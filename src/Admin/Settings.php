@@ -214,14 +214,14 @@ class Settings implements Hookable {
 		<div class="wrap extended-abilities-settings">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
-			<p class="description extended-abilities-description">
-				<?php esc_html_e( 'Configure which abilities are available to AI assistants. Enable only the abilities you trust AI assistants to use on your site.', 'extended-abilities' ); ?>
-			</p>
-
 			<?php settings_errors(); ?>
 
 			<form method="post" action="options.php" aria-label="<?php esc_attr_e( 'Extended Abilities Settings', 'extended-abilities' ); ?>">
 				<?php settings_fields( $this->option_group ); ?>
+
+				<p class="description extended-abilities-description">
+					<?php esc_html_e( 'Configure which abilities are available to AI assistants. Enable only the abilities you trust AI assistants to use on your site.', 'extended-abilities' ); ?>
+				</p>
 
 				<?php foreach ( $grouped_abilities as $category => $data ) : ?>
 					<section class="ability-group" aria-labelledby="<?php echo esc_attr( 'group-title-' . $category ); ?>">

@@ -29,8 +29,12 @@
 
 /* Page description */
 .extended-abilities-description {
-	margin: var(--ea-spacing-md) 0 var(--ea-spacing-lg) 0;
-	max-width: 800px;
+	margin: 0 0 var(--ea-spacing-xl) 0;
+	padding-bottom: var(--ea-spacing-lg);
+	border-bottom: 1px solid var(--ea-border-light);
+	color: var(--ea-text-secondary);
+	font-size: 14px;
+	line-height: 1.6;
 }
 
 /* Settings form container */
