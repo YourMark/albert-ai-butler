@@ -1,0 +1,281 @@
+<?php
+/**
+ * List Pages Ability
+ *
+ * @package    ExtendedAbilities
+ * @subpackage Abilities\WordPress
+ * @since      1.0.0
+ */
+
+namespace ExtendedAbilities\Abilities\WordPress;
+
+use ExtendedAbilities\Abstracts\BaseAbility;
+use WP_Error;
+use WP_REST_Request;
+
+/**
+ * List Pages Ability class
+ *
+ * Allows AI assistants to list WordPress pages via the abilities API.
+ *
+ * @since 1.0.0
+ */
+class ListPagesAbility extends BaseAbility {
+	/**
+	 * Constructor.
+	 *
+	 * @since 1.0.0
+	 */
+	public function __construct() {
+		$this->id          = 'wordpress/list-pages';
+		$this->label       = __( 'List Pages', '' );
+		$this->description = __( 'Retrieve a list of WordPress pages with optional filtering and pagination.', '' );
+		$this->category    = 'wp-extended-abilities-wp-core';
+		$this->group       = 'pages';
+
+		$this->input_schema  = $this->get_input_schema();
+		$this->output_schema = $this->get_output_schema();
+
+		$this->meta = [
+			'mcp' => [
+				'public' => true,
+			],
+		];
+
+		parent::__construct();
+	}
+
+	/**
+	 * Get the input schema for this ability.
+	 *
+	 * @return array Input schema.
+	 * @since 1.0.0
+	 */
+	protected function get_input_schema(): array {
+		// Get all available post statuses dynamically.
+		$post_statuses = array_keys( get_post_statuses() );
+
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'page'     => [
+					'type'        => 'integer',
+					'description' => 'Page number for pagination',
+					'default'     => 1,
+					'minimum'     => 1,
+				],
+				'per_page' => [
+					'type'        => 'integer',
+					'description' => 'Number of pages per page',
+					'default'     => 10,
+					'minimum'     => 1,
+					'maximum'     => 100,
+				],
+				'search'   => [
+					'type'        => 'string',
+					'description' => 'Search pages by title or content',
+					'default'     => '',
+				],
+				'status'   => [
+					'type'        => 'string',
+					'description' => 'Filter pages by status',
+					'enum'        => $post_statuses,
+				],
+				'parent'   => [
+					'type'        => 'integer',
+					'description' => 'Filter by parent page ID (0 for top-level pages)',
+				],
+				'order'    => [
+					'type'        => 'string',
+					'description' => 'Order direction',
+					'enum'        => [ 'asc', 'desc' ],
+					'default'     => 'desc',
+				],
+				'orderby'  => [
+					'type'        => 'string',
+					'description' => 'Sort by field',
+					'enum'        => [ 'date', 'modified', 'title', 'id', 'menu_order' ],
+					'default'     => 'date',
+				],
+			],
+		];
+	}
+
+	/**
+	 * Get the output schema for this ability.
+	 *
+	 * @return array Output schema.
+	 * @since 1.0.0
+	 */
+	protected function get_output_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'pages'       => [
+					'type'  => 'array',
+					'items' => [
+						'type'       => 'object',
+						'properties' => [
+							'id'         => [ 'type' => 'integer' ],
+							'title'      => [ 'type' => 'string' ],
+							'content'    => [ 'type' => 'string' ],
+							'excerpt'    => [ 'type' => 'string' ],
+							'status'     => [ 'type' => 'string' ],
+							'date'       => [ 'type' => 'string' ],
+							'modified'   => [ 'type' => 'string' ],
+							'author'     => [ 'type' => 'integer' ],
+							'parent'     => [ 'type' => 'integer' ],
+							'menu_order' => [ 'type' => 'integer' ],
+							'permalink'  => [ 'type' => 'string' ],
+						],
+					],
+				],
+				'total'       => [ 'type' => 'integer' ],
+				'total_pages' => [ 'type' => 'integer' ],
+			],
+			'required'   => [ 'pages', 'total' ],
+		];
+	}
+
+	/**
+	 * Check if current user has permission to execute this ability.
+	 *
+	 * Uses the permission callback from the WordPress REST API endpoint.
+	 *
+	 * @return bool Whether user has permission.
+	 * @since 1.0.0
+	 */
+	public function check_permission(): bool {
+		$server = rest_get_server();
+		$routes = $server->get_routes();
+
+		// Get the route for listing pages.
+		$route = '/wp/v2/pages';
+
+		if ( ! isset( $routes[ $route ] ) ) {
+			return false;
+		}
+
+		// Find the GET method endpoint.
+		foreach ( $routes[ $route ] as $endpoint ) {
+			if ( isset( $endpoint['methods']['GET'] ) && isset( $endpoint['permission_callback'] ) ) {
+				// Create a mock request for permission check.
+				$request = new WP_REST_Request( 'GET', $route );
+
+				// Call the permission callback.
+				$permission_callback = $endpoint['permission_callback'];
+
+				if ( is_callable( $permission_callback ) ) {
+					$result = call_user_func( $permission_callback, $request );
+
+					// Handle WP_Error or boolean response.
+					if ( is_wp_error( $result ) ) {
+						return false;
+					}
+
+					return (bool) $result;
+				}
+			}
+		}
+
+		// Fallback to basic capability check.
+		return current_user_can( 'edit_pages' );
+	}
+
+	/**
+	 * Execute the ability - list pages using WordPress REST API.
+	 *
+	 * @param array $args {
+	 *     Input parameters.
+	 *
+	 * @type int $page Page number for pagination.
+	 * @type int $per_page Number of pages per result page.
+	 * @type string $search Search query.
+	 * @type string $status Filter by status.
+	 * @type int $parent Filter by parent page ID.
+	 * @type string $order Order direction.
+	 * @type string $orderby Sort by field.
+	 * }
+	 * @return array|WP_Error Pages list on success, WP_Error on failure.
+	 * @since 1.0.0
+	 */
+	public function execute( array $args ): array|WP_Error {
+		// Create REST request.
+		$request = new WP_REST_Request( 'GET', '/wp/v2/pages' );
+
+		// Set pagination parameters.
+		$request->set_param( 'page', absint( $args['page'] ?? 1 ) );
+		$request->set_param( 'per_page', absint( $args['per_page'] ?? 10 ) );
+
+		// Set search parameter if provided.
+		if ( ! empty( $args['search'] ) ) {
+			$request->set_param( 'search', sanitize_text_field( $args['search'] ) );
+		}
+
+		// Set status filter if provided.
+		if ( ! empty( $args['status'] ) ) {
+			$request->set_param( 'status', sanitize_key( $args['status'] ) );
+		}
+
+		// Set parent filter if provided.
+		if ( isset( $args['parent'] ) ) {
+			$request->set_param( 'parent', absint( $args['parent'] ) );
+		}
+
+		// Set order parameters.
+		if ( ! empty( $args['order'] ) ) {
+			$request->set_param( 'order', sanitize_key( $args['order'] ) );
+		}
+
+		if ( ! empty( $args['orderby'] ) ) {
+			$request->set_param( 'orderby', sanitize_key( $args['orderby'] ) );
+		}
+
+		// Execute the request.
+		$response = rest_do_request( $request );
+		$server   = rest_get_server();
+		$data     = $server->response_to_data( $response, false );
+
+		// Check for errors.
+		if ( is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		if ( $response->is_error() ) {
+			return new WP_Error(
+				$data['code'] ?? 'rest_error',
+				$data['message'] ?? __( 'An error occurred while retrieving pages.', '' ),
+				[ 'status' => $response->get_status() ]
+			);
+		}
+
+		// Format pages data.
+		$pages = [];
+		foreach ( $data as $page_data ) {
+			$pages[] = [
+				'id'         => $page_data['id'],
+				'title'      => $page_data['title']['rendered'] ?? '',
+				'content'    => $page_data['content']['rendered'] ?? '',
+				'excerpt'    => $page_data['excerpt']['rendered'] ?? '',
+				'status'     => $page_data['status'] ?? '',
+				'date'       => $page_data['date'] ?? '',
+				'modified'   => $page_data['modified'] ?? '',
+				'author'     => $page_data['author'] ?? 0,
+				'parent'     => $page_data['parent'] ?? 0,
+				'menu_order' => $page_data['menu_order'] ?? 0,
+				'permalink'  => $page_data['link'] ?? '',
+			];
+		}
+
+		// Get pagination headers.
+		$headers      = $response->get_headers();
+		$total        = isset( $headers['X-WP-Total'] ) ? (int) $headers['X-WP-Total'] : count( $pages );
+		$total_pages  = isset( $headers['X-WP-TotalPages'] ) ? (int) $headers['X-WP-TotalPages'] : 1;
+
+		return [
+			'pages'       => $pages,
+			'total'       => $total,
+			'total_pages' => $total_pages,
+		];
+	}
+}

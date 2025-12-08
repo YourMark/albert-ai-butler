@@ -9,9 +9,11 @@
 
 namespace ExtendedAbilities\Core;
 
+use ExtendedAbilities\Abilities\WordPress\ListPostsAbility;
 use ExtendedAbilities\Abilities\WordPress\CreatePostAbility;
 use ExtendedAbilities\Abilities\WordPress\UpdatePostAbility;
 use ExtendedAbilities\Abilities\WordPress\DeletePostAbility;
+use ExtendedAbilities\Abilities\WordPress\ListPagesAbility;
 use ExtendedAbilities\Abilities\WordPress\CreatePageAbility;
 use ExtendedAbilities\Abilities\WordPress\UpdatePageAbility;
 use ExtendedAbilities\Abilities\WordPress\DeletePageAbility;
@@ -103,9 +105,11 @@ class Plugin {
 		$this->abilities_manager = new AbilitiesManager();
 
 		// Add abilities to the manager.
+		$this->abilities_manager->add_ability( new ListPostsAbility() );
 		$this->abilities_manager->add_ability( new CreatePostAbility() );
 		$this->abilities_manager->add_ability( new UpdatePostAbility() );
 		$this->abilities_manager->add_ability( new DeletePostAbility() );
+		$this->abilities_manager->add_ability( new ListPagesAbility() );
 		$this->abilities_manager->add_ability( new CreatePageAbility() );
 		$this->abilities_manager->add_ability( new UpdatePageAbility() );
 		$this->abilities_manager->add_ability( new DeletePageAbility() );
