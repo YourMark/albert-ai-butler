@@ -1,0 +1,224 @@
+<?php
+/**
+ * Create Page Ability
+ *
+ * @package    ExtendedAbilities
+ * @subpackage Abilities\WordPress
+ * @since      1.0.0
+ */
+
+namespace ExtendedAbilities\Abilities\WordPress;
+
+use ExtendedAbilities\Abstracts\BaseAbility;
+use WP_Error;
+use WP_REST_Request;
+
+/**
+ * Create Page Ability class
+ *
+ * Allows AI assistants to create WordPress pages via the abilities API.
+ *
+ * @since 1.0.0
+ */
+class CreatePageAbility extends BaseAbility {
+	/**
+	 * Constructor.
+	 *
+	 * @since 1.0.0
+	 */
+	public function __construct() {
+		$this->id          = 'wordpress/create-page';
+		$this->label       = __( 'Create Page', '' );
+		$this->description = __( 'Create a new WordPress page with specified title and content.', '' );
+		$this->category    = 'wp-extended-abilities-wp-core';
+		$this->group       = 'pages';
+
+		$this->input_schema  = $this->get_input_schema();
+		$this->output_schema = $this->get_output_schema();
+
+		$this->meta = [
+			'mcp' => [
+				'public' => true,
+			],
+		];
+
+		parent::__construct();
+	}
+
+	/**
+	 * Get the input schema for this ability.
+	 *
+	 * @return array Input schema.
+	 * @since 1.0.0
+	 */
+	protected function get_input_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'title'   => [
+					'type'        => 'string',
+					'description' => 'The page title',
+				],
+				'content' => [
+					'type'        => 'string',
+					'description' => 'The page content (HTML allowed)',
+					'default'     => '',
+				],
+				'status'  => [
+					'type'        => 'string',
+					'enum'        => [ 'draft', 'publish', 'pending', 'private' ],
+					'description' => 'Page status',
+					'default'     => 'draft',
+				],
+				'excerpt' => [
+					'type'        => 'string',
+					'description' => 'Optional page excerpt',
+					'default'     => '',
+				],
+				'parent'  => [
+					'type'        => 'integer',
+					'description' => 'Parent page ID for hierarchical pages',
+					'default'     => 0,
+				],
+			],
+			'required'   => [ 'title' ],
+		];
+	}
+
+	/**
+	 * Get the output schema for this ability.
+	 *
+	 * @return array Output schema.
+	 * @since 1.0.0
+	 */
+	protected function get_output_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'id'        => [ 'type' => 'integer' ],
+				'title'     => [ 'type' => 'string' ],
+				'status'    => [ 'type' => 'string' ],
+				'permalink' => [ 'type' => 'string' ],
+				'edit_url'  => [ 'type' => 'string' ],
+			],
+			'required'   => [ 'id', 'title', 'status' ],
+		];
+	}
+
+	/**
+	 * Check if current user has permission to execute this ability.
+	 *
+	 * Uses the permission callback from the WordPress REST API endpoint.
+	 *
+	 * @return bool Whether user has permission.
+	 * @since 1.0.0
+	 */
+	public function check_permission(): bool {
+		$server = rest_get_server();
+		$routes = $server->get_routes();
+
+		// Get the route for creating pages.
+		$route = '/wp/v2/pages';
+
+		if ( ! isset( $routes[ $route ] ) ) {
+			return false;
+		}
+
+		// Find the POST method endpoint.
+		foreach ( $routes[ $route ] as $endpoint ) {
+			if ( isset( $endpoint['methods']['POST'] ) && isset( $endpoint['permission_callback'] ) ) {
+				// Create a mock request for permission check.
+				$request = new WP_REST_Request( 'POST', $route );
+
+				// Call the permission callback.
+				$permission_callback = $endpoint['permission_callback'];
+
+				if ( is_callable( $permission_callback ) ) {
+					$result = call_user_func( $permission_callback, $request );
+
+					// Handle WP_Error or boolean response.
+					if ( is_wp_error( $result ) ) {
+						return false;
+					}
+
+					return (bool) $result;
+				}
+			}
+		}
+
+		// Fallback to basic capability check.
+		return current_user_can( 'edit_pages' );
+	}
+
+	/**
+	 * Execute the ability - create a page using WordPress REST API.
+	 *
+	 * @param array $args {
+	 *     Input parameters.
+	 *
+	 * @type string $title Page title (required).
+	 * @type string $content Page content.
+	 * @type string $status Page status.
+	 * @type string $excerpt Page excerpt.
+	 * @type int $parent Parent page ID.
+	 * }
+	 * @return array|WP_Error Page data on success, WP_Error on failure.
+	 * @since 1.0.0
+	 */
+	public function execute( array $args ): array|WP_Error {
+		// Validate input.
+		if ( empty( $args['title'] ) ) {
+			return new WP_Error(
+				'missing_title',
+				__( 'Page title is required.', '' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		// Prepare REST API request data.
+		$request_data = [
+			'title'   => sanitize_text_field( $args['title'] ),
+			'content' => wp_kses_post( $args['content'] ?? '' ),
+			'status'  => sanitize_key( $args['status'] ?? 'draft' ),
+			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
+		];
+
+		// Add parent if provided.
+		if ( ! empty( $args['parent'] ) ) {
+			$request_data['parent'] = absint( $args['parent'] );
+		}
+
+		// Create REST request.
+		$request = new WP_REST_Request( 'POST', '/wp/v2/pages' );
+		foreach ( $request_data as $key => $value ) {
+			$request->set_param( $key, $value );
+		}
+
+		// Execute the request.
+		$response = rest_do_request( $request );
+		$server   = rest_get_server();
+		$data     = $server->response_to_data( $response, false );
+
+		// Check for errors.
+		if ( is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		if ( $response->is_error() ) {
+			return new WP_Error(
+				$data['code'] ?? 'rest_error',
+				$data['message'] ?? __( 'An error occurred while creating the page.', '' ),
+				[ 'status' => $response->get_status() ]
+			);
+		}
+
+		// Return formatted page data.
+		return [
+			'id'        => $data['id'],
+			'title'     => $data['title']['rendered'] ?? '',
+			'status'    => $data['status'],
+			'permalink' => $data['link'] ?? get_permalink( $data['id'] ),
+			'edit_url'  => admin_url( 'post.php?post=' . $data['id'] . '&action=edit' ),
+		];
+	}
+}

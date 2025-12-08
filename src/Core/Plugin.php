@@ -12,6 +12,9 @@ namespace ExtendedAbilities\Core;
 use ExtendedAbilities\Abilities\WordPress\CreatePostAbility;
 use ExtendedAbilities\Abilities\WordPress\UpdatePostAbility;
 use ExtendedAbilities\Abilities\WordPress\DeletePostAbility;
+use ExtendedAbilities\Abilities\WordPress\CreatePageAbility;
+use ExtendedAbilities\Abilities\WordPress\UpdatePageAbility;
+use ExtendedAbilities\Abilities\WordPress\DeletePageAbility;
 use ExtendedAbilities\Admin\Settings;
 use ExtendedAbilities\Contracts\Interfaces\Hookable;
 use WP\MCP\Core\McpAdapter;
@@ -103,6 +106,9 @@ class Plugin {
 		$this->abilities_manager->add_ability( new CreatePostAbility() );
 		$this->abilities_manager->add_ability( new UpdatePostAbility() );
 		$this->abilities_manager->add_ability( new DeletePostAbility() );
+		$this->abilities_manager->add_ability( new CreatePageAbility() );
+		$this->abilities_manager->add_ability( new UpdatePageAbility() );
+		$this->abilities_manager->add_ability( new DeletePageAbility() );
 
 		// Register abilities manager hooks.
 		$this->abilities_manager->register_hooks();
