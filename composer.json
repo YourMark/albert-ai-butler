@@ -30,8 +30,8 @@
         }
     },
     "scripts": {
-        "phpcs": "phpcs --standard=WordPress src/",
-        "phpcbf": "phpcbf --standard=WordPress src/",
+        "phpcs": "phpcs src/",
+        "phpcbf": "phpcbf src/",
         "test": "phpunit"
     },
     "config": {
