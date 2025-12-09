@@ -1,35 +1,35 @@
 <?php
 /**
- * Update Post Ability
+ * Create Post Ability
  *
  * @package    ExtendedAbilities
- * @subpackage Abilities\WordPress
+ * @subpackage Abilities\WordPress\Posts
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress;
+namespace ExtendedAbilities\Abilities\WordPress\Posts;
 
 use ExtendedAbilities\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
 /**
- * Update Post Ability class
+ * Create Post Ability class
  *
- * Allows AI assistants to update WordPress posts via the abilities API.
+ * Allows AI assistants to create WordPress posts via the abilities API.
  *
  * @since 1.0.0
  */
-class UpdatePostAbility extends BaseAbility {
+class Create extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'wordpress/update-post';
-		$this->label       = __( 'Update Post', '' );
-		$this->description = __( 'Update an existing WordPress post with new title, content, and metadata.', '' );
+		$this->id          = 'wordpress/create-post';
+		$this->label       = __( 'Create Post', '' );
+		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', '' );
 		$this->category    = 'wp-extended-abilities-wp-core';
 		$this->group       = 'posts';
 
@@ -52,13 +52,12 @@ class UpdatePostAbility extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	protected function get_input_schema(): array {
+		// Get all available post statuses dynamically.
+		$post_statuses = array_keys( get_post_statuses() );
+
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'         => [
-					'type'        => 'integer',
-					'description' => 'The post ID to update',
-				],
 				'title'      => [
 					'type'        => 'string',
 					'description' => 'The post title',
@@ -66,28 +65,33 @@ class UpdatePostAbility extends BaseAbility {
 				'content'    => [
 					'type'        => 'string',
 					'description' => 'The post content (HTML allowed)',
+					'default'     => '',
 				],
 				'status'     => [
 					'type'        => 'string',
-					'enum'        => [ 'draft', 'publish', 'pending', 'private' ],
+					'enum'        => $post_statuses,
 					'description' => 'Post status',
+					'default'     => 'draft',
 				],
 				'excerpt'    => [
 					'type'        => 'string',
 					'description' => 'Optional post excerpt',
+					'default'     => '',
 				],
 				'categories' => [
 					'type'        => 'array',
 					'items'       => [ 'type' => 'integer' ],
 					'description' => 'Array of category IDs',
+					'default'     => [],
 				],
 				'tags'       => [
 					'type'        => 'array',
 					'items'       => [ 'type' => 'string' ],
 					'description' => 'Array of tag names',
+					'default'     => [],
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'   => [ 'title' ],
 		];
 	}
 
@@ -123,31 +127,31 @@ class UpdatePostAbility extends BaseAbility {
 		$server = rest_get_server();
 		$routes = $server->get_routes();
 
-		// Get the route pattern for updating a specific post.
-		$route_pattern = '/wp/v2/posts/(?P<id>[\d]+)';
+		// Get the route for creating posts.
+		$route = '/wp/v2/posts';
 
-		// Find matching route.
-		foreach ( $routes as $route => $endpoints ) {
-			if ( preg_match( '#^' . $route_pattern . '$#', $route ) ) {
-				foreach ( $endpoints as $endpoint ) {
-					if ( isset( $endpoint['methods']['POST'] ) && isset( $endpoint['permission_callback'] ) ) {
-						// Create a mock request for permission check.
-						$request = new WP_REST_Request( 'POST', $route );
+		if ( ! isset( $routes[ $route ] ) ) {
+			return false;
+		}
 
-						// Call the permission callback.
-						$permission_callback = $endpoint['permission_callback'];
+		// Find the POST method endpoint.
+		foreach ( $routes[ $route ] as $endpoint ) {
+			if ( isset( $endpoint['methods']['POST'] ) && isset( $endpoint['permission_callback'] ) ) {
+				// Create a mock request for permission check.
+				$request = new WP_REST_Request( 'POST', $route );
 
-						if ( is_callable( $permission_callback ) ) {
-							$result = call_user_func( $permission_callback, $request );
+				// Call the permission callback.
+				$permission_callback = $endpoint['permission_callback'];
 
-							// Handle WP_Error or boolean response.
-							if ( is_wp_error( $result ) ) {
-								return false;
-							}
+				if ( is_callable( $permission_callback ) ) {
+					$result = call_user_func( $permission_callback, $request );
 
-							return (bool) $result;
-						}
+					// Handle WP_Error or boolean response.
+					if ( is_wp_error( $result ) ) {
+						return false;
 					}
+
+					return (bool) $result;
 				}
 			}
 		}
@@ -157,13 +161,12 @@ class UpdatePostAbility extends BaseAbility {
 	}
 
 	/**
-	 * Execute the ability - update a post using WordPress REST API.
+	 * Execute the ability - create a post using WordPress REST API.
 	 *
 	 * @param array $args {
 	 *     Input parameters.
 	 *
-	 * @type int $id Post ID (required).
-	 * @type string $title Post title.
+	 * @type string $title Post title (required).
 	 * @type string $content Post content.
 	 * @type string $status Post status.
 	 * @type string $excerpt Post excerpt.
@@ -175,43 +178,21 @@ class UpdatePostAbility extends BaseAbility {
 	 */
 	public function execute( array $args ): array|WP_Error {
 		// Validate input.
-		if ( empty( $args['id'] ) ) {
+		if ( empty( $args['title'] ) ) {
 			return new WP_Error(
-				'missing_id',
-				__( 'Post ID is required.', '' ),
+				'missing_title',
+				__( 'Post title is required.', '' ),
 				[ 'status' => 400 ]
 			);
 		}
 
-		$post_id = absint( $args['id'] );
-
-		// Check if post exists.
-		if ( ! get_post( $post_id ) ) {
-			return new WP_Error(
-				'post_not_found',
-				__( 'Post not found.', '' ),
-				[ 'status' => 404 ]
-			);
-		}
-
-		// Prepare REST API request data (only include provided fields).
-		$request_data = [];
-
-		if ( isset( $args['title'] ) ) {
-			$request_data['title'] = sanitize_text_field( $args['title'] );
-		}
-
-		if ( isset( $args['content'] ) ) {
-			$request_data['content'] = wp_kses_post( $args['content'] );
-		}
-
-		if ( isset( $args['status'] ) ) {
-			$request_data['status'] = sanitize_key( $args['status'] );
-		}
-
-		if ( isset( $args['excerpt'] ) ) {
-			$request_data['excerpt'] = sanitize_textarea_field( $args['excerpt'] );
-		}
+		// Prepare REST API request data.
+		$request_data = [
+			'title'   => sanitize_text_field( $args['title'] ),
+			'content' => wp_kses_post( $args['content'] ?? '' ),
+			'status'  => sanitize_key( $args['status'] ?? 'draft' ),
+			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
+		];
 
 		// Add categories if provided.
 		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
@@ -238,7 +219,7 @@ class UpdatePostAbility extends BaseAbility {
 		}
 
 		// Create REST request.
-		$request = new WP_REST_Request( 'POST', '/wp/v2/posts/' . $post_id );
+		$request = new WP_REST_Request( 'POST', '/wp/v2/posts' );
 		foreach ( $request_data as $key => $value ) {
 			$request->set_param( $key, $value );
 		}
@@ -256,7 +237,7 @@ class UpdatePostAbility extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while updating the post.', '' ),
+				$data['message'] ?? __( 'An error occurred while creating the post.', '' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

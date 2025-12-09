@@ -3,11 +3,11 @@
  * Delete Post Ability
  *
  * @package    ExtendedAbilities
- * @subpackage Abilities\WordPress
+ * @subpackage Abilities\WordPress\Posts
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress;
+namespace ExtendedAbilities\Abilities\WordPress\Posts;
 
 use ExtendedAbilities\Abstracts\BaseAbility;
 use WP_Error;
@@ -20,7 +20,7 @@ use WP_REST_Request;
  *
  * @since 1.0.0
  */
-class DeletePostAbility extends BaseAbility {
+class Delete extends BaseAbility {
 	/**
 	 * Constructor.
 	 *

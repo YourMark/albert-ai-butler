@@ -3,11 +3,11 @@
  * List Posts Ability
  *
  * @package    ExtendedAbilities
- * @subpackage Abilities\WordPress
+ * @subpackage Abilities\WordPress\Posts
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress;
+namespace ExtendedAbilities\Abilities\WordPress\Posts;
 
 use ExtendedAbilities\Abstracts\BaseAbility;
 use WP_Error;
@@ -20,7 +20,7 @@ use WP_REST_Request;
  *
  * @since 1.0.0
  */
-class ListPostsAbility extends BaseAbility {
+class ListPosts extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
@@ -126,8 +126,14 @@ class ListPostsAbility extends BaseAbility {
 							'modified'   => [ 'type' => 'string' ],
 							'author'     => [ 'type' => 'integer' ],
 							'permalink'  => [ 'type' => 'string' ],
-							'categories' => [ 'type' => 'array', 'items' => [ 'type' => 'integer' ] ],
-							'tags'       => [ 'type' => 'array', 'items' => [ 'type' => 'integer' ] ],
+							'categories' => [
+								'type'  => 'array',
+								'items' => [ 'type' => 'integer' ],
+							],
+							'tags'       => [
+								'type'  => 'array',
+								'items' => [ 'type' => 'integer' ],
+							],
 						],
 					],
 				],
@@ -269,9 +275,9 @@ class ListPostsAbility extends BaseAbility {
 		}
 
 		// Get pagination headers.
-		$headers      = $response->get_headers();
-		$total        = isset( $headers['X-WP-Total'] ) ? (int) $headers['X-WP-Total'] : count( $posts );
-		$total_pages  = isset( $headers['X-WP-TotalPages'] ) ? (int) $headers['X-WP-TotalPages'] : 1;
+		$headers     = $response->get_headers();
+		$total       = isset( $headers['X-WP-Total'] ) ? (int) $headers['X-WP-Total'] : count( $posts );
+		$total_pages = isset( $headers['X-WP-TotalPages'] ) ? (int) $headers['X-WP-TotalPages'] : 1;
 
 		return [
 			'posts'       => $posts,
