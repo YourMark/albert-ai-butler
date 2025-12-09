@@ -9,14 +9,18 @@
 
 namespace ExtendedAbilities\Core;
 
-use ExtendedAbilities\Abilities\WordPress\ListPostsAbility;
-use ExtendedAbilities\Abilities\WordPress\CreatePostAbility;
-use ExtendedAbilities\Abilities\WordPress\UpdatePostAbility;
-use ExtendedAbilities\Abilities\WordPress\DeletePostAbility;
-use ExtendedAbilities\Abilities\WordPress\ListPagesAbility;
-use ExtendedAbilities\Abilities\WordPress\CreatePageAbility;
-use ExtendedAbilities\Abilities\WordPress\UpdatePageAbility;
-use ExtendedAbilities\Abilities\WordPress\DeletePageAbility;
+use ExtendedAbilities\Abilities\WordPress\Posts\ListPosts;
+use ExtendedAbilities\Abilities\WordPress\Posts\Create as CreatePost;
+use ExtendedAbilities\Abilities\WordPress\Posts\Update as UpdatePost;
+use ExtendedAbilities\Abilities\WordPress\Posts\Delete as DeletePost;
+use ExtendedAbilities\Abilities\WordPress\Pages\ListPages;
+use ExtendedAbilities\Abilities\WordPress\Pages\Create as CreatePage;
+use ExtendedAbilities\Abilities\WordPress\Pages\Update as UpdatePage;
+use ExtendedAbilities\Abilities\WordPress\Pages\Delete as DeletePage;
+use ExtendedAbilities\Abilities\WordPress\Users\ListUsers;
+use ExtendedAbilities\Abilities\WordPress\Users\Create as CreateUser;
+use ExtendedAbilities\Abilities\WordPress\Users\Update as UpdateUser;
+use ExtendedAbilities\Abilities\WordPress\Users\Delete as DeleteUser;
 use ExtendedAbilities\Admin\Settings;
 use ExtendedAbilities\Contracts\Interfaces\Hookable;
 use WP\MCP\Core\McpAdapter;
@@ -105,14 +109,18 @@ class Plugin {
 		$this->abilities_manager = new AbilitiesManager();
 
 		// Add abilities to the manager.
-		$this->abilities_manager->add_ability( new ListPostsAbility() );
-		$this->abilities_manager->add_ability( new CreatePostAbility() );
-		$this->abilities_manager->add_ability( new UpdatePostAbility() );
-		$this->abilities_manager->add_ability( new DeletePostAbility() );
-		$this->abilities_manager->add_ability( new ListPagesAbility() );
-		$this->abilities_manager->add_ability( new CreatePageAbility() );
-		$this->abilities_manager->add_ability( new UpdatePageAbility() );
-		$this->abilities_manager->add_ability( new DeletePageAbility() );
+		$this->abilities_manager->add_ability( new ListPosts() );
+		$this->abilities_manager->add_ability( new CreatePost() );
+		$this->abilities_manager->add_ability( new UpdatePost() );
+		$this->abilities_manager->add_ability( new DeletePost() );
+		$this->abilities_manager->add_ability( new ListPages() );
+		$this->abilities_manager->add_ability( new CreatePage() );
+		$this->abilities_manager->add_ability( new UpdatePage() );
+		$this->abilities_manager->add_ability( new DeletePage() );
+		$this->abilities_manager->add_ability( new ListUsers() );
+		$this->abilities_manager->add_ability( new CreateUser() );
+		$this->abilities_manager->add_ability( new UpdateUser() );
+		$this->abilities_manager->add_ability( new DeleteUser() );
 
 		// Register abilities manager hooks.
 		$this->abilities_manager->register_hooks();
