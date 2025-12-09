@@ -3,11 +3,11 @@
  * Delete Page Ability
  *
  * @package    ExtendedAbilities
- * @subpackage Abilities\WordPress
+ * @subpackage Abilities\WordPress\Pages
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress;
+namespace ExtendedAbilities\Abilities\WordPress\Pages;
 
 use ExtendedAbilities\Abstracts\BaseAbility;
 use WP_Error;
@@ -20,7 +20,7 @@ use WP_REST_Request;
  *
  * @since 1.0.0
  */
-class DeletePageAbility extends BaseAbility {
+class Delete extends BaseAbility {
 	/**
 	 * Constructor.
 	 *

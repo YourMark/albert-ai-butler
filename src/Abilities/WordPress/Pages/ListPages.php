@@ -3,11 +3,11 @@
  * List Pages Ability
  *
  * @package    ExtendedAbilities
- * @subpackage Abilities\WordPress
+ * @subpackage Abilities\WordPress\Pages
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress;
+namespace ExtendedAbilities\Abilities\WordPress\Pages;
 
 use ExtendedAbilities\Abstracts\BaseAbility;
 use WP_Error;
@@ -20,7 +20,7 @@ use WP_REST_Request;
  *
  * @since 1.0.0
  */
-class ListPagesAbility extends BaseAbility {
+class ListPages extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
@@ -268,9 +268,9 @@ class ListPagesAbility extends BaseAbility {
 		}
 
 		// Get pagination headers.
-		$headers      = $response->get_headers();
-		$total        = isset( $headers['X-WP-Total'] ) ? (int) $headers['X-WP-Total'] : count( $pages );
-		$total_pages  = isset( $headers['X-WP-TotalPages'] ) ? (int) $headers['X-WP-TotalPages'] : 1;
+		$headers     = $response->get_headers();
+		$total       = isset( $headers['X-WP-Total'] ) ? (int) $headers['X-WP-Total'] : count( $pages );
+		$total_pages = isset( $headers['X-WP-TotalPages'] ) ? (int) $headers['X-WP-TotalPages'] : 1;
 
 		return [
 			'pages'       => $pages,

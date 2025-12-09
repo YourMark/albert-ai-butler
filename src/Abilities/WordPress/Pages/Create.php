@@ -1,35 +1,35 @@
 <?php
 /**
- * Update Page Ability
+ * Create Page Ability
  *
  * @package    ExtendedAbilities
- * @subpackage Abilities\WordPress
+ * @subpackage Abilities\WordPress\Pages
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress;
+namespace ExtendedAbilities\Abilities\WordPress\Pages;
 
 use ExtendedAbilities\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
 /**
- * Update Page Ability class
+ * Create Page Ability class
  *
- * Allows AI assistants to update WordPress pages via the abilities API.
+ * Allows AI assistants to create WordPress pages via the abilities API.
  *
  * @since 1.0.0
  */
-class UpdatePageAbility extends BaseAbility {
+class Create extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'wordpress/update-page';
-		$this->label       = __( 'Update Page', '' );
-		$this->description = __( 'Update an existing WordPress page with new title and content.', '' );
+		$this->id          = 'wordpress/create-page';
+		$this->label       = __( 'Create Page', '' );
+		$this->description = __( 'Create a new WordPress page with specified title and content.', '' );
 		$this->category    = 'wp-extended-abilities-wp-core';
 		$this->group       = 'pages';
 
@@ -52,13 +52,12 @@ class UpdatePageAbility extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	protected function get_input_schema(): array {
+		// Get all available post statuses dynamically.
+		$post_statuses = array_keys( get_post_statuses() );
+
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'      => [
-					'type'        => 'integer',
-					'description' => 'The page ID to update',
-				],
 				'title'   => [
 					'type'        => 'string',
 					'description' => 'The page title',
@@ -66,22 +65,26 @@ class UpdatePageAbility extends BaseAbility {
 				'content' => [
 					'type'        => 'string',
 					'description' => 'The page content (HTML allowed)',
+					'default'     => '',
 				],
 				'status'  => [
 					'type'        => 'string',
-					'enum'        => [ 'draft', 'publish', 'pending', 'private' ],
+					'enum'        => $post_statuses,
 					'description' => 'Page status',
+					'default'     => 'draft',
 				],
 				'excerpt' => [
 					'type'        => 'string',
 					'description' => 'Optional page excerpt',
+					'default'     => '',
 				],
 				'parent'  => [
 					'type'        => 'integer',
 					'description' => 'Parent page ID for hierarchical pages',
+					'default'     => 0,
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'   => [ 'title' ],
 		];
 	}
 
@@ -117,31 +120,31 @@ class UpdatePageAbility extends BaseAbility {
 		$server = rest_get_server();
 		$routes = $server->get_routes();
 
-		// Get the route pattern for updating a specific page.
-		$route_pattern = '/wp/v2/pages/(?P<id>[\d]+)';
+		// Get the route for creating pages.
+		$route = '/wp/v2/pages';
 
-		// Find matching route.
-		foreach ( $routes as $route => $endpoints ) {
-			if ( preg_match( '#^' . $route_pattern . '$#', $route ) ) {
-				foreach ( $endpoints as $endpoint ) {
-					if ( isset( $endpoint['methods']['POST'] ) && isset( $endpoint['permission_callback'] ) ) {
-						// Create a mock request for permission check.
-						$request = new WP_REST_Request( 'POST', $route );
+		if ( ! isset( $routes[ $route ] ) ) {
+			return false;
+		}
 
-						// Call the permission callback.
-						$permission_callback = $endpoint['permission_callback'];
+		// Find the POST method endpoint.
+		foreach ( $routes[ $route ] as $endpoint ) {
+			if ( isset( $endpoint['methods']['POST'] ) && isset( $endpoint['permission_callback'] ) ) {
+				// Create a mock request for permission check.
+				$request = new WP_REST_Request( 'POST', $route );
 
-						if ( is_callable( $permission_callback ) ) {
-							$result = call_user_func( $permission_callback, $request );
+				// Call the permission callback.
+				$permission_callback = $endpoint['permission_callback'];
 
-							// Handle WP_Error or boolean response.
-							if ( is_wp_error( $result ) ) {
-								return false;
-							}
+				if ( is_callable( $permission_callback ) ) {
+					$result = call_user_func( $permission_callback, $request );
 
-							return (bool) $result;
-						}
+					// Handle WP_Error or boolean response.
+					if ( is_wp_error( $result ) ) {
+						return false;
 					}
+
+					return (bool) $result;
 				}
 			}
 		}
@@ -151,13 +154,12 @@ class UpdatePageAbility extends BaseAbility {
 	}
 
 	/**
-	 * Execute the ability - update a page using WordPress REST API.
+	 * Execute the ability - create a page using WordPress REST API.
 	 *
 	 * @param array $args {
 	 *     Input parameters.
 	 *
-	 * @type int $id Page ID (required).
-	 * @type string $title Page title.
+	 * @type string $title Page title (required).
 	 * @type string $content Page content.
 	 * @type string $status Page status.
 	 * @type string $excerpt Page excerpt.
@@ -168,50 +170,29 @@ class UpdatePageAbility extends BaseAbility {
 	 */
 	public function execute( array $args ): array|WP_Error {
 		// Validate input.
-		if ( empty( $args['id'] ) ) {
+		if ( empty( $args['title'] ) ) {
 			return new WP_Error(
-				'missing_id',
-				__( 'Page ID is required.', '' ),
+				'missing_title',
+				__( 'Page title is required.', '' ),
 				[ 'status' => 400 ]
 			);
 		}
 
-		$page_id = absint( $args['id'] );
+		// Prepare REST API request data.
+		$request_data = [
+			'title'   => sanitize_text_field( $args['title'] ),
+			'content' => wp_kses_post( $args['content'] ?? '' ),
+			'status'  => sanitize_key( $args['status'] ?? 'draft' ),
+			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
+		];
 
-		// Check if page exists.
-		if ( ! get_post( $page_id ) ) {
-			return new WP_Error(
-				'page_not_found',
-				__( 'Page not found.', '' ),
-				[ 'status' => 404 ]
-			);
-		}
-
-		// Prepare REST API request data (only include provided fields).
-		$request_data = [];
-
-		if ( isset( $args['title'] ) ) {
-			$request_data['title'] = sanitize_text_field( $args['title'] );
-		}
-
-		if ( isset( $args['content'] ) ) {
-			$request_data['content'] = wp_kses_post( $args['content'] );
-		}
-
-		if ( isset( $args['status'] ) ) {
-			$request_data['status'] = sanitize_key( $args['status'] );
-		}
-
-		if ( isset( $args['excerpt'] ) ) {
-			$request_data['excerpt'] = sanitize_textarea_field( $args['excerpt'] );
-		}
-
-		if ( isset( $args['parent'] ) ) {
+		// Add parent if provided.
+		if ( ! empty( $args['parent'] ) ) {
 			$request_data['parent'] = absint( $args['parent'] );
 		}
 
 		// Create REST request.
-		$request = new WP_REST_Request( 'POST', '/wp/v2/pages/' . $page_id );
+		$request = new WP_REST_Request( 'POST', '/wp/v2/pages' );
 		foreach ( $request_data as $key => $value ) {
 			$request->set_param( $key, $value );
 		}
@@ -229,7 +210,7 @@ class UpdatePageAbility extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while updating the page.', '' ),
+				$data['message'] ?? __( 'An error occurred while creating the page.', '' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
