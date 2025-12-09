@@ -1,0 +1,256 @@
+<?php
+/**
+ * List Users Ability
+ *
+ * @package    ExtendedAbilities
+ * @subpackage Abilities\WordPress\Users
+ * @since      1.0.0
+ */
+
+namespace ExtendedAbilities\Abilities\WordPress\Users;
+
+use ExtendedAbilities\Abstracts\BaseAbility;
+use WP_Error;
+use WP_REST_Request;
+use WP_REST_Server;
+
+/**
+ * List Users Ability class
+ *
+ * Allows AI assistants to list WordPress users via the abilities API.
+ *
+ * @since 1.0.0
+ */
+class ListUsers extends BaseAbility {
+	/**
+	 * Constructor.
+	 *
+	 * @since 1.0.0
+	 */
+	public function __construct() {
+		$this->id          = 'wordpress/list-users';
+		$this->label       = __( 'List Users', '' );
+		$this->description = __( 'Retrieve a list of WordPress users with optional filtering and pagination.', '' );
+		$this->category    = 'wp-extended-abilities-wp-core';
+		$this->group       = 'users';
+
+		$this->input_schema  = $this->get_input_schema();
+		$this->output_schema = $this->get_output_schema();
+
+		$this->meta = [
+			'mcp' => [
+				'public' => true,
+			],
+		];
+
+		parent::__construct();
+	}
+
+	/**
+	 * Get the input schema for this ability.
+	 *
+	 * @return array Input schema.
+	 * @since 1.0.0
+	 */
+	protected function get_input_schema(): array {
+		// Get all available WordPress roles dynamically.
+		$wp_roles   = wp_roles();
+		$role_names = array_keys( $wp_roles->roles );
+
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'id' => [
+					'type' => 'integer',
+					'description' => 'User id for direct querying.',
+				],
+				'page'     => [
+					'type'        => 'integer',
+					'description' => 'Page number for pagination',
+					'default'     => 1,
+					'minimum'     => 1,
+				],
+				'per_page' => [
+					'type'        => 'integer',
+					'description' => 'Number of users per page',
+					'default'     => 10,
+					'minimum'     => 1,
+					'maximum'     => 100,
+				],
+				'search'   => [
+					'type'        => 'string',
+					'description' => 'Search users by name or email',
+					'default'     => '',
+				],
+				'role'     => [
+					'type'        => 'string',
+					'description' => 'Filter users by role',
+					'enum'        => $role_names,
+				],
+			],
+		];
+	}
+
+	/**
+	 * Get the output schema for this ability.
+	 *
+	 * @return array Output schema.
+	 * @since 1.0.0
+	 */
+	protected function get_output_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'users'       => [
+					'type'  => 'array',
+					'items' => [
+						'type'       => 'object',
+						'properties' => [
+							'id'          => [ 'type' => 'integer' ],
+							'username'    => [ 'type' => 'string' ],
+							'name'        => [ 'type' => 'string' ],
+							'email'       => [ 'type' => 'string' ],
+							'roles'       => [
+								'type'  => 'array',
+								'items' => [ 'type' => 'string' ],
+							],
+							'url'         => [ 'type' => 'string' ],
+							'description' => [ 'type' => 'string' ],
+						],
+					],
+				],
+				'total'       => [ 'type' => 'integer' ],
+				'total_pages' => [ 'type' => 'integer' ],
+			],
+			'required'   => [ 'users', 'total' ],
+		];
+	}
+
+	/**
+	 * Check if current user has permission to execute this ability.
+	 *
+	 * Uses the permission callback from the WordPress REST API endpoint.
+	 *
+	 * @return bool Whether user has permission.
+	 * @since 1.0.0
+	 */
+	public function check_permission(): bool {
+		$server = rest_get_server();
+		$routes = $server->get_routes();
+
+		// Get the route for listing users.
+		$route = '/wp/v2/users';
+
+		if ( ! isset( $routes[ $route ] ) ) {
+			return false;
+		}
+
+		// Find the GET method endpoint.
+		foreach ( $routes[ $route ] as $endpoint ) {
+			if ( isset( $endpoint['methods']['GET'] ) && isset( $endpoint['permission_callback'] ) ) {
+				// Create a mock request for permission check.
+				$request = new WP_REST_Request( 'GET', $route );
+
+				// Call the permission callback.
+				$permission_callback = $endpoint['permission_callback'];
+
+				if ( is_callable( $permission_callback ) ) {
+					$result = call_user_func( $permission_callback, $request );
+
+					// Handle WP_Error or boolean response.
+					if ( is_wp_error( $result ) ) {
+						return false;
+					}
+
+					return (bool) $result;
+				}
+			}
+		}
+
+		// Fallback to basic capability check.
+		return current_user_can( 'list_users' );
+	}
+
+	/**
+	 * Execute the ability - list users using WordPress REST API.
+	 *
+	 * @param array $args {
+	 *     Input parameters.
+	 *
+	 * @type int $page Page number for pagination.
+	 * @type int $per_page Number of users per page.
+	 * @type string $search Search query.
+	 * @type string $role Filter by role.
+	 * }
+	 * @return array|WP_Error Users list on success, WP_Error on failure.
+	 * @since 1.0.0
+	 */
+	public function execute( array $args ): array|WP_Error {
+		// Create REST request.
+
+		$route = '/wp/v2/users';
+
+		if( isset( $args['id'] ) && ! empty( $args['id'] ) ) {
+			$route .= '/' . $args['id'];
+		}
+
+		$request = new WP_REST_Request( 'GET', $route );
+
+		// Set pagination parameters.
+		$request->set_param( 'page', absint( $args['page'] ?? 1 ) );
+		$request->set_param( 'per_page', absint( $args['per_page'] ?? 10 ) );
+
+		// Set search parameter if provided.
+		if ( ! empty( $args['search'] ) ) {
+			$request->set_param( 'search', sanitize_text_field( $args['search'] ) );
+		}
+
+		// Set role filter if provided.
+		if ( ! empty( $args['role'] ) ) {
+			$request->set_param( 'roles', sanitize_key( $args['role'] ) );
+		}
+
+		// Execute the request.
+		$response = rest_do_request( $request );
+		$server   = rest_get_server();
+		$data     = $server->response_to_data( $response, false );
+
+		// Check for errors.
+		if ( is_wp_error( $data ) ) {
+			return $data;
+		}
+
+		if ( $response->is_error() ) {
+			return new WP_Error(
+				$data['code'] ?? 'rest_error',
+				$data['message'] ?? __( 'An error occurred while retrieving users.', '' ),
+				[ 'status' => $response->get_status() ]
+			);
+		}
+
+		// Format users data.
+		$users = [];
+		foreach ( $data as $user_data ) {
+			$users[] = [
+				'id'          => $user_data['id'],
+				'username'    => $user_data['slug'] ?? '',
+				'name'        => $user_data['name'] ?? '',
+				'email'       => $user_data['email'] ?? '',
+				'roles'       => $user_data['roles'] ?? [],
+				'url'         => $user_data['url'] ?? '',
+				'description' => $user_data['description'] ?? '',
+			];
+		}
+
+		// Get pagination headers.
+		$headers     = $response->get_headers();
+		$total       = isset( $headers['X-WP-Total'] ) ? (int) $headers['X-WP-Total'] : count( $users );
+		$total_pages = isset( $headers['X-WP-TotalPages'] ) ? (int) $headers['X-WP-TotalPages'] : 1;
+
+		return [
+			'users'       => $users,
+			'total'       => $total,
+			'total_pages' => $total_pages,
+		];
+	}
+}
