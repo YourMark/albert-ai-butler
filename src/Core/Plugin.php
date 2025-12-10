@@ -21,6 +21,8 @@ use ExtendedAbilities\Abilities\WordPress\Users\ListUsers;
 use ExtendedAbilities\Abilities\WordPress\Users\Create as CreateUser;
 use ExtendedAbilities\Abilities\WordPress\Users\Update as UpdateUser;
 use ExtendedAbilities\Abilities\WordPress\Users\Delete as DeleteUser;
+use ExtendedAbilities\Abilities\WordPress\Media\UploadMedia;
+use ExtendedAbilities\Abilities\WordPress\Media\SetFeaturedImage;
 use ExtendedAbilities\Admin\Settings;
 use ExtendedAbilities\Contracts\Interfaces\Hookable;
 use WP\MCP\Core\McpAdapter;
@@ -88,7 +90,9 @@ class Plugin {
 		// Try and run the McpAdapter. Without this, it's useless.
 		if ( ! class_exists( McpAdapter::class ) ) {
 			/**
-			 * @ToDo: If the class does not exist, for some reason, we need to handle this gracefully.
+			 * Handle missing McpAdapter gracefully.
+			 *
+			 * @todo If the class does not exist, for some reason, we need to handle this gracefully.
 			 */
 			return;
 		}
@@ -96,39 +100,7 @@ class Plugin {
 		// Initialize the adapter.
 		McpAdapter::instance();
 
-		// Initialize abilities manager.
-		$this->abilities_manager = new AbilitiesManager();
-
-		// Add abilities to the manager.
-		$this->abilities_manager->add_ability( new ListPosts() );
-		$this->abilities_manager->add_ability( new CreatePost() );
-		$this->abilities_manager->add_ability( new UpdatePost() );
-		$this->abilities_manager->add_ability( new DeletePost() );
-		$this->abilities_manager->add_ability( new ListPages() );
-		$this->abilities_manager->add_ability( new CreatePage() );
-		$this->abilities_manager->add_ability( new UpdatePage() );
-		$this->abilities_manager->add_ability( new DeletePage() );
-		$this->abilities_manager->add_ability( new ListUsers() );
-		$this->abilities_manager->add_ability( new CreateUser() );
-		$this->abilities_manager->add_ability( new UpdateUser() );
-		$this->abilities_manager->add_ability( new DeleteUser() );
-
-		// Register abilities manager hooks.
-		$this->abilities_manager->register_hooks();
-	}
-
-	/**
-	 * Load plugin text domain for translations.
-	 *
-	 * @return void
-	 * @since 1.0.0
-	 */
-	public function load_textdomain(): void {
-		load_plugin_textdomain(
-			'extended-abilities',
-			false,
-			dirname( plugin_basename( EXTENDED_ABILITIES_PLUGIN_FILE ) ) . '/languages'
-		);
+		add_action( 'init', [ $this, 'register_abilities' ] );
 	}
 
 	/**
@@ -137,42 +109,44 @@ class Plugin {
 	 * @return void
 	 * @since 1.0.0
 	 */
-	private function register_abilities(): void {
-		// Register WordPress abilities.
-		$this->abilities_manager->add_ability( new CreatePostAbility() );
+	public function register_abilities(): void {
+		// Initialize abilities manager.
+		$this->abilities_manager = new AbilitiesManager();
 
-		/**
-		 * Allows additional abilities to be registered.
-		 *
-		 * @param AbilitiesManager $abilities_manager The abilities manager instance.
-		 *
-		 * @since 1.0.0
-		 */
-		do_action( 'extended_abilities_register_abilities', $this->abilities_manager );
+		// Posts abilities.
+		$this->abilities_manager->add_ability( new ListPosts() );
+		$this->abilities_manager->add_ability( new CreatePost() );
+		$this->abilities_manager->add_ability( new UpdatePost() );
+		$this->abilities_manager->add_ability( new DeletePost() );
+
+		// Pages abilities.
+		$this->abilities_manager->add_ability( new ListPages() );
+		$this->abilities_manager->add_ability( new CreatePage() );
+		$this->abilities_manager->add_ability( new UpdatePage() );
+		$this->abilities_manager->add_ability( new DeletePage() );
+
+		// Users abilities.
+		$this->abilities_manager->add_ability( new ListUsers() );
+		$this->abilities_manager->add_ability( new CreateUser() );
+		$this->abilities_manager->add_ability( new UpdateUser() );
+		$this->abilities_manager->add_ability( new DeleteUser() );
+
+		// Media abilities.
+		$this->abilities_manager->add_ability( new UploadMedia() );
+		$this->abilities_manager->add_ability( new SetFeaturedImage() );
+
+		// Register abilities manager hooks.
+		$this->abilities_manager->register_hooks();
 	}
 
 	/**
-	 * Add a component to the plugin.
+	 * Get the abilities manager instance.
 	 *
-	 * @param Hookable $component The component to add.
-	 *
-	 * @return void
+	 * @return AbilitiesManager|null The abilities manager instance.
 	 * @since 1.0.0
 	 */
-	public function add_component( Hookable $component ): void {
-		$this->components[] = $component;
-	}
-
-	/**
-	 * Register hooks for all registered components.
-	 *
-	 * @return void
-	 * @since 1.0.0
-	 */
-	public function register_component_hooks(): void {
-		foreach ( $this->components as $component ) {
-			$component->register_hooks();
-		}
+	public function get_abilities_manager(): ?AbilitiesManager {
+		return $this->abilities_manager;
 	}
 
 	/**
