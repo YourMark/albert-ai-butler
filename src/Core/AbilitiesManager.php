@@ -49,6 +49,7 @@ class AbilitiesManager implements Hookable {
 		add_filter( 'extended_abilities_plugin_abilities', [ $this, 'add_plugin_abilities_to_settings' ] );
 	}
 
+
 	/**
 	 * Register ability categories.
 	 *
@@ -73,7 +74,7 @@ class AbilitiesManager implements Hookable {
 	}
 
 	/**
-	 * Add an ability to the manager.
+	 * Add an ability instance to the manager.
 	 *
 	 * @param BaseAbility $ability Ability instance.
 	 *
