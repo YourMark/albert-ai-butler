@@ -189,8 +189,11 @@ class Update extends BaseAbility {
 
 		$post_id = absint( $args['id'] );
 
-		// Check if post exists.
-		if ( ! get_post( $post_id ) ) {
+		// Check if post exists using REST API.
+		$check_request  = new WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );
+		$check_response = rest_do_request( $check_request );
+
+		if ( $check_response->is_error() ) {
 			return new WP_Error(
 				'post_not_found',
 				__( 'Post not found.', 'extended-abilities' ),
@@ -222,23 +225,12 @@ class Update extends BaseAbility {
 			$request_data['categories'] = array_map( 'absint', $args['categories'] );
 		}
 
-		// Add tags if provided (REST API expects tag IDs, so convert tag names to IDs).
+		// Add tags if provided (convert tag names to IDs using REST API).
 		if ( ! empty( $args['tags'] ) && is_array( $args['tags'] ) ) {
-			$tag_ids = [];
-			foreach ( $args['tags'] as $tag_name ) {
-				$tag = get_term_by( 'name', $tag_name, 'post_tag' );
-				if ( ! $tag ) {
-					// Create tag if it doesn't exist.
-					$tag = wp_insert_term( $tag_name, 'post_tag' );
-					if ( is_wp_error( $tag ) ) {
-						continue;
-					}
-					$tag_ids[] = $tag['term_id'];
-				} else {
-					$tag_ids[] = $tag->term_id;
-				}
+			$tag_ids = $this->get_or_create_tag_ids( $args['tags'] );
+			if ( ! empty( $tag_ids ) ) {
+				$request_data['tags'] = $tag_ids;
 			}
-			$request_data['tags'] = $tag_ids;
 		}
 
 		// Create REST request.
@@ -266,12 +258,61 @@ class Update extends BaseAbility {
 		}
 
 		// Return formatted post data.
+		$post_id = $data['id'];
+
 		return [
-			'id'        => $data['id'],
+			'id'        => $post_id,
 			'title'     => $data['title']['rendered'] ?? '',
 			'status'    => $data['status'],
-			'permalink' => $data['link'] ?? get_permalink( $data['id'] ),
-			'edit_url'  => admin_url( 'post.php?post=' . $data['id'] . '&action=edit' ),
+			'permalink' => $data['link'] ?? '',
+			'edit_url'  => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
 		];
+	}
+
+	/**
+	 * Get or create tag IDs from tag names using REST API.
+	 *
+	 * @param array $tag_names Array of tag names.
+	 * @return array Array of tag IDs.
+	 * @since 1.0.0
+	 */
+	private function get_or_create_tag_ids( array $tag_names ): array {
+		$tag_ids = [];
+
+		foreach ( $tag_names as $tag_name ) {
+			$tag_name = sanitize_text_field( $tag_name );
+
+			// Search for existing tag using REST API.
+			$search_request = new WP_REST_Request( 'GET', '/wp/v2/tags' );
+			$search_request->set_param( 'search', $tag_name );
+			$search_request->set_param( 'per_page', 1 );
+
+			$search_response = rest_do_request( $search_request );
+			$server          = rest_get_server();
+			$search_data     = $server->response_to_data( $search_response, false );
+
+			// Check if exact match exists.
+			if ( ! is_wp_error( $search_data ) && ! empty( $search_data ) ) {
+				foreach ( $search_data as $tag ) {
+					if ( strtolower( $tag['name'] ) === strtolower( $tag_name ) ) {
+						$tag_ids[] = $tag['id'];
+						continue 2;
+					}
+				}
+			}
+
+			// Create new tag using REST API if not found.
+			$create_request = new WP_REST_Request( 'POST', '/wp/v2/tags' );
+			$create_request->set_param( 'name', $tag_name );
+
+			$create_response = rest_do_request( $create_request );
+			$create_data     = $server->response_to_data( $create_response, false );
+
+			if ( ! is_wp_error( $create_data ) && ! empty( $create_data['id'] ) ) {
+				$tag_ids[] = $create_data['id'];
+			}
+		}
+
+		return $tag_ids;
 	}
 }

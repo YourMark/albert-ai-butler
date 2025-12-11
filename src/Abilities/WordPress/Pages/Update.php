@@ -182,8 +182,11 @@ class Update extends BaseAbility {
 
 		$page_id = absint( $args['id'] );
 
-		// Check if page exists.
-		if ( ! get_post( $page_id ) ) {
+		// Check if page exists using REST API.
+		$check_request  = new WP_REST_Request( 'GET', '/wp/v2/pages/' . $page_id );
+		$check_response = rest_do_request( $check_request );
+
+		if ( $check_response->is_error() ) {
 			return new WP_Error(
 				'page_not_found',
 				__( 'Page not found.', 'extended-abilities' ),
@@ -239,12 +242,14 @@ class Update extends BaseAbility {
 		}
 
 		// Return formatted page data.
+		$page_id = $data['id'];
+
 		return [
-			'id'        => $data['id'],
+			'id'        => $page_id,
 			'title'     => $data['title']['rendered'] ?? '',
 			'status'    => $data['status'],
-			'permalink' => $data['link'] ?? get_permalink( $data['id'] ),
-			'edit_url'  => admin_url( 'post.php?post=' . $data['id'] . '&action=edit' ),
+			'permalink' => $data['link'] ?? '',
+			'edit_url'  => admin_url( 'post.php?post=' . $page_id . '&action=edit' ),
 		];
 	}
 }
