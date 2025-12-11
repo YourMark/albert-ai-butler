@@ -9,6 +9,7 @@
 
 namespace ExtendedAbilities\Abilities\WordPress\Posts;
 
+use Alley\WP\Block_Converter\Block_Converter;
 use ExtendedAbilities\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
@@ -186,10 +187,12 @@ class Create extends BaseAbility {
 			);
 		}
 
+		$content = ( new Block_Converter( $args['content'] ) )->convert();
+
 		// Prepare REST API request data.
 		$request_data = [
 			'title'   => sanitize_text_field( $args['title'] ),
-			'content' => wp_kses_post( $args['content'] ?? '' ),
+			'content' => $content,
 			'status'  => sanitize_key( $args['status'] ?? 'draft' ),
 			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
 		];

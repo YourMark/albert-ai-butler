@@ -9,6 +9,7 @@
 
 namespace ExtendedAbilities\Abilities\WordPress\Pages;
 
+use Alley\WP\Block_Converter\Block_Converter;
 use ExtendedAbilities\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
@@ -178,10 +179,13 @@ class Create extends BaseAbility {
 			);
 		}
 
+		// Process content with Block Converter.
+		$content = ! empty( $args['content'] ) ? ( new Block_Converter( $args['content'] ) )->convert() : '';
+
 		// Prepare REST API request data.
 		$request_data = [
 			'title'   => sanitize_text_field( $args['title'] ),
-			'content' => wp_kses_post( $args['content'] ?? '' ),
+			'content' => $content,
 			'status'  => sanitize_key( $args['status'] ?? 'draft' ),
 			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
 		];
@@ -216,12 +220,14 @@ class Create extends BaseAbility {
 		}
 
 		// Return formatted page data.
+		$page_id = $data['id'];
+
 		return [
-			'id'        => $data['id'],
+			'id'        => $page_id,
 			'title'     => $data['title']['rendered'] ?? '',
 			'status'    => $data['status'],
-			'permalink' => $data['link'] ?? get_permalink( $data['id'] ),
-			'edit_url'  => admin_url( 'post.php?post=' . $data['id'] . '&action=edit' ),
+			'permalink' => $data['link'] ?? '',
+			'edit_url'  => admin_url( 'post.php?post=' . $page_id . '&action=edit' ),
 		];
 	}
 }

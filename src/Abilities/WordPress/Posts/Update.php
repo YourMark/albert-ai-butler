@@ -9,6 +9,7 @@
 
 namespace ExtendedAbilities\Abilities\WordPress\Posts;
 
+use Alley\WP\Block_Converter\Block_Converter;
 use ExtendedAbilities\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
@@ -205,7 +206,7 @@ class Update extends BaseAbility {
 		}
 
 		if ( isset( $args['content'] ) ) {
-			$request_data['content'] = wp_kses_post( $args['content'] );
+			$request_data['content'] = ( new Block_Converter( $args['content'] ) )->convert();;
 		}
 
 		if ( isset( $args['status'] ) ) {
