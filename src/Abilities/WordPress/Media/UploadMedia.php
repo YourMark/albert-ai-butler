@@ -55,26 +55,26 @@ class UploadMedia extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'file'     => [
+				'file'        => [
 					'type'        => 'string',
 					'description' => 'File source: can be a URL, local file path, or base64 encoded file data (required)',
 				],
-				'filename' => [
+				'filename'    => [
 					'type'        => 'string',
 					'description' => 'The filename for the uploaded file (optional, auto-detected for URLs/paths, required for base64)',
 					'default'     => '',
 				],
-				'title'    => [
+				'title'       => [
 					'type'        => 'string',
 					'description' => 'Title for the media item in the media library',
 					'default'     => '',
 				],
-				'alt_text' => [
+				'alt_text'    => [
 					'type'        => 'string',
 					'description' => 'Alternative text for images',
 					'default'     => '',
 				],
-				'caption'  => [
+				'caption'     => [
 					'type'        => 'string',
 					'description' => 'Caption for the media item',
 					'default'     => '',
@@ -84,7 +84,7 @@ class UploadMedia extends BaseAbility {
 					'description' => 'Description for the media item',
 					'default'     => '',
 				],
-				'post_id'  => [
+				'post_id'     => [
 					'type'        => 'integer',
 					'description' => 'Optional post ID to attach the media to',
 					'default'     => 0,
@@ -335,7 +335,7 @@ class UploadMedia extends BaseAbility {
 		$file_type = wp_check_filetype_and_ext( $temp_file, $filename );
 
 		if ( ! $file_type['type'] || ! $file_type['ext'] ) {
-			unlink( $temp_file );
+			wp_delete_file( $temp_file );
 			return new WP_Error(
 				'invalid_file_type',
 				__( 'Invalid file type.', 'extended-abilities' ),
@@ -346,7 +346,7 @@ class UploadMedia extends BaseAbility {
 		// Read the file data.
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local temp file.
 		$file_data = file_get_contents( $temp_file );
-		unlink( $temp_file );
+		wp_delete_file( $temp_file );
 
 		if ( false === $file_data ) {
 			return new WP_Error(

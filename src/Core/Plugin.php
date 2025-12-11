@@ -23,6 +23,11 @@ use ExtendedAbilities\Abilities\WordPress\Users\Update as UpdateUser;
 use ExtendedAbilities\Abilities\WordPress\Users\Delete as DeleteUser;
 use ExtendedAbilities\Abilities\WordPress\Media\UploadMedia;
 use ExtendedAbilities\Abilities\WordPress\Media\SetFeaturedImage;
+use ExtendedAbilities\Abilities\WordPress\Taxonomies\ListTaxonomies;
+use ExtendedAbilities\Abilities\WordPress\Taxonomies\ListTerms;
+use ExtendedAbilities\Abilities\WordPress\Taxonomies\CreateTerm;
+use ExtendedAbilities\Abilities\WordPress\Taxonomies\UpdateTerm;
+use ExtendedAbilities\Abilities\WordPress\Taxonomies\DeleteTerm;
 use ExtendedAbilities\Admin\Settings;
 use ExtendedAbilities\Contracts\Interfaces\Hookable;
 use WP\MCP\Core\McpAdapter;
@@ -134,6 +139,13 @@ class Plugin {
 		// Media abilities.
 		$this->abilities_manager->add_ability( new UploadMedia() );
 		$this->abilities_manager->add_ability( new SetFeaturedImage() );
+
+		// Taxonomy abilities.
+		$this->abilities_manager->add_ability( new ListTaxonomies() );
+		$this->abilities_manager->add_ability( new ListTerms() );
+		$this->abilities_manager->add_ability( new CreateTerm() );
+		$this->abilities_manager->add_ability( new UpdateTerm() );
+		$this->abilities_manager->add_ability( new DeleteTerm() );
 
 		// Register abilities manager hooks.
 		$this->abilities_manager->register_hooks();
