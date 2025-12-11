@@ -2,14 +2,14 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Extended Abilities 1.0.0\n"
+"Project-Id-Version: Extended Abilities 0.0.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/extended-abilities\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-12-09T20:14:25+00:00\n"
+"POT-Creation-Date: 2025-12-11T22:34:37+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.11.0\n"
 "X-Domain: extended-abilities\n"
@@ -42,19 +42,95 @@ msgstr ""
 msgid "Extended Abilities Plugin Error: %s"
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Create.php:31
-msgid "Create Page"
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:31
+msgid "Set Featured Image"
+msgstr ""
+
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:32
+msgid "Set an existing media attachment as the featured image for a post or page."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:151
+#: src/Abilities/WordPress/Posts/Delete.php:152
+#: src/Abilities/WordPress/Posts/Update.php:185
+msgid "Post ID is required."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:159
+msgid "Attachment ID is required."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:179
+#: src/Abilities/WordPress/Media/UploadMedia.php:207
+msgid "The specified post or page does not exist."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:192
+msgid "The specified attachment does not exist."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:220
+msgid "Failed to set the featured image."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:31
+msgid "Upload Media"
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:32
+msgid "Upload media files (images, videos, documents) to the WordPress media library."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:185
+msgid "File data is required."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:268
+msgid "An error occurred while uploading the file."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:323
+msgid "Failed to download file from URL."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:341
+#: src/Abilities/WordPress/Media/UploadMedia.php:386
+msgid "Invalid file type."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:354
+msgid "Failed to read downloaded file."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:398
+msgid "Failed to read file."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:423
+msgid "Filename is required when using base64 encoded file data."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:434
+msgid "Invalid base64 encoded file data."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:445
+msgid "Invalid file type. Cannot determine type from filename."
 msgstr ""
 
 #: src/Abilities/WordPress/Pages/Create.php:32
+msgid "Create Page"
+msgstr ""
+
+#: src/Abilities/WordPress/Pages/Create.php:33
 msgid "Create a new WordPress page with specified title and content."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Create.php:176
+#: src/Abilities/WordPress/Pages/Create.php:177
 msgid "Page title is required."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Create.php:213
+#: src/Abilities/WordPress/Pages/Create.php:217
 msgid "An error occurred while creating the page."
 msgstr ""
 
@@ -67,12 +143,12 @@ msgid "Delete a WordPress page permanently or move it to trash."
 msgstr ""
 
 #: src/Abilities/WordPress/Pages/Delete.php:152
-#: src/Abilities/WordPress/Pages/Update.php:177
+#: src/Abilities/WordPress/Pages/Update.php:178
 msgid "Page ID is required."
 msgstr ""
 
 #: src/Abilities/WordPress/Pages/Delete.php:164
-#: src/Abilities/WordPress/Pages/Update.php:188
+#: src/Abilities/WordPress/Pages/Update.php:192
 msgid "Page not found."
 msgstr ""
 
@@ -92,31 +168,31 @@ msgstr ""
 msgid "An error occurred while retrieving pages."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Update.php:31
+#: src/Abilities/WordPress/Pages/Update.php:32
 msgid "Update Page"
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Update.php:32
+#: src/Abilities/WordPress/Pages/Update.php:33
 msgid "Update an existing WordPress page with new title and content."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Update.php:235
+#: src/Abilities/WordPress/Pages/Update.php:239
 msgid "An error occurred while updating the page."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Create.php:31
+#: src/Abilities/WordPress/Posts/Create.php:32
 msgid "Create Post"
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Create.php:32
+#: src/Abilities/WordPress/Posts/Create.php:33
 msgid "Create a new WordPress post with specified title, content, and metadata."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Create.php:184
+#: src/Abilities/WordPress/Posts/Create.php:185
 msgid "Post title is required."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Create.php:240
+#: src/Abilities/WordPress/Posts/Create.php:243
 msgid "An error occurred while creating the post."
 msgstr ""
 
@@ -128,13 +204,8 @@ msgstr ""
 msgid "Delete a WordPress post permanently or move it to trash."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Delete.php:152
-#: src/Abilities/WordPress/Posts/Update.php:184
-msgid "Post ID is required."
-msgstr ""
-
 #: src/Abilities/WordPress/Posts/Delete.php:164
-#: src/Abilities/WordPress/Posts/Update.php:195
+#: src/Abilities/WordPress/Posts/Update.php:199
 msgid "Post not found."
 msgstr ""
 
@@ -154,16 +225,99 @@ msgstr ""
 msgid "An error occurred while retrieving posts."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Update.php:31
+#: src/Abilities/WordPress/Posts/Update.php:32
 msgid "Update Post"
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Update.php:32
+#: src/Abilities/WordPress/Posts/Update.php:33
 msgid "Update an existing WordPress post with new title, content, and metadata."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Update.php:262
+#: src/Abilities/WordPress/Posts/Update.php:255
 msgid "An error occurred while updating the post."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:31
+msgid "Create Term"
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:32
+msgid "Create a new term in a taxonomy (category, tag, etc)."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:138
+msgid "Term name is required."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:182
+msgid "An error occurred while creating the term."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:222
+#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:204
+#: src/Abilities/WordPress/Taxonomies/ListTerms.php:218
+#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:227
+msgid "Invalid taxonomy."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:230
+#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:212
+#: src/Abilities/WordPress/Taxonomies/ListTerms.php:226
+#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:235
+msgid "This taxonomy is not available via REST API."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:31
+msgid "Delete Term"
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:32
+msgid "Delete a term from a taxonomy (category, tag, etc)."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:129
+#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:140
+msgid "Term ID is required."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:164
+msgid "An error occurred while deleting the term."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/ListTaxonomies.php:31
+msgid "List Taxonomies"
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/ListTaxonomies.php:32
+msgid "Retrieve a list of all registered taxonomies."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/ListTaxonomies.php:132
+msgid "An error occurred while retrieving taxonomies."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/ListTerms.php:31
+msgid "List Terms"
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/ListTerms.php:32
+msgid "Retrieve a list of terms from a specific taxonomy (categories, tags, etc)."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/ListTerms.php:173
+msgid "An error occurred while retrieving terms."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:31
+msgid "Update Term"
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:32
+msgid "Update an existing term in a taxonomy (category, tag, etc)."
+msgstr ""
+
+#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:187
+msgid "An error occurred while updating the term."
 msgstr ""
 
 #: src/Abilities/WordPress/Users/Create.php:31
@@ -280,49 +434,45 @@ msgstr ""
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
-#: src/Admin/Settings.php:221
-msgid "Settings Tabs"
-msgstr ""
-
-#: src/Admin/Settings.php:238
+#: src/Admin/Settings.php:219
 msgid "Extended Abilities Settings"
 msgstr ""
 
-#: src/Admin/Settings.php:242
+#: src/Admin/Settings.php:223
 msgid "Configure which abilities are available to AI assistants. Enable only the abilities you trust AI assistants to use on your site."
 msgstr ""
 
-#: src/Admin/Settings.php:270
-#: src/Admin/Settings.php:364
+#: src/Admin/Settings.php:250
+#: src/Admin/Settings.php:344
 msgid "Enable all %s abilities"
 msgstr ""
 
-#: src/Admin/Settings.php:275
+#: src/Admin/Settings.php:255
 msgid "Enable All"
 msgstr ""
 
-#: src/Admin/Settings.php:303
+#: src/Admin/Settings.php:283
 msgid "No abilities are currently registered. Abilities will appear here once they are registered by this plugin or other installed plugins."
 msgstr ""
 
 #. translators: %s: plugin documentation URL
-#: src/Admin/Settings.php:318
+#: src/Admin/Settings.php:298
 msgid "Need help? Check out the %s."
 msgstr ""
 
-#: src/Admin/Settings.php:319
+#: src/Admin/Settings.php:299
 msgid "documentation"
 msgstr ""
 
 #. translators: %s: group name
-#: src/Admin/Settings.php:372
+#: src/Admin/Settings.php:352
 msgid "Enable All %s"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:68
+#: src/Core/AbilitiesManager.php:69
 msgid "WordPress"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:69
+#: src/Core/AbilitiesManager.php:70
 msgid "WordPress core functionality abilities."
 msgstr ""
