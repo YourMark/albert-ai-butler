@@ -27,6 +27,60 @@
 	max-width: 1000px;
 }
 
+/* Tab navigation */
+.extended-abilities-settings .nav-tab-wrapper {
+	margin-bottom: 0;
+	border-bottom: 1px solid var(--ea-border);
+}
+
+.extended-abilities-settings .nav-tab {
+	background: transparent;
+	border: 1px solid transparent;
+	border-bottom: none;
+	margin-left: 0;
+	margin-right: 4px;
+	padding: 8px 12px;
+	font-size: 14px;
+	line-height: 1.4;
+	color: var(--ea-text-secondary);
+}
+
+.extended-abilities-settings .nav-tab:hover {
+	background: var(--ea-bg-white);
+	color: var(--ea-text-primary);
+}
+
+.extended-abilities-settings .nav-tab-active {
+	background: var(--ea-bg-white);
+	border-color: var(--ea-border);
+	border-bottom: 1px solid var(--ea-bg-white);
+	margin-bottom: -1px;
+	color: var(--ea-text-primary);
+}
+
+/* Tab content area */
+.extended-abilities-tab-content {
+	background: var(--ea-bg-white);
+	border: 1px solid var(--ea-border);
+	border-top: none;
+	border-radius: 0 0 var(--ea-border-radius) var(--ea-border-radius);
+	padding: var(--ea-spacing-lg);
+	margin-bottom: var(--ea-spacing-lg);
+}
+
+/* Remove form background when inside tab content */
+.extended-abilities-tab-content form {
+	background: none;
+	border: none;
+	padding: 0;
+	margin: 0;
+}
+
+/* Authentication tab */
+.extended-abilities-auth-tab .notice.inline {
+	margin: var(--ea-spacing-lg) 0;
+}
+
 /* Page description */
 .extended-abilities-description {
 	margin: 0 0 var(--ea-spacing-xl) 0;

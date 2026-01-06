@@ -44,6 +44,42 @@ class Settings implements Hookable {
 	private string $option_name = 'extended_abilities_options';
 
 	/**
+	 * Available tabs.
+	 *
+	 * @since 1.1.0
+	 * @var array|null
+	 */
+	private ?array $tabs = null;
+
+	/**
+	 * Get available tabs.
+	 *
+	 * Tabs are lazy-loaded to avoid translation functions being called too early.
+	 *
+	 * @return array Array of tab slug => label pairs.
+	 * @since 1.1.0
+	 */
+	private function get_tabs(): array {
+		if ( null === $this->tabs ) {
+			$this->tabs = [
+				'abilities'      => __( 'Abilities', 'extended-abilities' ),
+				'authentication' => __( 'Authentication', 'extended-abilities' ),
+			];
+
+			/**
+			 * Filter the available settings tabs.
+			 *
+			 * @param array $tabs Array of tab slug => label pairs.
+			 *
+			 * @since 1.1.0
+			 */
+			$this->tabs = apply_filters( 'extended_abilities_settings_tabs', $this->tabs );
+		}
+
+		return $this->tabs;
+	}
+
+	/**
 	 * Register WordPress hooks.
 	 *
 	 * @return void
@@ -54,6 +90,48 @@ class Settings implements Hookable {
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 		add_action( 'admin_notices', [ $this, 'display_admin_notices' ] );
+	}
+
+	/**
+	 * Get the current active tab.
+	 *
+	 * @return string The current tab slug.
+	 * @since 1.1.0
+	 */
+	private function get_current_tab(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tab navigation doesn't require nonce.
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'abilities';
+
+		$tabs = $this->get_tabs();
+
+		// Ensure the tab exists, fallback to first tab.
+		if ( ! array_key_exists( $tab, $tabs ) ) {
+			$tab = array_key_first( $tabs );
+		}
+
+		return $tab;
+	}
+
+	/**
+	 * Render the tab navigation.
+	 *
+	 * @return void
+	 * @since 1.1.0
+	 */
+	private function render_tabs(): void {
+		$current_tab = $this->get_current_tab();
+		$tabs        = $this->get_tabs();
+		?>
+		<nav class="nav-tab-wrapper wp-clearfix" aria-label="<?php esc_attr_e( 'Settings tabs', 'extended-abilities' ); ?>">
+			<?php foreach ( $tabs as $tab_slug => $tab_label ) : ?>
+				<a href="<?php echo esc_url( admin_url( 'options-general.php?page=' . $this->page_slug . '&tab=' . $tab_slug ) ); ?>"
+					class="nav-tab <?php echo $current_tab === $tab_slug ? 'nav-tab-active' : ''; ?>"
+					<?php echo $current_tab === $tab_slug ? 'aria-current="page"' : ''; ?>>
+					<?php echo esc_html( $tab_label ); ?>
+				</a>
+			<?php endforeach; ?>
+		</nav>
+		<?php
 	}
 
 	/**
@@ -206,89 +284,35 @@ class Settings implements Hookable {
 			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'extended-abilities' ) );
 		}
 
-		// Get all abilities grouped by category.
-		$grouped_abilities = $this->get_grouped_abilities();
-		$options           = get_option( $this->option_name, [] );
-
+		$current_tab = $this->get_current_tab();
 		?>
 		<div class="wrap extended-abilities-settings">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
+			<div class="notice notice-warning">
+				<p>
+					<strong><?php esc_html_e( 'Beta Version:', 'extended-abilities' ); ?></strong>
+					<?php esc_html_e( 'This plugin is currently in beta and is intended for testing purposes only. Please use with caution and do not use on production sites.', 'extended-abilities' ); ?>
+				</p>
+			</div>
+
 			<?php settings_errors(); ?>
 
-			<form method="post" action="options.php" aria-label="<?php esc_attr_e( 'Extended Abilities Settings', 'extended-abilities' ); ?>">
-				<?php settings_fields( $this->option_group ); ?>
+			<?php $this->render_tabs(); ?>
 
-				<p class="description extended-abilities-description">
-					<?php esc_html_e( 'Configure which abilities are available to AI assistants. Enable only the abilities you trust AI assistants to use on your site.', 'extended-abilities' ); ?>
-				</p>
-
-				<?php foreach ( $grouped_abilities as $category => $data ) : ?>
-					<section class="ability-group" aria-labelledby="<?php echo esc_attr( 'group-title-' . $category ); ?>">
-						<div class="ability-group-header">
-							<div class="ability-group-title-wrapper">
-								<button
-										type="button"
-										class="ability-group-collapse-toggle"
-										aria-expanded="true"
-										aria-controls="<?php echo esc_attr( 'group-items-' . $category ); ?>"
-								>
-									<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
-								</button>
-								<h2 class="ability-group-title" id="<?php echo esc_attr( 'group-title-' . $category ); ?>">
-									<?php echo esc_html( $data['title'] ); ?>
-								</h2>
-							</div>
-							<div class="ability-group-toggle-all">
-								<?php $toggle_all_id = 'toggle-all-' . esc_attr( $category ); ?>
-								<label class="extended-abilities-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
-									<input
-											type="checkbox"
-											id="<?php echo esc_attr( $toggle_all_id ); ?>"
-											class="toggle-all-abilities"
-											data-group="<?php echo esc_attr( $category ); ?>"
-											aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'extended-abilities' ), $data['title'] ) ); ?>"
-									/>
-									<span class="extended-abilities-toggle-slider" aria-hidden="true"></span>
-								</label>
-								<label for="<?php echo esc_attr( $toggle_all_id ); ?>">
-									<?php esc_html_e( 'Enable All', 'extended-abilities' ); ?>
-								</label>
-							</div>
-						</div>
-
-						<div class="ability-group-items" id="<?php echo esc_attr( 'group-items-' . $category ); ?>" role="group" aria-labelledby="<?php echo esc_attr( 'group-title-' . $category ); ?>">
-							<?php
-							// Render ungrouped abilities first.
-							if ( ! empty( $data['abilities']['ungrouped'] ) ) {
-								foreach ( $data['abilities']['ungrouped'] as $ability_id => $ability ) {
-									$this->render_ability_item( $ability_id, $ability, $category, $options );
-								}
-							}
-
-							// Render grouped abilities.
-							if ( ! empty( $data['abilities']['groups'] ) ) {
-								foreach ( $data['abilities']['groups'] as $group_id => $group_data ) {
-									$this->render_ability_subgroup( $group_id, $group_data, $category, $options );
-								}
-							}
-							?>
-						</div>
-					</section>
-				<?php endforeach; ?>
-
-				<?php if ( empty( $grouped_abilities ) ) : ?>
-					<div class="notice notice-info">
-						<p>
-							<?php esc_html_e( 'No abilities are currently registered. Abilities will appear here once they are registered by this plugin or other installed plugins.', 'extended-abilities' ); ?>
-						</p>
-					</div>
-				<?php endif; ?>
-
-				<div class="submit">
-					<?php submit_button( null, 'primary', 'submit', false ); ?>
-				</div>
-			</form>
+			<div class="extended-abilities-tab-content">
+				<?php
+				switch ( $current_tab ) {
+					case 'authentication':
+						$this->render_authentication_tab();
+						break;
+					case 'abilities':
+					default:
+						$this->render_abilities_tab();
+						break;
+				}
+				?>
+			</div>
 
 			<div class="extended-abilities-footer">
 				<p>
@@ -301,6 +325,127 @@ class Settings implements Hookable {
 					?>
 				</p>
 			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render the Abilities tab content.
+	 *
+	 * @return void
+	 * @since 1.1.0
+	 */
+	private function render_abilities_tab(): void {
+		// Get all abilities grouped by category.
+		$grouped_abilities = $this->get_grouped_abilities();
+		$options           = get_option( $this->option_name, [] );
+		?>
+		<form method="post" action="options.php" aria-label="<?php esc_attr_e( 'Extended Abilities Settings', 'extended-abilities' ); ?>">
+			<?php settings_fields( $this->option_group ); ?>
+
+			<p class="description extended-abilities-description">
+				<?php esc_html_e( 'Configure which abilities are available to AI assistants. Enable only the abilities you trust AI assistants to use on your site.', 'extended-abilities' ); ?>
+			</p>
+
+			<?php foreach ( $grouped_abilities as $category => $data ) : ?>
+				<section class="ability-group" aria-labelledby="<?php echo esc_attr( 'group-title-' . $category ); ?>">
+					<div class="ability-group-header">
+						<div class="ability-group-title-wrapper">
+							<button
+									type="button"
+									class="ability-group-collapse-toggle"
+									aria-expanded="true"
+									aria-controls="<?php echo esc_attr( 'group-items-' . $category ); ?>"
+							>
+								<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
+							</button>
+							<h2 class="ability-group-title" id="<?php echo esc_attr( 'group-title-' . $category ); ?>">
+								<?php echo esc_html( $data['title'] ); ?>
+							</h2>
+						</div>
+						<div class="ability-group-toggle-all">
+							<?php $toggle_all_id = 'toggle-all-' . esc_attr( $category ); ?>
+							<label class="extended-abilities-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
+								<input
+										type="checkbox"
+										id="<?php echo esc_attr( $toggle_all_id ); ?>"
+										class="toggle-all-abilities"
+										data-group="<?php echo esc_attr( $category ); ?>"
+										<?php /* translators: %s: ability group name */ ?>
+										aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'extended-abilities' ), $data['title'] ) ); ?>"
+								/>
+								<span class="extended-abilities-toggle-slider" aria-hidden="true"></span>
+							</label>
+							<label for="<?php echo esc_attr( $toggle_all_id ); ?>">
+								<?php esc_html_e( 'Enable All', 'extended-abilities' ); ?>
+							</label>
+						</div>
+					</div>
+
+					<div class="ability-group-items" id="<?php echo esc_attr( 'group-items-' . $category ); ?>" role="group" aria-labelledby="<?php echo esc_attr( 'group-title-' . $category ); ?>">
+						<?php
+						// Render ungrouped abilities first.
+						if ( ! empty( $data['abilities']['ungrouped'] ) ) {
+							foreach ( $data['abilities']['ungrouped'] as $ability_id => $ability ) {
+								$this->render_ability_item( $ability_id, $ability, $category, $options );
+							}
+						}
+
+						// Render grouped abilities.
+						if ( ! empty( $data['abilities']['groups'] ) ) {
+							foreach ( $data['abilities']['groups'] as $group_id => $group_data ) {
+								$this->render_ability_subgroup( $group_id, $group_data, $category, $options );
+							}
+						}
+						?>
+					</div>
+				</section>
+			<?php endforeach; ?>
+
+			<?php if ( empty( $grouped_abilities ) ) : ?>
+				<div class="notice notice-info">
+					<p>
+						<?php esc_html_e( 'No abilities are currently registered. Abilities will appear here once they are registered by this plugin or other installed plugins.', 'extended-abilities' ); ?>
+					</p>
+				</div>
+			<?php endif; ?>
+
+			<div class="submit">
+				<?php submit_button( null, 'primary', 'submit', false ); ?>
+			</div>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Render the Authentication tab content.
+	 *
+	 * @return void
+	 * @since 1.1.0
+	 */
+	private function render_authentication_tab(): void {
+		?>
+		<div class="extended-abilities-auth-tab">
+			<p class="description extended-abilities-description">
+				<?php esc_html_e( 'Manage OAuth 2.0 clients and access tokens for AI assistants to connect to your site.', 'extended-abilities' ); ?>
+			</p>
+
+			<div class="notice notice-info inline">
+				<p>
+					<?php esc_html_e( 'OAuth 2.0 authentication will be available in a future update. This will allow AI tools like Claude Desktop and ChatGPT to securely connect to your WordPress site.', 'extended-abilities' ); ?>
+				</p>
+			</div>
+
+			<?php
+			/**
+			 * Fires after the authentication tab content.
+			 *
+			 * Use this hook to add custom authentication UI components.
+			 *
+			 * @since 1.1.0
+			 */
+			do_action( 'extended_abilities_authentication_tab_content' );
+			?>
 		</div>
 		<?php
 	}
@@ -341,6 +486,7 @@ class Settings implements Hookable {
 								id="<?php echo esc_attr( $subgroup_toggle_id ); ?>"
 								class="toggle-subgroup-abilities"
 								data-subgroup="<?php echo esc_attr( $subgroup_class ); ?>"
+								<?php /* translators: %s: ability subgroup name */ ?>
 								aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'extended-abilities' ), $group_data['label'] ) ); ?>"
 						/>
 						<span class="extended-abilities-toggle-slider" aria-hidden="true"></span>
