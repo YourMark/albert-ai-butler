@@ -30,6 +30,7 @@ use ExtendedAbilities\Abilities\WordPress\Taxonomies\UpdateTerm;
 use ExtendedAbilities\Abilities\WordPress\Taxonomies\DeleteTerm;
 use ExtendedAbilities\Admin\Settings;
 use ExtendedAbilities\Contracts\Interfaces\Hookable;
+use ExtendedAbilities\OAuth\Database\Installer as OAuthInstaller;
 use WP\MCP\Core\McpAdapter;
 
 /**
@@ -86,6 +87,9 @@ class Plugin {
 	 * @since 1.0.0
 	 */
 	public function init(): void {
+		// Check for database updates (handles upgrades without re-activation).
+		OAuthInstaller::install();
+
 		// Register admin components.
 		if ( is_admin() ) {
 			$settings = new Settings();
@@ -170,9 +174,8 @@ class Plugin {
 	 * @since 1.0.0
 	 */
 	public static function activate(): void {
-		// Set default options if they don't exist.
-		// Flush rewrite rules if needed.
-		// Create custom database tables if needed.
+		// Install OAuth database tables.
+		OAuthInstaller::install();
 
 		/**
 		 * Fires when the plugin is activated.
