@@ -28,6 +28,7 @@ use ExtendedAbilities\Abilities\WordPress\Taxonomies\ListTerms;
 use ExtendedAbilities\Abilities\WordPress\Taxonomies\CreateTerm;
 use ExtendedAbilities\Abilities\WordPress\Taxonomies\UpdateTerm;
 use ExtendedAbilities\Abilities\WordPress\Taxonomies\DeleteTerm;
+use ExtendedAbilities\Admin\Abilities;
 use ExtendedAbilities\Admin\Settings;
 use ExtendedAbilities\Admin\UserSessions;
 use ExtendedAbilities\Contracts\Interfaces\Hookable;
@@ -98,9 +99,15 @@ class Plugin {
 
 		// Register admin components.
 		if ( is_admin() ) {
+			// Abilities page (creates top-level menu).
+			$abilities = new Abilities();
+			$abilities->register_hooks();
+
+			// Settings page (adds submenu under Abilities).
 			$settings = new Settings();
 			$settings->register_hooks();
 
+			// User sessions page (dashboard submenu for users).
 			$user_sessions = new UserSessions();
 			$user_sessions->register_hooks();
 		}

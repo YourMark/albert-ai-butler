@@ -360,13 +360,30 @@
 	color: var(--ea-text-secondary);
 }
 
+/* Settings sections */
+.ea-settings-section {
+	margin-bottom: var(--ea-spacing-xl);
+}
+
+.ea-settings-section h2 {
+	font-size: 18px;
+	font-weight: 600;
+	margin: 0 0 var(--ea-spacing-lg) 0;
+	padding-bottom: var(--ea-spacing-sm);
+	border-bottom: 1px solid var(--ea-border-light);
+}
+
 /* OAuth Info Box */
 .ea-oauth-info-box {
 	background: #f6f7f7;
 	border: 1px solid var(--ea-border);
 	border-radius: var(--ea-border-radius);
 	padding: var(--ea-spacing-md);
-	margin-bottom: var(--ea-spacing-xl);
+	margin-bottom: var(--ea-spacing-lg);
+}
+
+.ea-oauth-info-box:last-child {
+	margin-bottom: 0;
 }
 
 .ea-oauth-info-box h3 {
@@ -389,7 +406,32 @@
 	padding: var(--ea-spacing-xs) 0;
 }
 
-/* Copy text */
+/* Copy field with button */
+.ea-copy-field {
+	display: flex;
+	align-items: center;
+	gap: var(--ea-spacing-sm);
+	margin-top: var(--ea-spacing-sm);
+}
+
+.ea-copy-field code {
+	flex: 1;
+	padding: var(--ea-spacing-xs) var(--ea-spacing-sm);
+	background: var(--ea-bg-white);
+	border: 1px solid var(--ea-border);
+	border-radius: var(--ea-border-radius);
+	word-break: break-all;
+}
+
+.ea-copy-button {
+	flex-shrink: 0;
+}
+
+.ea-copy-button.copied {
+	color: #00a32a;
+}
+
+/* Copy text (inline) */
 .ea-copy-text {
 	cursor: pointer;
 	position: relative;

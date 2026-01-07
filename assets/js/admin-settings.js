@@ -17,6 +17,7 @@
 		handleIndividualToggles();
 		handleCollapseToggle();
 		handleCopyText();
+		handleCopyButton();
 		handleOAuthModal();
 	}
 
@@ -213,6 +214,45 @@
 				setTimeout(function () {
 					$el.removeClass('copied');
 					$el.removeAttr('data-copied');
+				}, 2000);
+			});
+		});
+	}
+
+	/**
+	 * Handle copy button functionality.
+	 */
+	function handleCopyButton() {
+		$(document).on('click', '.ea-copy-button', function () {
+			const $button = $(this);
+			const targetId = $button.data('copy-target');
+			const $target = $('#' + targetId);
+			const text = $target.text().trim();
+			const originalText = $button.text();
+
+			navigator.clipboard.writeText(text).then(function () {
+				$button.addClass('copied');
+				$button.text(extendedAbilitiesAdmin.i18n.copied);
+
+				setTimeout(function () {
+					$button.removeClass('copied');
+					$button.text(originalText);
+				}, 2000);
+			}).catch(function () {
+				// Fallback for older browsers
+				const textarea = document.createElement('textarea');
+				textarea.value = text;
+				document.body.appendChild(textarea);
+				textarea.select();
+				document.execCommand('copy');
+				document.body.removeChild(textarea);
+
+				$button.addClass('copied');
+				$button.text(extendedAbilitiesAdmin.i18n.copied);
+
+				setTimeout(function () {
+					$button.removeClass('copied');
+					$button.text(originalText);
 				}, 2000);
 			});
 		});
