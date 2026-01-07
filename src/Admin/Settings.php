@@ -129,9 +129,20 @@ class Settings implements Hookable {
 				</div>
 			</div>
 
-			<?php if ( defined( 'EA_DEBUG' ) && EA_DEBUG ) : ?>
+			<?php
+			/**
+			 * Filter to show developer settings like External URL.
+			 *
+			 * @param bool $show Whether to show developer settings. Default false.
+			 *
+			 * @since 1.0.0
+			 */
+			$show_developer_settings = apply_filters( 'extended_abilities_show_developer_settings', false );
+
+			if ( $show_developer_settings ) :
+				?>
 				<div class="ea-oauth-info-box">
-					<h3><?php esc_html_e( 'External URL (Debug)', 'extended-abilities' ); ?></h3>
+					<h3><?php esc_html_e( 'External URL (Developer)', 'extended-abilities' ); ?></h3>
 					<p class="description">
 						<?php esc_html_e( 'If your site is behind a tunnel (Cloudflare, ngrok) or reverse proxy, enter the public URL here.', 'extended-abilities' ); ?>
 					</p>
