@@ -110,7 +110,17 @@ class Settings implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function render_mcp_server_section(): void {
-		$external_url = get_option( 'ea_external_url', '' );
+		/**
+		 * Filter to show developer settings like External URL.
+		 *
+		 * @param bool $show Whether to show developer settings. Default false.
+		 *
+		 * @since 1.0.0
+		 */
+		$show_developer_settings = apply_filters( 'extended_abilities_show_developer_settings', false );
+
+		// Only use external URL if developer settings are enabled.
+		$external_url = $show_developer_settings ? get_option( 'ea_external_url', '' ) : '';
 		$mcp_endpoint = McpServer::get_endpoint_url( $external_url );
 		?>
 		<div class="ea-settings-section">
@@ -130,14 +140,6 @@ class Settings implements Hookable {
 			</div>
 
 			<?php
-			/**
-			 * Filter to show developer settings like External URL.
-			 *
-			 * @param bool $show Whether to show developer settings. Default false.
-			 *
-			 * @since 1.0.0
-			 */
-			$show_developer_settings = apply_filters( 'extended_abilities_show_developer_settings', false );
 
 			if ( $show_developer_settings ) :
 				?>

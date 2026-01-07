@@ -173,18 +173,38 @@ class Server implements Hookable {
 	}
 
 	/**
+	 * Check if developer settings are enabled.
+	 *
+	 * @return bool Whether developer settings are enabled.
+	 * @since 1.0.0
+	 */
+	private static function is_developer_mode(): bool {
+		/**
+		 * Filter to enable developer settings like External URL.
+		 *
+		 * @param bool $show Whether to show developer settings. Default false.
+		 *
+		 * @since 1.0.0
+		 */
+		return apply_filters( 'extended_abilities_show_developer_settings', false );
+	}
+
+	/**
 	 * Get the base URL for OAuth endpoints.
 	 *
-	 * Uses the external URL setting if configured, otherwise falls back to home_url().
+	 * Uses the external URL setting if configured and developer mode is enabled,
+	 * otherwise falls back to home_url().
 	 *
 	 * @return string The base URL.
 	 * @since 1.0.0
 	 */
 	public static function get_base_url(): string {
-		$external_url = get_option( 'ea_external_url', '' );
+		if ( self::is_developer_mode() ) {
+			$external_url = get_option( 'ea_external_url', '' );
 
-		if ( ! empty( $external_url ) ) {
-			return $external_url;
+			if ( ! empty( $external_url ) ) {
+				return $external_url;
+			}
 		}
 
 		return home_url();
@@ -193,20 +213,23 @@ class Server implements Hookable {
 	/**
 	 * Get the server endpoint URL.
 	 *
-	 * @param string $external_url Optional external URL to use as base.
+	 * @param string $external_url Optional external URL to use as base (only used if developer mode enabled).
 	 *
 	 * @return string The full URL to the MCP server endpoint.
 	 * @since 1.0.0
 	 */
 	public static function get_endpoint_url( string $external_url = '' ): string {
-		if ( ! empty( $external_url ) ) {
-			return $external_url . '/wp-json/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE;
-		}
+		// Only use external URL if developer mode is enabled.
+		if ( self::is_developer_mode() ) {
+			if ( ! empty( $external_url ) ) {
+				return $external_url . '/wp-json/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE;
+			}
 
-		// Check for configured external URL.
-		$configured_url = get_option( 'ea_external_url', '' );
-		if ( ! empty( $configured_url ) ) {
-			return $configured_url . '/wp-json/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE;
+			// Check for configured external URL.
+			$configured_url = get_option( 'ea_external_url', '' );
+			if ( ! empty( $configured_url ) ) {
+				return $configured_url . '/wp-json/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE;
+			}
 		}
 
 		return rest_url( self::ROUTE_NAMESPACE . '/' . self::ROUTE );

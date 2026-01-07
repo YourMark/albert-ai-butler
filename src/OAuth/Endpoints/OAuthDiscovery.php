@@ -141,17 +141,29 @@ class OAuthDiscovery implements Hookable {
 	/**
 	 * Get the base URL for OAuth endpoints.
 	 *
-	 * Uses the external URL setting if configured, otherwise falls back to home_url().
+	 * Uses the external URL setting if configured and developer settings are enabled,
+	 * otherwise falls back to home_url().
 	 *
 	 * @return string The base URL.
 	 * @since 1.0.0
 	 */
 	private function get_base_url(): string {
-		// Check for configured external URL (supports tunnels/proxies).
-		$external_url = get_option( 'ea_external_url', '' );
+		/**
+		 * Filter to enable developer settings like External URL.
+		 *
+		 * @param bool $show Whether to show developer settings. Default false.
+		 *
+		 * @since 1.0.0
+		 */
+		$show_developer_settings = apply_filters( 'extended_abilities_show_developer_settings', false );
 
-		if ( ! empty( $external_url ) ) {
-			return $external_url;
+		// Only use external URL if developer settings are enabled.
+		if ( $show_developer_settings ) {
+			$external_url = get_option( 'ea_external_url', '' );
+
+			if ( ! empty( $external_url ) ) {
+				return $external_url;
+			}
 		}
 
 		return home_url();
