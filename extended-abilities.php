@@ -98,3 +98,25 @@ function deactivate_extended_abilities(): void {
 }
 
 register_deactivation_hook( __FILE__, 'deactivate_extended_abilities' );
+
+/**
+ * Add settings link to plugin action links.
+ *
+ * @param array $links Existing plugin action links.
+ *
+ * @return array Modified plugin action links.
+ * @since 1.0.0
+ */
+function extended_abilities_plugin_action_links( array $links ): array {
+	$settings_link = sprintf(
+		'<a href="%s">%s</a>',
+		esc_url( admin_url( 'admin.php?page=ea-settings' ) ),
+		esc_html__( 'Settings', 'extended-abilities' )
+	);
+
+	array_unshift( $links, $settings_link );
+
+	return $links;
+}
+
+add_filter( 'plugin_action_links_' . EXTENDED_ABILITIES_PLUGIN_BASENAME, 'extended_abilities_plugin_action_links' );
