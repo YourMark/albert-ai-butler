@@ -4,7 +4,7 @@
  *
  * @package    ExtendedAbilities
  * @subpackage OAuth\Repositories
- * @since      1.1.0
+ * @since      1.0.0
  */
 
 namespace ExtendedAbilities\OAuth\Repositories;
@@ -19,7 +19,7 @@ use League\OAuth2\Server\Repositories\RefreshTokenRepositoryInterface;
  *
  * Handles persistence and retrieval of refresh tokens from the WordPress database.
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class RefreshTokenRepository implements RefreshTokenRepositoryInterface {
 
@@ -27,7 +27,7 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface {
 	 * Create a new refresh token.
 	 *
 	 * @return RefreshTokenEntityInterface|null The new refresh token entity.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function getNewRefreshToken(): ?RefreshTokenEntityInterface {
 		return new RefreshTokenEntity();
@@ -39,7 +39,7 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface {
 	 * @param RefreshTokenEntityInterface $refresh_token_entity The refresh token entity.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function persistNewRefreshToken( RefreshTokenEntityInterface $refresh_token_entity ): void {
 		global $wpdb;
@@ -65,7 +65,7 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface {
 	 * @param string $token_id The token identifier.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function revokeRefreshToken( $token_id ): void {
 		global $wpdb;
@@ -88,7 +88,7 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface {
 	 * @param string $token_id The token identifier.
 	 *
 	 * @return bool True if revoked, false otherwise.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function isRefreshTokenRevoked( $token_id ): bool {
 		global $wpdb;
@@ -118,7 +118,7 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface {
 	 * @param string $access_token_id The access token identifier.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function revokeRefreshTokensByAccessToken( string $access_token_id ): void {
 		global $wpdb;
@@ -139,7 +139,7 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface {
 	 * Clean up expired refresh tokens.
 	 *
 	 * @return int Number of tokens deleted.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function cleanupExpiredTokens(): int {
 		global $wpdb;

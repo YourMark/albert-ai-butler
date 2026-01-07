@@ -29,8 +29,14 @@ use ExtendedAbilities\Abilities\WordPress\Taxonomies\CreateTerm;
 use ExtendedAbilities\Abilities\WordPress\Taxonomies\UpdateTerm;
 use ExtendedAbilities\Abilities\WordPress\Taxonomies\DeleteTerm;
 use ExtendedAbilities\Admin\Settings;
+use ExtendedAbilities\Admin\UserSessions;
 use ExtendedAbilities\Contracts\Interfaces\Hookable;
+use ExtendedAbilities\MCP\Server as McpServer;
 use ExtendedAbilities\OAuth\Database\Installer as OAuthInstaller;
+use ExtendedAbilities\OAuth\Endpoints\AuthorizationPage;
+use ExtendedAbilities\OAuth\Endpoints\ClientRegistration;
+use ExtendedAbilities\OAuth\Endpoints\OAuthController;
+use ExtendedAbilities\OAuth\Endpoints\OAuthDiscovery;
 use WP\MCP\Core\McpAdapter;
 
 /**
@@ -94,7 +100,30 @@ class Plugin {
 		if ( is_admin() ) {
 			$settings = new Settings();
 			$settings->register_hooks();
+
+			$user_sessions = new UserSessions();
+			$user_sessions->register_hooks();
 		}
+
+		// Register OAuth controller (REST API endpoints for token exchange).
+		$oauth_controller = new OAuthController();
+		$oauth_controller->register_hooks();
+
+		// Register OAuth authorization page (HTML-based consent flow).
+		$authorization_page = new AuthorizationPage();
+		$authorization_page->register_hooks();
+
+		// Register OAuth dynamic client registration (RFC 7591).
+		$client_registration = new ClientRegistration();
+		$client_registration->register_hooks();
+
+		// Register OAuth discovery endpoint (.well-known/oauth-authorization-server).
+		$oauth_discovery = new OAuthDiscovery();
+		$oauth_discovery->register_hooks();
+
+		// Register MCP server (uses OAuth for authentication).
+		$mcp_server = new McpServer();
+		$mcp_server->register_hooks();
 
 		// Try and run the McpAdapter. Without this, it's useless.
 		if ( ! class_exists( McpAdapter::class ) ) {
@@ -177,6 +206,9 @@ class Plugin {
 		// Install OAuth database tables.
 		OAuthInstaller::install();
 
+		// Register OAuth discovery rewrite rules.
+		OAuthDiscovery::activate();
+
 		/**
 		 * Fires when the plugin is activated.
 		 *
@@ -194,8 +226,8 @@ class Plugin {
 	 * @since 1.0.0
 	 */
 	public static function deactivate(): void {
-		// Flush rewrite rules if needed.
-		// Clean up temporary data if needed.
+		// Clean up OAuth discovery rewrite rules.
+		OAuthDiscovery::deactivate();
 
 		/**
 		 * Fires when the plugin is deactivated.

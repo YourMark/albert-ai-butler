@@ -16,6 +16,8 @@
 		handleSubgroupToggleAll();
 		handleIndividualToggles();
 		handleCollapseToggle();
+		handleCopyText();
+		handleOAuthModal();
 	}
 
 	/**
@@ -178,6 +180,141 @@
 			$button.attr('aria-expanded', !isExpanded);
 			$target.toggleClass('collapsed');
 		});
+	}
+
+	/**
+	 * Handle copy-to-clipboard functionality.
+	 */
+	function handleCopyText() {
+		$(document).on('click', '.ea-copy-text', function () {
+			const $el = $(this);
+			const text = $el.text().trim();
+
+			navigator.clipboard.writeText(text).then(function () {
+				$el.addClass('copied');
+				$el.attr('data-copied', extendedAbilitiesAdmin.i18n.copied);
+
+				setTimeout(function () {
+					$el.removeClass('copied');
+					$el.removeAttr('data-copied');
+				}, 2000);
+			}).catch(function () {
+				// Fallback for older browsers
+				const textarea = document.createElement('textarea');
+				textarea.value = text;
+				document.body.appendChild(textarea);
+				textarea.select();
+				document.execCommand('copy');
+				document.body.removeChild(textarea);
+
+				$el.addClass('copied');
+				$el.attr('data-copied', extendedAbilitiesAdmin.i18n.copied);
+
+				setTimeout(function () {
+					$el.removeClass('copied');
+					$el.removeAttr('data-copied');
+				}, 2000);
+			});
+		});
+	}
+
+	/**
+	 * Handle OAuth client modal.
+	 */
+	function handleOAuthModal() {
+		const $modal = $('#ea-oauth-client-modal');
+		const $form = $('#ea-client-form');
+		const $created = $('#ea-client-created');
+		const $spinner = $modal.find('.spinner');
+
+		// Open modal
+		$(document).on('click', '#ea-add-client', function (e) {
+			e.preventDefault();
+			openModal();
+		});
+
+		// Close modal
+		$(document).on('click', '.ea-modal-close, #ea-close-modal-btn', function () {
+			closeModal();
+		});
+
+		// Close on backdrop click
+		$modal.on('click', function (e) {
+			if ($(e.target).is('.ea-modal')) {
+				closeModal();
+			}
+		});
+
+		// Close on ESC key
+		$(document).on('keydown', function (e) {
+			if (e.key === 'Escape' && $modal.is(':visible')) {
+				closeModal();
+			}
+		});
+
+		// Create client
+		$(document).on('click', '#ea-create-client-btn', function () {
+			const userId = $('#ea-client-user').val();
+			const name = $('#ea-client-name').val().trim();
+
+			if (!userId) {
+				$('#ea-client-user').focus();
+				return;
+			}
+
+			if (!name) {
+				$('#ea-client-name').focus();
+				return;
+			}
+
+			$spinner.addClass('is-active');
+
+			$.ajax({
+				url: extendedAbilitiesAdmin.ajaxUrl,
+				type: 'POST',
+				data: {
+					action: 'ea_create_oauth_client',
+					nonce: extendedAbilitiesAdmin.nonce,
+					user_id: userId,
+					name: name
+				},
+				success: function (response) {
+					$spinner.removeClass('is-active');
+
+					if (response.success) {
+						$('#ea-new-client-id').text(response.data.client_id);
+						$('#ea-new-client-secret').text(response.data.client_secret);
+						$form.hide();
+						$created.show();
+					} else {
+						alert(response.data.message || extendedAbilitiesAdmin.i18n.createError);
+					}
+				},
+				error: function () {
+					$spinner.removeClass('is-active');
+					alert(extendedAbilitiesAdmin.i18n.createError);
+				}
+			});
+		});
+
+		function openModal() {
+			// Reset form
+			$form.show();
+			$created.hide();
+			$('#ea-client-user').val('');
+			$('#ea-client-name').val('');
+			$modal.show();
+			$('#ea-client-user').focus();
+		}
+
+		function closeModal() {
+			$modal.hide();
+
+			// If client was created, reload the page to show it
+			if ($created.is(':visible')) {
+				window.location.reload();
+			}
+		}
 	}
 
 	// Initialize on document ready

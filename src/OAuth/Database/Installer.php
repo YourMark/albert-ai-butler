@@ -4,7 +4,7 @@
  *
  * @package    ExtendedAbilities
  * @subpackage OAuth\Database
- * @since      1.1.0
+ * @since      1.0.0
  */
 
 namespace ExtendedAbilities\OAuth\Database;
@@ -14,14 +14,14 @@ namespace ExtendedAbilities\OAuth\Database;
  *
  * Handles creation and management of OAuth database tables.
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class Installer {
 
 	/**
 	 * Database version.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @var string
 	 */
 	const DB_VERSION = '1.0.0';
@@ -29,7 +29,7 @@ class Installer {
 	/**
 	 * Option name for storing database version.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @var string
 	 */
 	const DB_VERSION_OPTION = 'extended_abilities_oauth_db_version';
@@ -38,7 +38,7 @@ class Installer {
 	 * Install database tables.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function install(): void {
 		$installed_version = get_option( self::DB_VERSION_OPTION, '0' );
@@ -53,7 +53,7 @@ class Installer {
 	 * Create database tables.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private static function create_tables(): void {
 		global $wpdb;
@@ -75,7 +75,7 @@ class Installer {
 	 * @param string $charset_collate Database charset and collation.
 	 *
 	 * @return string SQL statement.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private static function get_clients_table_sql( string $charset_collate ): string {
 		global $wpdb;
@@ -104,7 +104,7 @@ class Installer {
 	 * @param string $charset_collate Database charset and collation.
 	 *
 	 * @return string SQL statement.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private static function get_access_tokens_table_sql( string $charset_collate ): string {
 		global $wpdb;
@@ -135,7 +135,7 @@ class Installer {
 	 * @param string $charset_collate Database charset and collation.
 	 *
 	 * @return string SQL statement.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private static function get_refresh_tokens_table_sql( string $charset_collate ): string {
 		global $wpdb;
@@ -163,7 +163,7 @@ class Installer {
 	 * @param string $charset_collate Database charset and collation.
 	 *
 	 * @return string SQL statement.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private static function get_auth_codes_table_sql( string $charset_collate ): string {
 		global $wpdb;
@@ -192,7 +192,7 @@ class Installer {
 	 * Get table names.
 	 *
 	 * @return array Array of table names.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function get_table_names(): array {
 		global $wpdb;
@@ -211,7 +211,7 @@ class Installer {
 	 * Only call this on plugin uninstall, not deactivation.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function uninstall(): void {
 		global $wpdb;

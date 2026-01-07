@@ -4,7 +4,7 @@
  *
  * @package    ExtendedAbilities
  * @subpackage OAuth\Entities
- * @since      1.1.0
+ * @since      1.0.0
  */
 
 namespace ExtendedAbilities\OAuth\Entities;
@@ -19,7 +19,7 @@ use League\OAuth2\Server\Entities\Traits\TokenEntityTrait;
  *
  * Represents an OAuth 2.0 authorization code.
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class AuthCodeEntity implements AuthCodeEntityInterface {
 

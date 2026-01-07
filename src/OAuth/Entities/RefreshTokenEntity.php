@@ -4,7 +4,7 @@
  *
  * @package    ExtendedAbilities
  * @subpackage OAuth\Entities
- * @since      1.1.0
+ * @since      1.0.0
  */
 
 namespace ExtendedAbilities\OAuth\Entities;
@@ -18,7 +18,7 @@ use League\OAuth2\Server\Entities\Traits\RefreshTokenTrait;
  *
  * Represents an OAuth 2.0 refresh token.
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class RefreshTokenEntity implements RefreshTokenEntityInterface {
 

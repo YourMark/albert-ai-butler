@@ -4,7 +4,7 @@
  *
  * @package    ExtendedAbilities
  * @subpackage OAuth\Repositories
- * @since      1.1.0
+ * @since      1.0.0
  */
 
 namespace ExtendedAbilities\OAuth\Repositories;
@@ -19,7 +19,7 @@ use League\OAuth2\Server\Repositories\AuthCodeRepositoryInterface;
  *
  * Handles persistence and retrieval of authorization codes from the WordPress database.
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class AuthCodeRepository implements AuthCodeRepositoryInterface {
 
@@ -27,7 +27,7 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface {
 	 * Create a new auth code.
 	 *
 	 * @return AuthCodeEntityInterface The new auth code entity.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function getNewAuthCode(): AuthCodeEntityInterface {
 		return new AuthCodeEntity();
@@ -39,7 +39,7 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface {
 	 * @param AuthCodeEntityInterface $auth_code_entity The auth code entity.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function persistNewAuthCode( AuthCodeEntityInterface $auth_code_entity ): void {
 		global $wpdb;
@@ -72,7 +72,7 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface {
 	 * @param string $code_id The auth code identifier.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function revokeAuthCode( $code_id ): void {
 		global $wpdb;
@@ -95,7 +95,7 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface {
 	 * @param string $code_id The auth code identifier.
 	 *
 	 * @return bool True if revoked, false otherwise.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function isAuthCodeRevoked( $code_id ): bool {
 		global $wpdb;
@@ -123,7 +123,7 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface {
 	 * Clean up expired authorization codes.
 	 *
 	 * @return int Number of codes deleted.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function cleanupExpiredCodes(): int {
 		global $wpdb;

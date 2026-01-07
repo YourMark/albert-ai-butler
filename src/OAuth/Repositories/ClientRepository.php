@@ -4,7 +4,7 @@
  *
  * @package    ExtendedAbilities
  * @subpackage OAuth\Repositories
- * @since      1.1.0
+ * @since      1.0.0
  */
 
 namespace ExtendedAbilities\OAuth\Repositories;
@@ -18,7 +18,7 @@ use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
  *
  * Handles persistence and retrieval of OAuth clients from the WordPress database.
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class ClientRepository implements ClientRepositoryInterface {
 
@@ -28,7 +28,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * @param string $client_identifier The client's identifier.
 	 *
 	 * @return ClientEntity|null The client entity or null if not found.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function getClientEntity( $client_identifier ): ?ClientEntity {
 		global $wpdb;
@@ -60,7 +60,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * @param string|null $grant_type        The grant type used (optional).
 	 *
 	 * @return bool Whether the client credentials are valid.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function validateClient( $client_identifier, $client_secret, $grant_type ): bool {
 		$client = $this->getClientEntity( $client_identifier );
@@ -99,7 +99,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * @param string|null $client_secret   The plain text client secret (will be hashed).
 	 *
 	 * @return array{client_id: string, client_secret: string|null}|null The client credentials or null on failure.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function createClient(
 		string $name,
@@ -154,7 +154,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * @param string $client_identifier The client's identifier.
 	 *
 	 * @return bool Whether the deletion was successful.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function deleteClient( string $client_identifier ): bool {
 		global $wpdb;
@@ -177,7 +177,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * @param int|null $user_id The WordPress user ID, or null for all clients.
 	 *
 	 * @return ClientEntity[] Array of client entities.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function getClientsByUser( ?int $user_id = null ): array {
 		global $wpdb;
@@ -216,7 +216,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * @param array $row The database row.
 	 *
 	 * @return ClientEntity The hydrated client entity.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private function hydrate_client( array $row ): ClientEntity {
 		$client = new ClientEntity();
@@ -238,7 +238,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * Generate a unique client ID.
 	 *
 	 * @return string The generated client ID.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private function generate_client_id(): string {
 		return 'ea_' . bin2hex( random_bytes( 16 ) );
@@ -248,7 +248,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * Generate a client secret.
 	 *
 	 * @return string The generated client secret.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private function generate_client_secret(): string {
 		return bin2hex( random_bytes( 32 ) );

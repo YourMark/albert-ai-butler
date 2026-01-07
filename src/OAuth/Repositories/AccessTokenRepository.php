@@ -4,7 +4,7 @@
  *
  * @package    ExtendedAbilities
  * @subpackage OAuth\Repositories
- * @since      1.1.0
+ * @since      1.0.0
  */
 
 namespace ExtendedAbilities\OAuth\Repositories;
@@ -20,7 +20,7 @@ use League\OAuth2\Server\Repositories\AccessTokenRepositoryInterface;
  *
  * Handles persistence and retrieval of access tokens from the WordPress database.
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class AccessTokenRepository implements AccessTokenRepositoryInterface {
 
@@ -32,7 +32,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	 * @param string|int|null       $user_identifier The user identifier.
 	 *
 	 * @return AccessTokenEntityInterface The new access token entity.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function getNewToken(
 		ClientEntityInterface $client_entity,
@@ -59,7 +59,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	 * @param AccessTokenEntityInterface $access_token_entity The access token entity.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function persistNewAccessToken( AccessTokenEntityInterface $access_token_entity ): void {
 		global $wpdb;
@@ -92,7 +92,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	 * @param string $token_id The token identifier.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function revokeAccessToken( $token_id ): void {
 		global $wpdb;
@@ -115,7 +115,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	 * @param string $token_id The token identifier.
 	 *
 	 * @return bool True if revoked, false otherwise.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function isAccessTokenRevoked( $token_id ): bool {
 		global $wpdb;
@@ -145,7 +145,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	 * @param int|null $user_id The WordPress user ID, or null for all tokens.
 	 *
 	 * @return array Array of access token data.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function getAccessTokensByUser( ?int $user_id = null ): array {
 		global $wpdb;
@@ -178,7 +178,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	 * @param string $token_id The token identifier.
 	 *
 	 * @return bool Whether the deletion was successful.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function deleteAccessToken( string $token_id ): bool {
 		global $wpdb;
@@ -199,7 +199,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	 * Clean up expired tokens.
 	 *
 	 * @return int Number of tokens deleted.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function cleanupExpiredTokens(): int {
 		global $wpdb;

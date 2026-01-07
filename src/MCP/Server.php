@@ -1,0 +1,214 @@
+<?php
+/**
+ * MCP Server with OAuth Authentication
+ *
+ * @package    ExtendedAbilities
+ * @subpackage MCP
+ * @since      1.0.0
+ */
+
+namespace ExtendedAbilities\MCP;
+
+use ExtendedAbilities\Contracts\Interfaces\Hookable;
+use ExtendedAbilities\OAuth\Server\TokenValidator;
+use WP\MCP\Core\McpAdapter;
+use WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler;
+use WP\MCP\Infrastructure\Observability\NullMcpObservabilityHandler;
+use WP\MCP\Transport\HttpTransport;
+use WP_Error;
+use WP_REST_Request;
+
+/**
+ * Server class
+ *
+ * Creates and configures an MCP server that authenticates via OAuth 2.0 Bearer tokens.
+ * This allows AI clients like Claude Desktop to connect using OAuth authentication.
+ *
+ * @since 1.0.0
+ */
+class Server implements Hookable {
+
+	/**
+	 * Server ID.
+	 *
+	 * @since 1.0.0
+	 * @var string
+	 */
+	const SERVER_ID = 'extended-abilities';
+
+	/**
+	 * Server route namespace.
+	 *
+	 * @since 1.0.0
+	 * @var string
+	 */
+	const ROUTE_NAMESPACE = 'extended-abilities';
+
+	/**
+	 * Server route.
+	 *
+	 * @since 1.0.0
+	 * @var string
+	 */
+	const ROUTE = 'mcp';
+
+	/**
+	 * Register WordPress hooks.
+	 *
+	 * @return void
+	 * @since 1.0.0
+	 */
+	public function register_hooks(): void {
+		add_action( 'mcp_adapter_init', [ $this, 'create_server' ] );
+		add_filter( 'rest_request_before_callbacks', [ $this, 'add_oauth_discovery_headers' ], 10, 3 );
+	}
+
+	/**
+	 * Add OAuth discovery headers for unauthorized MCP requests.
+	 *
+	 * When a request to our MCP endpoint fails authentication, we need to tell
+	 * the client where to find OAuth authorization server metadata.
+	 *
+	 * @param mixed            $response The response.
+	 * @param array            $handler  The handler.
+	 * @param \WP_REST_Request $request  The request.
+	 *
+	 * @return mixed The response.
+	 * @since 1.0.0
+	 */
+	public function add_oauth_discovery_headers( $response, $handler, $request ) {
+		// Only handle our MCP endpoint.
+		$route = $request->get_route();
+		if ( strpos( $route, '/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE ) === false ) {
+			return $response;
+		}
+
+		// Check if there's no Bearer token - add discovery headers.
+		$token = TokenValidator::get_bearer_token( $request );
+		if ( empty( $token ) ) {
+			// Send headers for OAuth discovery per MCP spec (RFC 6750).
+			// Point to REST API resource endpoint for OAuth discovery.
+			$resource_url = self::get_base_url() . '/wp-json/extended-abilities/v1/oauth/resource';
+			header( 'WWW-Authenticate: Bearer realm="MCP", resource="' . $resource_url . '"' );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Create the MCP server.
+	 *
+	 * @param McpAdapter $adapter The MCP adapter instance.
+	 *
+	 * @return void
+	 * @since 1.0.0
+	 */
+	public function create_server( McpAdapter $adapter ): void {
+		$adapter->create_server(
+			self::SERVER_ID,
+			self::ROUTE_NAMESPACE,
+			self::ROUTE,
+			__( 'Extended Abilities MCP Server', 'extended-abilities' ),
+			__( 'MCP server for AI assistants to interact with WordPress', 'extended-abilities' ),
+			EXTENDED_ABILITIES_VERSION,
+			[ HttpTransport::class ],
+			ErrorLogMcpErrorHandler::class,
+			NullMcpObservabilityHandler::class,
+			$this->get_tools(),
+			[], // Resources.
+			[], // Prompts.
+			[ $this, 'permission_callback' ]
+		);
+	}
+
+	/**
+	 * Get the tools to register for this server.
+	 *
+	 * Uses the same core abilities as the default MCP server.
+	 *
+	 * @return array The tool names.
+	 * @since 1.0.0
+	 */
+	private function get_tools(): array {
+		return [
+			'mcp-adapter/discover-abilities',
+			'mcp-adapter/get-ability-info',
+			'mcp-adapter/execute-ability',
+		];
+	}
+
+	/**
+	 * Permission callback for OAuth authentication.
+	 *
+	 * Validates OAuth 2.0 Bearer tokens and sets the current WordPress user.
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 *
+	 * @return bool|WP_Error True if authenticated, WP_Error otherwise.
+	 * @since 1.0.0
+	 */
+	public function permission_callback( WP_REST_Request $request ): bool|WP_Error {
+		// Check for Bearer token.
+		$token = TokenValidator::get_bearer_token( $request );
+
+		if ( empty( $token ) ) {
+			return new WP_Error(
+				'oauth_missing_token',
+				__( 'OAuth Bearer token required. Include an Authorization header with a valid Bearer token.', 'extended-abilities' ),
+				[ 'status' => 401 ]
+			);
+		}
+
+		// Validate the token.
+		$user = TokenValidator::validate_request( $request );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		// Set the current user for the request.
+		wp_set_current_user( $user->ID );
+
+		return true;
+	}
+
+	/**
+	 * Get the base URL for OAuth endpoints.
+	 *
+	 * Uses the external URL setting if configured, otherwise falls back to home_url().
+	 *
+	 * @return string The base URL.
+	 * @since 1.0.0
+	 */
+	public static function get_base_url(): string {
+		$external_url = get_option( 'ea_external_url', '' );
+
+		if ( ! empty( $external_url ) ) {
+			return $external_url;
+		}
+
+		return home_url();
+	}
+
+	/**
+	 * Get the server endpoint URL.
+	 *
+	 * @param string $external_url Optional external URL to use as base.
+	 *
+	 * @return string The full URL to the MCP server endpoint.
+	 * @since 1.0.0
+	 */
+	public static function get_endpoint_url( string $external_url = '' ): string {
+		if ( ! empty( $external_url ) ) {
+			return $external_url . '/wp-json/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE;
+		}
+
+		// Check for configured external URL.
+		$configured_url = get_option( 'ea_external_url', '' );
+		if ( ! empty( $configured_url ) ) {
+			return $configured_url . '/wp-json/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE;
+		}
+
+		return rest_url( self::ROUTE_NAMESPACE . '/' . self::ROUTE );
+	}
+}

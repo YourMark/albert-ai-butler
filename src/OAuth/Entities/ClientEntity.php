@@ -4,7 +4,7 @@
  *
  * @package    ExtendedAbilities
  * @subpackage OAuth\Entities
- * @since      1.1.0
+ * @since      1.0.0
  */
 
 namespace ExtendedAbilities\OAuth\Entities;
@@ -18,7 +18,7 @@ use League\OAuth2\Server\Entities\Traits\EntityTrait;
  *
  * Represents an OAuth 2.0 client application.
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class ClientEntity implements ClientEntityInterface {
 
@@ -28,7 +28,7 @@ class ClientEntity implements ClientEntityInterface {
 	/**
 	 * The WordPress user ID who created this client.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @var int|null
 	 */
 	private ?int $user_id = null;
@@ -36,7 +36,7 @@ class ClientEntity implements ClientEntityInterface {
 	/**
 	 * The client secret (hashed).
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @var string|null
 	 */
 	private ?string $client_secret = null;
@@ -44,7 +44,7 @@ class ClientEntity implements ClientEntityInterface {
 	/**
 	 * When the client was created.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 * @var \DateTimeImmutable|null
 	 */
 	private ?\DateTimeImmutable $created_at = null;
@@ -55,7 +55,7 @@ class ClientEntity implements ClientEntityInterface {
 	 * @param string $name The client name.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function setName( string $name ): void {
 		$this->name = $name;
@@ -67,7 +67,7 @@ class ClientEntity implements ClientEntityInterface {
 	 * @param string|string[] $uri The redirect URI(s).
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function setRedirectUri( $uri ): void {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Property defined by league/oauth2-server trait.
@@ -80,7 +80,7 @@ class ClientEntity implements ClientEntityInterface {
 	 * @param bool $is_confidential Whether the client is confidential.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function setConfidential( bool $is_confidential ): void {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Property defined by league/oauth2-server trait.
@@ -93,7 +93,7 @@ class ClientEntity implements ClientEntityInterface {
 	 * @param int|null $user_id The user ID.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function setUserId( ?int $user_id ): void {
 		$this->user_id = $user_id;
@@ -103,7 +103,7 @@ class ClientEntity implements ClientEntityInterface {
 	 * Get the WordPress user ID who created this client.
 	 *
 	 * @return int|null The user ID.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function getUserId(): ?int {
 		return $this->user_id;
@@ -115,7 +115,7 @@ class ClientEntity implements ClientEntityInterface {
 	 * @param string|null $secret The hashed client secret.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function setClientSecret( ?string $secret ): void {
 		$this->client_secret = $secret;
@@ -125,7 +125,7 @@ class ClientEntity implements ClientEntityInterface {
 	 * Get the client secret (hashed).
 	 *
 	 * @return string|null The hashed client secret.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function getClientSecret(): ?string {
 		return $this->client_secret;
@@ -137,7 +137,7 @@ class ClientEntity implements ClientEntityInterface {
 	 * @param \DateTimeImmutable|null $created_at The creation timestamp.
 	 *
 	 * @return void
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function setCreatedAt( ?\DateTimeImmutable $created_at ): void {
 		$this->created_at = $created_at;
@@ -147,7 +147,7 @@ class ClientEntity implements ClientEntityInterface {
 	 * Get the creation timestamp.
 	 *
 	 * @return \DateTimeImmutable|null The creation timestamp.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function getCreatedAt(): ?\DateTimeImmutable {
 		return $this->created_at;

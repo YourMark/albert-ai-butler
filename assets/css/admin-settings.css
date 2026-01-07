@@ -360,6 +360,190 @@
 	color: var(--ea-text-secondary);
 }
 
+/* OAuth Info Box */
+.ea-oauth-info-box {
+	background: #f6f7f7;
+	border: 1px solid var(--ea-border);
+	border-radius: var(--ea-border-radius);
+	padding: var(--ea-spacing-md);
+	margin-bottom: var(--ea-spacing-xl);
+}
+
+.ea-oauth-info-box h3 {
+	margin: 0 0 var(--ea-spacing-md) 0;
+	font-size: 14px;
+}
+
+.ea-oauth-info-box .form-table {
+	margin: 0;
+}
+
+.ea-oauth-info-box .form-table th {
+	padding: var(--ea-spacing-xs) 0;
+	width: 150px;
+	font-weight: normal;
+	color: var(--ea-text-secondary);
+}
+
+.ea-oauth-info-box .form-table td {
+	padding: var(--ea-spacing-xs) 0;
+}
+
+/* Copy text */
+.ea-copy-text {
+	cursor: pointer;
+	position: relative;
+	padding: 4px 8px;
+	display: inline-block;
+}
+
+.ea-copy-text:hover {
+	background: #e5e5e5;
+	border-radius: 2px;
+}
+
+.ea-copy-text.copied::after {
+	content: attr(data-copied);
+	position: absolute;
+	top: -28px;
+	left: 50%;
+	transform: translateX(-50%);
+	background: #1d2327;
+	color: #fff;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 11px;
+	white-space: nowrap;
+}
+
+/* OAuth clients table */
+.extended-abilities-auth-tab .wp-list-table {
+	margin-top: var(--ea-spacing-md);
+}
+
+.extended-abilities-auth-tab .tablenav {
+	margin: var(--ea-spacing-md) 0;
+}
+
+.ea-uri-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ea-uri-list li {
+	margin-bottom: 4px;
+}
+
+.ea-uri-list li:last-child {
+	margin-bottom: 0;
+}
+
+/* Modal styles */
+.ea-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 100100;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.7);
+}
+
+.ea-modal-content {
+	background: var(--ea-bg-white);
+	border-radius: var(--ea-border-radius);
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+	max-width: 500px;
+	width: 90%;
+	max-height: 90vh;
+	overflow-y: auto;
+}
+
+.ea-modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--ea-spacing-md) var(--ea-spacing-lg);
+	border-bottom: 1px solid var(--ea-border);
+}
+
+.ea-modal-header h2 {
+	margin: 0;
+	font-size: 18px;
+}
+
+.ea-modal-close {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	color: var(--ea-text-secondary);
+	display: flex;
+	align-items: center;
+}
+
+.ea-modal-close:hover {
+	color: var(--ea-text-primary);
+}
+
+.ea-modal-body {
+	padding: var(--ea-spacing-lg);
+}
+
+.ea-modal-body p {
+	margin-bottom: var(--ea-spacing-md);
+}
+
+.ea-modal-body label {
+	display: block;
+	font-weight: 500;
+	margin-bottom: 4px;
+}
+
+.ea-modal-body input.regular-text {
+	width: 100%;
+}
+
+.ea-modal-body .description {
+	display: block;
+	margin-top: 4px;
+	color: var(--ea-text-secondary);
+	font-size: 12px;
+}
+
+.ea-modal-body .submit {
+	margin-top: var(--ea-spacing-lg);
+	padding-top: var(--ea-spacing-md);
+	border-top: 1px solid var(--ea-border-light);
+}
+
+.ea-modal-body .spinner {
+	float: none;
+	margin-left: var(--ea-spacing-xs);
+}
+
+.ea-modal-body .spinner.is-active {
+	visibility: visible;
+}
+
+.ea-modal-body .form-table {
+	margin: var(--ea-spacing-md) 0;
+}
+
+.ea-modal-body .form-table th {
+	padding: var(--ea-spacing-xs) 0;
+	width: 120px;
+}
+
+.ea-modal-body .form-table td {
+	padding: var(--ea-spacing-xs) 0;
+}
+
+.ea-modal-body .notice {
+	margin: 0 0 var(--ea-spacing-md) 0;
+}
+
 /* Responsive */
 @media screen and (max-width: 782px) {
 	.ability-group-header {
@@ -376,5 +560,19 @@
 		flex-direction: column;
 		align-items: flex-start;
 		gap: var(--ea-spacing-xs);
+	}
+
+	.ea-modal-content {
+		width: 95%;
+		margin: var(--ea-spacing-md);
+	}
+
+	.ea-oauth-info-box .form-table th {
+		width: auto;
+		display: block;
+	}
+
+	.ea-oauth-info-box .form-table td {
+		display: block;
 	}
 }

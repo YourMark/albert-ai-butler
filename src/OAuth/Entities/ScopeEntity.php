@@ -4,7 +4,7 @@
  *
  * @package    ExtendedAbilities
  * @subpackage OAuth\Entities
- * @since      1.1.0
+ * @since      1.0.0
  */
 
 namespace ExtendedAbilities\OAuth\Entities;
@@ -20,7 +20,7 @@ use League\OAuth2\Server\Entities\Traits\ScopeTrait;
  * Note: This plugin uses full access based on user capabilities,
  * so scopes are minimal (just a default scope).
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class ScopeEntity implements ScopeEntityInterface {
 
@@ -32,7 +32,7 @@ class ScopeEntity implements ScopeEntityInterface {
 	 *
 	 * @param string $identifier The scope identifier.
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function __construct( string $identifier = 'default' ) {
 		$this->setIdentifier( $identifier );
@@ -42,7 +42,7 @@ class ScopeEntity implements ScopeEntityInterface {
 	 * Serialize the scope to JSON.
 	 *
 	 * @return mixed Data for JSON serialization.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	#[\ReturnTypeWillChange]
 	public function jsonSerialize() {
