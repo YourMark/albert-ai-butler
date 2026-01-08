@@ -302,6 +302,46 @@ if ( is_admin() ) {
 - Optimize database queries to avoid performance bottlenecks
 - Minimize HTTP requests through proper asset management
 
+### JavaScript Standards (All Plugins)
+- **NEVER use jQuery** - always use modern vanilla JavaScript
+- Use ES6+ features (const/let, arrow functions, template literals, destructuring)
+- Organize code using the module pattern for separation of concerns
+- Use async/await for asynchronous operations (fetch, clipboard API, etc.)
+- Use event delegation where appropriate for dynamic content
+- Use `document.querySelectorAll()` and `element.closest()` for DOM traversal
+- Use native `FormData` and `fetch` API for AJAX requests
+- No jQuery dependency in `wp_enqueue_script()` calls for admin scripts
+
+**Example Module Pattern:**
+```javascript
+const MyModule = {
+    init() {
+        this.bindEvents();
+    },
+
+    bindEvents() {
+        document.addEventListener( 'click', ( e ) => {
+            if ( e.target.closest( '.my-button' ) ) {
+                this.handleClick( e );
+            }
+        } );
+    },
+
+    async handleClick( e ) {
+        const response = await fetch( '/api/endpoint' );
+        const data = await response.json();
+        // Handle response
+    },
+};
+
+// Initialize when DOM is ready
+if ( document.readyState === 'loading' ) {
+    document.addEventListener( 'DOMContentLoaded', () => MyModule.init() );
+} else {
+    MyModule.init();
+}
+```
+
 ## Testing & Deployment
 
 ### Quality Assurance

@@ -96,9 +96,16 @@ class Settings implements Hookable {
 
 			<?php settings_errors(); ?>
 
-			<?php $this->render_mcp_server_section(); ?>
+			<div class="ea-content-header">
+				<p class="ea-content-description">
+					<?php esc_html_e( 'Configure how AI tools connect to your site and manage user access.', 'extended-abilities' ); ?>
+				</p>
+			</div>
 
-			<?php $this->render_authentication_section(); ?>
+			<div class="ea-settings-grid">
+				<?php $this->render_mcp_server_section(); ?>
+				<?php $this->render_authentication_section(); ?>
+			</div>
 		</div>
 		<?php
 	}
@@ -123,50 +130,51 @@ class Settings implements Hookable {
 		$external_url = $show_developer_settings ? get_option( 'ea_external_url', '' ) : '';
 		$mcp_endpoint = McpServer::get_endpoint_url( $external_url );
 		?>
-		<div class="ea-settings-section">
-			<h2><?php esc_html_e( 'MCP Server', 'extended-abilities' ); ?></h2>
-
-			<div class="ea-oauth-info-box">
-				<h3><?php esc_html_e( 'Connection URL', 'extended-abilities' ); ?></h3>
-				<p class="description">
-					<?php esc_html_e( 'Use this URL to connect AI tools (Claude Desktop, ChatGPT, etc.) to your site. Users will authenticate with their WordPress credentials.', 'extended-abilities' ); ?>
-				</p>
-				<div class="ea-copy-field">
-					<code class="ea-copy-text" id="mcp-endpoint-url"><?php echo esc_html( $mcp_endpoint ); ?></code>
-					<button type="button" class="button ea-copy-button" data-copy-target="mcp-endpoint-url">
-						<?php esc_html_e( 'Copy', 'extended-abilities' ); ?>
-					</button>
-				</div>
+		<section class="ea-settings-card">
+			<div class="ea-settings-card-header">
+				<span class="dashicons dashicons-cloud" aria-hidden="true"></span>
+				<h2><?php esc_html_e( 'MCP Server', 'extended-abilities' ); ?></h2>
 			</div>
-
-			<?php
-
-			if ( $show_developer_settings ) :
-				?>
-				<div class="ea-oauth-info-box">
-					<h3><?php esc_html_e( 'External URL (Developer)', 'extended-abilities' ); ?></h3>
-					<p class="description">
-						<?php esc_html_e( 'If your site is behind a tunnel (Cloudflare, ngrok) or reverse proxy, enter the public URL here.', 'extended-abilities' ); ?>
+			<div class="ea-settings-card-body">
+				<div class="ea-field-group">
+					<label class="ea-field-label"><?php esc_html_e( 'Connection URL', 'extended-abilities' ); ?></label>
+					<p class="ea-field-description">
+						<?php esc_html_e( 'Use this URL to connect AI tools (Claude Desktop, ChatGPT, etc.) to your site.', 'extended-abilities' ); ?>
 					</p>
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ea-external-url-form">
-						<?php wp_nonce_field( 'ea_save_external_url', 'ea_external_url_nonce' ); ?>
-						<input type="hidden" name="action" value="ea_save_external_url" />
-						<input
-							type="url"
-							name="ea_external_url"
-							id="ea-external-url"
-							value="<?php echo esc_attr( $external_url ); ?>"
-							placeholder="<?php esc_attr_e( 'https://your-tunnel-url.trycloudflare.com', 'extended-abilities' ); ?>"
-							class="regular-text"
-						/>
-						<button type="submit" class="button"><?php esc_html_e( 'Save', 'extended-abilities' ); ?></button>
-						<?php if ( ! empty( $external_url ) ) : ?>
-							<button type="submit" name="ea_clear_url" value="1" class="button"><?php esc_html_e( 'Clear', 'extended-abilities' ); ?></button>
-						<?php endif; ?>
-					</form>
+					<div class="ea-url-field">
+						<code class="ea-url-value" id="mcp-endpoint-url"><?php echo esc_html( $mcp_endpoint ); ?></code>
+						<button type="button" class="button ea-copy-button" data-copy-target="mcp-endpoint-url">
+							<?php esc_html_e( 'Copy', 'extended-abilities' ); ?>
+						</button>
+					</div>
 				</div>
-			<?php endif; ?>
-		</div>
+
+				<?php if ( $show_developer_settings ) : ?>
+					<div class="ea-field-group">
+						<label class="ea-field-label" for="ea-external-url"><?php esc_html_e( 'External URL', 'extended-abilities' ); ?></label>
+						<p class="ea-field-description">
+							<?php esc_html_e( 'If your site is behind a tunnel or reverse proxy, enter the public URL here.', 'extended-abilities' ); ?>
+						</p>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ea-inline-form">
+							<?php wp_nonce_field( 'ea_save_external_url', 'ea_external_url_nonce' ); ?>
+							<input type="hidden" name="action" value="ea_save_external_url" />
+							<input
+								type="url"
+								name="ea_external_url"
+								id="ea-external-url"
+								value="<?php echo esc_attr( $external_url ); ?>"
+								placeholder="<?php esc_attr_e( 'https://your-tunnel-url.example.com', 'extended-abilities' ); ?>"
+								class="ea-text-input"
+							/>
+							<button type="submit" class="button"><?php esc_html_e( 'Save', 'extended-abilities' ); ?></button>
+							<?php if ( ! empty( $external_url ) ) : ?>
+								<button type="submit" name="ea_clear_url" value="1" class="button"><?php esc_html_e( 'Clear', 'extended-abilities' ); ?></button>
+							<?php endif; ?>
+						</form>
+					</div>
+				<?php endif; ?>
+			</div>
+		</section>
 		<?php
 	}
 
@@ -187,109 +195,108 @@ class Settings implements Hookable {
 			]
 		);
 		?>
-		<div class="ea-settings-section">
-			<h2><?php esc_html_e( 'Authentication', 'extended-abilities' ); ?></h2>
+		<section class="ea-settings-card">
+			<div class="ea-settings-card-header">
+				<span class="dashicons dashicons-admin-users" aria-hidden="true"></span>
+				<h2><?php esc_html_e( 'Authentication', 'extended-abilities' ); ?></h2>
+			</div>
+			<div class="ea-settings-card-body">
+				<div class="ea-field-group">
+					<label class="ea-field-label"><?php esc_html_e( 'Allowed Users', 'extended-abilities' ); ?></label>
+					<p class="ea-field-description">
+						<?php esc_html_e( 'Select users who can connect AI tools to your site. Only these users can authorize AI assistants.', 'extended-abilities' ); ?>
+					</p>
 
-			<div class="ea-oauth-info-box">
-				<h3><?php esc_html_e( 'Allowed Users', 'extended-abilities' ); ?></h3>
-				<p class="description">
-					<?php esc_html_e( 'Select users who can connect AI tools to your site via MCP. Only these users will be able to authorize AI assistants.', 'extended-abilities' ); ?>
-				</p>
-
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ea-add-user-form">
-					<?php wp_nonce_field( 'ea_add_allowed_user', 'ea_add_user_nonce' ); ?>
-					<input type="hidden" name="action" value="ea_add_allowed_user" />
-					<select name="ea_user_id" id="ea-add-user-select" class="regular-text">
-						<option value=""><?php esc_html_e( '— Select User to Add —', 'extended-abilities' ); ?></option>
-						<?php foreach ( $all_users as $user ) : ?>
-							<?php if ( ! in_array( $user->ID, $allowed_users, true ) ) : ?>
-								<option value="<?php echo esc_attr( $user->ID ); ?>">
-									<?php echo esc_html( $user->display_name . ' (' . $user->user_email . ')' ); ?>
-								</option>
-							<?php endif; ?>
-						<?php endforeach; ?>
-					</select>
-					<button type="submit" class="button"><?php esc_html_e( 'Add User', 'extended-abilities' ); ?></button>
-				</form>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ea-inline-form">
+						<?php wp_nonce_field( 'ea_add_allowed_user', 'ea_add_user_nonce' ); ?>
+						<input type="hidden" name="action" value="ea_add_allowed_user" />
+						<select name="ea_user_id" id="ea-add-user-select" class="ea-select-input">
+							<option value=""><?php esc_html_e( '— Select User —', 'extended-abilities' ); ?></option>
+							<?php foreach ( $all_users as $user ) : ?>
+								<?php if ( ! in_array( $user->ID, $allowed_users, true ) ) : ?>
+									<option value="<?php echo esc_attr( $user->ID ); ?>">
+										<?php echo esc_html( $user->display_name . ' (' . $user->user_email . ')' ); ?>
+									</option>
+								<?php endif; ?>
+							<?php endforeach; ?>
+						</select>
+						<button type="submit" class="button button-primary"><?php esc_html_e( 'Add User', 'extended-abilities' ); ?></button>
+					</form>
+				</div>
 
 				<?php if ( empty( $allowed_users ) ) : ?>
-					<p><em><?php esc_html_e( 'No users have MCP access yet. Add users above.', 'extended-abilities' ); ?></em></p>
+					<div class="ea-empty-state">
+						<span class="dashicons dashicons-groups" aria-hidden="true"></span>
+						<p><?php esc_html_e( 'No users have access yet. Add users above to allow them to connect AI tools.', 'extended-abilities' ); ?></p>
+					</div>
 				<?php else : ?>
-					<table class="wp-list-table widefat fixed striped" style="margin-top: 15px;">
-						<thead>
-							<tr>
-								<th><?php esc_html_e( 'User', 'extended-abilities' ); ?></th>
-								<th><?php esc_html_e( 'Active Sessions', 'extended-abilities' ); ?></th>
-								<th><?php esc_html_e( 'Actions', 'extended-abilities' ); ?></th>
-							</tr>
-						</thead>
-						<tbody>
-							<?php foreach ( $allowed_users as $user_id ) : ?>
-								<?php
-								$user          = get_user_by( 'id', $user_id );
-								$session_count = $this->get_user_session_count( $user_id );
+					<div class="ea-users-list">
+						<?php foreach ( $allowed_users as $user_id ) : ?>
+							<?php
+							$user          = get_user_by( 'id', $user_id );
+							$session_count = $this->get_user_session_count( $user_id );
 
-								if ( ! $user ) {
-									continue;
-								}
-								?>
-								<tr>
-									<td>
-										<strong><?php echo esc_html( $user->display_name ); ?></strong>
-										<br><small><?php echo esc_html( $user->user_email ); ?></small>
-									</td>
-									<td>
-										<?php if ( $session_count > 0 ) : ?>
+							if ( ! $user ) {
+								continue;
+							}
+
+							$remove_url = wp_nonce_url(
+								add_query_arg(
+									[
+										'page'    => $this->page_slug,
+										'action'  => 'remove_allowed_user',
+										'user_id' => $user_id,
+									],
+									admin_url( 'admin.php' )
+								),
+								'remove_user_' . $user_id
+							);
+
+							$sessions_url = add_query_arg(
+								[
+									'page'    => $this->page_slug,
+									'action'  => 'view_user_sessions',
+									'user_id' => $user_id,
+								],
+								admin_url( 'admin.php' )
+							);
+							?>
+							<div class="ea-user-row">
+								<div class="ea-user-info">
+									<span class="ea-user-avatar"><?php echo get_avatar( $user_id, 32 ); ?></span>
+									<div class="ea-user-details">
+										<strong class="ea-user-name"><?php echo esc_html( $user->display_name ); ?></strong>
+										<span class="ea-user-email"><?php echo esc_html( $user->user_email ); ?></span>
+									</div>
+								</div>
+								<div class="ea-user-sessions">
+									<?php if ( $session_count > 0 ) : ?>
+										<a href="<?php echo esc_url( $sessions_url ); ?>" class="ea-sessions-link">
 											<?php
-											$sessions_url = add_query_arg(
-												[
-													'page' => $this->page_slug,
-													'action' => 'view_user_sessions',
-													'user_id' => $user_id,
-												],
-												admin_url( 'admin.php' )
+											printf(
+												/* translators: %d: number of sessions */
+												esc_html( _n( '%d session', '%d sessions', $session_count, 'extended-abilities' ) ),
+												esc_html( $session_count )
 											);
 											?>
-											<a href="<?php echo esc_url( $sessions_url ); ?>">
-												<?php
-												printf(
-													/* translators: %d: number of sessions */
-													esc_html( _n( '%d active session', '%d active sessions', $session_count, 'extended-abilities' ) ),
-													esc_html( $session_count )
-												);
-												?>
-											</a>
-										<?php else : ?>
-											<span class="ea-no-sessions"><?php esc_html_e( 'No active sessions', 'extended-abilities' ); ?></span>
-										<?php endif; ?>
-									</td>
-									<td>
-										<?php
-										$remove_url = wp_nonce_url(
-											add_query_arg(
-												[
-													'page' => $this->page_slug,
-													'action' => 'remove_allowed_user',
-													'user_id' => $user_id,
-												],
-												admin_url( 'admin.php' )
-											),
-											'remove_user_' . $user_id
-										);
-										?>
-										<a href="<?php echo esc_url( $remove_url ); ?>"
-											class="button button-small"
-											onclick="return confirm('<?php echo esc_js( __( 'Remove this user\'s MCP access? All their sessions will be revoked.', 'extended-abilities' ) ); ?>');">
-											<?php esc_html_e( 'Remove Access', 'extended-abilities' ); ?>
 										</a>
-									</td>
-								</tr>
-							<?php endforeach; ?>
-						</tbody>
-					</table>
+									<?php else : ?>
+										<span class="ea-no-sessions"><?php esc_html_e( 'No sessions', 'extended-abilities' ); ?></span>
+									<?php endif; ?>
+								</div>
+								<div class="ea-user-actions">
+									<a href="<?php echo esc_url( $remove_url ); ?>"
+										class="ea-remove-link"
+										onclick="return confirm('<?php echo esc_js( __( 'Remove this user\'s access? All their sessions will be revoked.', 'extended-abilities' ) ); ?>');">
+										<?php esc_html_e( 'Remove', 'extended-abilities' ); ?>
+									</a>
+								</div>
+							</div>
+						<?php endforeach; ?>
+					</div>
 				<?php endif; ?>
 			</div>
-		</div>
+		</section>
 		<?php
 	}
 
@@ -833,7 +840,7 @@ class Settings implements Hookable {
 		wp_enqueue_script(
 			'extended-abilities-admin',
 			EXTENDED_ABILITIES_PLUGIN_URL . 'assets/js/admin-settings.js',
-			[ 'jquery' ],
+			[],
 			EXTENDED_ABILITIES_VERSION,
 			true
 		);

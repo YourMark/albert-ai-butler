@@ -198,7 +198,8 @@ class Abilities implements Hookable {
 			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'extended-abilities' ) );
 		}
 
-		$current_tab = $this->get_current_tab();
+		$current_tab       = $this->get_current_tab();
+		$grouped_abilities = $this->get_abilities_for_tab( $current_tab );
 		?>
 		<div class="wrap extended-abilities-settings">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -214,86 +215,149 @@ class Abilities implements Hookable {
 
 			<?php $this->render_tabs(); ?>
 
-			<div class="extended-abilities-tab-content">
-				<?php $this->render_abilities_content( $current_tab ); ?>
+			<div class="ea-page-layout">
+				<?php $this->render_sidebar( $grouped_abilities ); ?>
+
+				<div class="ea-main-content">
+					<div class="extended-abilities-tab-content">
+						<?php $this->render_abilities_content( $current_tab, $grouped_abilities ); ?>
+					</div>
+				</div>
 			</div>
 		</div>
 		<?php
 	}
 
 	/**
-	 * Render abilities content for the current tab.
+	 * Render sidebar navigation.
 	 *
-	 * @param string $tab Current tab slug.
+	 * @param array $grouped_abilities Grouped abilities data.
 	 *
 	 * @return void
 	 * @since 1.0.0
 	 */
-	private function render_abilities_content( string $tab ): void {
-		$grouped_abilities = $this->get_abilities_for_tab( $tab );
-		$options           = get_option( $this->option_name, [] );
+	private function render_sidebar( array $grouped_abilities ): void {
+		if ( empty( $grouped_abilities ) ) {
+			return;
+		}
+
+		$options = get_option( $this->option_name, [] );
+		?>
+		<aside class="ea-sidebar" aria-label="<?php esc_attr_e( 'Abilities navigation', 'extended-abilities' ); ?>">
+			<div class="ea-sidebar-save">
+				<?php submit_button( __( 'Save Changes', 'extended-abilities' ), 'primary', 'submit', false ); ?>
+			</div>
+			<h2 class="ea-sidebar-title"><?php esc_html_e( 'Quick Nav', 'extended-abilities' ); ?></h2>
+			<nav>
+				<ul class="ea-sidebar-nav">
+					<?php foreach ( $grouped_abilities as $category => $data ) : ?>
+						<?php
+						if ( empty( $data['abilities']['groups'] ) ) {
+							continue;
+						}
+						foreach ( $data['abilities']['groups'] as $group_id => $group_data ) :
+							$group_anchor   = 'group-' . sanitize_key( $category . '-' . $group_id );
+							$ability_count  = count( $group_data['abilities'] );
+							$enabled_count  = 0;
+							foreach ( $group_data['abilities'] as $ability_id => $ability ) {
+								if ( ! empty( $options[ $ability_id ] ) ) {
+									++$enabled_count;
+								}
+							}
+							$icon = $this->get_group_icon( $group_id );
+							?>
+							<li>
+								<a href="#<?php echo esc_attr( $group_anchor ); ?>">
+									<span class="dashicons <?php echo esc_attr( $icon ); ?>" aria-hidden="true"></span>
+									<?php echo esc_html( $group_data['label'] ); ?>
+									<span class="ea-nav-count"><?php echo esc_html( $enabled_count . '/' . $ability_count ); ?></span>
+								</a>
+							</li>
+						<?php endforeach; ?>
+					<?php endforeach; ?>
+				</ul>
+			</nav>
+		</aside>
+		<?php
+	}
+
+	/**
+	 * Get icon class for a group.
+	 *
+	 * @param string $group Group identifier.
+	 *
+	 * @return string Dashicon class.
+	 * @since 1.0.0
+	 */
+	private function get_group_icon( string $group ): string {
+		$icons = [
+			'posts'      => 'dashicons-admin-post',
+			'pages'      => 'dashicons-admin-page',
+			'media'      => 'dashicons-admin-media',
+			'users'      => 'dashicons-admin-users',
+			'comments'   => 'dashicons-admin-comments',
+			'plugins'    => 'dashicons-admin-plugins',
+			'themes'     => 'dashicons-admin-appearance',
+			'taxonomies' => 'dashicons-category',
+		];
+
+		/**
+		 * Filter group icons.
+		 *
+		 * @param array $icons Group icon mappings.
+		 *
+		 * @since 1.0.0
+		 */
+		$icons = apply_filters( 'extended_abilities/abilities/group_icons', $icons );
+
+		return $icons[ $group ] ?? 'dashicons-admin-generic';
+	}
+
+	/**
+	 * Render abilities content for the current tab.
+	 *
+	 * @param string $tab Current tab slug.
+	 * @param array  $grouped_abilities Pre-fetched grouped abilities data.
+	 *
+	 * @return void
+	 * @since 1.0.0
+	 */
+	private function render_abilities_content( string $tab, array $grouped_abilities ): void {
+		$options = get_option( $this->option_name, [] );
 		?>
 		<form method="post" action="options.php" aria-label="<?php esc_attr_e( 'Extended Abilities Settings', 'extended-abilities' ); ?>">
 			<?php settings_fields( $this->option_group ); ?>
 
-			<p class="description extended-abilities-description">
-				<?php esc_html_e( 'Configure which abilities are available to AI assistants. Enable only the abilities you trust AI assistants to use on your site.', 'extended-abilities' ); ?>
-			</p>
+			<div class="ea-content-header">
+				<p class="ea-content-description">
+					<?php esc_html_e( 'Select which abilities AI assistants can use on your site. Only enable abilities you trust.', 'extended-abilities' ); ?>
+				</p>
+				<span class="ea-content-actions">
+					<button type="button" class="ea-action-link" id="ea-expand-all"><?php esc_html_e( 'Expand all', 'extended-abilities' ); ?></button>
+					<span class="ea-action-separator" aria-hidden="true">·</span>
+					<button type="button" class="ea-action-link" id="ea-collapse-all"><?php esc_html_e( 'Collapse all', 'extended-abilities' ); ?></button>
+				</span>
+			</div>
 
-			<?php foreach ( $grouped_abilities as $category => $data ) : ?>
-				<section class="ability-group" aria-labelledby="<?php echo esc_attr( 'group-title-' . $category ); ?>">
-					<div class="ability-group-header">
-						<div class="ability-group-title-wrapper">
-							<button
-									type="button"
-									class="ability-group-collapse-toggle"
-									aria-expanded="true"
-									aria-controls="<?php echo esc_attr( 'group-items-' . $category ); ?>"
-							>
-								<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
-							</button>
-							<h2 class="ability-group-title" id="<?php echo esc_attr( 'group-title-' . $category ); ?>">
-								<?php echo esc_html( $data['title'] ); ?>
-							</h2>
-						</div>
-						<div class="ability-group-toggle-all">
-							<?php $toggle_all_id = 'toggle-all-' . esc_attr( $category ); ?>
-							<label class="extended-abilities-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
-								<input
-										type="checkbox"
-										id="<?php echo esc_attr( $toggle_all_id ); ?>"
-										class="toggle-all-abilities"
-										data-group="<?php echo esc_attr( $category ); ?>"
-										<?php /* translators: %s: ability group name */ ?>
-										aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'extended-abilities' ), $data['title'] ) ); ?>"
-								/>
-								<span class="extended-abilities-toggle-slider" aria-hidden="true"></span>
-							</label>
-							<label for="<?php echo esc_attr( $toggle_all_id ); ?>">
-								<?php esc_html_e( 'Enable All', 'extended-abilities' ); ?>
-							</label>
-						</div>
-					</div>
-
-					<div class="ability-group-items" id="<?php echo esc_attr( 'group-items-' . $category ); ?>" role="group" aria-labelledby="<?php echo esc_attr( 'group-title-' . $category ); ?>">
+			<?php if ( ! empty( $grouped_abilities ) ) : ?>
+				<div class="ea-groups-grid">
+					<?php foreach ( $grouped_abilities as $category => $data ) : ?>
 						<?php
-						// Render ungrouped abilities first.
-						if ( ! empty( $data['abilities']['ungrouped'] ) ) {
-							foreach ( $data['abilities']['ungrouped'] as $ability_id => $ability ) {
-								$this->render_ability_item( $ability_id, $ability, $category, $options );
-							}
-						}
-
-						// Render grouped abilities.
+						// Render each subgroup as a separate card.
 						if ( ! empty( $data['abilities']['groups'] ) ) {
 							foreach ( $data['abilities']['groups'] as $group_id => $group_data ) {
-								$this->render_ability_subgroup( $group_id, $group_data, $category, $options );
+								$this->render_ability_group_card( $group_id, $group_data, $category, $options );
 							}
 						}
+
+						// Render ungrouped abilities in their own card if any exist.
+						if ( ! empty( $data['abilities']['ungrouped'] ) ) {
+							$this->render_ungrouped_abilities_card( $data['abilities']['ungrouped'], $category, $options );
+						}
 						?>
-					</div>
-				</section>
-			<?php endforeach; ?>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
 
 			<?php if ( empty( $grouped_abilities ) ) : ?>
 				<div class="notice notice-info">
@@ -304,11 +368,138 @@ class Abilities implements Hookable {
 			<?php endif; ?>
 
 			<?php if ( ! empty( $grouped_abilities ) ) : ?>
-				<div class="submit">
-					<?php submit_button( null, 'primary', 'submit', false ); ?>
+				<div class="ea-mobile-save">
+					<?php submit_button( __( 'Save Changes', 'extended-abilities' ), 'primary', 'submit-mobile', false ); ?>
 				</div>
 			<?php endif; ?>
 		</form>
+		<?php
+	}
+
+	/**
+	 * Render an ability group as a card.
+	 *
+	 * @param string $group_id Group identifier.
+	 * @param array  $group_data Group data including label and abilities.
+	 * @param string $category Parent category.
+	 * @param array  $options Current options.
+	 *
+	 * @return void
+	 * @since 1.0.0
+	 */
+	private function render_ability_group_card( string $group_id, array $group_data, string $category, array $options ): void {
+		$card_id           = 'group-' . sanitize_key( $category . '-' . $group_id );
+		$toggle_all_id     = 'toggle-all-' . sanitize_key( $category . '-' . $group_id );
+		$items_id          = 'group-items-' . sanitize_key( $category . '-' . $group_id );
+		$subgroup_class    = 'subgroup-' . esc_attr( $category . '-' . $group_id );
+		$icon              = $this->get_group_icon( $group_id );
+		?>
+		<section class="ability-group" id="<?php echo esc_attr( $card_id ); ?>" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
+			<div class="ability-group-header">
+				<div class="ability-group-title-wrapper">
+					<button
+							type="button"
+							class="ability-group-collapse-toggle"
+							aria-expanded="true"
+							aria-controls="<?php echo esc_attr( $items_id ); ?>"
+					>
+						<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
+					</button>
+					<span class="dashicons <?php echo esc_attr( $icon ); ?>" aria-hidden="true" style="color: var(--ea-text-secondary);"></span>
+					<h2 class="ability-group-title" id="<?php echo esc_attr( 'title-' . $card_id ); ?>">
+						<?php echo esc_html( $group_data['label'] ); ?>
+					</h2>
+				</div>
+				<div class="ability-group-toggle-all">
+					<label class="extended-abilities-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
+						<input
+								type="checkbox"
+								id="<?php echo esc_attr( $toggle_all_id ); ?>"
+								class="toggle-subgroup-abilities"
+								data-subgroup="<?php echo esc_attr( $subgroup_class ); ?>"
+								<?php /* translators: %s: ability group name */ ?>
+								aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'extended-abilities' ), $group_data['label'] ) ); ?>"
+						/>
+						<span class="extended-abilities-toggle-slider" aria-hidden="true"></span>
+					</label>
+					<label for="<?php echo esc_attr( $toggle_all_id ); ?>">
+						<?php esc_html_e( 'Enable All', 'extended-abilities' ); ?>
+					</label>
+				</div>
+			</div>
+
+			<div class="ability-group-items" id="<?php echo esc_attr( $items_id ); ?>" role="group" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
+				<div class="ability-subgroup-items">
+					<?php
+					foreach ( $group_data['abilities'] as $ability_id => $ability ) {
+						$this->render_ability_item( $ability_id, $ability, $category, $options, $subgroup_class );
+					}
+					?>
+				</div>
+			</div>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Render ungrouped abilities in a card.
+	 *
+	 * @param array  $abilities Ungrouped abilities.
+	 * @param string $category Parent category.
+	 * @param array  $options Current options.
+	 *
+	 * @return void
+	 * @since 1.0.0
+	 */
+	private function render_ungrouped_abilities_card( array $abilities, string $category, array $options ): void {
+		$card_id       = 'group-' . sanitize_key( $category . '-other' );
+		$toggle_all_id = 'toggle-all-' . sanitize_key( $category . '-other' );
+		$items_id      = 'group-items-' . sanitize_key( $category . '-other' );
+		$subgroup_class = 'subgroup-' . esc_attr( $category . '-other' );
+		?>
+		<section class="ability-group" id="<?php echo esc_attr( $card_id ); ?>" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
+			<div class="ability-group-header">
+				<div class="ability-group-title-wrapper">
+					<button
+							type="button"
+							class="ability-group-collapse-toggle"
+							aria-expanded="true"
+							aria-controls="<?php echo esc_attr( $items_id ); ?>"
+					>
+						<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
+					</button>
+					<span class="dashicons dashicons-admin-generic" aria-hidden="true" style="color: var(--ea-text-secondary);"></span>
+					<h2 class="ability-group-title" id="<?php echo esc_attr( 'title-' . $card_id ); ?>">
+						<?php esc_html_e( 'Other', 'extended-abilities' ); ?>
+					</h2>
+				</div>
+				<div class="ability-group-toggle-all">
+					<label class="extended-abilities-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
+						<input
+								type="checkbox"
+								id="<?php echo esc_attr( $toggle_all_id ); ?>"
+								class="toggle-subgroup-abilities"
+								data-subgroup="<?php echo esc_attr( $subgroup_class ); ?>"
+								aria-label="<?php esc_attr_e( 'Enable all other abilities', 'extended-abilities' ); ?>"
+						/>
+						<span class="extended-abilities-toggle-slider" aria-hidden="true"></span>
+					</label>
+					<label for="<?php echo esc_attr( $toggle_all_id ); ?>">
+						<?php esc_html_e( 'Enable All', 'extended-abilities' ); ?>
+					</label>
+				</div>
+			</div>
+
+			<div class="ability-group-items" id="<?php echo esc_attr( $items_id ); ?>" role="group" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
+				<div class="ability-subgroup-items">
+					<?php
+					foreach ( $abilities as $ability_id => $ability ) {
+						$this->render_ability_item( $ability_id, $ability, $category, $options, $subgroup_class );
+					}
+					?>
+				</div>
+			</div>
+		</section>
 		<?php
 	}
 
@@ -617,7 +808,7 @@ class Abilities implements Hookable {
 		wp_enqueue_script(
 			'extended-abilities-admin',
 			EXTENDED_ABILITIES_PLUGIN_URL . 'assets/js/admin-settings.js',
-			[ 'jquery' ],
+			[],
 			EXTENDED_ABILITIES_VERSION,
 			true
 		);
