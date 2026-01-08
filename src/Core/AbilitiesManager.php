@@ -44,9 +44,9 @@ class AbilitiesManager implements Hookable {
 		add_action( 'wp_abilities_api_init', [ $this, 'register_abilities' ] );
 
 		// Add abilities to settings page filters.
-		add_filter( 'extended_abilities_wordpress_abilities', [ $this, 'add_wordpress_abilities_to_settings' ] );
-		add_filter( 'extended_abilities_woocommerce_abilities', [ $this, 'add_woocommerce_abilities_to_settings' ] );
-		add_filter( 'extended_abilities_plugin_abilities', [ $this, 'add_plugin_abilities_to_settings' ] );
+		add_filter( 'extended_abilities/abilities/wordpress', [ $this, 'add_wordpress_abilities_to_settings' ] );
+		add_filter( 'extended_abilities/abilities/woocommerce', [ $this, 'add_woocommerce_abilities_to_settings' ] );
+		add_filter( 'extended_abilities/abilities/plugins', [ $this, 'add_plugin_abilities_to_settings' ] );
 	}
 
 

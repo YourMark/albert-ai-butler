@@ -221,7 +221,7 @@ class Plugin {
 		 *
 		 * @since 1.0.0
 		 */
-		do_action( 'extended_abilities_activated' );
+		do_action( 'extended_abilities/core/activated' );
 	}
 
 	/**
@@ -241,6 +241,6 @@ class Plugin {
 		 *
 		 * @since 1.0.0
 		 */
-		do_action( 'extended_abilities_deactivated' );
+		do_action( 'extended_abilities/core/deactivated' );
 	}
 }

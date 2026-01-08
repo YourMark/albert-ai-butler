@@ -95,7 +95,7 @@ class Abilities implements Hookable {
 			 *
 			 * @since 1.0.0
 			 */
-			$this->tabs = apply_filters( 'extended_abilities_abilities_tabs', $this->tabs );
+			$this->tabs = apply_filters( 'extended_abilities/abilities/tabs', $this->tabs );
 		}
 
 		return $this->tabs;
@@ -332,7 +332,7 @@ class Abilities implements Hookable {
 
 		switch ( $tab ) {
 			case 'core':
-				$wordpress_abilities = apply_filters( 'extended_abilities_wordpress_abilities', [] );
+				$wordpress_abilities = apply_filters( 'extended_abilities/abilities/wordpress', [] );
 				if ( ! empty( $wordpress_abilities ) ) {
 					$grouped['wordpress'] = [
 						'title'     => __( 'WordPress Abilities', 'extended-abilities' ),
@@ -342,7 +342,7 @@ class Abilities implements Hookable {
 				break;
 
 			case 'woocommerce':
-				$woocommerce_abilities = apply_filters( 'extended_abilities_woocommerce_abilities', [] );
+				$woocommerce_abilities = apply_filters( 'extended_abilities/abilities/woocommerce', [] );
 				if ( ! empty( $woocommerce_abilities ) ) {
 					$grouped['woocommerce'] = [
 						'title'     => __( 'WooCommerce Abilities', 'extended-abilities' ),
@@ -352,7 +352,7 @@ class Abilities implements Hookable {
 				break;
 
 			case 'acf':
-				$acf_abilities = apply_filters( 'extended_abilities_acf_abilities', [] );
+				$acf_abilities = apply_filters( 'extended_abilities/abilities/acf', [] );
 				if ( ! empty( $acf_abilities ) ) {
 					$grouped['acf'] = [
 						'title'     => __( 'ACF Abilities', 'extended-abilities' ),
@@ -362,7 +362,7 @@ class Abilities implements Hookable {
 				break;
 
 			default:
-				$plugin_abilities = apply_filters( 'extended_abilities_plugin_abilities', [] );
+				$plugin_abilities = apply_filters( 'extended_abilities/abilities/plugins', [] );
 				if ( ! empty( $plugin_abilities ) ) {
 					$grouped['plugins'] = [
 						'title'     => __( 'Plugin Integrations', 'extended-abilities' ),
@@ -435,7 +435,7 @@ class Abilities implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$labels = apply_filters( 'extended_abilities_group_labels', $labels );
+		$labels = apply_filters( 'extended_abilities/abilities/group_labels', $labels );
 
 		return $labels[ $group ] ?? ucfirst( $group );
 	}
@@ -601,10 +601,10 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function is_valid_ability_id( string $ability_id ): bool {
-		$wordpress_abilities   = apply_filters( 'extended_abilities_wordpress_abilities', [] );
-		$woocommerce_abilities = apply_filters( 'extended_abilities_woocommerce_abilities', [] );
-		$acf_abilities         = apply_filters( 'extended_abilities_acf_abilities', [] );
-		$plugin_abilities      = apply_filters( 'extended_abilities_plugin_abilities', [] );
+		$wordpress_abilities   = apply_filters( 'extended_abilities/abilities/wordpress', [] );
+		$woocommerce_abilities = apply_filters( 'extended_abilities/abilities/woocommerce', [] );
+		$acf_abilities         = apply_filters( 'extended_abilities/abilities/acf', [] );
+		$plugin_abilities      = apply_filters( 'extended_abilities/abilities/plugins', [] );
 
 		$all_abilities = array_merge(
 			$wordpress_abilities,

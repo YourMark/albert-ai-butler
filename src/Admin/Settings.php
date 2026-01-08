@@ -117,7 +117,7 @@ class Settings implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$show_developer_settings = apply_filters( 'extended_abilities_show_developer_settings', false );
+		$show_developer_settings = apply_filters( 'extended_abilities/settings/developer_mode', false );
 
 		// Only use external URL if developer settings are enabled.
 		$external_url = $show_developer_settings ? get_option( 'ea_external_url', '' ) : '';
@@ -869,6 +869,6 @@ class Settings implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		do_action( 'extended_abilities_admin_notices' );
+		do_action( 'extended_abilities/admin/notices' );
 	}
 }

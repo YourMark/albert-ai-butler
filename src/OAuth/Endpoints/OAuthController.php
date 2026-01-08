@@ -503,7 +503,7 @@ class OAuthController implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$show_developer_settings = apply_filters( 'extended_abilities_show_developer_settings', false );
+		$show_developer_settings = apply_filters( 'extended_abilities/settings/developer_mode', false );
 
 		if ( $show_developer_settings ) {
 			$external_url = get_option( 'ea_external_url', '' );

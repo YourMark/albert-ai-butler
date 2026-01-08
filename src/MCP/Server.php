@@ -186,7 +186,7 @@ class Server implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		return apply_filters( 'extended_abilities_show_developer_settings', false );
+		return apply_filters( 'extended_abilities/settings/developer_mode', false );
 	}
 
 	/**
