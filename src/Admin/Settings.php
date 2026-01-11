@@ -82,7 +82,7 @@ class Settings implements Hookable {
 
 		// Check if viewing sessions for a specific user.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Just checking for view action.
-		$view_sessions = isset( $_GET['action'] ) && 'view_user_sessions' === $_GET['action'];
+		$view_sessions = isset( $_GET['action'] ) && $_GET['action'] === 'view_user_sessions';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Just getting user ID for display.
 		$view_user_id = isset( $_GET['user_id'] ) ? absint( $_GET['user_id'] ) : 0;
 
@@ -810,7 +810,7 @@ class Settings implements Hookable {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 			$wpdb->query(
 				$wpdb->prepare(
-					"UPDATE {$refresh_tokens_table} SET revoked = 1 WHERE access_token_id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					"UPDATE {$refresh_tokens_table} SET revoked = 1 WHERE access_token_id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 					...$token_ids
 				)
 			);

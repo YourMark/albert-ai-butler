@@ -48,7 +48,7 @@ class DeleteTerm extends BaseAbility {
 	/**
 	 * Get the input schema for this ability.
 	 *
-	 * @return array Input schema.
+	 * @return array<string, mixed> Input schema.
 	 * @since 1.0.0
 	 */
 	protected function get_input_schema(): array {
@@ -77,7 +77,7 @@ class DeleteTerm extends BaseAbility {
 	/**
 	 * Get the output schema for this ability.
 	 *
-	 * @return array Output schema.
+	 * @return array<string, mixed> Output schema.
 	 * @since 1.0.0
 	 */
 	protected function get_output_schema(): array {
@@ -111,14 +111,14 @@ class DeleteTerm extends BaseAbility {
 	/**
 	 * Execute the ability - delete term using WordPress REST API.
 	 *
-	 * @param array $args {
+	 * @param array<string, mixed> $args {
 	 *     Input parameters.
 	 *
-	 * @type string $taxonomy Taxonomy slug.
-	 * @type int    $id       Term ID.
-	 * @type bool   $force    Force deletion.
+	 *     @type string $taxonomy Taxonomy slug.
+	 *     @type int    $id       Term ID.
+	 *     @type bool   $force    Force deletion.
 	 * }
-	 * @return array|WP_Error Result data on success, WP_Error on failure.
+	 * @return array<string, mixed>|WP_Error Result data on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
@@ -212,6 +212,11 @@ class DeleteTerm extends BaseAbility {
 				__( 'This taxonomy is not available via REST API.', 'extended-abilities' ),
 				[ 'status' => 400 ]
 			);
+		}
+
+		// If rest_base is true, use the taxonomy name as the REST base.
+		if ( $taxonomy_obj->rest_base === true ) {
+			return $taxonomy_obj->name;
 		}
 
 		return $taxonomy_obj->rest_base;

@@ -28,7 +28,7 @@ class TokenValidator {
 	/**
 	 * Validate the Bearer token from a REST request.
 	 *
-	 * @param WP_REST_Request $request The REST request to validate.
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request to validate.
 	 *
 	 * @return WP_User|WP_Error The authenticated user or an error.
 	 * @since 1.0.0
@@ -84,9 +84,9 @@ class TokenValidator {
 	 *
 	 * Returns an array with token details if valid, or WP_Error if invalid.
 	 *
-	 * @param WP_REST_Request $request The REST request to validate.
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request to validate.
 	 *
-	 * @return array|WP_Error Token metadata or error.
+	 * @return array<string, mixed>|WP_Error Token metadata or error.
 	 * @since 1.0.0
 	 */
 	public static function get_token_metadata( WP_REST_Request $request ): array|WP_Error {
@@ -121,7 +121,7 @@ class TokenValidator {
 	/**
 	 * Check if a request has a valid Bearer token.
 	 *
-	 * @param WP_REST_Request $request The REST request to check.
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request to check.
 	 *
 	 * @return bool True if the request has a valid token.
 	 * @since 1.0.0
@@ -134,7 +134,7 @@ class TokenValidator {
 	/**
 	 * Extract Bearer token from Authorization header.
 	 *
-	 * @param WP_REST_Request $request The REST request.
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request.
 	 *
 	 * @return string|null The token or null if not found.
 	 * @since 1.0.0
@@ -185,7 +185,7 @@ class TokenValidator {
 	/**
 	 * Create a permission callback that requires specific scopes.
 	 *
-	 * @param array $required_scopes The scopes required for access.
+	 * @param array<int, string> $required_scopes The scopes required for access.
 	 *
 	 * @return callable The permission callback.
 	 * @since 1.0.0

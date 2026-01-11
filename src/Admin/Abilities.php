@@ -48,7 +48,7 @@ class Abilities implements Hookable {
 	 * Available tabs.
 	 *
 	 * @since 1.0.0
-	 * @var array|null
+	 * @var array<string, string>|null
 	 */
 	private ?array $tabs = null;
 
@@ -69,11 +69,11 @@ class Abilities implements Hookable {
 	 *
 	 * Tabs are lazy-loaded to avoid translation functions being called too early.
 	 *
-	 * @return array Array of tab slug => label pairs.
+	 * @return array<string, string> Array of tab slug => label pairs.
 	 * @since 1.0.0
 	 */
 	private function get_tabs(): array {
-		if ( null === $this->tabs ) {
+		if ( $this->tabs === null ) {
 			$this->tabs = [
 				'core' => __( 'Core', 'extended-abilities' ),
 			];
@@ -108,7 +108,7 @@ class Abilities implements Hookable {
 
 		// Ensure the tab exists, fallback to first tab.
 		if ( ! array_key_exists( $tab, $tabs ) ) {
-			$tab = array_key_first( $tabs );
+			$tab = (string) array_key_first( $tabs );
 		}
 
 		return $tab;
@@ -231,7 +231,7 @@ class Abilities implements Hookable {
 	/**
 	 * Render sidebar navigation.
 	 *
-	 * @param array $grouped_abilities Grouped abilities data.
+	 * @param array<string, mixed> $grouped_abilities Grouped abilities data.
 	 *
 	 * @return void
 	 * @since 1.0.0
@@ -256,9 +256,9 @@ class Abilities implements Hookable {
 							continue;
 						}
 						foreach ( $data['abilities']['groups'] as $group_id => $group_data ) :
-							$group_anchor   = 'group-' . sanitize_key( $category . '-' . $group_id );
-							$ability_count  = count( $group_data['abilities'] );
-							$enabled_count  = 0;
+							$group_anchor  = 'group-' . sanitize_key( $category . '-' . $group_id );
+							$ability_count = count( $group_data['abilities'] );
+							$enabled_count = 0;
 							foreach ( $group_data['abilities'] as $ability_id => $ability ) {
 								if ( ! empty( $options[ $ability_id ] ) ) {
 									++$enabled_count;
@@ -316,8 +316,8 @@ class Abilities implements Hookable {
 	/**
 	 * Render abilities content for the current tab.
 	 *
-	 * @param string $tab Current tab slug.
-	 * @param array  $grouped_abilities Pre-fetched grouped abilities data.
+	 * @param string               $tab Current tab slug.
+	 * @param array<string, mixed> $grouped_abilities Pre-fetched grouped abilities data.
 	 *
 	 * @return void
 	 * @since 1.0.0
@@ -379,20 +379,20 @@ class Abilities implements Hookable {
 	/**
 	 * Render an ability group as a card.
 	 *
-	 * @param string $group_id Group identifier.
-	 * @param array  $group_data Group data including label and abilities.
-	 * @param string $category Parent category.
-	 * @param array  $options Current options.
+	 * @param string               $group_id   Group identifier.
+	 * @param array<string, mixed> $group_data Group data including label and abilities.
+	 * @param string               $category   Parent category.
+	 * @param array<string, mixed> $options    Current options.
 	 *
 	 * @return void
 	 * @since 1.0.0
 	 */
 	private function render_ability_group_card( string $group_id, array $group_data, string $category, array $options ): void {
-		$card_id           = 'group-' . sanitize_key( $category . '-' . $group_id );
-		$toggle_all_id     = 'toggle-all-' . sanitize_key( $category . '-' . $group_id );
-		$items_id          = 'group-items-' . sanitize_key( $category . '-' . $group_id );
-		$subgroup_class    = 'subgroup-' . esc_attr( $category . '-' . $group_id );
-		$icon              = $this->get_group_icon( $group_id );
+		$card_id        = 'group-' . sanitize_key( $category . '-' . $group_id );
+		$toggle_all_id  = 'toggle-all-' . sanitize_key( $category . '-' . $group_id );
+		$items_id       = 'group-items-' . sanitize_key( $category . '-' . $group_id );
+		$subgroup_class = 'subgroup-' . esc_attr( $category . '-' . $group_id );
+		$icon           = $this->get_group_icon( $group_id );
 		?>
 		<section class="ability-group" id="<?php echo esc_attr( $card_id ); ?>" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
 			<div class="ability-group-header">
@@ -444,17 +444,17 @@ class Abilities implements Hookable {
 	/**
 	 * Render ungrouped abilities in a card.
 	 *
-	 * @param array  $abilities Ungrouped abilities.
-	 * @param string $category Parent category.
-	 * @param array  $options Current options.
+	 * @param array<string, mixed> $abilities Ungrouped abilities.
+	 * @param string               $category  Parent category.
+	 * @param array<string, mixed> $options   Current options.
 	 *
 	 * @return void
 	 * @since 1.0.0
 	 */
 	private function render_ungrouped_abilities_card( array $abilities, string $category, array $options ): void {
-		$card_id       = 'group-' . sanitize_key( $category . '-other' );
-		$toggle_all_id = 'toggle-all-' . sanitize_key( $category . '-other' );
-		$items_id      = 'group-items-' . sanitize_key( $category . '-other' );
+		$card_id        = 'group-' . sanitize_key( $category . '-other' );
+		$toggle_all_id  = 'toggle-all-' . sanitize_key( $category . '-other' );
+		$items_id       = 'group-items-' . sanitize_key( $category . '-other' );
 		$subgroup_class = 'subgroup-' . esc_attr( $category . '-other' );
 		?>
 		<section class="ability-group" id="<?php echo esc_attr( $card_id ); ?>" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
@@ -508,13 +508,13 @@ class Abilities implements Hookable {
 	 *
 	 * @param string $tab Tab slug.
 	 *
-	 * @return array Grouped abilities for the tab.
+	 * @return array<string, mixed> Grouped abilities for the tab.
 	 * @since 1.0.0
 	 */
 	private function get_abilities_for_tab( string $tab ): array {
 		$grouped = [];
 
-		if ( 'core' === $tab ) {
+		if ( $tab === 'core' ) {
 			$wordpress_abilities = apply_filters( 'extended_abilities/abilities/wordpress', [] );
 			if ( ! empty( $wordpress_abilities ) ) {
 				$grouped['wordpress'] = [
@@ -548,9 +548,9 @@ class Abilities implements Hookable {
 	/**
 	 * Organize abilities by their group property.
 	 *
-	 * @param array $abilities Flat array of abilities.
+	 * @param array<string, mixed> $abilities Flat array of abilities.
 	 *
-	 * @return array Organized abilities with groups.
+	 * @return array<string, mixed> Organized abilities with groups.
 	 * @since 1.0.0
 	 */
 	private function organize_abilities_by_group( array $abilities ): array {
@@ -613,10 +613,10 @@ class Abilities implements Hookable {
 	/**
 	 * Render an ability subgroup with toggle all functionality.
 	 *
-	 * @param string $group_id Group identifier.
-	 * @param array  $group_data Group data including label and abilities.
-	 * @param string $category Parent category.
-	 * @param array  $options Current options.
+	 * @param string               $group_id   Group identifier.
+	 * @param array<string, mixed> $group_data Group data including label and abilities.
+	 * @param string               $category   Parent category.
+	 * @param array<string, mixed> $options    Current options.
 	 *
 	 * @return void
 	 * @since 1.0.0
@@ -676,11 +676,11 @@ class Abilities implements Hookable {
 	/**
 	 * Render a single ability item.
 	 *
-	 * @param string $ability_id Ability ID.
-	 * @param array  $ability Ability data.
-	 * @param string $category Parent category.
-	 * @param array  $options Current options.
-	 * @param string $subgroup_class Optional subgroup class for grouped abilities.
+	 * @param string               $ability_id     Ability ID.
+	 * @param array<string, mixed> $ability        Ability data.
+	 * @param string               $category       Parent category.
+	 * @param array<string, mixed> $options        Current options.
+	 * @param string               $subgroup_class Optional subgroup class for grouped abilities.
 	 *
 	 * @return void
 	 * @since 1.0.0
@@ -731,9 +731,9 @@ class Abilities implements Hookable {
 	/**
 	 * Sanitize settings.
 	 *
-	 * @param array $input Input settings.
+	 * @param array<string, mixed>|mixed $input Input settings.
 	 *
-	 * @return array
+	 * @return array<string, bool>
 	 * @since 1.0.0
 	 */
 	public function sanitize_settings( $input ): array {
@@ -776,7 +776,7 @@ class Abilities implements Hookable {
 		// Include abilities from all registered tabs.
 		$tabs = $this->get_tabs();
 		foreach ( array_keys( $tabs ) as $tab_slug ) {
-			if ( 'core' !== $tab_slug ) {
+			if ( $tab_slug !== 'core' ) {
 				$tab_abilities = apply_filters( "extended_abilities/abilities/{$tab_slug}", [] );
 				$all_abilities = array_merge( $all_abilities, $tab_abilities );
 			}

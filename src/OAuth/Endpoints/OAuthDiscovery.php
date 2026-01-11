@@ -100,9 +100,9 @@ class OAuthDiscovery implements Hookable {
 	/**
 	 * Add custom query vars.
 	 *
-	 * @param array $vars Existing query vars.
+	 * @param array<int, string> $vars Existing query vars.
 	 *
-	 * @return array Modified query vars.
+	 * @return array<int, string> Modified query vars.
 	 * @since 1.0.0
 	 */
 	public function add_query_vars( array $vars ): array {
@@ -128,7 +128,7 @@ class OAuthDiscovery implements Hookable {
 		header( 'Cache-Control: public, max-age=3600' );
 		header( 'Access-Control-Allow-Origin: *' );
 
-		if ( 'protected-resource' === $discovery ) {
+		if ( $discovery === 'protected-resource' ) {
 			$metadata = $this->get_protected_resource_metadata();
 		} else {
 			$metadata = $this->get_authorization_server_metadata();
@@ -187,7 +187,7 @@ class OAuthDiscovery implements Hookable {
 	 *
 	 * This tells MCP clients where to find the authorization server.
 	 *
-	 * @return array The metadata array.
+	 * @return array<string, mixed> The metadata array.
 	 * @since 1.0.0
 	 */
 	public function get_protected_resource_metadata(): array {
@@ -203,7 +203,7 @@ class OAuthDiscovery implements Hookable {
 	/**
 	 * Get OAuth Authorization Server Metadata (RFC 8414).
 	 *
-	 * @return array The metadata array.
+	 * @return array<string, mixed> The metadata array.
 	 * @since 1.0.0
 	 */
 	public function get_authorization_server_metadata(): array {

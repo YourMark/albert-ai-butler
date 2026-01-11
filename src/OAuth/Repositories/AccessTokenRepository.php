@@ -27,9 +27,9 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	/**
 	 * Create a new access token.
 	 *
-	 * @param ClientEntityInterface $client_entity  The client entity.
-	 * @param array                 $scopes         The scopes.
-	 * @param string|int|null       $user_identifier The user identifier.
+	 * @param ClientEntityInterface                                           $client_entity   The client entity.
+	 * @param array<int, \League\OAuth2\Server\Entities\ScopeEntityInterface> $scopes          The scopes.
+	 * @param string|int|null                                                 $user_identifier The user identifier.
 	 *
 	 * @return AccessTokenEntityInterface The new access token entity.
 	 * @since 1.0.0
@@ -46,8 +46,8 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 			$access_token->addScope( $scope );
 		}
 
-		if ( null !== $user_identifier ) {
-			$access_token->setUserIdentifier( $user_identifier );
+		if ( $user_identifier !== null && (string) $user_identifier !== '' ) {
+			$access_token->setUserIdentifier( (string) $user_identifier );
 		}
 
 		return $access_token;
@@ -132,7 +132,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 		// phpcs:enable
 
 		// If token not found, consider it revoked.
-		if ( null === $revoked ) {
+		if ( $revoked === null ) {
 			return true;
 		}
 
@@ -144,7 +144,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	 *
 	 * @param int|null $user_id The WordPress user ID, or null for all tokens.
 	 *
-	 * @return array Array of access token data.
+	 * @return array<int, array<string, mixed>> Array of access token data.
 	 * @since 1.0.0
 	 */
 	public function getAccessTokensByUser( ?int $user_id = null ): array {
@@ -153,7 +153,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 		$tables = Installer::get_table_names();
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		if ( null === $user_id ) {
+		if ( $user_id === null ) {
 			$rows = $wpdb->get_results(
 				"SELECT * FROM {$tables['access_tokens']} ORDER BY created_at DESC",
 				ARRAY_A
@@ -192,7 +192,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 			[ '%s' ]
 		);
 
-		return false !== $result;
+		return $result !== false;
 	}
 
 	/**

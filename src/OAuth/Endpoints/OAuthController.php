@@ -161,7 +161,7 @@ class OAuthController implements Hookable {
 	/**
 	 * Handle authorization request (GET).
 	 *
-	 * @param WP_REST_Request $request The REST request.
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request.
 	 *
 	 * @return WP_REST_Response|WP_Error The response.
 	 * @since 1.0.0
@@ -251,7 +251,7 @@ class OAuthController implements Hookable {
 	/**
 	 * Handle authorization form submission (POST).
 	 *
-	 * @param WP_REST_Request $request The REST request.
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request.
 	 *
 	 * @return WP_REST_Response|WP_Error The response.
 	 * @since 1.0.0
@@ -287,7 +287,7 @@ class OAuthController implements Hookable {
 		$state        = $auth_request_data['state'];
 
 		// User denied.
-		if ( 'yes' !== $approve ) {
+		if ( $approve !== 'yes' ) {
 			$redirect_params = [
 				'error'             => 'access_denied',
 				'error_description' => 'The user denied the request.',
@@ -367,7 +367,7 @@ class OAuthController implements Hookable {
 	/**
 	 * Handle token request (POST).
 	 *
-	 * @param WP_REST_Request $request The REST request.
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request.
 	 *
 	 * @return WP_REST_Response The response.
 	 * @since 1.0.0
@@ -418,7 +418,7 @@ class OAuthController implements Hookable {
 	/**
 	 * Get the current request URL.
 	 *
-	 * @param WP_REST_Request $request The REST request.
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request.
 	 *
 	 * @return string The current URL.
 	 * @since 1.0.0

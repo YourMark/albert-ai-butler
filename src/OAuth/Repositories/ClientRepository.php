@@ -168,7 +168,7 @@ class ClientRepository implements ClientRepositoryInterface {
 			[ '%s' ]
 		);
 
-		return false !== $result;
+		return $result !== false;
 	}
 
 	/**
@@ -184,7 +184,7 @@ class ClientRepository implements ClientRepositoryInterface {
 
 		$tables = Installer::get_table_names();
 
-		if ( null === $user_id ) {
+		if ( $user_id === null ) {
 			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$rows = $wpdb->get_results(
 				"SELECT * FROM {$tables['clients']} ORDER BY created_at DESC",
@@ -213,7 +213,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	/**
 	 * Hydrate a client entity from a database row.
 	 *
-	 * @param array $row The database row.
+	 * @param array<string, mixed> $row The database row.
 	 *
 	 * @return ClientEntity The hydrated client entity.
 	 * @since 1.0.0

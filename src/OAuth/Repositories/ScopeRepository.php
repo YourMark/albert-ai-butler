@@ -34,7 +34,7 @@ class ScopeRepository implements ScopeRepositoryInterface {
 	 */
 	public function getScopeEntityByIdentifier( $identifier ): ?ScopeEntityInterface {
 		// We only support a default scope.
-		if ( 'default' === $identifier ) {
+		if ( $identifier === 'default' ) {
 			return new ScopeEntity( 'default' );
 		}
 

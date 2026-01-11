@@ -119,9 +119,9 @@ class AbilitiesManager implements Hookable {
 	/**
 	 * Add WordPress abilities to settings page.
 	 *
-	 * @param array $abilities Existing abilities.
+	 * @param array<string, array<string, string>> $abilities Existing abilities.
 	 *
-	 * @return array Modified abilities.
+	 * @return array<string, array<string, string>> Modified abilities.
 	 * @since 1.0.0
 	 */
 	public function add_wordpress_abilities_to_settings( array $abilities ): array {

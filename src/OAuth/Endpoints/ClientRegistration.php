@@ -66,7 +66,7 @@ class ClientRegistration implements Hookable {
 	/**
 	 * Handle client registration request.
 	 *
-	 * @param WP_REST_Request $request The REST request.
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request.
 	 *
 	 * @return WP_REST_Response|WP_Error The response.
 	 * @since 1.0.0
@@ -92,10 +92,11 @@ class ClientRegistration implements Hookable {
 		}
 
 		// Create the client.
-		$client_repo = new ClientRepository();
-		$result      = $client_repo->createClient(
+		$client_repo  = new ClientRepository();
+		$redirect_uri = ! empty( $redirect_uris ) ? wp_json_encode( $redirect_uris ) : '*';
+		$result       = $client_repo->createClient(
 			$client_name,
-			! empty( $redirect_uris ) ? wp_json_encode( $redirect_uris ) : '*',
+			$redirect_uri !== false ? $redirect_uri : '*',
 			true, // Confidential client.
 			null  // No associated WordPress user for DCR clients.
 		);
@@ -127,9 +128,9 @@ class ClientRegistration implements Hookable {
 	/**
 	 * Sanitize redirect URIs array.
 	 *
-	 * @param array $uris Array of redirect URIs.
+	 * @param array<int, string> $uris Array of redirect URIs.
 	 *
-	 * @return array Sanitized URIs.
+	 * @return array<int, string> Sanitized URIs.
 	 * @since 1.0.0
 	 */
 	private function sanitize_redirect_uris( array $uris ): array {
@@ -156,7 +157,7 @@ class ClientRegistration implements Hookable {
 		}
 
 		// Must be HTTPS or localhost.
-		$is_https     = 'https' === $parsed['scheme'];
+		$is_https     = $parsed['scheme'] === 'https';
 		$is_localhost = in_array( $parsed['host'], [ 'localhost', '127.0.0.1', '::1' ], true );
 
 		if ( ! $is_https && ! $is_localhost ) {

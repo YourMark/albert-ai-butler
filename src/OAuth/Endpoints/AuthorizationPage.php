@@ -83,9 +83,9 @@ class AuthorizationPage implements Hookable {
 	/**
 	 * Add custom query vars.
 	 *
-	 * @param array $vars Existing query vars.
+	 * @param array<int, string> $vars Existing query vars.
 	 *
-	 * @return array Modified query vars.
+	 * @return array<int, string> Modified query vars.
 	 * @since 1.0.0
 	 */
 	public function add_query_vars( array $vars ): array {
@@ -116,7 +116,7 @@ class AuthorizationPage implements Hookable {
 		// phpcs:enable
 
 		// Validate required parameters.
-		if ( empty( $client_id ) || empty( $redirect_uri ) || 'code' !== $response_type ) {
+		if ( empty( $client_id ) || empty( $redirect_uri ) || $response_type !== 'code' ) {
 			$this->render_error_page(
 				__( 'Invalid Request', 'extended-abilities' ),
 				__( 'Missing or invalid OAuth parameters.', 'extended-abilities' )
@@ -169,7 +169,7 @@ class AuthorizationPage implements Hookable {
 
 		// Handle form submission (user approved or denied).
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- OAuth flow uses state parameter.
-		if ( isset( $_SERVER['REQUEST_METHOD'] ) && 'POST' === $_SERVER['REQUEST_METHOD'] ) {
+		if ( isset( $_SERVER['REQUEST_METHOD'] ) && $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 			$this->handle_authorization_decision(
 				$client,
 				$redirect_uri,
@@ -189,19 +189,19 @@ class AuthorizationPage implements Hookable {
 	/**
 	 * Handle authorization decision (approve/deny).
 	 *
-	 * @param object $client                The client entity.
-	 * @param string $redirect_uri          The redirect URI.
-	 * @param string $state                 The state parameter.
-	 * @param string $scope                 The requested scope.
-	 * @param string $code_challenge        PKCE code challenge.
-	 * @param string $code_challenge_method PKCE challenge method.
+	 * @param \ExtendedAbilities\OAuth\Entities\ClientEntity $client                The client entity.
+	 * @param string                                         $redirect_uri          The redirect URI.
+	 * @param string                                         $state                 The state parameter.
+	 * @param string                                         $scope                 The requested scope.
+	 * @param string                                         $code_challenge        PKCE code challenge.
+	 * @param string                                         $code_challenge_method PKCE challenge method.
 	 *
 	 * @return void
 	 * @since 1.0.0
 	 */
 	private function handle_authorization_decision( $client, $redirect_uri, $state, $scope, $code_challenge, $code_challenge_method ): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- OAuth flow uses state parameter.
-		$approved = isset( $_POST['approve'] ) && 'yes' === $_POST['approve'];
+		$approved = isset( $_POST['approve'] ) && $_POST['approve'] === 'yes';
 
 		if ( ! $approved ) {
 			// User denied - redirect with error.
@@ -274,12 +274,12 @@ class AuthorizationPage implements Hookable {
 	/**
 	 * Render the consent page.
 	 *
-	 * @param object $client                The client entity.
-	 * @param string $redirect_uri          The redirect URI.
-	 * @param string $state                 The state parameter.
-	 * @param string $scope                 The requested scope.
-	 * @param string $code_challenge        PKCE code challenge.
-	 * @param string $code_challenge_method PKCE challenge method.
+	 * @param \ExtendedAbilities\OAuth\Entities\ClientEntity $client                The client entity.
+	 * @param string                                         $redirect_uri          The redirect URI.
+	 * @param string                                         $state                 The state parameter.
+	 * @param string                                         $scope                 The requested scope.
+	 * @param string                                         $code_challenge        PKCE code challenge.
+	 * @param string                                         $code_challenge_method PKCE challenge method.
 	 *
 	 * @return void
 	 * @since 1.0.0

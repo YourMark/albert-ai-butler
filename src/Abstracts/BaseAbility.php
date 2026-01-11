@@ -67,7 +67,7 @@ abstract class BaseAbility implements Ability {
 	 * Input JSON schema.
 	 *
 	 * @since 1.0.0
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	protected array $input_schema = [];
 
@@ -75,7 +75,7 @@ abstract class BaseAbility implements Ability {
 	 * Output JSON schema.
 	 *
 	 * @since 1.0.0
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	protected array $output_schema = [];
 
@@ -83,7 +83,7 @@ abstract class BaseAbility implements Ability {
 	 * Additional metadata.
 	 *
 	 * @since 1.0.0
-	 * @var array
+	 * @var array<string, mixed>
 	 */
 	protected array $meta = [];
 
@@ -133,9 +133,9 @@ abstract class BaseAbility implements Ability {
 	 *
 	 * Must be implemented by child classes.
 	 *
-	 * @param array $args Input parameters.
+	 * @param array<string, mixed> $args Input parameters.
 	 *
-	 * @return array|WP_Error The result of the ability execution.
+	 * @return array<string, mixed>|WP_Error The result of the ability execution.
 	 * @since 1.0.0
 	 */
 	abstract public function execute( array $args ): array|WP_Error;
@@ -231,7 +231,7 @@ abstract class BaseAbility implements Ability {
 	/**
 	 * Get ability metadata for settings page.
 	 *
-	 * @return array
+	 * @return array<string, string>
 	 * @since 1.0.0
 	 */
 	public function get_settings_data(): array {

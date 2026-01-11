@@ -35,9 +35,9 @@ interface Ability {
 	 *
 	 * This method contains the core logic for what the ability does.
 	 *
-	 * @param array $args Arguments passed to the ability.
+	 * @param array<string, mixed> $args Arguments passed to the ability.
 	 *
-	 * @return array|WP_Error The result of the ability execution.
+	 * @return array<string, mixed>|WP_Error The result of the ability execution.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error;

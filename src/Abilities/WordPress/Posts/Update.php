@@ -49,7 +49,7 @@ class Update extends BaseAbility {
 	/**
 	 * Get the input schema for this ability.
 	 *
-	 * @return array Input schema.
+	 * @return array<string, mixed> Input schema.
 	 * @since 1.0.0
 	 */
 	protected function get_input_schema(): array {
@@ -98,7 +98,7 @@ class Update extends BaseAbility {
 	/**
 	 * Get the output schema for this ability.
 	 *
-	 * @return array Output schema.
+	 * @return array<string, mixed> Output schema.
 	 * @since 1.0.0
 	 */
 	protected function get_output_schema(): array {
@@ -163,18 +163,18 @@ class Update extends BaseAbility {
 	/**
 	 * Execute the ability - update a post using WordPress REST API.
 	 *
-	 * @param array $args {
+	 * @param array<string, mixed> $args {
 	 *     Input parameters.
 	 *
-	 * @type int $id Post ID (required).
-	 * @type string $title Post title.
-	 * @type string $content Post content.
-	 * @type string $status Post status.
-	 * @type string $excerpt Post excerpt.
-	 * @type array $categories Category IDs.
-	 * @type array $tags Tag names.
+	 *     @type int    $id         Post ID (required).
+	 *     @type string $title      Post title.
+	 *     @type string $content    Post content.
+	 *     @type string $status     Post status.
+	 *     @type string $excerpt    Post excerpt.
+	 *     @type array  $categories Category IDs.
+	 *     @type array  $tags       Tag names.
 	 * }
-	 * @return array|WP_Error Post data on success, WP_Error on failure.
+	 * @return array<string, mixed>|WP_Error Post data on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
@@ -272,8 +272,8 @@ class Update extends BaseAbility {
 	/**
 	 * Get or create tag IDs from tag names using REST API.
 	 *
-	 * @param array $tag_names Array of tag names.
-	 * @return array Array of tag IDs.
+	 * @param array<int, string> $tag_names Array of tag names.
+	 * @return array<int, int> Array of tag IDs.
 	 * @since 1.0.0
 	 */
 	private function get_or_create_tag_ids( array $tag_names ): array {

@@ -48,7 +48,7 @@ class SetFeaturedImage extends BaseAbility {
 	/**
 	 * Get the input schema for this ability.
 	 *
-	 * @return array Input schema.
+	 * @return array<string, mixed> Input schema.
 	 * @since 1.0.0
 	 */
 	protected function get_input_schema(): array {
@@ -71,7 +71,7 @@ class SetFeaturedImage extends BaseAbility {
 	/**
 	 * Get the output schema for this ability.
 	 *
-	 * @return array Output schema.
+	 * @return array<string, mixed> Output schema.
 	 * @since 1.0.0
 	 */
 	protected function get_output_schema(): array {
@@ -134,13 +134,13 @@ class SetFeaturedImage extends BaseAbility {
 	/**
 	 * Execute the ability - set featured image using REST API.
 	 *
-	 * @param array $args {
+	 * @param array<string, mixed> $args {
 	 *     Input parameters.
 	 *
-	 * @type int $post_id       Post ID to set featured image for.
-	 * @type int $attachment_id Attachment ID to use as featured image.
+	 *     @type int $post_id       Post ID to set featured image for.
+	 *     @type int $attachment_id Attachment ID to use as featured image.
 	 * }
-	 * @return array|WP_Error Result data on success, WP_Error on failure.
+	 * @return array<string, mixed>|WP_Error Result data on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {

@@ -69,9 +69,9 @@ class Server implements Hookable {
 	 * When a request to our MCP endpoint fails authentication, we need to tell
 	 * the client where to find OAuth authorization server metadata.
 	 *
-	 * @param mixed            $response The response.
-	 * @param array            $handler  The handler.
-	 * @param \WP_REST_Request $request  The request.
+	 * @param mixed                                 $response The response.
+	 * @param array<string, mixed>                  $handler  The handler.
+	 * @param WP_REST_Request<array<string, mixed>> $request  The request.
 	 *
 	 * @return mixed The response.
 	 * @since 1.0.0
@@ -126,7 +126,7 @@ class Server implements Hookable {
 	 *
 	 * Uses the same core abilities as the default MCP server.
 	 *
-	 * @return array The tool names.
+	 * @return array<int, string> The tool names.
 	 * @since 1.0.0
 	 */
 	private function get_tools(): array {
@@ -142,7 +142,7 @@ class Server implements Hookable {
 	 *
 	 * Validates OAuth 2.0 Bearer tokens and sets the current WordPress user.
 	 *
-	 * @param WP_REST_Request $request The REST request.
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request.
 	 *
 	 * @return bool|WP_Error True if authenticated, WP_Error otherwise.
 	 * @since 1.0.0

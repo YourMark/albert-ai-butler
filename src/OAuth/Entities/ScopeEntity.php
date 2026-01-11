@@ -30,7 +30,7 @@ class ScopeEntity implements ScopeEntityInterface {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $identifier The scope identifier.
+	 * @param non-empty-string $identifier The scope identifier.
 	 *
 	 * @since 1.0.0
 	 */

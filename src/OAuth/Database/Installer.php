@@ -191,7 +191,7 @@ class Installer {
 	/**
 	 * Get table names.
 	 *
-	 * @return array Array of table names.
+	 * @return array<string, string> Array of table names.
 	 * @since 1.0.0
 	 */
 	public static function get_table_names(): array {

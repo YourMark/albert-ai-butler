@@ -48,7 +48,7 @@ class UploadMedia extends BaseAbility {
 	/**
 	 * Get the input schema for this ability.
 	 *
-	 * @return array Input schema.
+	 * @return array<string, mixed> Input schema.
 	 * @since 1.0.0
 	 */
 	protected function get_input_schema(): array {
@@ -97,7 +97,7 @@ class UploadMedia extends BaseAbility {
 	/**
 	 * Get the output schema for this ability.
 	 *
-	 * @return array Output schema.
+	 * @return array<string, mixed> Output schema.
 	 * @since 1.0.0
 	 */
 	protected function get_output_schema(): array {
@@ -163,18 +163,18 @@ class UploadMedia extends BaseAbility {
 	/**
 	 * Execute the ability - upload media file using REST API.
 	 *
-	 * @param array $args {
+	 * @param array<string, mixed> $args {
 	 *     Input parameters.
 	 *
-	 * @type string $file        File source (URL, path, or base64).
-	 * @type string $filename    Filename for the file (optional).
-	 * @type string $title       Media title (optional).
-	 * @type string $alt_text    Image alt text (optional).
-	 * @type string $caption     Media caption (optional).
-	 * @type string $description Media description (optional).
-	 * @type int    $post_id     Post ID to attach to (optional).
+	 *     @type string $file        File source (URL, path, or base64).
+	 *     @type string $filename    Filename for the file (optional).
+	 *     @type string $title       Media title (optional).
+	 *     @type string $alt_text    Image alt text (optional).
+	 *     @type string $caption     Media caption (optional).
+	 *     @type string $description Media description (optional).
+	 *     @type int    $post_id     Post ID to attach to (optional).
 	 * }
-	 * @return array|WP_Error Media data on success, WP_Error on failure.
+	 * @return array<string, mixed>|WP_Error Media data on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
@@ -286,7 +286,7 @@ class UploadMedia extends BaseAbility {
 	 *
 	 * @param string $file     File source (URL, path, or base64).
 	 * @param string $filename Optional filename override.
-	 * @return array|WP_Error Array with 'data', 'filename', 'file_type' on success, WP_Error on failure.
+	 * @return array<string, mixed>|WP_Error Array with 'data', 'filename', 'file_type' on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	private function process_file_source( string $file, string $filename = '' ): array|WP_Error {
@@ -309,7 +309,7 @@ class UploadMedia extends BaseAbility {
 	 *
 	 * @param string $url      File URL.
 	 * @param string $filename Optional filename override.
-	 * @return array|WP_Error Array with 'data', 'filename', 'file_type' on success, WP_Error on failure.
+	 * @return array<string, mixed>|WP_Error Array with 'data', 'filename', 'file_type' on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	private function process_url( string $url, string $filename = '' ): array|WP_Error {
@@ -348,7 +348,7 @@ class UploadMedia extends BaseAbility {
 		$file_data = file_get_contents( $temp_file );
 		wp_delete_file( $temp_file );
 
-		if ( false === $file_data ) {
+		if ( $file_data === false ) {
 			return new WP_Error(
 				'read_failed',
 				__( 'Failed to read downloaded file.', 'extended-abilities' ),
@@ -368,7 +368,7 @@ class UploadMedia extends BaseAbility {
 	 *
 	 * @param string $path     Local file path.
 	 * @param string $filename Optional filename override.
-	 * @return array|WP_Error Array with 'data', 'filename', 'file_type' on success, WP_Error on failure.
+	 * @return array<string, mixed>|WP_Error Array with 'data', 'filename', 'file_type' on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	private function process_local_file( string $path, string $filename = '' ): array|WP_Error {
@@ -392,7 +392,7 @@ class UploadMedia extends BaseAbility {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file path provided by user.
 		$file_data = file_get_contents( $path );
 
-		if ( false === $file_data ) {
+		if ( $file_data === false ) {
 			return new WP_Error(
 				'read_failed',
 				__( 'Failed to read file.', 'extended-abilities' ),
@@ -412,7 +412,7 @@ class UploadMedia extends BaseAbility {
 	 *
 	 * @param string $base64   Base64 encoded file data.
 	 * @param string $filename Filename (required for base64).
-	 * @return array|WP_Error Array with 'data', 'filename', 'file_type' on success, WP_Error on failure.
+	 * @return array<string, mixed>|WP_Error Array with 'data', 'filename', 'file_type' on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	private function process_base64( string $base64, string $filename = '' ): array|WP_Error {
@@ -428,7 +428,7 @@ class UploadMedia extends BaseAbility {
 		// Decode base64 data.
 		$file_data = base64_decode( $base64, true );
 
-		if ( false === $file_data ) {
+		if ( $file_data === false ) {
 			return new WP_Error(
 				'invalid_base64',
 				__( 'Invalid base64 encoded file data.', 'extended-abilities' ),

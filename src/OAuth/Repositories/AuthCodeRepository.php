@@ -112,7 +112,7 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface {
 		// phpcs:enable
 
 		// If code not found, consider it revoked.
-		if ( null === $revoked ) {
+		if ( $revoked === null ) {
 			return true;
 		}
 

@@ -122,11 +122,19 @@ class KeyManager {
 
 		$resource = openssl_pkey_new( $config );
 
+		// Check if key generation failed.
+		if ( $resource === false ) {
+			return;
+		}
+
 		// Extract private key.
 		openssl_pkey_export( $resource, $private_key );
 
 		// Extract public key.
-		$details    = openssl_pkey_get_details( $resource );
+		$details = openssl_pkey_get_details( $resource );
+		if ( $details === false ) {
+			return;
+		}
 		$public_key = $details['key'];
 
 		// Store keys (not autoloaded for security).

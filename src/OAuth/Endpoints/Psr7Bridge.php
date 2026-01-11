@@ -28,7 +28,7 @@ class Psr7Bridge {
 	/**
 	 * Convert WP_REST_Request to PSR-7 ServerRequest.
 	 *
-	 * @param WP_REST_Request $wp_request The WordPress REST request.
+	 * @param WP_REST_Request<array<string, mixed>> $wp_request The WordPress REST request.
 	 *
 	 * @return ServerRequestInterface The PSR-7 request.
 	 * @since 1.0.0
@@ -85,7 +85,7 @@ class Psr7Bridge {
 
 		// Try to decode JSON body.
 		$data = json_decode( $body, true );
-		if ( null === $data && ! empty( $body ) ) {
+		if ( $data === null && ! empty( $body ) ) {
 			$data = $body;
 		}
 
@@ -104,9 +104,9 @@ class Psr7Bridge {
 	/**
 	 * Create a new PSR-7 Response.
 	 *
-	 * @param int    $status  HTTP status code.
-	 * @param array  $headers Response headers.
-	 * @param string $body    Response body.
+	 * @param int                   $status  HTTP status code.
+	 * @param array<string, string> $headers Response headers.
+	 * @param string                $body    Response body.
 	 *
 	 * @return ResponseInterface The PSR-7 response.
 	 * @since 1.0.0
@@ -118,9 +118,9 @@ class Psr7Bridge {
 	/**
 	 * Create a new PSR-7 ServerRequest.
 	 *
-	 * @param string $method HTTP method.
-	 * @param string $uri    Request URI.
-	 * @param array  $headers Request headers.
+	 * @param string                $method  HTTP method.
+	 * @param string                $uri     Request URI.
+	 * @param array<string, string> $headers Request headers.
 	 *
 	 * @return ServerRequestInterface The PSR-7 server request.
 	 * @since 1.0.0

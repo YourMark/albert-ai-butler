@@ -85,9 +85,9 @@ class UserSessions implements Hookable {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified below.
 		$action = sanitize_key( $_GET['action'] );
 
-		if ( 'revoke' === $action ) {
+		if ( $action === 'revoke' ) {
 			$this->handle_revoke_session();
-		} elseif ( 'revoke_all' === $action ) {
+		} elseif ( $action === 'revoke_all' ) {
 			$this->handle_revoke_all_sessions();
 		}
 	}

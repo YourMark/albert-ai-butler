@@ -48,7 +48,7 @@ class ListPages extends BaseAbility {
 	/**
 	 * Get the input schema for this ability.
 	 *
-	 * @return array Input schema.
+	 * @return array<string, mixed> Input schema.
 	 * @since 1.0.0
 	 */
 	protected function get_input_schema(): array {
@@ -104,7 +104,7 @@ class ListPages extends BaseAbility {
 	/**
 	 * Get the output schema for this ability.
 	 *
-	 * @return array Output schema.
+	 * @return array<string, mixed> Output schema.
 	 * @since 1.0.0
 	 */
 	protected function get_output_schema(): array {
@@ -185,18 +185,18 @@ class ListPages extends BaseAbility {
 	/**
 	 * Execute the ability - list pages using WordPress REST API.
 	 *
-	 * @param array $args {
+	 * @param array<string, mixed> $args {
 	 *     Input parameters.
 	 *
-	 * @type int $page Page number for pagination.
-	 * @type int $per_page Number of pages per result page.
-	 * @type string $search Search query.
-	 * @type string $status Filter by status.
-	 * @type int $parent Filter by parent page ID.
-	 * @type string $order Order direction.
-	 * @type string $orderby Sort by field.
+	 *     @type int    $page     Page number for pagination.
+	 *     @type int    $per_page Number of pages per result page.
+	 *     @type string $search   Search query.
+	 *     @type string $status   Filter by status.
+	 *     @type int    $parent   Filter by parent page ID.
+	 *     @type string $order    Order direction.
+	 *     @type string $orderby  Sort by field.
 	 * }
-	 * @return array|WP_Error Pages list on success, WP_Error on failure.
+	 * @return array<string, mixed>|WP_Error Pages list on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {

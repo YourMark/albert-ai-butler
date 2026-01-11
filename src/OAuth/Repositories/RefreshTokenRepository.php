@@ -105,7 +105,7 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface {
 		// phpcs:enable
 
 		// If token not found, consider it revoked.
-		if ( null === $revoked ) {
+		if ( $revoked === null ) {
 			return true;
 		}
 
