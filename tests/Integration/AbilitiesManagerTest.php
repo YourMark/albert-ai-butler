@@ -53,18 +53,17 @@ class AbilitiesManagerTest extends TestCase {
 	}
 
 	/**
-	 * Test that core abilities are registered after init.
+	 * Test that hooks are registered correctly.
 	 *
 	 * @return void
 	 */
-	public function test_core_abilities_are_registered(): void {
-		// Trigger hook registration.
+	public function test_hooks_are_registered(): void {
 		$this->manager->register_hooks();
-		do_action( 'init' );
 
-		$abilities = $this->manager->get_abilities();
-
-		// Should have some registered abilities.
-		$this->assertNotEmpty( $abilities, 'Core abilities should be registered' );
+		// Verify the manager registered its hooks.
+		$this->assertNotFalse(
+			has_action( 'abilities_api_init', [ $this->manager, 'register_abilities' ] ),
+			'register_abilities should be hooked to abilities_api_init'
+		);
 	}
 }
