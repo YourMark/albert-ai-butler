@@ -245,7 +245,7 @@ class Abilities implements Hookable {
 		?>
 		<aside class="ea-sidebar" aria-label="<?php esc_attr_e( 'Abilities navigation', 'extended-abilities' ); ?>">
 			<div class="ea-sidebar-save">
-				<?php submit_button( __( 'Save Changes', 'extended-abilities' ), 'primary', 'submit', false ); ?>
+				<?php submit_button( __( 'Save Changes', 'extended-abilities' ), 'primary', 'submit', false, [ 'form' => 'extended-abilities-form' ] ); ?>
 			</div>
 			<h2 class="ea-sidebar-title"><?php esc_html_e( 'Quick Nav', 'extended-abilities' ); ?></h2>
 			<nav>
@@ -325,7 +325,7 @@ class Abilities implements Hookable {
 	private function render_abilities_content( string $tab, array $grouped_abilities ): void {
 		$options = get_option( $this->option_name, [] );
 		?>
-		<form method="post" action="options.php" aria-label="<?php esc_attr_e( 'Extended Abilities Settings', 'extended-abilities' ); ?>">
+		<form method="post" action="options.php" id="extended-abilities-form" aria-label="<?php esc_attr_e( 'Extended Abilities Settings', 'extended-abilities' ); ?>">
 			<?php settings_fields( $this->option_group ); ?>
 
 			<div class="ea-content-header">
@@ -731,31 +731,21 @@ class Abilities implements Hookable {
 	/**
 	 * Sanitize settings.
 	 *
+	 * Only checked checkboxes are submitted. We simply store those as enabled.
+	 *
 	 * @param array<string, mixed>|mixed $input Input settings.
 	 *
 	 * @return array<string, bool>
 	 * @since 1.0.0
 	 */
 	public function sanitize_settings( $input ): array {
-		if ( ! is_array( $input ) ) {
-			return [];
-		}
-
 		$sanitized = [];
 
-		// Preserve existing settings for abilities not shown on current tab.
-		$existing = get_option( $this->option_name, [] );
-
-		foreach ( $existing as $key => $value ) {
-			if ( $this->is_valid_ability_id( $key ) ) {
-				$sanitized[ $key ] = (bool) $value;
-			}
-		}
-
-		// Update with new input.
-		foreach ( $input as $key => $value ) {
-			if ( $this->is_valid_ability_id( $key ) ) {
-				$sanitized[ $key ] = (bool) $value;
+		if ( is_array( $input ) ) {
+			foreach ( $input as $ability_id => $value ) {
+				if ( $this->is_valid_ability_id( $ability_id ) ) {
+					$sanitized[ $ability_id ] = true;
+				}
 			}
 		}
 
