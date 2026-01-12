@@ -193,17 +193,12 @@ const AbilityItemModule = {
 	init() {
 		document.querySelectorAll( '.ability-item' ).forEach( ( item ) => {
 			item.addEventListener( 'click', ( e ) => {
-				const target = e.target;
-
-				// Don't toggle if clicking directly on the checkbox or toggle switch.
-				if (
-					target.matches( 'input' ) ||
-					target.matches( '.extended-abilities-toggle' ) ||
-					target.matches( '.extended-abilities-toggle-slider' )
-				) {
+				// Let native label/input behavior handle clicks on those elements.
+				if ( e.target.closest( 'label' ) || e.target.closest( 'input' ) ) {
 					return;
 				}
 
+				// For clicks elsewhere (description, padding, etc.), toggle the checkbox.
 				const checkbox = item.querySelector( '.ability-checkbox' );
 				if ( checkbox ) {
 					checkbox.checked = ! checkbox.checked;
