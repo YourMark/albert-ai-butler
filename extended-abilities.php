@@ -3,7 +3,7 @@
  * Plugin Name: Extended Abilities
  * Plugin URI: https://yourmark.nl
  * Description: Extend the abilities of WordPress, WooCommerce and other plugins with the abilities API
- * Version: 1.0.0-alpha
+ * Version: 1.0.0-alpha.1
  * Author: Mark Jansen - Your Mark Media
  * Author URI: https://yourmark.nl
  * Text Domain: extended-abilities
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants.
-define( 'EXTENDED_ABILITIES_VERSION', '1.0.0-alpha' );
+define( 'EXTENDED_ABILITIES_VERSION', '1.0.0-alpha.1' );
 define( 'EXTENDED_ABILITIES_PLUGIN_FILE', __FILE__ );
 define( 'EXTENDED_ABILITIES_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EXTENDED_ABILITIES_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
