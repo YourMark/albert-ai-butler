@@ -43,7 +43,6 @@
         "test": "phpunit --configuration phpunit-unit.xml.dist",
         "test:unit": "phpunit --configuration phpunit-unit.xml.dist",
         "test:integration": "phpunit --configuration phpunit.xml.dist",
-        "test:coverage": "phpunit --coverage-html build/coverage",
         "lint": "find src/ tests/ -name '*.php' -exec php -l {} \\;"
     },
     "config": {

@@ -13,19 +13,6 @@
 		</testsuite>
 	</testsuites>
 
-	<coverage processUncoveredFiles="true">
-		<include>
-			<directory suffix=".php">./src</directory>
-		</include>
-		<exclude>
-			<directory suffix=".php">./vendor</directory>
-		</exclude>
-		<report>
-			<clover outputFile="build/logs/clover.xml"/>
-			<html outputDirectory="build/coverage"/>
-		</report>
-	</coverage>
-
 	<php>
 		<env name="WP_PHPUNIT__TESTS_CONFIG" value="tests/wp-tests-config.php"/>
 	</php>
