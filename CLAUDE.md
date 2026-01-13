@@ -406,7 +406,9 @@ tail -f wp-content/debug.log
 
 ### Version Control
 - The `.gitignore` file excludes vendor/, IDE files, and build artifacts
-- Always commit changes with descriptive messages
+- **NEVER commit changes unless explicitly asked by the user** - only make changes and stage them, let the user decide when to commit
+- **NEVER bump version numbers without being asked** - version changes require explicit user approval
+- When asked to commit, use descriptive commit messages
 - Keep the CLAUDE.md file updated when architecture changes
 
 ## Final Notes
