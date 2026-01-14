@@ -1,5 +1,10 @@
 # Extended Abilities
 
+![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.2+-blue)
+![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-6.9+-blue)
+![Tested up to](https://img.shields.io/badge/Tested%20up%20to-6.9-blue)
+![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
+
 **Give your WordPress installation superpowers with the abilities API for AI assistants.**
 
 ## Description
