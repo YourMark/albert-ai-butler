@@ -182,7 +182,7 @@ class Dashboard implements Hookable {
 						<li>
 							<span class="aibridge-status-indicator aibridge-status-info"></span>
 							<strong><?php echo esc_html__( 'Active Connections:', 'ai-bridge' ); ?></strong>
-							<span class="aibridge-status-value"><?php echo esc_html( $active_connections ); ?></span>
+							<span class="aibridge-status-value"><?php echo esc_html( (string) $active_connections ); ?></span>
 						</li>
 						<li>
 							<span class="aibridge-status-indicator aibridge-status-info"></span>
@@ -276,7 +276,7 @@ class Dashboard implements Hookable {
 	/**
 	 * Get recent activity from OAuth sessions.
 	 *
-	 * @return array Recent activity items.
+	 * @return array<int, array{icon: string, text: string, time: string}> Recent activity items.
 	 * @since 1.0.0
 	 */
 	private function get_recent_activity(): array {
