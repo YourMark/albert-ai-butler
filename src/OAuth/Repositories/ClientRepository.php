@@ -2,15 +2,15 @@
 /**
  * OAuth Client Repository
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage OAuth\Repositories
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\OAuth\Repositories;
+namespace AIBridge\OAuth\Repositories;
 
-use ExtendedAbilities\OAuth\Database\Installer;
-use ExtendedAbilities\OAuth\Entities\ClientEntity;
+use AIBridge\OAuth\Database\Installer;
+use AIBridge\OAuth\Entities\ClientEntity;
 use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
 
 /**
@@ -241,7 +241,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * @since 1.0.0
 	 */
 	private function generate_client_id(): string {
-		return 'extended_abilities_' . bin2hex( random_bytes( 16 ) );
+		return 'aibridge_' . bin2hex( random_bytes( 16 ) );
 	}
 
 	/**

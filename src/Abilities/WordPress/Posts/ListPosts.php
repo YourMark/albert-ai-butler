@@ -2,14 +2,14 @@
 /**
  * List Posts Ability
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Abilities\WordPress\Posts
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress\Posts;
+namespace AIBridge\Abilities\WordPress\Posts;
 
-use ExtendedAbilities\Abstracts\BaseAbility;
+use AIBridge\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -27,10 +27,10 @@ class ListPosts extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'wordpress/list-posts';
-		$this->label       = __( 'List Posts', 'extended-abilities' );
-		$this->description = __( 'Retrieve a list of WordPress posts with optional filtering and pagination.', 'extended-abilities' );
-		$this->category    = 'wp-extended-abilities-wp-core';
+		$this->id          = 'core/posts/list';
+		$this->label       = __( 'List Posts', 'ai-bridge' );
+		$this->description = __( 'Retrieve a list of WordPress posts with optional filtering and pagination.', 'ai-bridge' );
+		$this->category    = 'core';
 		$this->group       = 'posts';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -251,7 +251,7 @@ class ListPosts extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while retrieving posts.', 'extended-abilities' ),
+				$data['message'] ?? __( 'An error occurred while retrieving posts.', 'ai-bridge' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

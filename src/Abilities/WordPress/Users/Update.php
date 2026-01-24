@@ -2,14 +2,14 @@
 /**
  * Update User Ability
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Abilities\WordPress\Users
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress\Users;
+namespace AIBridge\Abilities\WordPress\Users;
 
-use ExtendedAbilities\Abstracts\BaseAbility;
+use AIBridge\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -27,10 +27,10 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'wordpress/update-user';
-		$this->label       = __( 'Update User', 'extended-abilities' );
-		$this->description = __( 'Update an existing WordPress user with new information.', 'extended-abilities' );
-		$this->category    = 'wp-extended-abilities-wp-core';
+		$this->id          = 'core/users/update';
+		$this->label       = __( 'Update User', 'ai-bridge' );
+		$this->description = __( 'Update an existing WordPress user with new information.', 'ai-bridge' );
+		$this->category    = 'core';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -193,7 +193,7 @@ class Update extends BaseAbility {
 		if ( empty( $args['id'] ) ) {
 			return new WP_Error(
 				'missing_id',
-				__( 'User ID is required.', 'extended-abilities' ),
+				__( 'User ID is required.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -204,7 +204,7 @@ class Update extends BaseAbility {
 		if ( ! get_userdata( $user_id ) ) {
 			return new WP_Error(
 				'user_not_found',
-				__( 'User not found.', 'extended-abilities' ),
+				__( 'User not found.', 'ai-bridge' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -259,7 +259,7 @@ class Update extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while updating the user.', 'extended-abilities' ),
+				$data['message'] ?? __( 'An error occurred while updating the user.', 'ai-bridge' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

@@ -2,18 +2,18 @@
 /**
  * OAuth REST API Controller
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage OAuth\Endpoints
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\OAuth\Endpoints;
+namespace AIBridge\OAuth\Endpoints;
 
 use Exception;
-use ExtendedAbilities\Contracts\Interfaces\Hookable;
-use ExtendedAbilities\OAuth\Entities\UserEntity;
-use ExtendedAbilities\OAuth\Repositories\ClientRepository;
-use ExtendedAbilities\OAuth\Server\AuthorizationServerFactory;
+use AIBridge\Contracts\Interfaces\Hookable;
+use AIBridge\OAuth\Entities\UserEntity;
+use AIBridge\OAuth\Repositories\ClientRepository;
+use AIBridge\OAuth\Server\AuthorizationServerFactory;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use WP_Error;
 use WP_REST_Request;
@@ -35,7 +35,7 @@ class OAuthController implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const NAMESPACE = 'extended-abilities/v1';
+	const NAMESPACE = 'ai-bridge/v1';
 
 	/**
 	 * Transient prefix for authorization requests.
@@ -43,7 +43,7 @@ class OAuthController implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const AUTH_REQUEST_TRANSIENT_PREFIX = 'extended_abilities_oauth_auth_request_';
+	const AUTH_REQUEST_TRANSIENT_PREFIX = 'aibridge_oauth_auth_request_';
 
 	/**
 	 * Register WordPress hooks.
@@ -175,7 +175,7 @@ class OAuthController implements Hookable {
 			return new WP_REST_Response(
 				[
 					'error'       => 'login_required',
-					'message'     => __( 'Please log in to authorize this application.', 'extended-abilities' ),
+					'message'     => __( 'Please log in to authorize this application.', 'ai-bridge' ),
 					'redirect_to' => $login_url,
 				],
 				401
@@ -192,7 +192,7 @@ class OAuthController implements Hookable {
 		if ( ! $client ) {
 			return new WP_Error(
 				'invalid_client',
-				__( 'Unknown client.', 'extended-abilities' ),
+				__( 'Unknown client.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -208,7 +208,7 @@ class OAuthController implements Hookable {
 		if ( ! $is_wildcard && ! in_array( $redirect_uri, $allowed_uris, true ) ) {
 			return new WP_Error(
 				'invalid_redirect_uri',
-				__( 'Invalid redirect URI.', 'extended-abilities' ),
+				__( 'Invalid redirect URI.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -266,7 +266,7 @@ class OAuthController implements Hookable {
 		if ( ! $auth_request_data ) {
 			return new WP_Error(
 				'invalid_request',
-				__( 'Authorization request expired or invalid.', 'extended-abilities' ),
+				__( 'Authorization request expired or invalid.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -278,7 +278,7 @@ class OAuthController implements Hookable {
 		if ( get_current_user_id() !== (int) $auth_request_data['user_id'] ) {
 			return new WP_Error(
 				'user_mismatch',
-				__( 'User mismatch.', 'extended-abilities' ),
+				__( 'User mismatch.', 'ai-bridge' ),
 				[ 'status' => 403 ]
 			);
 		}
@@ -407,7 +407,7 @@ class OAuthController implements Hookable {
 		if ( ! is_user_logged_in() ) {
 			return new WP_Error(
 				'rest_forbidden',
-				__( 'You must be logged in.', 'extended-abilities' ),
+				__( 'You must be logged in.', 'ai-bridge' ),
 				[ 'status' => 401 ]
 			);
 		}
@@ -448,8 +448,8 @@ class OAuthController implements Hookable {
 		$metadata = [
 			'issuer'                                => $base_url,
 			'authorization_endpoint'                => $base_url . '/oauth/authorize',
-			'token_endpoint'                        => $this->get_rest_url( 'extended-abilities/v1/oauth/token' ),
-			'registration_endpoint'                 => $this->get_rest_url( 'extended-abilities/v1/oauth/register' ),
+			'token_endpoint'                        => $this->get_rest_url( 'ai-bridge/v1/oauth/token' ),
+			'registration_endpoint'                 => $this->get_rest_url( 'ai-bridge/v1/oauth/register' ),
 			'response_types_supported'              => [ 'code' ],
 			'grant_types_supported'                 => [ 'authorization_code', 'refresh_token' ],
 			'token_endpoint_auth_methods_supported' => [ 'client_secret_post', 'client_secret_basic' ],
@@ -475,8 +475,8 @@ class OAuthController implements Hookable {
 		$base_url = $this->get_base_url();
 
 		$metadata = [
-			'resource'              => $this->get_rest_url( 'extended-abilities/mcp' ),
-			'authorization_servers' => [ $this->get_rest_url( 'extended-abilities/v1/oauth/metadata' ) ],
+			'resource'              => $this->get_rest_url( 'ai-bridge/v1/mcp' ),
+			'authorization_servers' => [ $this->get_rest_url( 'ai-bridge/v1/oauth/metadata' ) ],
 			'scopes_supported'      => [ 'default' ],
 		];
 
@@ -503,10 +503,10 @@ class OAuthController implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$show_developer_settings = apply_filters( 'extended_abilities/settings/developer_mode', false );
+		$show_developer_settings = apply_filters( 'aibridge/settings/developer_mode', false );
 
 		if ( $show_developer_settings ) {
-			$external_url = get_option( 'extended_abilities_external_url', '' );
+			$external_url = get_option( 'aibridge_external_url', '' );
 
 			if ( ! empty( $external_url ) ) {
 				return $external_url;

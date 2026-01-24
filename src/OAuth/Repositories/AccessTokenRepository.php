@@ -2,15 +2,15 @@
 /**
  * OAuth Access Token Repository
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage OAuth\Repositories
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\OAuth\Repositories;
+namespace AIBridge\OAuth\Repositories;
 
-use ExtendedAbilities\OAuth\Database\Installer;
-use ExtendedAbilities\OAuth\Entities\AccessTokenEntity;
+use AIBridge\OAuth\Database\Installer;
+use AIBridge\OAuth\Entities\AccessTokenEntity;
 use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
 use League\OAuth2\Server\Repositories\AccessTokenRepositoryInterface;

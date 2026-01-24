@@ -2,13 +2,13 @@
 /**
  * AbilitiesManager integration tests.
  *
- * @package ExtendedAbilities
+ * @package AIBridge
  */
 
-namespace ExtendedAbilities\Tests\Integration;
+namespace AIBridge\Tests\Integration;
 
-use ExtendedAbilities\Tests\TestCase;
-use ExtendedAbilities\Core\AbilitiesManager;
+use AIBridge\Tests\TestCase;
+use AIBridge\Core\AbilitiesManager;
 
 /**
  * Test the AbilitiesManager functionality.

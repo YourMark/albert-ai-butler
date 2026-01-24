@@ -1,15 +1,15 @@
-# Extended Abilities
+# AI Bridge for WordPress
 
-![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.2+-blue)
+![Requires PHP](https://img.shields.io/badge/Requires%20PHP-7.4+-blue)
 ![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-6.9+-blue)
 ![Tested up to](https://img.shields.io/badge/Tested%20up%20to-6.9-blue)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
 
-**Give your WordPress installation superpowers with the abilities API for AI assistants.**
+**Connect your WordPress site to AI assistants with secure OAuth 2.0 authentication and the Model Context Protocol (MCP).**
 
 ## Description
 
-Extended Abilities provides a powerful API that extends WordPress, WooCommerce, and other plugins with custom abilities that can be used by AI assistants. This plugin acts as a bridge between your WordPress site and AI-powered tools, enabling them to interact with and control various aspects of your website through a unified abilities interface.
+AI Bridge for WordPress provides a powerful API that exposes WordPress functionality to AI assistants through the Model Context Protocol (MCP). This plugin acts as a secure bridge between your WordPress site and AI-powered tools like Claude, enabling them to interact with and control various aspects of your website through a standardized interface.
 
 Think of abilities as superpowers that you can grant to AI assistants - from managing content and products to handling complex workflows. The abilities API provides a standardized way for AI assistants to:
 
@@ -35,7 +35,7 @@ Think of abilities as superpowers that you can grant to AI assistants - from man
 ### Manual Installation
 
 1. Download the plugin files
-2. Upload the `extended-abilities` folder to `/wp-content/plugins/`
+2. Upload the `ai-bridge` folder to `/wp-content/plugins/`
 3. Activate the plugin through the 'Plugins' menu in WordPress
 
 ## Development
@@ -45,7 +45,7 @@ Think of abilities as superpowers that you can grant to AI assistants - from man
 1. Clone this repository
 2. Navigate to the plugin directory:
    ```bash
-   cd wp-content/plugins/extended-abilities
+   cd wp-content/plugins/ai-bridge
    ```
 3. Install dependencies:
    ```bash
@@ -95,11 +95,11 @@ Website: https://yourmark.nl
 
 ## Changelog
 
-### 0.0.1 - 2025-12-10
-- Initial alpha release
-- Core abilities API
-- WordPress core abilities (Posts, Pages, Users, Media)
-- Settings page with tab navigation
-- Hookable interface pattern
-- Component system
-- Composer support
+### 1.0.0 - 2025-01-23
+- Initial release
+- Full OAuth 2.0 server implementation
+- MCP (Model Context Protocol) integration
+- Core WordPress abilities (Posts, Pages, Users, Media, Taxonomies)
+- Admin interface for managing abilities and OAuth sessions
+- Secure authentication and authorization
+- Extensible ability system

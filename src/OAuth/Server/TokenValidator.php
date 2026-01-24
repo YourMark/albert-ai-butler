@@ -2,15 +2,15 @@
 /**
  * OAuth Token Validator
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage OAuth\Server
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\OAuth\Server;
+namespace AIBridge\OAuth\Server;
 
 use Exception;
-use ExtendedAbilities\OAuth\Endpoints\Psr7Bridge;
+use AIBridge\OAuth\Endpoints\Psr7Bridge;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use WP_Error;
 use WP_REST_Request;
@@ -47,7 +47,7 @@ class TokenValidator {
 			if ( empty( $user_id ) ) {
 				return new WP_Error(
 					'oauth_invalid_token',
-					__( 'Token does not contain a valid user identifier.', 'extended-abilities' ),
+					__( 'Token does not contain a valid user identifier.', 'ai-bridge' ),
 					[ 'status' => 401 ]
 				);
 			}
@@ -58,7 +58,7 @@ class TokenValidator {
 			if ( ! $user ) {
 				return new WP_Error(
 					'oauth_user_not_found',
-					__( 'User associated with token not found.', 'extended-abilities' ),
+					__( 'User associated with token not found.', 'ai-bridge' ),
 					[ 'status' => 401 ]
 				);
 			}
@@ -206,7 +206,7 @@ class TokenValidator {
 						'oauth_insufficient_scope',
 						sprintf(
 							/* translators: %s: Required scope */
-							__( 'This action requires the "%s" scope.', 'extended-abilities' ),
+							__( 'This action requires the "%s" scope.', 'ai-bridge' ),
 							$scope
 						),
 						[ 'status' => 403 ]

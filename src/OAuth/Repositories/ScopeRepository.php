@@ -2,14 +2,14 @@
 /**
  * OAuth Scope Repository
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage OAuth\Repositories
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\OAuth\Repositories;
+namespace AIBridge\OAuth\Repositories;
 
-use ExtendedAbilities\OAuth\Entities\ScopeEntity;
+use AIBridge\OAuth\Entities\ScopeEntity;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
 use League\OAuth2\Server\Entities\ScopeEntityInterface;
 use League\OAuth2\Server\Repositories\ScopeRepositoryInterface;

@@ -2,15 +2,15 @@
 /**
  * OAuth Authorization Code Repository
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage OAuth\Repositories
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\OAuth\Repositories;
+namespace AIBridge\OAuth\Repositories;
 
-use ExtendedAbilities\OAuth\Database\Installer;
-use ExtendedAbilities\OAuth\Entities\AuthCodeEntity;
+use AIBridge\OAuth\Database\Installer;
+use AIBridge\OAuth\Entities\AuthCodeEntity;
 use League\OAuth2\Server\Entities\AuthCodeEntityInterface;
 use League\OAuth2\Server\Repositories\AuthCodeRepositoryInterface;
 

@@ -2,12 +2,12 @@
 /**
  * Hookable Interface
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Contracts\Interfaces
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Contracts\Interfaces;
+namespace AIBridge\Contracts\Interfaces;
 
 /**
  * The Hookable interface

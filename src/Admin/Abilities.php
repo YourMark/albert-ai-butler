@@ -2,14 +2,14 @@
 /**
  * Abilities Admin Page
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Admin
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Admin;
+namespace AIBridge\Admin;
 
-use ExtendedAbilities\Contracts\Interfaces\Hookable;
+use AIBridge\Contracts\Interfaces\Hookable;
 
 /**
  * Abilities class
@@ -26,7 +26,7 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private string $page_slug = 'extended-abilities';
+	private string $page_slug = 'ai-bridge';
 
 	/**
 	 * Option group name.
@@ -34,7 +34,7 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private string $option_group = 'extended_abilities_settings';
+	private string $option_group = 'aibridge_settings';
 
 	/**
 	 * Option name for storing settings.
@@ -42,7 +42,7 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private string $option_name = 'extended_abilities_options';
+	private string $option_name = 'aibridge_options';
 
 	/**
 	 * Available tabs.
@@ -75,7 +75,7 @@ class Abilities implements Hookable {
 	private function get_tabs(): array {
 		if ( $this->tabs === null ) {
 			$this->tabs = [
-				'core' => __( 'Core', 'extended-abilities' ),
+				'core' => __( 'Core', 'ai-bridge' ),
 			];
 
 			/**
@@ -88,7 +88,7 @@ class Abilities implements Hookable {
 			 *
 			 * @since 1.0.0
 			 */
-			$this->tabs = apply_filters( 'extended_abilities/abilities/tabs', $this->tabs );
+			$this->tabs = apply_filters( 'aibridge/abilities/tabs', $this->tabs );
 		}
 
 		return $this->tabs;
@@ -123,8 +123,8 @@ class Abilities implements Hookable {
 	public function add_menu_pages(): void {
 		// Add top-level menu.
 		add_menu_page(
-			__( 'Extended Abilities', 'extended-abilities' ),
-			__( 'Abilities', 'extended-abilities' ),
+			__( 'AI Bridge', 'ai-bridge' ),
+			__( 'Abilities', 'ai-bridge' ),
 			'manage_options',
 			$this->page_slug,
 			[ $this, 'render_page' ],
@@ -135,8 +135,8 @@ class Abilities implements Hookable {
 		// Add Abilities submenu (points to parent).
 		add_submenu_page(
 			$this->page_slug,
-			__( 'Abilities', 'extended-abilities' ),
-			__( 'Abilities', 'extended-abilities' ),
+			__( 'Abilities', 'ai-bridge' ),
+			__( 'Abilities', 'ai-bridge' ),
 			'manage_options',
 			$this->page_slug,
 			[ $this, 'render_page' ]
@@ -175,7 +175,7 @@ class Abilities implements Hookable {
 			return;
 		}
 		?>
-		<nav class="nav-tab-wrapper wp-clearfix" aria-label="<?php esc_attr_e( 'Abilities tabs', 'extended-abilities' ); ?>">
+		<nav class="nav-tab-wrapper wp-clearfix" aria-label="<?php esc_attr_e( 'Abilities tabs', 'ai-bridge' ); ?>">
 			<?php foreach ( $tabs as $tab_slug => $tab_label ) : ?>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . $this->page_slug . '&tab=' . $tab_slug ) ); ?>"
 					class="nav-tab <?php echo $current_tab === $tab_slug ? 'nav-tab-active' : ''; ?>"
@@ -195,19 +195,19 @@ class Abilities implements Hookable {
 	 */
 	public function render_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'extended-abilities' ) );
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'ai-bridge' ) );
 		}
 
 		$current_tab       = $this->get_current_tab();
 		$grouped_abilities = $this->get_abilities_for_tab( $current_tab );
 		?>
-		<div class="wrap extended-abilities-settings">
+		<div class="wrap aibridge-settings">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
 			<div class="notice notice-warning">
 				<p>
-					<strong><?php esc_html_e( 'Beta Version:', 'extended-abilities' ); ?></strong>
-					<?php esc_html_e( 'This plugin is currently in beta and is intended for testing purposes only. Please use with caution and do not use on production sites.', 'extended-abilities' ); ?>
+					<strong><?php esc_html_e( 'Beta Version:', 'ai-bridge' ); ?></strong>
+					<?php esc_html_e( 'This plugin is currently in beta and is intended for testing purposes only. Please use with caution and do not use on production sites.', 'ai-bridge' ); ?>
 				</p>
 			</div>
 
@@ -219,7 +219,7 @@ class Abilities implements Hookable {
 				<?php $this->render_sidebar( $grouped_abilities ); ?>
 
 				<div class="ea-main-content">
-					<div class="extended-abilities-tab-content">
+					<div class="aibridge-tab-content">
 						<?php $this->render_abilities_content( $current_tab, $grouped_abilities ); ?>
 					</div>
 				</div>
@@ -243,11 +243,11 @@ class Abilities implements Hookable {
 
 		$options = get_option( $this->option_name, [] );
 		?>
-		<aside class="ea-sidebar" aria-label="<?php esc_attr_e( 'Abilities navigation', 'extended-abilities' ); ?>">
+		<aside class="ea-sidebar" aria-label="<?php esc_attr_e( 'Abilities navigation', 'ai-bridge' ); ?>">
 			<div class="ea-sidebar-save">
-				<?php submit_button( __( 'Save Changes', 'extended-abilities' ), 'primary', 'submit', false, [ 'form' => 'extended-abilities-form' ] ); ?>
+				<?php submit_button( __( 'Save Changes', 'ai-bridge' ), 'primary', 'submit', false, [ 'form' => 'aibridge-form' ] ); ?>
 			</div>
-			<h2 class="ea-sidebar-title"><?php esc_html_e( 'Quick Nav', 'extended-abilities' ); ?></h2>
+			<h2 class="ea-sidebar-title"><?php esc_html_e( 'Quick Nav', 'ai-bridge' ); ?></h2>
 			<nav>
 				<ul class="ea-sidebar-nav">
 					<?php foreach ( $grouped_abilities as $category => $data ) : ?>
@@ -308,7 +308,7 @@ class Abilities implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$icons = apply_filters( 'extended_abilities/abilities/group_icons', $icons );
+		$icons = apply_filters( 'aibridge/abilities/group_icons', $icons );
 
 		return $icons[ $group ] ?? 'dashicons-admin-generic';
 	}
@@ -325,17 +325,17 @@ class Abilities implements Hookable {
 	private function render_abilities_content( string $tab, array $grouped_abilities ): void {
 		$options = get_option( $this->option_name, [] );
 		?>
-		<form method="post" action="options.php" id="extended-abilities-form" aria-label="<?php esc_attr_e( 'Extended Abilities Settings', 'extended-abilities' ); ?>">
+		<form method="post" action="options.php" id="aibridge-form" aria-label="<?php esc_attr_e( 'AI Bridge Settings', 'ai-bridge' ); ?>">
 			<?php settings_fields( $this->option_group ); ?>
 
 			<div class="ea-content-header">
 				<p class="ea-content-description">
-					<?php esc_html_e( 'Select which abilities AI assistants can use on your site. Only enable abilities you trust.', 'extended-abilities' ); ?>
+					<?php esc_html_e( 'Select which abilities AI assistants can use on your site. Only enable abilities you trust.', 'ai-bridge' ); ?>
 				</p>
 				<span class="ea-content-actions">
-					<button type="button" class="ea-action-link" id="ea-expand-all"><?php esc_html_e( 'Expand all', 'extended-abilities' ); ?></button>
+					<button type="button" class="ea-action-link" id="ea-expand-all"><?php esc_html_e( 'Expand all', 'ai-bridge' ); ?></button>
 					<span class="ea-action-separator" aria-hidden="true">·</span>
-					<button type="button" class="ea-action-link" id="ea-collapse-all"><?php esc_html_e( 'Collapse all', 'extended-abilities' ); ?></button>
+					<button type="button" class="ea-action-link" id="ea-collapse-all"><?php esc_html_e( 'Collapse all', 'ai-bridge' ); ?></button>
 				</span>
 			</div>
 
@@ -362,14 +362,14 @@ class Abilities implements Hookable {
 			<?php if ( empty( $grouped_abilities ) ) : ?>
 				<div class="notice notice-info">
 					<p>
-						<?php esc_html_e( 'No abilities are currently registered for this category. Abilities will appear here once they are registered.', 'extended-abilities' ); ?>
+						<?php esc_html_e( 'No abilities are currently registered for this category. Abilities will appear here once they are registered.', 'ai-bridge' ); ?>
 					</p>
 				</div>
 			<?php endif; ?>
 
 			<?php if ( ! empty( $grouped_abilities ) ) : ?>
 				<div class="ea-mobile-save">
-					<?php submit_button( __( 'Save Changes', 'extended-abilities' ), 'primary', 'submit-mobile', false ); ?>
+					<?php submit_button( __( 'Save Changes', 'ai-bridge' ), 'primary', 'submit-mobile', false ); ?>
 				</div>
 			<?php endif; ?>
 		</form>
@@ -411,19 +411,19 @@ class Abilities implements Hookable {
 					</h2>
 				</div>
 				<div class="ability-group-toggle-all">
-					<label class="extended-abilities-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
+					<label class="aibridge-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
 						<input
 								type="checkbox"
 								id="<?php echo esc_attr( $toggle_all_id ); ?>"
 								class="toggle-subgroup-abilities"
 								data-subgroup="<?php echo esc_attr( $subgroup_class ); ?>"
 								<?php /* translators: %s: ability group name */ ?>
-								aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'extended-abilities' ), $group_data['label'] ) ); ?>"
+								aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'ai-bridge' ), $group_data['label'] ) ); ?>"
 						/>
-						<span class="extended-abilities-toggle-slider" aria-hidden="true"></span>
+						<span class="aibridge-toggle-slider" aria-hidden="true"></span>
 					</label>
 					<label for="<?php echo esc_attr( $toggle_all_id ); ?>">
-						<?php esc_html_e( 'Enable All', 'extended-abilities' ); ?>
+						<?php esc_html_e( 'Enable All', 'ai-bridge' ); ?>
 					</label>
 				</div>
 			</div>
@@ -470,22 +470,22 @@ class Abilities implements Hookable {
 					</button>
 					<span class="dashicons dashicons-admin-generic" aria-hidden="true" style="color: var(--ea-text-secondary);"></span>
 					<h2 class="ability-group-title" id="<?php echo esc_attr( 'title-' . $card_id ); ?>">
-						<?php esc_html_e( 'Other', 'extended-abilities' ); ?>
+						<?php esc_html_e( 'Other', 'ai-bridge' ); ?>
 					</h2>
 				</div>
 				<div class="ability-group-toggle-all">
-					<label class="extended-abilities-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
+					<label class="aibridge-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
 						<input
 								type="checkbox"
 								id="<?php echo esc_attr( $toggle_all_id ); ?>"
 								class="toggle-subgroup-abilities"
 								data-subgroup="<?php echo esc_attr( $subgroup_class ); ?>"
-								aria-label="<?php esc_attr_e( 'Enable all other abilities', 'extended-abilities' ); ?>"
+								aria-label="<?php esc_attr_e( 'Enable all other abilities', 'ai-bridge' ); ?>"
 						/>
-						<span class="extended-abilities-toggle-slider" aria-hidden="true"></span>
+						<span class="aibridge-toggle-slider" aria-hidden="true"></span>
 					</label>
 					<label for="<?php echo esc_attr( $toggle_all_id ); ?>">
-						<?php esc_html_e( 'Enable All', 'extended-abilities' ); ?>
+						<?php esc_html_e( 'Enable All', 'ai-bridge' ); ?>
 					</label>
 				</div>
 			</div>
@@ -515,10 +515,10 @@ class Abilities implements Hookable {
 		$grouped = [];
 
 		if ( $tab === 'core' ) {
-			$wordpress_abilities = apply_filters( 'extended_abilities/abilities/wordpress', [] );
+			$wordpress_abilities = apply_filters( 'aibridge/abilities/wordpress', [] );
 			if ( ! empty( $wordpress_abilities ) ) {
 				$grouped['wordpress'] = [
-					'title'     => __( 'WordPress Abilities', 'extended-abilities' ),
+					'title'     => __( 'WordPress Abilities', 'ai-bridge' ),
 					'abilities' => $this->organize_abilities_by_group( $wordpress_abilities ),
 				];
 			}
@@ -533,7 +533,7 @@ class Abilities implements Hookable {
 			 *
 			 * @since 1.0.0
 			 */
-			$tab_abilities = apply_filters( "extended_abilities/abilities/{$tab}", [] );
+			$tab_abilities = apply_filters( "aibridge/abilities/{$tab}", [] );
 			if ( ! empty( $tab_abilities ) ) {
 				$grouped[ $tab ] = [
 					'title'     => $this->get_tabs()[ $tab ] ?? ucfirst( $tab ),
@@ -588,14 +588,14 @@ class Abilities implements Hookable {
 	 */
 	private function get_group_label( string $group ): string {
 		$labels = [
-			'posts'      => __( 'Posts', 'extended-abilities' ),
-			'pages'      => __( 'Pages', 'extended-abilities' ),
-			'media'      => __( 'Media', 'extended-abilities' ),
-			'users'      => __( 'Users', 'extended-abilities' ),
-			'comments'   => __( 'Comments', 'extended-abilities' ),
-			'plugins'    => __( 'Plugins', 'extended-abilities' ),
-			'themes'     => __( 'Themes', 'extended-abilities' ),
-			'taxonomies' => __( 'Taxonomies', 'extended-abilities' ),
+			'posts'      => __( 'Posts', 'ai-bridge' ),
+			'pages'      => __( 'Pages', 'ai-bridge' ),
+			'media'      => __( 'Media', 'ai-bridge' ),
+			'users'      => __( 'Users', 'ai-bridge' ),
+			'comments'   => __( 'Comments', 'ai-bridge' ),
+			'plugins'    => __( 'Plugins', 'ai-bridge' ),
+			'themes'     => __( 'Themes', 'ai-bridge' ),
+			'taxonomies' => __( 'Taxonomies', 'ai-bridge' ),
 		];
 
 		/**
@@ -605,7 +605,7 @@ class Abilities implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$labels = apply_filters( 'extended_abilities/abilities/group_labels', $labels );
+		$labels = apply_filters( 'aibridge/abilities/group_labels', $labels );
 
 		return $labels[ $group ] ?? ucfirst( $group );
 	}
@@ -640,22 +640,22 @@ class Abilities implements Hookable {
 					<h3 class="ability-subgroup-title"><?php echo esc_html( $group_data['label'] ); ?></h3>
 				</div>
 				<div class="ability-subgroup-toggle-all">
-					<label class="extended-abilities-toggle" for="<?php echo esc_attr( $subgroup_toggle_id ); ?>">
+					<label class="aibridge-toggle" for="<?php echo esc_attr( $subgroup_toggle_id ); ?>">
 						<input
 								type="checkbox"
 								id="<?php echo esc_attr( $subgroup_toggle_id ); ?>"
 								class="toggle-subgroup-abilities"
 								data-subgroup="<?php echo esc_attr( $subgroup_class ); ?>"
 								<?php /* translators: %s: ability subgroup name */ ?>
-								aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'extended-abilities' ), $group_data['label'] ) ); ?>"
+								aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'ai-bridge' ), $group_data['label'] ) ); ?>"
 						/>
-						<span class="extended-abilities-toggle-slider" aria-hidden="true"></span>
+						<span class="aibridge-toggle-slider" aria-hidden="true"></span>
 					</label>
 					<label for="<?php echo esc_attr( $subgroup_toggle_id ); ?>">
 						<?php
 						printf(
 							/* translators: %s: group name */
-							esc_html__( 'Enable All %s', 'extended-abilities' ),
+							esc_html__( 'Enable All %s', 'ai-bridge' ),
 							esc_html( $group_data['label'] )
 						);
 						?>
@@ -698,7 +698,7 @@ class Abilities implements Hookable {
 		?>
 		<div class="ability-item">
 			<div class="ability-item-toggle">
-				<label class="extended-abilities-toggle" for="<?php echo esc_attr( $field_id ); ?>">
+				<label class="aibridge-toggle" for="<?php echo esc_attr( $field_id ); ?>">
 					<input
 							type="checkbox"
 							id="<?php echo esc_attr( $field_id ); ?>"
@@ -711,7 +711,7 @@ class Abilities implements Hookable {
 						<?php endif; ?>
 						<?php checked( $checked ); ?>
 					/>
-					<span class="extended-abilities-toggle-slider" aria-hidden="true"></span>
+					<span class="aibridge-toggle-slider" aria-hidden="true"></span>
 				</label>
 			</div>
 			<div class="ability-item-content">
@@ -761,13 +761,13 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function is_valid_ability_id( string $ability_id ): bool {
-		$all_abilities = apply_filters( 'extended_abilities/abilities/wordpress', [] );
+		$all_abilities = apply_filters( 'aibridge/abilities/wordpress', [] );
 
 		// Include abilities from all registered tabs.
 		$tabs = $this->get_tabs();
 		foreach ( array_keys( $tabs ) as $tab_slug ) {
 			if ( $tab_slug !== 'core' ) {
-				$tab_abilities = apply_filters( "extended_abilities/abilities/{$tab_slug}", [] );
+				$tab_abilities = apply_filters( "aibridge/abilities/{$tab_slug}", [] );
 				$all_abilities = array_merge( $all_abilities, $tab_abilities );
 			}
 		}
@@ -789,17 +789,17 @@ class Abilities implements Hookable {
 		}
 
 		wp_enqueue_style(
-			'extended-abilities-admin',
-			EXTENDED_ABILITIES_PLUGIN_URL . 'assets/css/admin-settings.css',
+			'aibridge-admin',
+			AIBRIDGE_PLUGIN_URL . 'assets/css/admin-settings.css',
 			[],
-			EXTENDED_ABILITIES_VERSION
+			AIBRIDGE_VERSION
 		);
 
 		wp_enqueue_script(
-			'extended-abilities-admin',
-			EXTENDED_ABILITIES_PLUGIN_URL . 'assets/js/admin-settings.js',
+			'aibridge-admin',
+			AIBRIDGE_PLUGIN_URL . 'assets/js/admin-settings.js',
 			[],
-			EXTENDED_ABILITIES_VERSION,
+			AIBRIDGE_VERSION,
 			true
 		);
 	}

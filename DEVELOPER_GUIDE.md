@@ -1,4 +1,4 @@
-# Developer Guide - Extended Abilities
+# Developer Guide - AI Bridge for WordPress
 
 ## Adding Custom Abilities
 
@@ -8,12 +8,12 @@ Add your custom ability directly to the abilities manager:
 
 ```php
 add_action( 'plugins_loaded', function() {
-    $manager = \ExtendedAbilities\Core\Plugin::get_instance()->get_abilities_manager();
+    $manager = \AIBridge\Core\Plugin::get_instance()->get_abilities_manager();
 
     if ( $manager ) {
         $manager->add_ability( new MyPlugin\Abilities\CustomAbility() );
     }
-}, 20 ); // Priority 20 to run after Extended Abilities initializes
+}, 20 ); // Priority 20 to run after AI Bridge initializes
 ```
 
 ### Creating a Custom Ability
@@ -24,7 +24,7 @@ Extend the `BaseAbility` class and implement the required methods:
 <?php
 namespace MyPlugin\Abilities;
 
-use ExtendedAbilities\Abstracts\BaseAbility;
+use AIBridge\Abstracts\BaseAbility;
 use WP_Error;
 
 class CustomAbility extends BaseAbility {
@@ -32,7 +32,7 @@ class CustomAbility extends BaseAbility {
         $this->id          = 'myplugin/custom-action';
         $this->label       = __( 'Custom Action', 'myplugin' );
         $this->description = __( 'Performs a custom action', 'myplugin' );
-        $this->category    = 'wp-extended-abilities-wp-core'; // or your custom category
+        $this->category    = 'core'; // or your custom category
         $this->group       = 'custom'; // Optional: for UI grouping
 
         $this->input_schema  = $this->get_input_schema();

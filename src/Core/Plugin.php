@@ -2,42 +2,42 @@
 /**
  * Main Plugin Class
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Core
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Core;
+namespace AIBridge\Core;
 
-use ExtendedAbilities\Abilities\WordPress\Posts\ListPosts;
-use ExtendedAbilities\Abilities\WordPress\Posts\Create as CreatePost;
-use ExtendedAbilities\Abilities\WordPress\Posts\Update as UpdatePost;
-use ExtendedAbilities\Abilities\WordPress\Posts\Delete as DeletePost;
-use ExtendedAbilities\Abilities\WordPress\Pages\ListPages;
-use ExtendedAbilities\Abilities\WordPress\Pages\Create as CreatePage;
-use ExtendedAbilities\Abilities\WordPress\Pages\Update as UpdatePage;
-use ExtendedAbilities\Abilities\WordPress\Pages\Delete as DeletePage;
-use ExtendedAbilities\Abilities\WordPress\Users\ListUsers;
-use ExtendedAbilities\Abilities\WordPress\Users\Create as CreateUser;
-use ExtendedAbilities\Abilities\WordPress\Users\Update as UpdateUser;
-use ExtendedAbilities\Abilities\WordPress\Users\Delete as DeleteUser;
-use ExtendedAbilities\Abilities\WordPress\Media\UploadMedia;
-use ExtendedAbilities\Abilities\WordPress\Media\SetFeaturedImage;
-use ExtendedAbilities\Abilities\WordPress\Taxonomies\ListTaxonomies;
-use ExtendedAbilities\Abilities\WordPress\Taxonomies\ListTerms;
-use ExtendedAbilities\Abilities\WordPress\Taxonomies\CreateTerm;
-use ExtendedAbilities\Abilities\WordPress\Taxonomies\UpdateTerm;
-use ExtendedAbilities\Abilities\WordPress\Taxonomies\DeleteTerm;
-use ExtendedAbilities\Admin\Abilities;
-use ExtendedAbilities\Admin\Settings;
-use ExtendedAbilities\Admin\UserSessions;
-use ExtendedAbilities\Contracts\Interfaces\Hookable;
-use ExtendedAbilities\MCP\Server as McpServer;
-use ExtendedAbilities\OAuth\Database\Installer as OAuthInstaller;
-use ExtendedAbilities\OAuth\Endpoints\AuthorizationPage;
-use ExtendedAbilities\OAuth\Endpoints\ClientRegistration;
-use ExtendedAbilities\OAuth\Endpoints\OAuthController;
-use ExtendedAbilities\OAuth\Endpoints\OAuthDiscovery;
+use AIBridge\Abilities\WordPress\Posts\ListPosts;
+use AIBridge\Abilities\WordPress\Posts\Create as CreatePost;
+use AIBridge\Abilities\WordPress\Posts\Update as UpdatePost;
+use AIBridge\Abilities\WordPress\Posts\Delete as DeletePost;
+use AIBridge\Abilities\WordPress\Pages\ListPages;
+use AIBridge\Abilities\WordPress\Pages\Create as CreatePage;
+use AIBridge\Abilities\WordPress\Pages\Update as UpdatePage;
+use AIBridge\Abilities\WordPress\Pages\Delete as DeletePage;
+use AIBridge\Abilities\WordPress\Users\ListUsers;
+use AIBridge\Abilities\WordPress\Users\Create as CreateUser;
+use AIBridge\Abilities\WordPress\Users\Update as UpdateUser;
+use AIBridge\Abilities\WordPress\Users\Delete as DeleteUser;
+use AIBridge\Abilities\WordPress\Media\SetFeaturedImage;
+use AIBridge\Abilities\WordPress\Media\UploadMedia;
+use AIBridge\Abilities\WordPress\Taxonomies\ListTaxonomies;
+use AIBridge\Abilities\WordPress\Taxonomies\ListTerms;
+use AIBridge\Abilities\WordPress\Taxonomies\CreateTerm;
+use AIBridge\Abilities\WordPress\Taxonomies\UpdateTerm;
+use AIBridge\Abilities\WordPress\Taxonomies\DeleteTerm;
+use AIBridge\Admin\Abilities;
+use AIBridge\Admin\Settings;
+use AIBridge\Admin\UserSessions;
+use AIBridge\Contracts\Interfaces\Hookable;
+use AIBridge\MCP\Server as McpServer;
+use AIBridge\OAuth\Database\Installer as OAuthInstaller;
+use AIBridge\OAuth\Endpoints\AuthorizationPage;
+use AIBridge\OAuth\Endpoints\ClientRegistration;
+use AIBridge\OAuth\Endpoints\OAuthController;
+use AIBridge\OAuth\Endpoints\OAuthDiscovery;
 use WP\MCP\Core\McpAdapter;
 
 /**
@@ -221,7 +221,7 @@ class Plugin {
 		 *
 		 * @since 1.0.0
 		 */
-		do_action( 'extended_abilities/core/activated' );
+		do_action( 'aibridge/core/activated' );
 	}
 
 	/**
@@ -241,6 +241,6 @@ class Plugin {
 		 *
 		 * @since 1.0.0
 		 */
-		do_action( 'extended_abilities/core/deactivated' );
+		do_action( 'aibridge/core/deactivated' );
 	}
 }

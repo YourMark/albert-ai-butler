@@ -2,13 +2,13 @@
 /**
  * Plugin integration tests.
  *
- * @package ExtendedAbilities
+ * @package AIBridge
  */
 
-namespace ExtendedAbilities\Tests\Integration;
+namespace AIBridge\Tests\Integration;
 
-use ExtendedAbilities\Tests\TestCase;
-use ExtendedAbilities\Core\Plugin;
+use AIBridge\Tests\TestCase;
+use AIBridge\Core\Plugin;
 
 /**
  * Test plugin initialization and core functionality.
@@ -44,9 +44,9 @@ class PluginTest extends TestCase {
 	 * @return void
 	 */
 	public function test_plugin_constants_are_defined(): void {
-		$this->assertTrue( defined( 'EXTENDED_ABILITIES_VERSION' ) );
-		$this->assertTrue( defined( 'EXTENDED_ABILITIES_PLUGIN_FILE' ) );
-		$this->assertTrue( defined( 'EXTENDED_ABILITIES_PLUGIN_DIR' ) );
+		$this->assertTrue( defined( 'AIBRIDGE_VERSION' ) );
+		$this->assertTrue( defined( 'AIBRIDGE_PLUGIN_FILE' ) );
+		$this->assertTrue( defined( 'AIBRIDGE_PLUGIN_DIR' ) );
 	}
 
 	/**
@@ -55,7 +55,7 @@ class PluginTest extends TestCase {
 	 * @return void
 	 */
 	public function test_plugin_version_is_valid(): void {
-		$version = EXTENDED_ABILITIES_VERSION;
+		$version = AIBRIDGE_VERSION;
 
 		$this->assertMatchesRegularExpression(
 			'/^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$/',

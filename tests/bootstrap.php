@@ -1,8 +1,8 @@
 <?php
 /**
- * PHPUnit bootstrap file for Extended Abilities plugin tests.
+ * PHPUnit bootstrap file for AIBridge plugin tests.
  *
- * @package ExtendedAbilities
+ * @package AIBridge
  */
 
 // Composer autoloader for the plugin.

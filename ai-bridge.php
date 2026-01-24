@@ -1,41 +1,41 @@
 <?php
 /**
- * Plugin Name: Extended Abilities
- * Plugin URI: https://yourmark.nl
- * Description: Extend the abilities of WordPress, WooCommerce and other plugins with the abilities API
- * Version: 1.0.0-alpha.1
+ * Plugin Name: AI Bridge for WordPress
+ * Plugin URI: https://aibridgewp.com
+ * Description: Connect your WordPress site to AI assistants with secure OAuth 2.0 authentication and the Model Context Protocol (MCP).
+ * Version: 1.0.0
  * Author: Mark Jansen - Your Mark Media
  * Author URI: https://yourmark.nl
- * Text Domain: extended-abilities
+ * Text Domain: ai-bridge
  * Domain Path: /languages
  * Requires at least: 6.9
- * Requires PHP: 8.2
+ * Requires PHP: 7.4
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  *
- * @package ExtendedAbilities
+ * @package AIBridge
  */
 
 // Prevent direct access.
-use ExtendedAbilities\Core\Plugin;
+use AIBridge\Core\Plugin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 // Define plugin constants.
-define( 'EXTENDED_ABILITIES_VERSION', '1.0.0-alpha.1' );
-define( 'EXTENDED_ABILITIES_PLUGIN_FILE', __FILE__ );
-define( 'EXTENDED_ABILITIES_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'EXTENDED_ABILITIES_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'EXTENDED_ABILITIES_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+define( 'AIBRIDGE_VERSION', '1.0.0' );
+define( 'AIBRIDGE_PLUGIN_FILE', __FILE__ );
+define( 'AIBRIDGE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'AIBRIDGE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'AIBRIDGE_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 // Load Composer autoloader if available.
-if ( ! file_exists( EXTENDED_ABILITIES_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
+if ( ! file_exists( AIBRIDGE_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
 	return;
 }
 
-require_once EXTENDED_ABILITIES_PLUGIN_DIR . 'vendor/autoload.php';
+require_once AIBRIDGE_PLUGIN_DIR . 'vendor/autoload.php';
 
 /**
  * Initialize the plugin.
@@ -43,7 +43,7 @@ require_once EXTENDED_ABILITIES_PLUGIN_DIR . 'vendor/autoload.php';
  * @return void
  * @since 1.0.0
  */
-function init_extended_abilities(): void {
+function init_aibridge(): void {
 	try {
 		$plugin = Plugin::get_instance();
 		$plugin->init();
@@ -56,7 +56,7 @@ function init_extended_abilities(): void {
 					echo esc_html(
 						sprintf(
 						/* translators: %s: error message */
-							__( 'Extended Abilities Plugin Error: %s', 'extended-abilities' ),
+							__( 'AI Bridge Plugin Error: %s', 'ai-bridge' ),
 							$e->getMessage()
 						)
 					);
@@ -68,13 +68,13 @@ function init_extended_abilities(): void {
 		// Log the error for debugging.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional debug logging when WP_DEBUG_LOG is enabled.
-			error_log( 'Extended Abilities Plugin Error: ' . $e->getMessage() );
+			error_log( 'AI Bridge Plugin Error: ' . $e->getMessage() );
 		}
 	}
 }
 
 // Initialize the plugin.
-add_action( 'plugins_loaded', 'init_extended_abilities' );
+add_action( 'plugins_loaded', 'init_aibridge' );
 
 /**
  * Plugin activation hook.
@@ -82,11 +82,11 @@ add_action( 'plugins_loaded', 'init_extended_abilities' );
  * @return void
  * @since 1.0.0
  */
-function activate_extended_abilities(): void {
+function activate_aibridge(): void {
 	Plugin::activate();
 }
 
-register_activation_hook( __FILE__, 'activate_extended_abilities' );
+register_activation_hook( __FILE__, 'activate_aibridge' );
 
 /**
  * Plugin deactivation hook.
@@ -94,11 +94,11 @@ register_activation_hook( __FILE__, 'activate_extended_abilities' );
  * @return void
  * @since 1.0.0
  */
-function deactivate_extended_abilities(): void {
+function deactivate_aibridge(): void {
 	Plugin::deactivate();
 }
 
-register_deactivation_hook( __FILE__, 'deactivate_extended_abilities' );
+register_deactivation_hook( __FILE__, 'deactivate_aibridge' );
 
 /**
  * Add settings link to plugin action links.
@@ -108,11 +108,11 @@ register_deactivation_hook( __FILE__, 'deactivate_extended_abilities' );
  * @return array Modified plugin action links.
  * @since 1.0.0
  */
-function extended_abilities_plugin_action_links( array $links ): array {
+function aibridge_plugin_action_links( array $links ): array {
 	$settings_link = sprintf(
 		'<a href="%s">%s</a>',
-		esc_url( admin_url( 'admin.php?page=extended-abilities-settings' ) ),
-		esc_html__( 'Settings', 'extended-abilities' )
+		esc_url( admin_url( 'admin.php?page=ai-bridge-settings' ) ),
+		esc_html__( 'Settings', 'ai-bridge' )
 	);
 
 	array_unshift( $links, $settings_link );
@@ -120,4 +120,4 @@ function extended_abilities_plugin_action_links( array $links ): array {
 	return $links;
 }
 
-add_filter( 'plugin_action_links_' . EXTENDED_ABILITIES_PLUGIN_BASENAME, 'extended_abilities_plugin_action_links' );
+add_filter( 'plugin_action_links_' . AIBRIDGE_PLUGIN_BASENAME, 'aibridge_plugin_action_links' );

@@ -1,6 +1,6 @@
-=== Extended Abilities ===
+=== AI Bridge for WordPress ===
 Contributors: markjansen
-Tags: abilities, api, ai, woocommerce, automation
+Tags: ai, mcp, oauth, claude, automation, api
 Requires at least: 6.9
 Tested up to: 6.9
 Requires PHP: 7.4
@@ -8,65 +8,189 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Give your WordPress installation superpowers with the abilities API for AI assistants.
+Connect your WordPress site to AI assistants with secure OAuth 2.0 authentication and the Model Context Protocol (MCP).
 
 == Description ==
 
-Extended Abilities provides a powerful API that extends WordPress, WooCommerce, and other plugins with custom abilities that can be used by AI assistants. This plugin acts as a bridge between your WordPress site and AI-powered tools, enabling them to interact with and control various aspects of your website through a unified abilities interface.
+AI Bridge for WordPress is the secure bridge between your WordPress site and AI assistants like Claude. Using industry-standard OAuth 2.0 and the Model Context Protocol (MCP), AI Bridge enables AI assistants to safely interact with your WordPress content, users, and media.
 
-Think of abilities as superpowers that you can grant to AI assistants - from managing content and products to handling complex workflows. The abilities API provides a standardized way for AI assistants to:
+= Key Features =
 
-* Discover available actions they can perform on your site
-* Execute those actions with proper authentication and authorization
-* Receive structured responses they can understand and act upon
-* Extend WordPress and WooCommerce functionality in AI-friendly ways
+* **Full OAuth 2.0 Server**: Industry-standard authentication for AI assistants
+* **MCP Integration**: Native support for the Model Context Protocol
+* **Core WordPress Abilities**: Manage posts, pages, users, media, and taxonomies
+* **Secure by Default**: All operations require proper authentication and authorization
+* **Extensible API**: Developers can add custom abilities for any functionality
+* **Modern Architecture**: Built with PHP 7.4+ type safety and WordPress coding standards
+
+= What is MCP? =
+
+The Model Context Protocol (MCP) is an open standard that enables AI assistants to securely connect to external data sources and tools. AI Bridge implements MCP to allow AI assistants like Claude to interact with your WordPress site in a standardized, secure way.
 
 = Use Cases =
 
-* **Content Management**: Allow AI assistants to create, update, and manage WordPress content
-* **E-commerce Operations**: Enable AI to handle WooCommerce products, orders, and customer data
-* **Workflow Automation**: Build custom abilities that AI assistants can use to automate complex tasks
-* **Custom Integrations**: Extend any WordPress or WooCommerce functionality with AI-accessible abilities
+* **Content Management**: Let AI assistants help you create, update, and organize WordPress content
+* **Workflow Automation**: Automate complex content workflows with AI assistance
+* **Media Management**: AI-assisted media uploads and organization
+* **User Management**: Safely delegate user management tasks to AI assistants
+* **Custom Integrations**: Extend WordPress functionality with custom AI-accessible abilities
 
-= Features =
+= Included Abilities =
 
-* Modern PHP architecture with full type safety
-* Extensible abilities API
-* Secure authentication and authorization
-* WooCommerce integration support
-* Developer-friendly hooks and filters
+**Posts:**
+* List posts with advanced filtering
+* Create new posts
+* Update existing posts
+* Delete posts
+
+**Pages:**
+* List pages
+* Create new pages
+* Update existing pages
+* Delete pages
+
+**Users:**
+* List users with role filtering
+* Create new users
+* Update user information
+* Delete users
+
+**Media:**
+* Upload media from URL (sideloading)
+* Set featured images
+
+**Taxonomies:**
+* List all taxonomies
+* List taxonomy terms
+* Create new terms
+* Update existing terms
+* Delete terms
+
+= Security =
+
+AI Bridge takes security seriously:
+
+* All API requests require OAuth 2.0 authentication
+* Per-user authorization with WordPress capability checks
+* All operations respect WordPress permissions
+* Secure RSA key management for token signing
+* HTTPS required for OAuth flows
+* No sensitive data stored in plain text
+
+= For Developers =
+
+AI Bridge is built for extensibility:
+
+* Clean, modern PHP architecture with full type safety
+* PSR-4 autoloading via Composer
+* Comprehensive developer documentation
+* Hookable architecture with WordPress filters and actions
+* Easy to add custom abilities
 * Full internationalization support
+
+Learn more at [aibridgewp.com](https://aibridgewp.com)
 
 == Installation ==
 
-1. Upload the plugin files to the `/wp-content/plugins/extended-abilities` directory, or install the plugin through the WordPress plugins screen directly.
-2. Activate the plugin through the 'Plugins' screen in WordPress.
-3. Configure the plugin settings to define which abilities should be available.
+= From WordPress.org =
+
+1. Install AI Bridge for WordPress through the WordPress plugin directory
+2. Activate the plugin through the 'Plugins' menu in WordPress
+3. Navigate to **AI Bridge** in your admin menu
+4. Configure your settings and connect your AI assistant
+
+= Manual Installation =
+
+1. Download the plugin files
+2. Upload the `ai-bridge` folder to `/wp-content/plugins/`
+3. Activate the plugin through the 'Plugins' menu in WordPress
+4. Navigate to **AI Bridge** in your admin menu
+
+= Connecting Claude Desktop =
+
+1. In WordPress, go to **AI Bridge > Settings**
+2. Note your site's OAuth endpoint URL
+3. In Claude Desktop, add an MCP server configuration pointing to your WordPress site
+4. Authorize Claude when prompted
+5. Claude can now interact with your WordPress site
+
+Full setup guide available at [aibridgewp.com/docs](https://aibridgewp.com/docs)
 
 == Frequently Asked Questions ==
 
-= What are abilities? =
+= What AI assistants are supported? =
 
-Abilities are actions that AI assistants can perform on your WordPress site. They provide a standardized interface for AI tools to interact with your website's functionality.
+AI Bridge works with any AI assistant that supports the Model Context Protocol (MCP), including Claude Desktop. As MCP adoption grows, more AI assistants will be supported.
 
-= Does this plugin require WooCommerce? =
+= Is my data secure? =
 
-No, WooCommerce is only required if you want to use WooCommerce-specific abilities. The core plugin works with WordPress alone.
+Yes. AI Bridge uses OAuth 2.0, the same authentication standard used by Google, Facebook, and other major platforms. All operations require proper authentication and respect WordPress's built-in permission system.
 
-= Is this plugin secure? =
+= Do I need WooCommerce? =
 
-Yes, the plugin implements proper authentication and authorization checks for all abilities. Only authorized users and AI assistants can execute abilities.
+No. AI Bridge works with WordPress core functionality. WooCommerce abilities will be available in a future extension.
+
+= Can I add custom abilities? =
+
+Yes! AI Bridge is designed for extensibility. Developers can easily add custom abilities to expose any WordPress functionality to AI assistants. See the documentation at [aibridgewp.com/docs](https://aibridgewp.com/docs)
+
+= Does this work with multisite? =
+
+AI Bridge is primarily designed for single-site installations. Multisite support is on our roadmap.
+
+= What are the system requirements? =
+
+* WordPress 6.9 or higher
+* PHP 7.4 or higher (8.1+ recommended)
+* MySQL 8.0+ or MariaDB 10.5+
+* HTTPS (required for OAuth 2.0)
+
+= Where can I get support? =
+
+* Documentation: [aibridgewp.com/docs](https://aibridgewp.com/docs)
+* Support Forum: [WordPress.org support forums](https://wordpress.org/support/plugin/ai-bridge/)
+* GitHub: [Report issues](https://github.com/yourmark/ai-bridge/issues)
+
+= How can I contribute? =
+
+We welcome contributions! Visit our [GitHub repository](https://github.com/yourmark/ai-bridge) to report issues, submit pull requests, or contribute to documentation.
+
+== Screenshots ==
+
+1. AI Bridge dashboard showing enabled abilities
+2. OAuth authorization screen for AI assistants
+3. Settings page with external URL configuration
+4. Active OAuth sessions management
+5. Ability details and configuration
 
 == Changelog ==
 
-= 1.0.0 =
+= 1.0.0 - 2025-01-23 =
 * Initial release
-* Core abilities API
-* WordPress integration
-* WooCommerce support (optional)
-* Hookable architecture
+* Full OAuth 2.0 server implementation
+* MCP (Model Context Protocol) integration
+* Core WordPress abilities: Posts, Pages, Users, Media, Taxonomies
+* Admin interface for managing abilities and sessions
+* Secure authentication and authorization
+* Extensible ability system for developers
+* Full internationalization support
 
 == Upgrade Notice ==
 
 = 1.0.0 =
-Initial release of Extended Abilities.
+Initial release of AI Bridge for WordPress. Connect your site to AI assistants securely using OAuth 2.0 and MCP.
+
+== Privacy Policy ==
+
+AI Bridge for WordPress does not collect, store, or transmit any user data to external servers. All authentication tokens are stored locally in your WordPress database. When you authorize an AI assistant, that assistant will have access to perform actions on your WordPress site according to the permissions you grant.
+
+== Credits ==
+
+Developed by Mark Jansen - Your Mark Media
+Website: https://yourmark.nl
+Plugin URL: https://aibridgewp.com
+
+Built with:
+* league/oauth2-server for OAuth 2.0 implementation
+* WordPress Coding Standards
+* Love for AI and automation

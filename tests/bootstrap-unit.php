@@ -2,7 +2,7 @@
 /**
  * PHPUnit bootstrap file for unit tests (no WordPress dependency).
  *
- * @package ExtendedAbilities
+ * @package AIBridge
  */
 
 // Composer autoloader for the plugin.

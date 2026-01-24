@@ -2,15 +2,15 @@
 /**
  * Create Post Ability
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Abilities\WordPress\Posts
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress\Posts;
+namespace AIBridge\Abilities\WordPress\Posts;
 
 use Alley\WP\Block_Converter\Block_Converter;
-use ExtendedAbilities\Abstracts\BaseAbility;
+use AIBridge\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -28,10 +28,10 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'wordpress/create-post';
-		$this->label       = __( 'Create Post', 'extended-abilities' );
-		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', 'extended-abilities' );
-		$this->category    = 'wp-extended-abilities-wp-core';
+		$this->id          = 'core/posts/create';
+		$this->label       = __( 'Create Post', 'ai-bridge' );
+		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', 'ai-bridge' );
+		$this->category    = 'core';
 		$this->group       = 'posts';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -182,7 +182,7 @@ class Create extends BaseAbility {
 		if ( empty( $args['title'] ) ) {
 			return new WP_Error(
 				'missing_title',
-				__( 'Post title is required.', 'extended-abilities' ),
+				__( 'Post title is required.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -240,7 +240,7 @@ class Create extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while creating the post.', 'extended-abilities' ),
+				$data['message'] ?? __( 'An error occurred while creating the post.', 'ai-bridge' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

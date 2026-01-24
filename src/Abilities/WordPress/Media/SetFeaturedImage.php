@@ -2,14 +2,14 @@
 /**
  * Set Featured Image Ability
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Abilities\WordPress\Media
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress\Media;
+namespace AIBridge\Abilities\WordPress\Media;
 
-use ExtendedAbilities\Abstracts\BaseAbility;
+use AIBridge\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -27,10 +27,10 @@ class SetFeaturedImage extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'wordpress/set-featured-image';
-		$this->label       = __( 'Set Featured Image', 'extended-abilities' );
-		$this->description = __( 'Set an existing media attachment as the featured image for a post or page.', 'extended-abilities' );
-		$this->category    = 'wp-extended-abilities-wp-core';
+		$this->id          = 'core/media/set-featured-image';
+		$this->label       = __( 'Set Featured Image', 'ai-bridge' );
+		$this->description = __( 'Set an existing media attachment as the featured image for a post or page.', 'ai-bridge' );
+		$this->category    = 'core';
 		$this->group       = 'media';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -148,7 +148,7 @@ class SetFeaturedImage extends BaseAbility {
 		if ( empty( $args['post_id'] ) ) {
 			return new WP_Error(
 				'missing_post_id',
-				__( 'Post ID is required.', 'extended-abilities' ),
+				__( 'Post ID is required.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -156,7 +156,7 @@ class SetFeaturedImage extends BaseAbility {
 		if ( empty( $args['attachment_id'] ) ) {
 			return new WP_Error(
 				'missing_attachment_id',
-				__( 'Attachment ID is required.', 'extended-abilities' ),
+				__( 'Attachment ID is required.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -176,7 +176,7 @@ class SetFeaturedImage extends BaseAbility {
 			if ( $page_response->is_error() ) {
 				return new WP_Error(
 					'invalid_post',
-					__( 'The specified post or page does not exist.', 'extended-abilities' ),
+					__( 'The specified post or page does not exist.', 'ai-bridge' ),
 					[ 'status' => 404 ]
 				);
 			}
@@ -189,7 +189,7 @@ class SetFeaturedImage extends BaseAbility {
 		if ( $media_response->is_error() ) {
 			return new WP_Error(
 				'invalid_attachment',
-				__( 'The specified attachment does not exist.', 'extended-abilities' ),
+				__( 'The specified attachment does not exist.', 'ai-bridge' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -217,7 +217,7 @@ class SetFeaturedImage extends BaseAbility {
 			if ( $page_update_response->is_error() ) {
 				return new WP_Error(
 					'thumbnail_error',
-					__( 'Failed to set the featured image.', 'extended-abilities' ),
+					__( 'Failed to set the featured image.', 'ai-bridge' ),
 					[ 'status' => 500 ]
 				);
 			}

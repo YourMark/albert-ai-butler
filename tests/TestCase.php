@@ -1,17 +1,17 @@
 <?php
 /**
- * Base test case for Extended Abilities plugin tests.
+ * Base test case for AIBridge plugin tests.
  *
- * @package ExtendedAbilities
+ * @package AIBridge
  */
 
-namespace ExtendedAbilities\Tests;
+namespace AIBridge\Tests;
 
 /**
  * Base test case class.
  *
  * Extends WordPress unit test case with common functionality
- * for Extended Abilities plugin tests.
+ * for AIBridge plugin tests.
  *
  * @phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
  */

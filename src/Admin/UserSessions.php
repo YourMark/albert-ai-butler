@@ -4,14 +4,14 @@
  *
  * Allows users to view and revoke their own MCP sessions.
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Admin
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Admin;
+namespace AIBridge\Admin;
 
-use ExtendedAbilities\Contracts\Interfaces\Hookable;
+use AIBridge\Contracts\Interfaces\Hookable;
 
 /**
  * UserSessions class
@@ -28,7 +28,7 @@ class UserSessions implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private string $page_slug = 'extended-abilities-my-sessions';
+	private string $page_slug = 'ai-bridge-my-sessions';
 
 	/**
 	 * Register WordPress hooks.
@@ -50,15 +50,15 @@ class UserSessions implements Hookable {
 	 */
 	public function add_menu_page(): void {
 		// Only show for users who have MCP access.
-		$allowed_users = get_option( 'extended_abilities_allowed_users', [] );
+		$allowed_users = get_option( 'aibridge_allowed_users', [] );
 
 		if ( ! in_array( get_current_user_id(), $allowed_users, true ) ) {
 			return;
 		}
 
 		add_dashboard_page(
-			__( 'My AI Sessions', 'extended-abilities' ),
-			__( 'My AI Sessions', 'extended-abilities' ),
+			__( 'My AI Sessions', 'ai-bridge' ),
+			__( 'My AI Sessions', 'ai-bridge' ),
 			'read',
 			$this->page_slug,
 			[ $this, 'render_page' ]
@@ -108,11 +108,11 @@ class UserSessions implements Hookable {
 
 		// Verify nonce.
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'revoke_my_session_' . $token_id ) ) {
-			wp_die( esc_html__( 'Security check failed.', 'extended-abilities' ) );
+			wp_die( esc_html__( 'Security check failed.', 'ai-bridge' ) );
 		}
 
 		global $wpdb;
-		$table       = $wpdb->prefix . 'extended_abilities_oauth_access_tokens';
+		$table       = $wpdb->prefix . 'aibridge_oauth_access_tokens';
 		$current_uid = get_current_user_id();
 
 		// Only revoke if it belongs to the current user.
@@ -129,9 +129,9 @@ class UserSessions implements Hookable {
 		);
 
 		add_settings_error(
-			'extended_abilities_user_sessions',
+			'aibridge_user_sessions',
 			'session_revoked',
-			__( 'Session revoked successfully.', 'extended-abilities' ),
+			__( 'Session revoked successfully.', 'ai-bridge' ),
 			'success'
 		);
 
@@ -157,16 +157,16 @@ class UserSessions implements Hookable {
 	private function handle_revoke_all_sessions(): void {
 		// Verify nonce.
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'revoke_all_my_sessions' ) ) {
-			wp_die( esc_html__( 'Security check failed.', 'extended-abilities' ) );
+			wp_die( esc_html__( 'Security check failed.', 'ai-bridge' ) );
 		}
 
 		// Use shared method from Settings class.
 		Settings::revoke_user_tokens( get_current_user_id() );
 
 		add_settings_error(
-			'extended_abilities_user_sessions',
+			'aibridge_user_sessions',
 			'all_sessions_revoked',
-			__( 'All sessions revoked successfully.', 'extended-abilities' ),
+			__( 'All sessions revoked successfully.', 'ai-bridge' ),
 			'success'
 		);
 
@@ -193,8 +193,8 @@ class UserSessions implements Hookable {
 		global $wpdb;
 
 		$current_uid   = get_current_user_id();
-		$tokens_table  = $wpdb->prefix . 'extended_abilities_oauth_access_tokens';
-		$clients_table = $wpdb->prefix . 'extended_abilities_oauth_clients';
+		$tokens_table  = $wpdb->prefix . 'aibridge_oauth_access_tokens';
+		$clients_table = $wpdb->prefix . 'aibridge_oauth_clients';
 
 		// Get active sessions grouped by client, with first connection time.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -217,30 +217,30 @@ class UserSessions implements Hookable {
 		// phpcs:enable
 
 		echo '<div class="wrap ea-user-sessions">';
-		echo '<h1>' . esc_html__( 'My AI Sessions', 'extended-abilities' ) . '</h1>';
+		echo '<h1>' . esc_html__( 'My AI Sessions', 'ai-bridge' ) . '</h1>';
 
-		settings_errors( 'extended_abilities_user_sessions' );
+		settings_errors( 'aibridge_user_sessions' );
 
 		echo '<p class="description">';
-		esc_html_e( 'These are your active AI tool connections. Each session represents an AI assistant that can access this site on your behalf.', 'extended-abilities' );
+		esc_html_e( 'These are your active AI tool connections. Each session represents an AI assistant that can access this site on your behalf.', 'ai-bridge' );
 		echo '</p>';
 
 		if ( empty( $sessions ) ) {
 			echo '<div class="notice notice-info">';
-			echo '<p>' . esc_html__( 'You have no active AI sessions. When you authorize an AI tool to access this site, it will appear here.', 'extended-abilities' ) . '</p>';
+			echo '<p>' . esc_html__( 'You have no active AI sessions. When you authorize an AI tool to access this site, it will appear here.', 'ai-bridge' ) . '</p>';
 			echo '</div>';
 		} else {
 			echo '<table class="wp-list-table widefat fixed striped">';
 			echo '<thead><tr>';
-			echo '<th>' . esc_html__( 'App', 'extended-abilities' ) . '</th>';
-			echo '<th>' . esc_html__( 'Session', 'extended-abilities' ) . '</th>';
-			echo '<th>' . esc_html__( 'Connected', 'extended-abilities' ) . '</th>';
-			echo '<th>' . esc_html__( 'Actions', 'extended-abilities' ) . '</th>';
+			echo '<th>' . esc_html__( 'App', 'ai-bridge' ) . '</th>';
+			echo '<th>' . esc_html__( 'Session', 'ai-bridge' ) . '</th>';
+			echo '<th>' . esc_html__( 'Connected', 'ai-bridge' ) . '</th>';
+			echo '<th>' . esc_html__( 'Actions', 'ai-bridge' ) . '</th>';
 			echo '</tr></thead>';
 			echo '<tbody>';
 
 			foreach ( $sessions as $session ) {
-				$app_name        = ! empty( $session->client_name ) ? $session->client_name : __( 'Unknown', 'extended-abilities' );
+				$app_name        = ! empty( $session->client_name ) ? $session->client_name : __( 'Unknown', 'ai-bridge' );
 				$first_connected = $session->first_connected ?? $session->created_at;
 				echo '<tr>';
 				echo '<td><strong>' . esc_html( $app_name ) . '</strong></td>';
@@ -248,7 +248,7 @@ class UserSessions implements Hookable {
 				echo '<td>';
 				printf(
 					/* translators: %s: human-readable time difference */
-					esc_html__( '%s ago', 'extended-abilities' ),
+					esc_html__( '%s ago', 'ai-bridge' ),
 					esc_html( human_time_diff( strtotime( $first_connected ), time() ) )
 				);
 				echo '</td>';
@@ -266,8 +266,8 @@ class UserSessions implements Hookable {
 					'revoke_my_session_' . $session->id
 				);
 
-				echo '<a href="' . esc_url( $revoke_url ) . '" class="button button-small" onclick="return confirm(\'' . esc_js( __( 'Disconnect this AI tool?', 'extended-abilities' ) ) . '\');">';
-				esc_html_e( 'Disconnect', 'extended-abilities' );
+				echo '<a href="' . esc_url( $revoke_url ) . '" class="button button-small" onclick="return confirm(\'' . esc_js( __( 'Disconnect this AI tool?', 'ai-bridge' ) ) . '\');">';
+				esc_html_e( 'Disconnect', 'ai-bridge' );
 				echo '</a>';
 				echo '</td>';
 				echo '</tr>';
@@ -287,8 +287,8 @@ class UserSessions implements Hookable {
 			);
 
 			echo '<p style="margin-top: 15px;">';
-			echo '<a href="' . esc_url( $revoke_all_url ) . '" class="button" onclick="return confirm(\'' . esc_js( __( 'Disconnect ALL your AI tools?', 'extended-abilities' ) ) . '\');">';
-			esc_html_e( 'Disconnect All', 'extended-abilities' );
+			echo '<a href="' . esc_url( $revoke_all_url ) . '" class="button" onclick="return confirm(\'' . esc_js( __( 'Disconnect ALL your AI tools?', 'ai-bridge' ) ) . '\');">';
+			esc_html_e( 'Disconnect All', 'ai-bridge' );
 			echo '</a>';
 			echo '</p>';
 		}
@@ -310,10 +310,10 @@ class UserSessions implements Hookable {
 		}
 
 		wp_enqueue_style(
-			'extended-abilities-user-sessions',
-			EXTENDED_ABILITIES_PLUGIN_URL . 'assets/css/admin-settings.css',
+			'aibridge-user-sessions',
+			AIBRIDGE_PLUGIN_URL . 'assets/css/admin-settings.css',
 			[],
-			EXTENDED_ABILITIES_VERSION
+			AIBRIDGE_VERSION
 		);
 	}
 }

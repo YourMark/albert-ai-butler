@@ -2,15 +2,15 @@
 /**
  * Abilities Manager
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Core
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Core;
+namespace AIBridge\Core;
 
-use ExtendedAbilities\Abstracts\BaseAbility;
-use ExtendedAbilities\Contracts\Interfaces\Hookable;
+use AIBridge\Abstracts\BaseAbility;
+use AIBridge\Contracts\Interfaces\Hookable;
 
 /**
  * Abilities Manager class
@@ -44,7 +44,7 @@ class AbilitiesManager implements Hookable {
 		add_action( 'wp_abilities_api_init', [ $this, 'register_abilities' ] );
 
 		// Add abilities to settings page filters.
-		add_filter( 'extended_abilities/abilities/wordpress', [ $this, 'add_wordpress_abilities_to_settings' ] );
+		add_filter( 'aibridge/abilities/wordpress', [ $this, 'add_wordpress_abilities_to_settings' ] );
 	}
 
 
@@ -60,12 +60,12 @@ class AbilitiesManager implements Hookable {
 		}
 
 		// Register wordpress-rest category if it doesn't exist.
-		if ( ! wp_has_ability_category( 'wp-extended-abilities-wp-core' ) ) {
+		if ( ! wp_has_ability_category( 'core' ) ) {
 			wp_register_ability_category(
-				'wp-extended-abilities-wp-core',
+				'core',
 				[
-					'label'       => __( 'WordPress', 'extended-abilities' ),
-					'description' => __( 'WordPress core functionality abilities.', 'extended-abilities' ),
+					'label'       => __( 'WordPress', 'ai-bridge' ),
+					'description' => __( 'WordPress core functionality abilities.', 'ai-bridge' ),
 				]
 			);
 		}
@@ -125,7 +125,7 @@ class AbilitiesManager implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function add_wordpress_abilities_to_settings( array $abilities ): array {
-		$wordpress_abilities = $this->get_abilities_by_category( 'wp-extended-abilities-wp-core' );
+		$wordpress_abilities = $this->get_abilities_by_category( 'core' );
 
 		foreach ( $wordpress_abilities as $ability ) {
 			$abilities[ $ability->get_id() ] = $ability->get_settings_data();

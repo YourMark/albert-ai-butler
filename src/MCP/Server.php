@@ -2,15 +2,15 @@
 /**
  * MCP Server with OAuth Authentication
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage MCP
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\MCP;
+namespace AIBridge\MCP;
 
-use ExtendedAbilities\Contracts\Interfaces\Hookable;
-use ExtendedAbilities\OAuth\Server\TokenValidator;
+use AIBridge\Contracts\Interfaces\Hookable;
+use AIBridge\OAuth\Server\TokenValidator;
 use WP\MCP\Core\McpAdapter;
 use WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler;
 use WP\MCP\Infrastructure\Observability\NullMcpObservabilityHandler;
@@ -34,7 +34,7 @@ class Server implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const SERVER_ID = 'extended-abilities';
+	const SERVER_ID = 'ai-bridge';
 
 	/**
 	 * Server route namespace.
@@ -42,7 +42,7 @@ class Server implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const ROUTE_NAMESPACE = 'extended-abilities';
+	const ROUTE_NAMESPACE = 'ai-bridge/v1';
 
 	/**
 	 * Server route.
@@ -88,7 +88,7 @@ class Server implements Hookable {
 		if ( empty( $token ) ) {
 			// Send headers for OAuth discovery per MCP spec (RFC 6750).
 			// Point to REST API resource endpoint for OAuth discovery.
-			$resource_url = self::get_base_url() . '/wp-json/extended-abilities/v1/oauth/resource';
+			$resource_url = self::get_base_url() . '/wp-json/ai-bridge/v1/oauth/resource';
 			header( 'WWW-Authenticate: Bearer realm="MCP", resource="' . $resource_url . '"' );
 		}
 
@@ -108,9 +108,9 @@ class Server implements Hookable {
 			self::SERVER_ID,
 			self::ROUTE_NAMESPACE,
 			self::ROUTE,
-			__( 'Extended Abilities MCP Server', 'extended-abilities' ),
-			__( 'MCP server for AI assistants to interact with WordPress', 'extended-abilities' ),
-			EXTENDED_ABILITIES_VERSION,
+			__( 'AI Bridge MCP Server', 'ai-bridge' ),
+			__( 'MCP server for AI assistants to interact with WordPress', 'ai-bridge' ),
+			AIBRIDGE_VERSION,
 			[ HttpTransport::class ],
 			ErrorLogMcpErrorHandler::class,
 			NullMcpObservabilityHandler::class,
@@ -154,7 +154,7 @@ class Server implements Hookable {
 		if ( empty( $token ) ) {
 			return new WP_Error(
 				'oauth_missing_token',
-				__( 'OAuth Bearer token required. Include an Authorization header with a valid Bearer token.', 'extended-abilities' ),
+				__( 'OAuth Bearer token required. Include an Authorization header with a valid Bearer token.', 'ai-bridge' ),
 				[ 'status' => 401 ]
 			);
 		}
@@ -186,7 +186,7 @@ class Server implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		return apply_filters( 'extended_abilities/settings/developer_mode', false );
+		return apply_filters( 'aibridge/settings/developer_mode', false );
 	}
 
 	/**
@@ -200,7 +200,7 @@ class Server implements Hookable {
 	 */
 	public static function get_base_url(): string {
 		if ( self::is_developer_mode() ) {
-			$external_url = get_option( 'extended_abilities_external_url', '' );
+			$external_url = get_option( 'aibridge_external_url', '' );
 
 			if ( ! empty( $external_url ) ) {
 				return $external_url;
@@ -226,7 +226,7 @@ class Server implements Hookable {
 			}
 
 			// Check for configured external URL.
-			$configured_url = get_option( 'extended_abilities_external_url', '' );
+			$configured_url = get_option( 'aibridge_external_url', '' );
 			if ( ! empty( $configured_url ) ) {
 				return $configured_url . '/wp-json/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE;
 			}

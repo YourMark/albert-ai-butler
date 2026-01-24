@@ -2,12 +2,12 @@
 /**
  * OAuth Key Manager
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage OAuth\Server
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\OAuth\Server;
+namespace AIBridge\OAuth\Server;
 
 use Defuse\Crypto\Key;
 
@@ -27,7 +27,7 @@ class KeyManager {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const ENCRYPTION_KEY_OPTION = 'extended_abilities_oauth_encryption_key';
+	const ENCRYPTION_KEY_OPTION = 'aibridge_oauth_encryption_key';
 
 	/**
 	 * Option name for the private key.
@@ -35,7 +35,7 @@ class KeyManager {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const PRIVATE_KEY_OPTION = 'extended_abilities_oauth_private_key';
+	const PRIVATE_KEY_OPTION = 'aibridge_oauth_private_key';
 
 	/**
 	 * Option name for the public key.
@@ -43,7 +43,7 @@ class KeyManager {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const PUBLIC_KEY_OPTION = 'extended_abilities_oauth_public_key';
+	const PUBLIC_KEY_OPTION = 'aibridge_oauth_public_key';
 
 	/**
 	 * Get or generate the encryption key.

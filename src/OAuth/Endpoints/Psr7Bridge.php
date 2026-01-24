@@ -2,12 +2,12 @@
 /**
  * PSR-7 Bridge for WordPress
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage OAuth\Endpoints
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\OAuth\Endpoints;
+namespace AIBridge\OAuth\Endpoints;
 
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7\ServerRequest;

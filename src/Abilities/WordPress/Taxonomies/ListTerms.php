@@ -2,14 +2,14 @@
 /**
  * List Terms Ability
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Abilities\WordPress\Taxonomies
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress\Taxonomies;
+namespace AIBridge\Abilities\WordPress\Taxonomies;
 
-use ExtendedAbilities\Abstracts\BaseAbility;
+use AIBridge\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -27,11 +27,11 @@ class ListTerms extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'wordpress/list-terms';
-		$this->label       = __( 'List Terms', 'extended-abilities' );
-		$this->description = __( 'Retrieve a list of terms from a specific taxonomy (categories, tags, etc).', 'extended-abilities' );
-		$this->category    = 'wp-extended-abilities-wp-core';
-		$this->group       = 'taxonomies';
+		$this->id          = 'core/terms/list';
+		$this->label       = __( 'List Terms', 'ai-bridge' );
+		$this->description = __( 'Retrieve a list of terms from a specific taxonomy (categories, tags, etc).', 'ai-bridge' );
+		$this->category    = 'core';
+		$this->group       = 'terms';
 
 		$this->input_schema  = $this->get_input_schema();
 		$this->output_schema = $this->get_output_schema();
@@ -170,7 +170,7 @@ class ListTerms extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while retrieving terms.', 'extended-abilities' ),
+				$data['message'] ?? __( 'An error occurred while retrieving terms.', 'ai-bridge' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
@@ -218,7 +218,7 @@ class ListTerms extends BaseAbility {
 		if ( ! $taxonomy_obj ) {
 			return new WP_Error(
 				'invalid_taxonomy',
-				__( 'Invalid taxonomy.', 'extended-abilities' ),
+				__( 'Invalid taxonomy.', 'ai-bridge' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -226,7 +226,7 @@ class ListTerms extends BaseAbility {
 		if ( empty( $taxonomy_obj->rest_base ) ) {
 			return new WP_Error(
 				'taxonomy_not_rest_enabled',
-				__( 'This taxonomy is not available via REST API.', 'extended-abilities' ),
+				__( 'This taxonomy is not available via REST API.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}

@@ -2,12 +2,12 @@
 /**
  * OAuth User Entity
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage OAuth\Entities
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\OAuth\Entities;
+namespace AIBridge\OAuth\Entities;
 
 use League\OAuth2\Server\Entities\UserEntityInterface;
 

@@ -2,14 +2,14 @@
 /**
  * OAuth Resource Server Factory
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage OAuth\Server
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\OAuth\Server;
+namespace AIBridge\OAuth\Server;
 
-use ExtendedAbilities\OAuth\Repositories\AccessTokenRepository;
+use AIBridge\OAuth\Repositories\AccessTokenRepository;
 use League\OAuth2\Server\CryptKey;
 use League\OAuth2\Server\ResourceServer;
 

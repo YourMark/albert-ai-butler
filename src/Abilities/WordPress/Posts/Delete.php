@@ -2,14 +2,14 @@
 /**
  * Delete Post Ability
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Abilities\WordPress\Posts
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress\Posts;
+namespace AIBridge\Abilities\WordPress\Posts;
 
-use ExtendedAbilities\Abstracts\BaseAbility;
+use AIBridge\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -27,10 +27,10 @@ class Delete extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'wordpress/delete-post';
-		$this->label       = __( 'Delete Post', 'extended-abilities' );
-		$this->description = __( 'Delete a WordPress post permanently or move it to trash.', 'extended-abilities' );
-		$this->category    = 'wp-extended-abilities-wp-core';
+		$this->id          = 'core/posts/delete';
+		$this->label       = __( 'Delete Post', 'ai-bridge' );
+		$this->description = __( 'Delete a WordPress post permanently or move it to trash.', 'ai-bridge' );
+		$this->category    = 'core';
 		$this->group       = 'posts';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -149,7 +149,7 @@ class Delete extends BaseAbility {
 		if ( empty( $args['id'] ) ) {
 			return new WP_Error(
 				'missing_id',
-				__( 'Post ID is required.', 'extended-abilities' ),
+				__( 'Post ID is required.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -161,7 +161,7 @@ class Delete extends BaseAbility {
 		if ( ! $post ) {
 			return new WP_Error(
 				'post_not_found',
-				__( 'Post not found.', 'extended-abilities' ),
+				__( 'Post not found.', 'ai-bridge' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -185,7 +185,7 @@ class Delete extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while deleting the post.', 'extended-abilities' ),
+				$data['message'] ?? __( 'An error occurred while deleting the post.', 'ai-bridge' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

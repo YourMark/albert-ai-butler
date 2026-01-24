@@ -2,10 +2,10 @@
 /**
  * Sample unit tests.
  *
- * @package ExtendedAbilities
+ * @package AIBridge
  */
 
-namespace ExtendedAbilities\Tests\Unit;
+namespace AIBridge\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 
@@ -43,7 +43,7 @@ class SampleTest extends TestCase {
 	 */
 	public function test_autoload_is_available(): void {
 		$this->assertTrue(
-			class_exists( 'ExtendedAbilities\Core\Plugin' ),
+			class_exists( 'AIBridge\Core\Plugin' ),
 			'Plugin class should be autoloadable'
 		);
 	}

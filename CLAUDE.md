@@ -2,420 +2,301 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# About this plugin
+## About This Plugin
 
-This is a plugin for production environments and will be public. The purpose of this plugin is to extend the abilities of WordPress, WooCommerce and other plugins with the abilities API.
+AI Bridge for WordPress is a WordPress plugin that exposes WordPress functionality to AI assistants through the MCP (Model Context Protocol). It provides:
 
-## System Requirements & Environment
+- **Abilities API**: Register and expose WordPress operations as AI-callable tools
+- **OAuth 2.0 Server**: Full OAuth implementation for secure AI assistant authentication
+- **MCP Integration**: Connect AI assistants (Claude Desktop, etc.) to WordPress
 
-### Required Specifications
-- **PHP Version**: 7.4 or greater (prefer PHP 8.1+ for optimal performance)
-- **Database**: MySQL 8.0+ OR MariaDB 10.5+
-- **Web Server**: Apache with mod_rewrite module enabled
-- **Protocol**: HTTPS support required for all production environments
-- **WordPress**: Requires at least 6.9
-- **WooCommerce**: If the WooCommerce option is used, it should work with at least WooCommerce 10.4
+## System Requirements
 
-### Development Environment Standards
-- **Local Server**: Laravel Herd with Nginx
-- **PHP Version**: Differs for testing, but should be at least 7.4
-- **Debug Settings**: Enable WP_DEBUG and WP_DEBUG_LOG in development
-- **CLI Tools**: Use wp-cli for WordPress operations
-- **Code Standards**: PHPCS with WordPress coding standards (required)
+- **PHP**: 7.4+ (8.1+ recommended)
+- **WordPress**: 6.9+
+- **Database**: MySQL 8.0+ or MariaDB 10.5+
+- **HTTPS**: Required for OAuth
+- **WooCommerce**: 10.4+ (optional, for WooCommerce abilities)
 
-## Common Development Commands
+## Directory Structure
 
-### WordPress CLI (WP-CLI)
-```bash
-# Plugin management
-wp plugin list                    # List installed plugins
-wp plugin activate [plugin-name]  # Activate a plugin
-wp plugin deactivate [plugin-name] # Deactivate a plugin
-
-# Theme management  
-wp theme list                     # List installed themes
-wp theme activate [theme-name]    # Activate a theme
-
-# Database operations
-wp db export backup.sql           # Export database
-wp db import backup.sql           # Import database
-
-# WordPress updates
-wp core update                    # Update WordPress core
-wp plugin update --all            # Update all plugins
 ```
-
-### Code Quality & Validation
-```bash
-# WordPress Coding Standards (PHPCS)
-phpcs --standard=WordPress [file/directory]           # Check coding standards
-phpcbf --standard=WordPress [file/directory]          # Fix coding standards
-
-# Plugin/theme validation
-wp plugin path [plugin-name]                          # Get plugin directory path
-wp theme path [theme-name]                            # Get theme directory path
-```
-
-### Local Development with Valet
-```bash
-valet park                        # Park current directory for Valet
-valet restart                     # Restart Valet services
-valet links                       # List all Valet sites
-valet secure claudecode           # Enable HTTPS for this site
-```
-
-### Plugin Development Workflow
-```bash
-# Activate/deactivate plugins during development
-wp plugin activate header-notice-procedural
-wp plugin deactivate header-notice-procedural
-wp plugin activate header-notice-oop
-wp plugin deactivate header-notice-oop
-
-# Test plugin functionality
-wp option get hnp_notice_title    # Check procedural plugin options
-wp option list --search="header*" # List all header notice options
-```
-
-### Debugging Commands
-```bash
-# WordPress debug log monitoring
-tail -f wp-content/debug.log      # Monitor debug log in real-time
-wp config get WP_DEBUG            # Check debug mode status
-wp config set WP_DEBUG true       # Enable debug mode
-```
-
-## Development Philosophy
-
-### Keep It Simple (KISS Principle)
-- **NEVER over-complicate solutions** - choose the simplest approach that works
-- Break complex problems into simple, manageable steps
-- Use WordPress native functions before custom solutions
-- Prefer readable code over clever code
-- Document the "why" behind complex decisions
-
-### Step-by-Step Approach
-- Always break tasks into small, actionable steps
-- Complete one step fully before moving to the next
-- Test each step individually when possible
-- Provide clear explanations for each implementation decision
-
-## WordPress Core Principles
-
-### Fundamental Rules
-- **NEVER modify WordPress core files** - use hooks, filters, and the Plugin API instead
-- **ALWAYS follow WordPress coding standards** - use PHPCS with WordPress ruleset
-- **Keep solutions simple** - don't over-engineer or add unnecessary complexity
-- Prioritize security, performance, and accessibility in all implementations
-- Use WordPress native functions over custom solutions when available
-
-### Plugin API & Extensibility
-- Utilize WordPress' robust Plugin API for all customizations
-- Reference the Plugin Developer Handbook for best practices
-- Create child themes instead of modifying parent themes directly
-- Use WordPress hooks (actions/filters) for all functionality extensions
-
-## Extended Abilities Plugin Architecture
-
-The Extended Abilities plugin uses a modern, scalable object-oriented architecture designed for production use and extensibility.
-
-### High-Level Architecture
-This plugin provides an abilities API for AI assistants to interact with WordPress, WooCommerce, and other plugins through a unified interface.
-
-**Core Design Principles:**
-- Modern PHP 7.4+ with full type declarations
-- PSR-4 autoloading via Composer
-- Singleton pattern for plugin initialization
-- Hookable interface for clean, consistent hook registration
-- Component-based architecture for modularity and extensibility
-- No frontend components (backend/admin only)
-
-### Directory Structure
-```
-extended-abilities/
-├── extended-abilities.php         # Main plugin bootstrap file
-├── composer.json                  # Composer configuration with PSR-4 autoloading
-├── README.md                      # GitHub documentation (development)
-├── readme.txt                     # WordPress.org plugin repository format
-├── LICENSE                        # GPL v2 license
-├── .gitignore                     # Git ignore rules
-├── CLAUDE.md                      # This file - AI assistant guidance
-├── src/                           # Source code (PSR-4: ExtendedAbilities\)
+ai-bridge/
+├── ai-bridge.php                       # Main plugin bootstrap
+├── composer.json                       # PSR-4 autoloading & dependencies
+├── CLAUDE.md                           # This file
+├── README.md                           # GitHub documentation
+├── readme.txt                          # WordPress.org format
+├── DEVELOPER_GUIDE.md                  # Developer documentation
+│
+├── src/                                # Source code (AIBridge\)
+│   ├── Abstracts/
+│   │   └── BaseAbility.php             # Base class for all abilities
+│   │
 │   ├── Contracts/
 │   │   └── Interfaces/
-│   │       └── Hookable.php       # Interface for hook registration
+│   │       ├── Ability.php             # Ability interface
+│   │       └── Hookable.php            # Hook registration interface
+│   │
 │   ├── Core/
-│   │   └── Plugin.php             # Main plugin singleton class
-│   └── Admin/                     # Admin-specific components
+│   │   ├── Plugin.php                  # Main singleton, bootstraps everything
+│   │   └── AbilitiesManager.php        # Registers abilities with WordPress
+│   │
+│   ├── Admin/
+│   │   ├── Abilities.php               # Abilities admin page
+│   │   ├── Settings.php                # Plugin settings page
+│   │   └── UserSessions.php            # OAuth sessions management
+│   │
+│   ├── Abilities/
+│   │   └── WordPress/
+│   │       ├── Posts/
+│   │       │   ├── ListPosts.php       # core/posts/list
+│   │       │   ├── Create.php          # core/posts/create
+│   │       │   ├── Update.php          # core/posts/update
+│   │       │   └── Delete.php          # core/posts/delete
+│   │       ├── Pages/
+│   │       │   ├── ListPages.php       # core/pages/list
+│   │       │   ├── Create.php          # core/pages/create
+│   │       │   ├── Update.php          # core/pages/update
+│   │       │   └── Delete.php          # core/pages/delete
+│   │       ├── Users/
+│   │       │   ├── ListUsers.php       # core/users/list
+│   │       │   ├── Create.php          # core/users/create
+│   │       │   ├── Update.php          # core/users/update
+│   │       │   └── Delete.php          # core/users/delete
+│   │       ├── Media/
+│   │       │   ├── UploadMedia.php     # core/media/upload
+│   │       │   └── SetFeaturedImage.php # core/media/set-featured-image
+│   │       └── Taxonomies/
+│   │           ├── ListTaxonomies.php  # core/taxonomies/list
+│   │           ├── ListTerms.php       # core/terms/list
+│   │           ├── CreateTerm.php      # core/terms/create
+│   │           ├── UpdateTerm.php      # core/terms/update
+│   │           └── DeleteTerm.php      # core/terms/delete
+│   │
+│   ├── MCP/
+│   │   └── Server.php                  # MCP protocol handler
+│   │
+│   ├── OAuth/
+│   │   ├── Database/
+│   │   │   └── Installer.php           # Creates OAuth database tables
+│   │   ├── Endpoints/
+│   │   │   ├── OAuthController.php     # /oauth/authorize, /oauth/token
+│   │   │   ├── OAuthDiscovery.php      # .well-known endpoints
+│   │   │   ├── AuthorizationPage.php   # User consent UI
+│   │   │   ├── ClientRegistration.php  # Dynamic client registration
+│   │   │   └── Psr7Bridge.php          # PSR-7 ↔ WordPress conversion
+│   │   ├── Entities/
+│   │   │   ├── AccessTokenEntity.php
+│   │   │   ├── AuthCodeEntity.php
+│   │   │   ├── ClientEntity.php
+│   │   │   ├── RefreshTokenEntity.php
+│   │   │   ├── ScopeEntity.php
+│   │   │   └── UserEntity.php
+│   │   ├── Repositories/
+│   │   │   ├── AccessTokenRepository.php
+│   │   │   ├── AuthCodeRepository.php
+│   │   │   ├── ClientRepository.php
+│   │   │   ├── RefreshTokenRepository.php
+│   │   │   └── ScopeRepository.php
+│   │   └── Server/
+│   │       ├── AuthorizationServerFactory.php
+│   │       ├── ResourceServerFactory.php
+│   │       ├── KeyManager.php          # RSA key management
+│   │       └── TokenValidator.php      # Validates Bearer tokens
+│
 ├── assets/
-│   ├── css/                       # Stylesheets
-│   └── js/                        # JavaScript files
-├── languages/                     # Translation files (.pot, .po, .mo)
-└── vendor/                        # Composer dependencies (gitignored)
+│   ├── css/
+│   │   └── admin-settings.css
+│   └── js/
+│       └── admin-settings.js
+│
+├── tests/
+│   ├── bootstrap.php
+│   ├── bootstrap-unit.php
+│   ├── TestCase.php
+│   ├── Unit/
+│   │   └── SampleTest.php
+│   └── Integration/
+│       ├── PluginTest.php
+│       └── AbilitiesManagerTest.php
+│
+├── .claude/
+│   └── media-upload-discussion.md      # Ongoing discussion notes
+│
+└── vendor/                             # Composer dependencies (gitignored)
 ```
 
-### Core Architecture Components
+## Architecture Overview
 
-#### 1. Main Plugin File (`extended-abilities.php`)
-The bootstrap file that:
-- Defines plugin constants (VERSION, PLUGIN_FILE, PLUGIN_DIR, PLUGIN_URL, PLUGIN_BASENAME)
-- Loads Composer autoloader
-- Initializes the Plugin singleton on `plugins_loaded` hook
-- Registers activation/deactivation hooks
-- Handles initialization errors gracefully with admin notices
+### Core Components
 
-#### 2. Plugin Singleton (`src/Core/Plugin.php`)
-The main plugin class using singleton pattern:
-- **Singleton Pattern**: Ensures only one instance exists via `get_instance()`
-- **Component Registration**: Manages hookable components via `add_component()` and `register_components()`
-- **Hook Registration**: Automatically calls `register_hooks()` on all registered components
-- **Internationalization**: Loads text domain for translations
-- **Lifecycle Hooks**: Provides `activate()` and `deactivate()` static methods
-- **Extensibility**: Provides action hooks for external extension
+#### 1. Plugin Bootstrap (`src/Core/Plugin.php`)
+Singleton that initializes all components:
+- Registers admin pages (Abilities, Settings, Sessions)
+- Initializes OAuth endpoints
+- Registers MCP server
+- Registers abilities on `init` hook
 
-**Key Methods:**
-- `get_instance()`: Returns singleton instance
-- `init()`: Initializes plugin and registers components
-- `load_textdomain()`: Loads translation files
-- `register_components()`: Register all plugin components (override or filter)
-- `add_component(Hookable $component)`: Add a component dynamically
-- `activate()`: Plugin activation callback
-- `deactivate()`: Plugin deactivation callback
+#### 2. Abilities System
+Abilities are WordPress operations exposed to AI assistants.
 
-#### 3. Hookable Interface (`src/Contracts/Interfaces/Hookable.php`)
-Interface that all components must implement:
+**BaseAbility** (`src/Abstracts/BaseAbility.php`):
+- Abstract class all abilities extend
+- Defines: `$id`, `$label`, `$description`, `$input_schema`, `$output_schema`
+- Implements `register_ability()` to register with WordPress
+- Abstract `execute(array $args)` method for implementation
+
+**AbilitiesManager** (`src/Core/AbilitiesManager.php`):
+- Collects and registers all abilities
+- Calls `wp_register_ability()` for each enabled ability
+
+**Creating a New Ability:**
 ```php
-interface Hookable {
-    public function register_hooks(): void;
-}
-```
+namespace AIBridge\Abilities\WordPress\Example;
 
-**Purpose:**
-- Provides consistent pattern for registering WordPress hooks across all components
-- Components implement this interface and define all their hooks in `register_hooks()`
-- Main Plugin class automatically calls `register_hooks()` on each registered component
+use AIBridge\Abstracts\BaseAbility;
+use WP_Error;
 
-**Example Component:**
-```php
-namespace ExtendedAbilities\Admin;
+class MyAbility extends BaseAbility {
+    public function __construct() {
+        $this->id          = 'core/example/my-ability';
+        $this->label       = __( 'My Ability', 'ai-bridge' );
+        $this->description = __( 'Description of what it does.', 'ai-bridge' );
+        $this->category    = 'core';
+        $this->group       = 'example';
 
-use ExtendedAbilities\Contracts\Interfaces\Hookable;
+        $this->input_schema = [
+            'type'       => 'object',
+            'properties' => [
+                'param1' => [
+                    'type'        => 'string',
+                    'description' => 'Parameter description',
+                ],
+            ],
+            'required'   => [ 'param1' ],
+        ];
 
-class Settings implements Hookable {
-    public function register_hooks(): void {
-        add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
-        add_action( 'admin_init', array( $this, 'register_settings' ) );
+        $this->meta = [
+            'mcp' => [ 'public' => true ],
+        ];
+
+        parent::__construct();
     }
 
-    public function add_settings_page(): void {
+    public function check_permission(): bool {
+        return current_user_can( 'edit_posts' );
+    }
+
+    public function execute( array $args ): array|WP_Error {
         // Implementation
-    }
-
-    public function register_settings(): void {
-        // Implementation
+        return [ 'result' => 'success' ];
     }
 }
 ```
 
-### Extensibility & Hooks
-
-The plugin provides several WordPress action hooks for extensibility:
-
-#### Plugin Lifecycle Hooks
-- `extended_abilities_initialized` - Fires after plugin initialization
-- `extended_abilities_activated` - Fires on plugin activation
-- `extended_abilities_deactivated` - Fires on plugin deactivation
-
-#### Component Registration Hook
-- `extended_abilities_register_components` - Allows external code to register additional components
-
-**Example Usage:**
+Then register in `Plugin::register_abilities()`:
 ```php
-// Register a custom component from another plugin or theme
-add_action( 'extended_abilities_register_components', function( $plugin ) {
-    $plugin->add_component( new My_Custom_Ability() );
-} );
+$this->abilities_manager->add_ability( new MyAbility() );
 ```
 
-### Composer Configuration
+#### 3. OAuth 2.0 Server
+Full OAuth 2.0 implementation using `league/oauth2-server`.
 
-The plugin uses Composer for autoloading and dependency management:
+**Endpoints:**
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /wp-json/ai-bridge/v1/oauth/authorize` | Authorization request |
+| `POST /wp-json/ai-bridge/v1/oauth/authorize` | User consent submission |
+| `POST /wp-json/ai-bridge/v1/oauth/token` | Token exchange |
+| `POST /wp-json/ai-bridge/v1/oauth/register` | Dynamic client registration |
+| `GET /.well-known/oauth-authorization-server` | Server metadata (RFC 8414) |
+| `GET /wp-json/ai-bridge/v1/oauth/metadata` | Alternative metadata endpoint |
 
-**PSR-4 Autoloading:**
-- Namespace: `ExtendedAbilities\`
-- Base directory: `src/`
-
-**Development Dependencies:**
-- PHPUnit for unit testing
-- PHP_CodeSniffer with WordPress Coding Standards
-- WPCS for WordPress-specific rules
-
-**Composer Scripts:**
-- `composer phpcs` - Check coding standards
-- `composer phpcbf` - Fix coding standards automatically
-- `composer test` - Run PHPUnit tests
-
-### Adding New Components
-
-To add new functionality:
-
-1. **Create a component class** in appropriate namespace (e.g., `src/Admin/`)
-2. **Implement Hookable interface** with `register_hooks()` method
-3. **Register the component** in `Plugin::register_components()` or via the `extended_abilities_register_components` filter
-4. **Add any necessary assets** to `assets/css/` or `assets/js/`
-
-**Example:**
+**Token Validation:**
 ```php
-// In src/Admin/AbilitiesManager.php
-namespace ExtendedAbilities\Admin;
+use AIBridge\OAuth\Server\TokenValidator;
 
-use ExtendedAbilities\Contracts\Interfaces\Hookable;
-
-class AbilitiesManager implements Hookable {
-    public function register_hooks(): void {
-        add_action( 'admin_menu', array( $this, 'add_menu' ) );
-        add_action( 'rest_api_init', array( $this, 'register_api_routes' ) );
-    }
-
-    public function add_menu(): void { /* ... */ }
-    public function register_api_routes(): void { /* ... */ }
+// In a REST endpoint permission callback:
+$user = TokenValidator::validate_request( $request );
+if ( is_wp_error( $user ) ) {
+    return $user;
 }
-
-// In src/Core/Plugin.php register_components() method:
-if ( is_admin() ) {
-    $this->add_component( new \ExtendedAbilities\Admin\AbilitiesManager() );
-}
+wp_set_current_user( $user->ID );
 ```
 
-## Code Quality Standards
+#### 4. MCP Server (`src/MCP/Server.php`)
+Handles MCP protocol communication with AI assistants. Authenticated via OAuth.
 
-### Security Requirements (All Plugins)
-- Validate and sanitize ALL user input
-- Use prepared statements for database queries
-- Implement proper user capability checks
-- Never trust data from $_GET, $_POST, or $_REQUEST without validation
-- Use WordPress security functions (wp_nonce_field, current_user_can, etc.)
+### Current Abilities
 
-### Performance Standards (All Plugins)
-- Implement WordPress object caching for expensive operations
-- Use transients for temporary data storage
-- Optimize database queries to avoid performance bottlenecks
-- Minimize HTTP requests through proper asset management
+| ID | Description | Group |
+|----|-------------|-------|
+| `core/posts/list` | List posts with filters | posts |
+| `core/posts/create` | Create a new post | posts |
+| `core/posts/update` | Update existing post | posts |
+| `core/posts/delete` | Delete a post | posts |
+| `core/pages/list` | List pages | pages |
+| `core/pages/create` | Create a page | pages |
+| `core/pages/update` | Update a page | pages |
+| `core/pages/delete` | Delete a page | pages |
+| `core/users/list` | List users | users |
+| `core/users/create` | Create a user | users |
+| `core/users/update` | Update a user | users |
+| `core/users/delete` | Delete a user | users |
+| `core/media/upload` | Sideload media from URL | media |
+| `core/media/set-featured-image` | Set post featured image | media |
+| `core/taxonomies/list` | List taxonomies | taxonomies |
+| `core/terms/list` | List taxonomy terms | taxonomies |
+| `core/terms/create` | Create a term | taxonomies |
+| `core/terms/update` | Update a term | taxonomies |
+| `core/terms/delete` | Delete a term | taxonomies |
 
-### JavaScript Standards (All Plugins)
-- **NEVER use jQuery** - always use modern vanilla JavaScript
-- Use ES6+ features (const/let, arrow functions, template literals, destructuring)
-- Organize code using the module pattern for separation of concerns
-- Use async/await for asynchronous operations (fetch, clipboard API, etc.)
-- Use event delegation where appropriate for dynamic content
-- Use `document.querySelectorAll()` and `element.closest()` for DOM traversal
-- Use native `FormData` and `fetch` API for AJAX requests
-- No jQuery dependency in `wp_enqueue_script()` calls for admin scripts
+## Development Commands
 
-**Example Module Pattern:**
-```javascript
-const MyModule = {
-    init() {
-        this.bindEvents();
-    },
-
-    bindEvents() {
-        document.addEventListener( 'click', ( e ) => {
-            if ( e.target.closest( '.my-button' ) ) {
-                this.handleClick( e );
-            }
-        } );
-    },
-
-    async handleClick( e ) {
-        const response = await fetch( '/api/endpoint' );
-        const data = await response.json();
-        // Handle response
-    },
-};
-
-// Initialize when DOM is ready
-if ( document.readyState === 'loading' ) {
-    document.addEventListener( 'DOMContentLoaded', () => MyModule.init() );
-} else {
-    MyModule.init();
-}
-```
-
-## Testing & Deployment
-
-### Quality Assurance
-- Test across multiple WordPress versions
-- Validate with WordPress coding standards tools (PHPCS)
-- Use staging environments for testing
-- Implement proper backup strategies
-
-### Documentation Requirements
-- Document all custom hooks and filters
-- Maintain README files for each plugin
-- Include installation and configuration instructions
-- Document any third-party dependencies
-
-## Resources & Support
-
-### Primary Resources
-- **WordPress Codex**: Comprehensive WordPress documentation
-- **Plugin Developer Handbook**: Plugin development best practices
-
-### Support Channels
-- **HelpHub**: Encyclopedia of all things WordPress
-- **WordPress Blog**: Latest updates and news
-- **WordPress Planet**: News aggregator for WordPress blogs
-- **WordPress Support Forums**: Community support and troubleshooting
-- **WordPress IRC**: Real-time chat support (#wordpress on irc.libera.chat)
-
-### Development Tools & Standards
-- **PHPCS**: Required for all code - use WordPress coding standards ruleset
-- **Xdebug**: Available for debugging (PHP 8.1)
-- **WP-CLI**: For WordPress management and automation
-- **Valet**: Local development server with Nginx
-- **Code Validation**: Always run PHPCS before committing code
-
-## Development Workflow for Extended Abilities
-
-### Initial Setup
-1. Run `composer install` to install development dependencies
-2. Activate the plugin via WP-CLI or WordPress admin
-3. Begin adding components by implementing the Hookable interface
-
-### Adding New Features
-1. Create a new class in the appropriate namespace (`src/Admin/`, `src/Core/`, etc.)
-2. Implement the `Hookable` interface
-3. Register the component in `Plugin::register_components()`
-4. Write tests for the new component (recommended)
-5. Run `composer phpcs` to check coding standards
-6. Run `composer phpcbf` to auto-fix any issues
-
-### Testing the Plugin
 ```bash
+# Install dependencies
+composer install
+
+# Check coding standards
+composer phpcs
+
+# Auto-fix coding standards
+composer phpcbf
+
+# Run tests
+composer test
+
 # Activate plugin
-wp plugin activate extended-abilities
-
-# Check for errors
-wp plugin list
-tail -f wp-content/debug.log
-
-# Test functionality
-# Add your specific test commands here
+wp plugin activate ai-bridge
 ```
+
+## Development Guidelines
+
+### Code Standards
+- Follow WordPress Coding Standards (enforced by PHPCS)
+- Use PHP 7.4+ type declarations
+- Implement `Hookable` interface for components with hooks
+
+### JavaScript
+- **Never use jQuery** - use vanilla ES6+ JavaScript
+- Use module pattern for organization
+- Use `fetch` API for HTTP requests
+
+### Security
+- Validate and sanitize all input
+- Use capability checks (`current_user_can()`)
+- Use nonces for form submissions
+- OAuth tokens for API authentication
 
 ### Version Control
-- The `.gitignore` file excludes vendor/, IDE files, and build artifacts
-- **NEVER commit changes unless explicitly asked by the user** - only make changes and stage them, let the user decide when to commit
-- **NEVER bump version numbers without being asked** - version changes require explicit user approval
-- When asked to commit, use descriptive commit messages
-- Keep the CLAUDE.md file updated when architecture changes
+- **Never commit without explicit request**
+- **Never bump version without approval**
+- Run `composer phpcs` before committing
 
-## Final Notes
+## Ongoing Work
 
-- This plugin uses a modern OOP architecture with component-based design
-- All components must implement the Hookable interface for consistency
-- Follow WordPress coding standards at all times
-- Use the Composer scripts for quality assurance before committing
-- Document any new hooks or filters you add for extensibility
-- Keep security, performance, and maintainability as top priorities
+See `.claude/media-upload-discussion.md` for discussion about:
+- MCP binary transport limitations
+- Local file upload challenges
+- Potential solutions for media uploads from AI assistants

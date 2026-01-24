@@ -29,22 +29,22 @@
 }
 
 /* Main wrapper - full width with sidebar layout */
-.extended-abilities-settings {
+.aibridge-settings {
 	max-width: none;
 }
 
 /* Page header */
-.extended-abilities-settings > h1 {
+.aibridge-settings > h1 {
 	margin-bottom: var(--ea-spacing-lg);
 }
 
 /* Beta notice - more compact */
-.extended-abilities-settings > .notice {
+.aibridge-settings > .notice {
 	margin: 0 0 var(--ea-spacing-lg) 0;
 	padding: var(--ea-spacing-sm) var(--ea-spacing-md);
 }
 
-.extended-abilities-settings > .notice p {
+.aibridge-settings > .notice p {
 	margin: 0;
 	font-size: 13px;
 }
@@ -144,12 +144,12 @@
 }
 
 /* Tab navigation */
-.extended-abilities-settings .nav-tab-wrapper {
+.aibridge-settings .nav-tab-wrapper {
 	margin-bottom: 0;
 	border-bottom: 1px solid var(--ea-border);
 }
 
-.extended-abilities-settings .nav-tab {
+.aibridge-settings .nav-tab {
 	background: transparent;
 	border: 1px solid transparent;
 	border-bottom: none;
@@ -161,12 +161,12 @@
 	color: var(--ea-text-secondary);
 }
 
-.extended-abilities-settings .nav-tab:hover {
+.aibridge-settings .nav-tab:hover {
 	background: var(--ea-bg-white);
 	color: var(--ea-text-primary);
 }
 
-.extended-abilities-settings .nav-tab-active {
+.aibridge-settings .nav-tab-active {
 	background: var(--ea-bg-white);
 	border-color: var(--ea-border);
 	border-bottom: 1px solid var(--ea-bg-white);
@@ -175,7 +175,7 @@
 }
 
 /* Tab content area */
-.extended-abilities-tab-content {
+.aibridge-tab-content {
 	background: transparent;
 	border: none;
 	padding: 0;
@@ -183,7 +183,7 @@
 }
 
 /* Remove form background when inside tab content */
-.extended-abilities-tab-content form {
+.aibridge-tab-content form {
 	background: none;
 	border: none;
 	padding: 0;
@@ -198,7 +198,7 @@
 }
 
 /* Authentication tab */
-.extended-abilities-auth-tab .notice.inline {
+.aibridge-auth-tab .notice.inline {
 	margin: var(--ea-spacing-lg) 0;
 }
 
@@ -246,7 +246,7 @@
 }
 
 /* Settings form container */
-.extended-abilities-settings form {
+.aibridge-settings form {
 	background: transparent;
 	border: none;
 	padding: 0;
@@ -403,7 +403,7 @@
 }
 
 /* Toggle switch */
-.extended-abilities-toggle {
+.aibridge-toggle {
 	position: relative;
 	display: inline-block;
 	width: 28px;
@@ -412,14 +412,14 @@
 	cursor: pointer;
 }
 
-.extended-abilities-toggle input {
+.aibridge-toggle input {
 	opacity: 0;
 	width: 0;
 	height: 0;
 	position: absolute;
 }
 
-.extended-abilities-toggle-slider {
+.aibridge-toggle-slider {
 	position: absolute;
 	inset: 0;
 	background-color: #e0e0e0;
@@ -427,7 +427,7 @@
 	transition: background-color var(--ea-transition);
 }
 
-.extended-abilities-toggle-slider:before {
+.aibridge-toggle-slider:before {
 	content: "";
 	position: absolute;
 	height: 10px;
@@ -440,16 +440,16 @@
 	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
 }
 
-.extended-abilities-toggle input:checked + .extended-abilities-toggle-slider {
+.aibridge-toggle input:checked + .aibridge-toggle-slider {
 	background-color: #2271b1;
 }
 
-.extended-abilities-toggle input:focus + .extended-abilities-toggle-slider {
+.aibridge-toggle input:focus + .aibridge-toggle-slider {
 	box-shadow: 0 0 0 2px var(--ea-primary);
 	outline: 2px solid transparent;
 }
 
-.extended-abilities-toggle input:checked + .extended-abilities-toggle-slider:before {
+.aibridge-toggle input:checked + .aibridge-toggle-slider:before {
 	transform: translateX(12px);
 }
 
@@ -464,7 +464,7 @@
 }
 
 /* Footer */
-.extended-abilities-footer {
+.aibridge-footer {
 	background: var(--ea-bg-white);
 	border: 1px solid var(--ea-border);
 	padding: var(--ea-spacing-md) var(--ea-spacing-lg);
@@ -473,18 +473,18 @@
 	text-align: center;
 }
 
-.extended-abilities-footer p {
+.aibridge-footer p {
 	margin: 0;
 	color: var(--ea-text-secondary);
 	font-size: 13px;
 }
 
-.extended-abilities-footer a {
+.aibridge-footer a {
 	color: var(--ea-primary);
 	text-decoration: none;
 }
 
-.extended-abilities-footer a:hover {
+.aibridge-footer a:hover {
 	text-decoration: underline;
 }
 
@@ -884,11 +884,11 @@
 }
 
 /* OAuth clients table */
-.extended-abilities-auth-tab .wp-list-table {
+.aibridge-auth-tab .wp-list-table {
 	margin-top: var(--ea-spacing-md);
 }
 
-.extended-abilities-auth-tab .tablenav {
+.aibridge-auth-tab .tablenav {
 	margin: var(--ea-spacing-md) 0;
 }
 
@@ -1106,7 +1106,7 @@
 		display: block;
 	}
 
-	.extended-abilities-settings .submit {
+	.aibridge-settings .submit {
 		margin: var(--ea-spacing-md) 0 0 0;
 		padding: var(--ea-spacing-sm) var(--ea-spacing-md);
 	}

@@ -2,14 +2,14 @@
 /**
  * Create User Ability
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Abilities\WordPress\Users
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress\Users;
+namespace AIBridge\Abilities\WordPress\Users;
 
-use ExtendedAbilities\Abstracts\BaseAbility;
+use AIBridge\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -27,10 +27,10 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'wordpress/create-user';
-		$this->label       = __( 'Create User', 'extended-abilities' );
-		$this->description = __( 'Create a new WordPress user with specified username, email, and role.', 'extended-abilities' );
-		$this->category    = 'wp-extended-abilities-wp-core';
+		$this->id          = 'core/users/create';
+		$this->label       = __( 'Create User', 'ai-bridge' );
+		$this->description = __( 'Create a new WordPress user with specified username, email, and role.', 'ai-bridge' );
+		$this->category    = 'core';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -198,7 +198,7 @@ class Create extends BaseAbility {
 		if ( empty( $args['username'] ) ) {
 			return new WP_Error(
 				'missing_username',
-				__( 'Username is required.', 'extended-abilities' ),
+				__( 'Username is required.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -206,7 +206,7 @@ class Create extends BaseAbility {
 		if ( empty( $args['email'] ) ) {
 			return new WP_Error(
 				'missing_email',
-				__( 'Email is required.', 'extended-abilities' ),
+				__( 'Email is required.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -214,7 +214,7 @@ class Create extends BaseAbility {
 		if ( empty( $args['password'] ) ) {
 			return new WP_Error(
 				'missing_password',
-				__( 'Password is required.', 'extended-abilities' ),
+				__( 'Password is required.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -250,7 +250,7 @@ class Create extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while creating the user.', 'extended-abilities' ),
+				$data['message'] ?? __( 'An error occurred while creating the user.', 'ai-bridge' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

@@ -2,14 +2,14 @@
 /**
  * Base Ability Abstract Class
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Abstracts
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abstracts;
+namespace AIBridge\Abstracts;
 
-use ExtendedAbilities\Contracts\Interfaces\Ability;
+use AIBridge\Contracts\Interfaces\Ability;
 use WP_Error;
 
 /**
@@ -120,7 +120,7 @@ abstract class BaseAbility implements Ability {
 				'description'         => $this->description,
 				'input_schema'        => $this->input_schema,
 				'output_schema'       => $this->output_schema,
-				'category'            => $this->category ?? 'wp-extended-abilities',
+				'category'            => $this->category ?? 'core',
 				'execute_callback'    => [ $this, 'execute' ],
 				'permission_callback' => [ $this, 'check_permission' ],
 				'meta'                => $this->meta,
@@ -155,13 +155,13 @@ abstract class BaseAbility implements Ability {
 	/**
 	 * Check if ability is enabled.
 	 *
-	 * Checks the extended_abilities_options option to see if this ability is enabled.
+	 * Checks the aibridge_options option to see if this ability is enabled.
 	 *
 	 * @return bool
 	 * @since 1.0.0
 	 */
 	public function enabled(): bool {
-		$options = get_option( 'extended_abilities_options', [] );
+		$options = get_option( 'aibridge_options', [] );
 
 		return isset( $options[ $this->id ] );
 	}

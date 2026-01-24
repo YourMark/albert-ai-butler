@@ -2,14 +2,14 @@
 /**
  * Update Term Ability
  *
- * @package    ExtendedAbilities
+ * @package    AIBridge
  * @subpackage Abilities\WordPress\Taxonomies
  * @since      1.0.0
  */
 
-namespace ExtendedAbilities\Abilities\WordPress\Taxonomies;
+namespace AIBridge\Abilities\WordPress\Taxonomies;
 
-use ExtendedAbilities\Abstracts\BaseAbility;
+use AIBridge\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -27,11 +27,11 @@ class UpdateTerm extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'wordpress/update-term';
-		$this->label       = __( 'Update Term', 'extended-abilities' );
-		$this->description = __( 'Update an existing term in a taxonomy (category, tag, etc).', 'extended-abilities' );
-		$this->category    = 'wp-extended-abilities-wp-core';
-		$this->group       = 'taxonomies';
+		$this->id          = 'core/terms/update';
+		$this->label       = __( 'Update Term', 'ai-bridge' );
+		$this->description = __( 'Update an existing term in a taxonomy (category, tag, etc).', 'ai-bridge' );
+		$this->category    = 'core';
+		$this->group       = 'terms';
 
 		$this->input_schema  = $this->get_input_schema();
 		$this->output_schema = $this->get_output_schema();
@@ -137,7 +137,7 @@ class UpdateTerm extends BaseAbility {
 		if ( empty( $args['id'] ) ) {
 			return new WP_Error(
 				'missing_id',
-				__( 'Term ID is required.', 'extended-abilities' ),
+				__( 'Term ID is required.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -184,7 +184,7 @@ class UpdateTerm extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while updating the term.', 'extended-abilities' ),
+				$data['message'] ?? __( 'An error occurred while updating the term.', 'ai-bridge' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
@@ -224,7 +224,7 @@ class UpdateTerm extends BaseAbility {
 		if ( ! $taxonomy_obj ) {
 			return new WP_Error(
 				'invalid_taxonomy',
-				__( 'Invalid taxonomy.', 'extended-abilities' ),
+				__( 'Invalid taxonomy.', 'ai-bridge' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -232,7 +232,7 @@ class UpdateTerm extends BaseAbility {
 		if ( empty( $taxonomy_obj->rest_base ) ) {
 			return new WP_Error(
 				'taxonomy_not_rest_enabled',
-				__( 'This taxonomy is not available via REST API.', 'extended-abilities' ),
+				__( 'This taxonomy is not available via REST API.', 'ai-bridge' ),
 				[ 'status' => 400 ]
 			);
 		}
