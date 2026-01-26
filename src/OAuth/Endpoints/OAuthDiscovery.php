@@ -155,7 +155,7 @@ class OAuthDiscovery implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$show_developer_settings = apply_filters( 'aibridge/settings/developer_mode', false );
+		$show_developer_settings = apply_filters( 'albert/developer_mode', false );
 
 		// Only use external URL if developer settings are enabled.
 		if ( $show_developer_settings ) {

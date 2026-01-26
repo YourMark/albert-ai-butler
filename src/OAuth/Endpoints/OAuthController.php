@@ -503,7 +503,7 @@ class OAuthController implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$show_developer_settings = apply_filters( 'aibridge/settings/developer_mode', false );
+		$show_developer_settings = apply_filters( 'albert/developer_mode', false );
 
 		if ( $show_developer_settings ) {
 			$external_url = get_option( 'albert_external_url', '' );

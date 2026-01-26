@@ -89,7 +89,7 @@ class Abilities implements Hookable {
 			 *
 			 * @since 1.0.0
 			 */
-			$this->tabs = apply_filters( 'aibridge/abilities/tabs', $this->tabs );
+			$this->tabs = apply_filters( 'albert/abilities_tabs', $this->tabs );
 		}
 
 		return $this->tabs;
@@ -311,7 +311,7 @@ class Abilities implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$icons = apply_filters( 'aibridge/abilities/group_icons', $icons );
+		$icons = apply_filters( 'albert/abilities_icons', $icons );
 
 		return $icons[ $group ] ?? 'dashicons-admin-generic';
 	}

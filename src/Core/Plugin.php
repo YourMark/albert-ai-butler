@@ -246,7 +246,7 @@ class Plugin {
 		 *
 		 * @since 1.0.0
 		 */
-		do_action( 'aibridge/core/activated' );
+		do_action( 'albert/activated' );
 	}
 
 	/**
@@ -266,6 +266,6 @@ class Plugin {
 		 *
 		 * @since 1.0.0
 		 */
-		do_action( 'aibridge/core/deactivated' );
+		do_action( 'albert/deactivated' );
 	}
 }

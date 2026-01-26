@@ -124,7 +124,7 @@ class Settings implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$show_developer_settings = apply_filters( 'aibridge/settings/developer_mode', false );
+		$show_developer_settings = apply_filters( 'albert/developer_mode', false );
 
 		// Only use external URL if developer settings are enabled.
 		$external_url = $show_developer_settings ? get_option( 'albert_external_url', '' ) : '';
@@ -877,6 +877,6 @@ class Settings implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		do_action( 'aibridge/admin/notices' );
+		do_action( 'albert/admin_notices' );
 	}
 }

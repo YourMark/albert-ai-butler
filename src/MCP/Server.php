@@ -186,7 +186,7 @@ class Server implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		return apply_filters( 'aibridge/settings/developer_mode', false );
+		return apply_filters( 'albert/developer_mode', false );
 	}
 
 	/**
