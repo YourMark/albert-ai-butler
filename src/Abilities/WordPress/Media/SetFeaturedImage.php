@@ -28,8 +28,8 @@ class SetFeaturedImage extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/media-set-featured-image';
-		$this->label       = __( 'Set Featured Image', 'ai-bridge' );
-		$this->description = __( 'Set an existing media attachment as the featured image for a post or page.', 'ai-bridge' );
+		$this->label       = __( 'Set Featured Image', 'albert' );
+		$this->description = __( 'Set an existing media attachment as the featured image for a post or page.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'media';
 
@@ -148,7 +148,7 @@ class SetFeaturedImage extends BaseAbility {
 		if ( empty( $args['post_id'] ) ) {
 			return new WP_Error(
 				'missing_post_id',
-				__( 'Post ID is required.', 'ai-bridge' ),
+				__( 'Post ID is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -156,7 +156,7 @@ class SetFeaturedImage extends BaseAbility {
 		if ( empty( $args['attachment_id'] ) ) {
 			return new WP_Error(
 				'missing_attachment_id',
-				__( 'Attachment ID is required.', 'ai-bridge' ),
+				__( 'Attachment ID is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -176,7 +176,7 @@ class SetFeaturedImage extends BaseAbility {
 			if ( $page_response->is_error() ) {
 				return new WP_Error(
 					'invalid_post',
-					__( 'The specified post or page does not exist.', 'ai-bridge' ),
+					__( 'The specified post or page does not exist.', 'albert' ),
 					[ 'status' => 404 ]
 				);
 			}
@@ -189,7 +189,7 @@ class SetFeaturedImage extends BaseAbility {
 		if ( $media_response->is_error() ) {
 			return new WP_Error(
 				'invalid_attachment',
-				__( 'The specified attachment does not exist.', 'ai-bridge' ),
+				__( 'The specified attachment does not exist.', 'albert' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -217,7 +217,7 @@ class SetFeaturedImage extends BaseAbility {
 			if ( $page_update_response->is_error() ) {
 				return new WP_Error(
 					'thumbnail_error',
-					__( 'Failed to set the featured image.', 'ai-bridge' ),
+					__( 'Failed to set the featured image.', 'albert' ),
 					[ 'status' => 500 ]
 				);
 			}

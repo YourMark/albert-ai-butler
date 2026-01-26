@@ -29,8 +29,8 @@ class Create extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/pages-create';
-		$this->label       = __( 'Create Page', 'ai-bridge' );
-		$this->description = __( 'Create a new WordPress page with specified title and content.', 'ai-bridge' );
+		$this->label       = __( 'Create Page', 'albert' );
+		$this->description = __( 'Create a new WordPress page with specified title and content.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'pages';
 
@@ -174,7 +174,7 @@ class Create extends BaseAbility {
 		if ( empty( $args['title'] ) ) {
 			return new WP_Error(
 				'missing_title',
-				__( 'Page title is required.', 'ai-bridge' ),
+				__( 'Page title is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -214,7 +214,7 @@ class Create extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while creating the page.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while creating the page.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

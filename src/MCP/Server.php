@@ -34,7 +34,7 @@ class Server implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const SERVER_ID = 'ai-bridge';
+	const SERVER_ID = 'albert';
 
 	/**
 	 * Server route namespace.
@@ -108,8 +108,8 @@ class Server implements Hookable {
 			self::SERVER_ID,
 			self::ROUTE_NAMESPACE,
 			self::ROUTE,
-			__( 'AI Bridge MCP Server', 'ai-bridge' ),
-			__( 'MCP server for AI assistants to interact with WordPress', 'ai-bridge' ),
+			__( 'AI Bridge MCP Server', 'albert' ),
+			__( 'MCP server for AI assistants to interact with WordPress', 'albert' ),
 			AIBRIDGE_VERSION,
 			[ HttpTransport::class ],
 			ErrorLogMcpErrorHandler::class,
@@ -154,7 +154,7 @@ class Server implements Hookable {
 		if ( empty( $token ) ) {
 			return new WP_Error(
 				'oauth_missing_token',
-				__( 'OAuth Bearer token required. Include an Authorization header with a valid Bearer token.', 'ai-bridge' ),
+				__( 'OAuth Bearer token required. Include an Authorization header with a valid Bearer token.', 'albert' ),
 				[ 'status' => 401 ]
 			);
 		}

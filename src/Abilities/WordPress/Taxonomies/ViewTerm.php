@@ -28,8 +28,8 @@ class ViewTerm extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/terms-view';
-		$this->label       = __( 'View Term', 'ai-bridge' );
-		$this->description = __( 'Retrieve a single taxonomy term by ID.', 'ai-bridge' );
+		$this->label       = __( 'View Term', 'albert' );
+		$this->description = __( 'Retrieve a single taxonomy term by ID.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'terms';
 
@@ -109,15 +109,15 @@ class ViewTerm extends BaseAbility {
 		$taxonomy = sanitize_key( $args['taxonomy'] ?? '' );
 
 		if ( ! $term_id ) {
-			return new WP_Error( 'missing_term_id', __( 'Term ID is required.', 'ai-bridge' ) );
+			return new WP_Error( 'missing_term_id', __( 'Term ID is required.', 'albert' ) );
 		}
 
 		if ( ! $taxonomy ) {
-			return new WP_Error( 'missing_taxonomy', __( 'Taxonomy is required.', 'ai-bridge' ) );
+			return new WP_Error( 'missing_taxonomy', __( 'Taxonomy is required.', 'albert' ) );
 		}
 
 		if ( ! taxonomy_exists( $taxonomy ) ) {
-			return new WP_Error( 'invalid_taxonomy', __( 'Invalid taxonomy.', 'ai-bridge' ) );
+			return new WP_Error( 'invalid_taxonomy', __( 'Invalid taxonomy.', 'albert' ) );
 		}
 
 		$term = get_term( $term_id, $taxonomy );
@@ -131,7 +131,7 @@ class ViewTerm extends BaseAbility {
 				'term_not_found',
 				sprintf(
 					/* translators: %d: Term ID */
-					__( 'Term with ID %d not found.', 'ai-bridge' ),
+					__( 'Term with ID %d not found.', 'albert' ),
 					$term_id
 				)
 			);

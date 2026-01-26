@@ -28,8 +28,8 @@ class FindPosts extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/posts-find';
-		$this->label       = __( 'Find Posts', 'ai-bridge' );
-		$this->description = __( 'Find and search WordPress posts with optional filtering and pagination.', 'ai-bridge' );
+		$this->label       = __( 'Find Posts', 'albert' );
+		$this->description = __( 'Find and search WordPress posts with optional filtering and pagination.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'posts';
 
@@ -251,7 +251,7 @@ class FindPosts extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while retrieving posts.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while retrieving posts.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

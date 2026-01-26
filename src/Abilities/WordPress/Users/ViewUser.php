@@ -29,8 +29,8 @@ class ViewUser extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/users-view';
-		$this->label       = __( 'View User', 'ai-bridge' );
-		$this->description = __( 'Retrieve a single WordPress user by ID.', 'ai-bridge' );
+		$this->label       = __( 'View User', 'albert' );
+		$this->description = __( 'Retrieve a single WordPress user by ID.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'users';
 
@@ -105,7 +105,7 @@ class ViewUser extends BaseAbility {
 		$user_id = absint( $args['id'] ?? 0 );
 
 		if ( ! $user_id ) {
-			return new WP_Error( 'missing_user_id', __( 'User ID is required.', 'ai-bridge' ) );
+			return new WP_Error( 'missing_user_id', __( 'User ID is required.', 'albert' ) );
 		}
 
 		$user = get_user_by( 'id', $user_id );
@@ -115,7 +115,7 @@ class ViewUser extends BaseAbility {
 				'user_not_found',
 				sprintf(
 					/* translators: %d: User ID */
-					__( 'User with ID %d not found.', 'ai-bridge' ),
+					__( 'User with ID %d not found.', 'albert' ),
 					$user_id
 				)
 			);

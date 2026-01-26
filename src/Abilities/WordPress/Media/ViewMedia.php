@@ -28,8 +28,8 @@ class ViewMedia extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/media-view';
-		$this->label       = __( 'View Media', 'ai-bridge' );
-		$this->description = __( 'Retrieve a single media file by ID.', 'ai-bridge' );
+		$this->label       = __( 'View Media', 'albert' );
+		$this->description = __( 'Retrieve a single media file by ID.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'media';
 
@@ -104,7 +104,7 @@ class ViewMedia extends BaseAbility {
 		$media_id = absint( $args['id'] ?? 0 );
 
 		if ( ! $media_id ) {
-			return new WP_Error( 'missing_media_id', __( 'Media ID is required.', 'ai-bridge' ) );
+			return new WP_Error( 'missing_media_id', __( 'Media ID is required.', 'albert' ) );
 		}
 
 		$media = get_post( $media_id );
@@ -114,7 +114,7 @@ class ViewMedia extends BaseAbility {
 				'media_not_found',
 				sprintf(
 					/* translators: %d: Media ID */
-					__( 'Media with ID %d not found.', 'ai-bridge' ),
+					__( 'Media with ID %d not found.', 'albert' ),
 					$media_id
 				)
 			);

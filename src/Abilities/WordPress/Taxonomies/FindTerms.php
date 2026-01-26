@@ -28,8 +28,8 @@ class FindTerms extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/terms-find';
-		$this->label       = __( 'Find Terms', 'ai-bridge' );
-		$this->description = __( 'Find terms from a specific taxonomy (categories, tags, custom terms).', 'ai-bridge' );
+		$this->label       = __( 'Find Terms', 'albert' );
+		$this->description = __( 'Find terms from a specific taxonomy (categories, tags, custom terms).', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'terms';
 
@@ -170,7 +170,7 @@ class FindTerms extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while retrieving terms.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while retrieving terms.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
@@ -218,7 +218,7 @@ class FindTerms extends BaseAbility {
 		if ( ! $taxonomy_obj ) {
 			return new WP_Error(
 				'invalid_taxonomy',
-				__( 'Invalid taxonomy.', 'ai-bridge' ),
+				__( 'Invalid taxonomy.', 'albert' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -226,7 +226,7 @@ class FindTerms extends BaseAbility {
 		if ( empty( $taxonomy_obj->rest_base ) ) {
 			return new WP_Error(
 				'taxonomy_not_rest_enabled',
-				__( 'This taxonomy is not available via REST API.', 'ai-bridge' ),
+				__( 'This taxonomy is not available via REST API.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}

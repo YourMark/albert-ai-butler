@@ -28,8 +28,8 @@ class Info extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/site-info';
-		$this->label       = __( 'Site Info', 'ai-bridge' );
-		$this->description = __( 'Retrieve WordPress site information and settings.', 'ai-bridge' );
+		$this->label       = __( 'Site Info', 'albert' );
+		$this->description = __( 'Retrieve WordPress site information and settings.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'site';
 

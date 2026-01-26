@@ -29,8 +29,8 @@ class Update extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/posts-update';
-		$this->label       = __( 'Update Post', 'ai-bridge' );
-		$this->description = __( 'Update an existing WordPress post with new title, content, and metadata.', 'ai-bridge' );
+		$this->label       = __( 'Update Post', 'albert' );
+		$this->description = __( 'Update an existing WordPress post with new title, content, and metadata.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'posts';
 
@@ -182,7 +182,7 @@ class Update extends BaseAbility {
 		if ( empty( $args['id'] ) ) {
 			return new WP_Error(
 				'missing_id',
-				__( 'Post ID is required.', 'ai-bridge' ),
+				__( 'Post ID is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -196,7 +196,7 @@ class Update extends BaseAbility {
 		if ( $check_response->is_error() ) {
 			return new WP_Error(
 				'post_not_found',
-				__( 'Post not found.', 'ai-bridge' ),
+				__( 'Post not found.', 'albert' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -252,7 +252,7 @@ class Update extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while updating the post.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while updating the post.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

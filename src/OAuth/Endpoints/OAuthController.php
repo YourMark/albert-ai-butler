@@ -175,7 +175,7 @@ class OAuthController implements Hookable {
 			return new WP_REST_Response(
 				[
 					'error'       => 'login_required',
-					'message'     => __( 'Please log in to authorize this application.', 'ai-bridge' ),
+					'message'     => __( 'Please log in to authorize this application.', 'albert' ),
 					'redirect_to' => $login_url,
 				],
 				401
@@ -192,7 +192,7 @@ class OAuthController implements Hookable {
 		if ( ! $client ) {
 			return new WP_Error(
 				'invalid_client',
-				__( 'Unknown client.', 'ai-bridge' ),
+				__( 'Unknown client.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -208,7 +208,7 @@ class OAuthController implements Hookable {
 		if ( ! $is_wildcard && ! in_array( $redirect_uri, $allowed_uris, true ) ) {
 			return new WP_Error(
 				'invalid_redirect_uri',
-				__( 'Invalid redirect URI.', 'ai-bridge' ),
+				__( 'Invalid redirect URI.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -266,7 +266,7 @@ class OAuthController implements Hookable {
 		if ( ! $auth_request_data ) {
 			return new WP_Error(
 				'invalid_request',
-				__( 'Authorization request expired or invalid.', 'ai-bridge' ),
+				__( 'Authorization request expired or invalid.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -278,7 +278,7 @@ class OAuthController implements Hookable {
 		if ( get_current_user_id() !== (int) $auth_request_data['user_id'] ) {
 			return new WP_Error(
 				'user_mismatch',
-				__( 'User mismatch.', 'ai-bridge' ),
+				__( 'User mismatch.', 'albert' ),
 				[ 'status' => 403 ]
 			);
 		}
@@ -407,7 +407,7 @@ class OAuthController implements Hookable {
 		if ( ! is_user_logged_in() ) {
 			return new WP_Error(
 				'rest_forbidden',
-				__( 'You must be logged in.', 'ai-bridge' ),
+				__( 'You must be logged in.', 'albert' ),
 				[ 'status' => 401 ]
 			);
 		}

@@ -64,8 +64,8 @@ class AbilitiesManager implements Hookable {
 			wp_register_ability_category(
 				'core',
 				[
-					'label'       => __( 'WordPress', 'ai-bridge' ),
-					'description' => __( 'WordPress core functionality abilities.', 'ai-bridge' ),
+					'label'       => __( 'WordPress', 'albert' ),
+					'description' => __( 'WordPress core functionality abilities.', 'albert' ),
 				]
 			);
 		}

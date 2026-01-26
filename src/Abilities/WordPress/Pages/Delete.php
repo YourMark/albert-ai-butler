@@ -28,8 +28,8 @@ class Delete extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/pages-delete';
-		$this->label       = __( 'Delete Page', 'ai-bridge' );
-		$this->description = __( 'Delete a WordPress page permanently or move it to trash.', 'ai-bridge' );
+		$this->label       = __( 'Delete Page', 'albert' );
+		$this->description = __( 'Delete a WordPress page permanently or move it to trash.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'pages';
 
@@ -149,7 +149,7 @@ class Delete extends BaseAbility {
 		if ( empty( $args['id'] ) ) {
 			return new WP_Error(
 				'missing_id',
-				__( 'Page ID is required.', 'ai-bridge' ),
+				__( 'Page ID is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -161,7 +161,7 @@ class Delete extends BaseAbility {
 		if ( ! $page ) {
 			return new WP_Error(
 				'page_not_found',
-				__( 'Page not found.', 'ai-bridge' ),
+				__( 'Page not found.', 'albert' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -185,7 +185,7 @@ class Delete extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while deleting the page.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while deleting the page.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

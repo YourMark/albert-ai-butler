@@ -84,7 +84,7 @@ class ClientRegistration implements Hookable {
 				if ( ! $this->is_valid_redirect_uri( $uri ) ) {
 					return new WP_Error(
 						'invalid_redirect_uri',
-						__( 'Invalid redirect URI provided.', 'ai-bridge' ),
+						__( 'Invalid redirect URI provided.', 'albert' ),
 						[ 'status' => 400 ]
 					);
 				}
@@ -104,7 +104,7 @@ class ClientRegistration implements Hookable {
 		if ( ! $result ) {
 			return new WP_Error(
 				'registration_failed',
-				__( 'Failed to register client.', 'ai-bridge' ),
+				__( 'Failed to register client.', 'albert' ),
 				[ 'status' => 500 ]
 			);
 		}

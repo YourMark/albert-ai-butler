@@ -29,8 +29,8 @@ class AbilitiesRegistry {
 	public static function get_ability_groups(): array {
 		$groups = [
 			'wordpress' => [
-				'label'       => __( 'WordPress Core', 'ai-bridge' ),
-				'description' => __( 'Core WordPress content management.', 'ai-bridge' ),
+				'label'       => __( 'WordPress Core', 'albert' ),
+				'description' => __( 'Core WordPress content management.', 'albert' ),
 				'types'       => self::get_wordpress_types(),
 			],
 		];
@@ -38,8 +38,8 @@ class AbilitiesRegistry {
 		// Add WooCommerce if active.
 		if ( class_exists( 'WooCommerce' ) ) {
 			$groups['woocommerce'] = [
-				'label'       => __( 'WooCommerce', 'ai-bridge' ),
-				'description' => __( 'Store and order management.', 'ai-bridge' ),
+				'label'       => __( 'WooCommerce', 'albert' ),
+				'description' => __( 'Store and order management.', 'albert' ),
 				'types'       => self::get_woocommerce_types(),
 			];
 		}
@@ -56,85 +56,85 @@ class AbilitiesRegistry {
 	private static function get_wordpress_types(): array {
 		return [
 			'posts'      => [
-				'label' => __( 'Posts', 'ai-bridge' ),
+				'label' => __( 'Posts', 'albert' ),
 				'read'  => [
-					'label'       => __( 'Read', 'ai-bridge' ),
-					'description' => __( 'Find and view posts', 'ai-bridge' ),
+					'label'       => __( 'Read', 'albert' ),
+					'description' => __( 'Find and view posts', 'albert' ),
 					'abilities'   => [ 'core/posts-find', 'core/posts-view' ],
 					'premium'     => false,
 				],
 				'write' => [
-					'label'       => __( 'Write', 'ai-bridge' ),
-					'description' => __( 'Create, edit, and delete posts', 'ai-bridge' ),
+					'label'       => __( 'Write', 'albert' ),
+					'description' => __( 'Create, edit, and delete posts', 'albert' ),
 					'abilities'   => [ 'core/posts-create', 'core/posts-update', 'core/posts-delete' ],
 					'premium'     => false,
 				],
 			],
 			'pages'      => [
-				'label' => __( 'Pages', 'ai-bridge' ),
+				'label' => __( 'Pages', 'albert' ),
 				'read'  => [
-					'label'       => __( 'Read', 'ai-bridge' ),
-					'description' => __( 'Find and view pages', 'ai-bridge' ),
+					'label'       => __( 'Read', 'albert' ),
+					'description' => __( 'Find and view pages', 'albert' ),
 					'abilities'   => [ 'core/pages-find', 'core/pages-view' ],
 					'premium'     => false,
 				],
 				'write' => [
-					'label'       => __( 'Write', 'ai-bridge' ),
-					'description' => __( 'Create, edit, and delete pages', 'ai-bridge' ),
+					'label'       => __( 'Write', 'albert' ),
+					'description' => __( 'Create, edit, and delete pages', 'albert' ),
 					'abilities'   => [ 'core/pages-create', 'core/pages-update', 'core/pages-delete' ],
 					'premium'     => false,
 				],
 			],
 			'media'      => [
-				'label' => __( 'Media', 'ai-bridge' ),
+				'label' => __( 'Media', 'albert' ),
 				'read'  => [
-					'label'       => __( 'Read', 'ai-bridge' ),
-					'description' => __( 'Find and view media files', 'ai-bridge' ),
+					'label'       => __( 'Read', 'albert' ),
+					'description' => __( 'Find and view media files', 'albert' ),
 					'abilities'   => [ 'core/media-find', 'core/media-view' ],
 					'premium'     => false,
 				],
 				'write' => [
-					'label'       => __( 'Write', 'ai-bridge' ),
-					'description' => __( 'Upload and manage media', 'ai-bridge' ),
+					'label'       => __( 'Write', 'albert' ),
+					'description' => __( 'Upload and manage media', 'albert' ),
 					'abilities'   => [ 'core/media-upload', 'core/media-set-featured-image' ],
 					'premium'     => false,
 				],
 			],
 			'users'      => [
-				'label' => __( 'Users', 'ai-bridge' ),
+				'label' => __( 'Users', 'albert' ),
 				'read'  => [
-					'label'       => __( 'Read', 'ai-bridge' ),
-					'description' => __( 'Find and view users', 'ai-bridge' ),
+					'label'       => __( 'Read', 'albert' ),
+					'description' => __( 'Find and view users', 'albert' ),
 					'abilities'   => [ 'core/users-find', 'core/users-view' ],
 					'premium'     => false,
 				],
 				'write' => [
-					'label'       => __( 'Write', 'ai-bridge' ),
-					'description' => __( 'Create, edit, and delete users', 'ai-bridge' ),
+					'label'       => __( 'Write', 'albert' ),
+					'description' => __( 'Create, edit, and delete users', 'albert' ),
 					'abilities'   => [ 'core/users-create', 'core/users-update', 'core/users-delete' ],
 					'premium'     => false,
 				],
 			],
 			'taxonomies' => [
-				'label' => __( 'Taxonomies', 'ai-bridge' ),
+				'label' => __( 'Taxonomies', 'albert' ),
 				'read'  => [
-					'label'       => __( 'Read', 'ai-bridge' ),
-					'description' => __( 'Find categories, tags, and terms', 'ai-bridge' ),
+					'label'       => __( 'Read', 'albert' ),
+					'description' => __( 'Find categories, tags, and terms', 'albert' ),
 					'abilities'   => [ 'core/taxonomies-find', 'core/terms-view' ],
 					'premium'     => false,
 				],
 				'write' => [
-					'label'       => __( 'Write', 'ai-bridge' ),
-					'description' => __( 'Create, edit, and delete terms', 'ai-bridge' ),
+					'label'       => __( 'Write', 'albert' ),
+					'description' => __( 'Create, edit, and delete terms', 'albert' ),
 					'abilities'   => [ 'core/terms-create', 'core/terms-update', 'core/terms-delete' ],
 					'premium'     => false,
 				],
 			],
 			'site'       => [
-				'label' => __( 'Site Info', 'ai-bridge' ),
+				'label' => __( 'Site Info', 'albert' ),
 				'read'  => [
-					'label'       => __( 'Read', 'ai-bridge' ),
-					'description' => __( 'View site information', 'ai-bridge' ),
+					'label'       => __( 'Read', 'albert' ),
+					'description' => __( 'View site information', 'albert' ),
 					'abilities'   => [ 'core/site-info' ],
 					'premium'     => false,
 				],
@@ -152,50 +152,50 @@ class AbilitiesRegistry {
 	private static function get_woocommerce_types(): array {
 		return [
 			'orders'    => [
-				'label' => __( 'Orders', 'ai-bridge' ),
+				'label' => __( 'Orders', 'albert' ),
 				'read'  => [
-					'label'       => __( 'Read', 'ai-bridge' ),
-					'description' => __( 'Find and view orders', 'ai-bridge' ),
+					'label'       => __( 'Read', 'albert' ),
+					'description' => __( 'Find and view orders', 'albert' ),
 					'abilities'   => [ 'woo/orders/find', 'woo/orders/view' ],
 					'premium'     => false,
 				],
 				'write' => [
-					'label'       => __( 'Write', 'ai-bridge' ),
-					'description' => __( 'Create and update orders', 'ai-bridge' ),
+					'label'       => __( 'Write', 'albert' ),
+					'description' => __( 'Create and update orders', 'albert' ),
 					'abilities'   => [ 'woo/orders/create', 'woo/orders/update' ],
 					'premium'     => true, // Locked in free version.
 				],
 			],
 			'products'  => [
-				'label' => __( 'Products', 'ai-bridge' ),
+				'label' => __( 'Products', 'albert' ),
 				'read'  => [
-					'label'       => __( 'Read', 'ai-bridge' ),
-					'description' => __( 'Find and view products', 'ai-bridge' ),
+					'label'       => __( 'Read', 'albert' ),
+					'description' => __( 'Find and view products', 'albert' ),
 					'abilities'   => [ 'woo/products/find', 'woo/products/view' ],
 					'premium'     => false,
 				],
 				'write' => [
-					'label'       => __( 'Write', 'ai-bridge' ),
-					'description' => __( 'Create, edit, and delete products', 'ai-bridge' ),
+					'label'       => __( 'Write', 'albert' ),
+					'description' => __( 'Create, edit, and delete products', 'albert' ),
 					'abilities'   => [ 'woo/products/create', 'woo/products/update', 'woo/products/delete' ],
 					'premium'     => true, // Locked in free version.
 				],
 			],
 			'customers' => [
-				'label' => __( 'Customers', 'ai-bridge' ),
+				'label' => __( 'Customers', 'albert' ),
 				'read'  => [
-					'label'       => __( 'Read', 'ai-bridge' ),
-					'description' => __( 'Find and view customers', 'ai-bridge' ),
+					'label'       => __( 'Read', 'albert' ),
+					'description' => __( 'Find and view customers', 'albert' ),
 					'abilities'   => [ 'woo/customers/find', 'woo/customers/view' ],
 					'premium'     => false,
 				],
 				// No write for customers in free version.
 			],
 			'stats'     => [
-				'label' => __( 'Statistics', 'ai-bridge' ),
+				'label' => __( 'Statistics', 'albert' ),
 				'read'  => [
-					'label'       => __( 'Read', 'ai-bridge' ),
-					'description' => __( 'View sales and store statistics', 'ai-bridge' ),
+					'label'       => __( 'Read', 'albert' ),
+					'description' => __( 'View sales and store statistics', 'albert' ),
 					'abilities'   => [ 'woo/stats/sales', 'woo/stats/overview' ],
 					'premium'     => false,
 				],

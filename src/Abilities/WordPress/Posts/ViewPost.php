@@ -28,8 +28,8 @@ class ViewPost extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/posts-view';
-		$this->label       = __( 'View Post', 'ai-bridge' );
-		$this->description = __( 'Retrieve a single WordPress post by ID.', 'ai-bridge' );
+		$this->label       = __( 'View Post', 'albert' );
+		$this->description = __( 'Retrieve a single WordPress post by ID.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'posts';
 
@@ -104,7 +104,7 @@ class ViewPost extends BaseAbility {
 		$post_id = absint( $args['id'] ?? 0 );
 
 		if ( ! $post_id ) {
-			return new WP_Error( 'missing_post_id', __( 'Post ID is required.', 'ai-bridge' ) );
+			return new WP_Error( 'missing_post_id', __( 'Post ID is required.', 'albert' ) );
 		}
 
 		$post = get_post( $post_id );
@@ -114,7 +114,7 @@ class ViewPost extends BaseAbility {
 				'post_not_found',
 				sprintf(
 					/* translators: %d: Post ID */
-					__( 'Post with ID %d not found.', 'ai-bridge' ),
+					__( 'Post with ID %d not found.', 'albert' ),
 					$post_id
 				)
 			);
@@ -122,7 +122,7 @@ class ViewPost extends BaseAbility {
 
 		// Check if user can read this specific post.
 		if ( ! current_user_can( 'read_post', $post_id ) ) {
-			return new WP_Error( 'forbidden', __( 'You do not have permission to view this post.', 'ai-bridge' ) );
+			return new WP_Error( 'forbidden', __( 'You do not have permission to view this post.', 'albert' ) );
 		}
 
 		return [

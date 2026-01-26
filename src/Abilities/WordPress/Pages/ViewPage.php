@@ -28,8 +28,8 @@ class ViewPage extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/pages-view';
-		$this->label       = __( 'View Page', 'ai-bridge' );
-		$this->description = __( 'Retrieve a single WordPress page by ID.', 'ai-bridge' );
+		$this->label       = __( 'View Page', 'albert' );
+		$this->description = __( 'Retrieve a single WordPress page by ID.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'pages';
 
@@ -104,7 +104,7 @@ class ViewPage extends BaseAbility {
 		$page_id = absint( $args['id'] ?? 0 );
 
 		if ( ! $page_id ) {
-			return new WP_Error( 'missing_page_id', __( 'Page ID is required.', 'ai-bridge' ) );
+			return new WP_Error( 'missing_page_id', __( 'Page ID is required.', 'albert' ) );
 		}
 
 		$page = get_post( $page_id );
@@ -114,7 +114,7 @@ class ViewPage extends BaseAbility {
 				'page_not_found',
 				sprintf(
 					/* translators: %d: Page ID */
-					__( 'Page with ID %d not found.', 'ai-bridge' ),
+					__( 'Page with ID %d not found.', 'albert' ),
 					$page_id
 				)
 			);
@@ -122,7 +122,7 @@ class ViewPage extends BaseAbility {
 
 		// Check if user can read this specific page.
 		if ( ! current_user_can( 'read_post', $page_id ) ) {
-			return new WP_Error( 'forbidden', __( 'You do not have permission to view this page.', 'ai-bridge' ) );
+			return new WP_Error( 'forbidden', __( 'You do not have permission to view this page.', 'albert' ) );
 		}
 
 		return [

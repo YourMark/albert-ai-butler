@@ -27,7 +27,7 @@ class Settings implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private string $parent_slug = 'ai-bridge';
+	private string $parent_slug = 'albert';
 
 	/**
 	 * Settings page slug.
@@ -61,8 +61,8 @@ class Settings implements Hookable {
 	public function add_settings_page(): void {
 		add_submenu_page(
 			$this->parent_slug,
-			__( 'Settings', 'ai-bridge' ),
-			__( 'Settings', 'ai-bridge' ),
+			__( 'Settings', 'albert' ),
+			__( 'Settings', 'albert' ),
 			'manage_options',
 			$this->page_slug,
 			[ $this, 'render_settings_page' ]
@@ -77,7 +77,7 @@ class Settings implements Hookable {
 	 */
 	public function render_settings_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'albert' ) );
 		}
 
 		// Check if viewing sessions for a specific user.
@@ -98,7 +98,7 @@ class Settings implements Hookable {
 
 			<div class="ea-content-header">
 				<p class="ea-content-description">
-					<?php esc_html_e( 'Configure how AI tools connect to your site and manage user access.', 'ai-bridge' ); ?>
+					<?php esc_html_e( 'Configure how AI tools connect to your site and manage user access.', 'albert' ); ?>
 				</p>
 			</div>
 
@@ -133,27 +133,27 @@ class Settings implements Hookable {
 		<section class="ea-settings-card">
 			<div class="ea-settings-card-header">
 				<span class="dashicons dashicons-cloud" aria-hidden="true"></span>
-				<h2><?php esc_html_e( 'MCP Server', 'ai-bridge' ); ?></h2>
+				<h2><?php esc_html_e( 'MCP Server', 'albert' ); ?></h2>
 			</div>
 			<div class="ea-settings-card-body">
 				<div class="ea-field-group">
-					<label class="ea-field-label"><?php esc_html_e( 'Connection URL', 'ai-bridge' ); ?></label>
+					<label class="ea-field-label"><?php esc_html_e( 'Connection URL', 'albert' ); ?></label>
 					<p class="ea-field-description">
-						<?php esc_html_e( 'Use this URL to connect AI tools (Claude Desktop, ChatGPT, etc.) to your site.', 'ai-bridge' ); ?>
+						<?php esc_html_e( 'Use this URL to connect AI tools (Claude Desktop, ChatGPT, etc.) to your site.', 'albert' ); ?>
 					</p>
 					<div class="ea-url-field">
 						<code class="ea-url-value" id="mcp-endpoint-url"><?php echo esc_html( $mcp_endpoint ); ?></code>
 						<button type="button" class="button ea-copy-button" data-copy-target="mcp-endpoint-url">
-							<?php esc_html_e( 'Copy', 'ai-bridge' ); ?>
+							<?php esc_html_e( 'Copy', 'albert' ); ?>
 						</button>
 					</div>
 				</div>
 
 				<?php if ( $show_developer_settings ) : ?>
 					<div class="ea-field-group">
-						<label class="ea-field-label" for="ea-external-url"><?php esc_html_e( 'External URL', 'ai-bridge' ); ?></label>
+						<label class="ea-field-label" for="ea-external-url"><?php esc_html_e( 'External URL', 'albert' ); ?></label>
 						<p class="ea-field-description">
-							<?php esc_html_e( 'If your site is behind a tunnel or reverse proxy, enter the public URL here.', 'ai-bridge' ); ?>
+							<?php esc_html_e( 'If your site is behind a tunnel or reverse proxy, enter the public URL here.', 'albert' ); ?>
 						</p>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ea-inline-form">
 							<?php wp_nonce_field( 'aibridge_save_external_url', 'aibridge_external_url_nonce' ); ?>
@@ -163,12 +163,12 @@ class Settings implements Hookable {
 								name="aibridge_external_url"
 								id="ea-external-url"
 								value="<?php echo esc_attr( $external_url ); ?>"
-								placeholder="<?php esc_attr_e( 'https://your-tunnel-url.example.com', 'ai-bridge' ); ?>"
+								placeholder="<?php esc_attr_e( 'https://your-tunnel-url.example.com', 'albert' ); ?>"
 								class="ea-text-input"
 							/>
-							<button type="submit" class="button"><?php esc_html_e( 'Save', 'ai-bridge' ); ?></button>
+							<button type="submit" class="button"><?php esc_html_e( 'Save', 'albert' ); ?></button>
 							<?php if ( ! empty( $external_url ) ) : ?>
-								<button type="submit" name="aibridge_clear_url" value="1" class="button"><?php esc_html_e( 'Clear', 'ai-bridge' ); ?></button>
+								<button type="submit" name="aibridge_clear_url" value="1" class="button"><?php esc_html_e( 'Clear', 'albert' ); ?></button>
 							<?php endif; ?>
 						</form>
 					</div>
@@ -198,20 +198,20 @@ class Settings implements Hookable {
 		<section class="ea-settings-card">
 			<div class="ea-settings-card-header">
 				<span class="dashicons dashicons-admin-users" aria-hidden="true"></span>
-				<h2><?php esc_html_e( 'Authentication', 'ai-bridge' ); ?></h2>
+				<h2><?php esc_html_e( 'Authentication', 'albert' ); ?></h2>
 			</div>
 			<div class="ea-settings-card-body">
 				<div class="ea-field-group">
-					<label class="ea-field-label"><?php esc_html_e( 'Allowed Users', 'ai-bridge' ); ?></label>
+					<label class="ea-field-label"><?php esc_html_e( 'Allowed Users', 'albert' ); ?></label>
 					<p class="ea-field-description">
-						<?php esc_html_e( 'Select users who can connect AI tools to your site. Only these users can authorize AI assistants.', 'ai-bridge' ); ?>
+						<?php esc_html_e( 'Select users who can connect AI tools to your site. Only these users can authorize AI assistants.', 'albert' ); ?>
 					</p>
 
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ea-inline-form">
 						<?php wp_nonce_field( 'aibridge_add_allowed_user', 'aibridge_add_user_nonce' ); ?>
 						<input type="hidden" name="action" value="aibridge_add_allowed_user" />
 						<select name="aibridge_user_id" id="ea-add-user-select" class="ea-select-input">
-							<option value=""><?php esc_html_e( '— Select User —', 'ai-bridge' ); ?></option>
+							<option value=""><?php esc_html_e( '— Select User —', 'albert' ); ?></option>
 							<?php foreach ( $all_users as $user ) : ?>
 								<?php if ( ! in_array( $user->ID, $allowed_users, true ) ) : ?>
 									<option value="<?php echo esc_attr( $user->ID ); ?>">
@@ -220,14 +220,14 @@ class Settings implements Hookable {
 								<?php endif; ?>
 							<?php endforeach; ?>
 						</select>
-						<button type="submit" class="button button-primary"><?php esc_html_e( 'Add User', 'ai-bridge' ); ?></button>
+						<button type="submit" class="button button-primary"><?php esc_html_e( 'Add User', 'albert' ); ?></button>
 					</form>
 				</div>
 
 				<?php if ( empty( $allowed_users ) ) : ?>
 					<div class="ea-empty-state">
 						<span class="dashicons dashicons-groups" aria-hidden="true"></span>
-						<p><?php esc_html_e( 'No users have access yet. Add users above to allow them to connect AI tools.', 'ai-bridge' ); ?></p>
+						<p><?php esc_html_e( 'No users have access yet. Add users above to allow them to connect AI tools.', 'albert' ); ?></p>
 					</div>
 				<?php else : ?>
 					<div class="ea-users-list">
@@ -275,20 +275,20 @@ class Settings implements Hookable {
 											<?php
 											printf(
 												/* translators: %d: number of sessions */
-												esc_html( _n( '%d session', '%d sessions', $session_count, 'ai-bridge' ) ),
+												esc_html( _n( '%d session', '%d sessions', $session_count, 'albert' ) ),
 												(int) $session_count
 											);
 											?>
 										</a>
 									<?php else : ?>
-										<span class="ea-no-sessions"><?php esc_html_e( 'No sessions', 'ai-bridge' ); ?></span>
+										<span class="ea-no-sessions"><?php esc_html_e( 'No sessions', 'albert' ); ?></span>
 									<?php endif; ?>
 								</div>
 								<div class="ea-user-actions">
 									<a href="<?php echo esc_url( $remove_url ); ?>"
 										class="ea-remove-link"
-										onclick="return confirm('<?php echo esc_js( __( 'Remove this user\'s access? All their sessions will be revoked.', 'ai-bridge' ) ); ?>');">
-										<?php esc_html_e( 'Remove', 'ai-bridge' ); ?>
+										onclick="return confirm('<?php echo esc_js( __( 'Remove this user\'s access? All their sessions will be revoked.', 'albert' ) ); ?>');">
+										<?php esc_html_e( 'Remove', 'albert' ); ?>
 									</a>
 								</div>
 							</div>
@@ -309,12 +309,12 @@ class Settings implements Hookable {
 	public function handle_save_external_url(): void {
 		// Verify nonce.
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['aibridge_external_url_nonce'] ?? '' ) ), 'aibridge_save_external_url' ) ) {
-			wp_die( esc_html__( 'Security check failed.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'Security check failed.', 'albert' ) );
 		}
 
 		// Check permissions.
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to change this setting.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'You do not have permission to change this setting.', 'albert' ) );
 		}
 
 		// Check if clearing.
@@ -379,7 +379,7 @@ class Settings implements Hookable {
 		$user = get_user_by( 'id', $user_id );
 
 		if ( ! $user ) {
-			echo '<div class="wrap"><div class="notice notice-error"><p>' . esc_html__( 'User not found.', 'ai-bridge' ) . '</p></div></div>';
+			echo '<div class="wrap"><div class="notice notice-error"><p>' . esc_html__( 'User not found.', 'albert' ) . '</p></div></div>';
 			return;
 		}
 
@@ -412,53 +412,53 @@ class Settings implements Hookable {
 		);
 		?>
 		<div class="wrap aibridge-settings">
-			<h1><?php esc_html_e( 'User Sessions', 'ai-bridge' ); ?></h1>
+			<h1><?php esc_html_e( 'User Sessions', 'albert' ); ?></h1>
 
 			<?php settings_errors(); ?>
 
 			<p>
 				<a href="<?php echo esc_url( $back_url ); ?>" class="button">
-					&larr; <?php esc_html_e( 'Back to Settings', 'ai-bridge' ); ?>
+					&larr; <?php esc_html_e( 'Back to Settings', 'albert' ); ?>
 				</a>
 			</p>
 
 			<div class="ea-settings-section">
 				<div class="ea-oauth-info-box">
-					<h3><?php esc_html_e( 'User Details', 'ai-bridge' ); ?></h3>
+					<h3><?php esc_html_e( 'User Details', 'albert' ); ?></h3>
 					<table class="form-table">
 						<tr>
-							<th><?php esc_html_e( 'Name', 'ai-bridge' ); ?></th>
+							<th><?php esc_html_e( 'Name', 'albert' ); ?></th>
 							<td><strong><?php echo esc_html( $user->display_name ); ?></strong></td>
 						</tr>
 						<tr>
-							<th><?php esc_html_e( 'Email', 'ai-bridge' ); ?></th>
+							<th><?php esc_html_e( 'Email', 'albert' ); ?></th>
 							<td><?php echo esc_html( $user->user_email ); ?></td>
 						</tr>
 					</table>
 				</div>
 
-				<h3><?php esc_html_e( 'Active Sessions', 'ai-bridge' ); ?></h3>
+				<h3><?php esc_html_e( 'Active Sessions', 'albert' ); ?></h3>
 				<p class="description">
-					<?php esc_html_e( 'Each session represents an AI tool that has been authorized. Revoking a session will disconnect that tool.', 'ai-bridge' ); ?>
+					<?php esc_html_e( 'Each session represents an AI tool that has been authorized. Revoking a session will disconnect that tool.', 'albert' ); ?>
 				</p>
 
 				<?php if ( empty( $sessions ) ) : ?>
-					<p><em><?php esc_html_e( 'No active sessions. The user has not authorized any tools yet.', 'ai-bridge' ); ?></em></p>
+					<p><em><?php esc_html_e( 'No active sessions. The user has not authorized any tools yet.', 'albert' ); ?></em></p>
 				<?php else : ?>
 					<table class="wp-list-table widefat fixed striped">
 						<thead>
 							<tr>
-								<th><?php esc_html_e( 'App', 'ai-bridge' ); ?></th>
-								<th><?php esc_html_e( 'Session ID', 'ai-bridge' ); ?></th>
-								<th><?php esc_html_e( 'Connected', 'ai-bridge' ); ?></th>
-								<th><?php esc_html_e( 'Actions', 'ai-bridge' ); ?></th>
+								<th><?php esc_html_e( 'App', 'albert' ); ?></th>
+								<th><?php esc_html_e( 'Session ID', 'albert' ); ?></th>
+								<th><?php esc_html_e( 'Connected', 'albert' ); ?></th>
+								<th><?php esc_html_e( 'Actions', 'albert' ); ?></th>
 							</tr>
 						</thead>
 						<tbody>
 							<?php foreach ( $sessions as $session ) : ?>
 								<tr>
 									<td>
-										<strong><?php echo esc_html( $session->client_name ?? __( 'Unknown', 'ai-bridge' ) ); ?></strong>
+										<strong><?php echo esc_html( $session->client_name ?? __( 'Unknown', 'albert' ) ); ?></strong>
 									</td>
 									<td><code><?php echo esc_html( substr( $session->token_id, 0, 16 ) . '...' ); ?></code></td>
 									<td>
@@ -467,7 +467,7 @@ class Settings implements Hookable {
 										echo esc_html(
 											sprintf(
 												/* translators: %s: human-readable time difference */
-												__( '%s ago', 'ai-bridge' ),
+												__( '%s ago', 'albert' ),
 												human_time_diff( strtotime( $first_connected ), time() )
 											)
 										);
@@ -490,8 +490,8 @@ class Settings implements Hookable {
 										?>
 										<a href="<?php echo esc_url( $revoke_url ); ?>"
 											class="button button-small"
-											onclick="return confirm('<?php echo esc_js( __( 'Revoke this session?', 'ai-bridge' ) ); ?>');">
-											<?php esc_html_e( 'Revoke', 'ai-bridge' ); ?>
+											onclick="return confirm('<?php echo esc_js( __( 'Revoke this session?', 'albert' ) ); ?>');">
+											<?php esc_html_e( 'Revoke', 'albert' ); ?>
 										</a>
 									</td>
 								</tr>
@@ -515,8 +515,8 @@ class Settings implements Hookable {
 					<p style="margin-top: 15px;">
 						<a href="<?php echo esc_url( $revoke_all_url ); ?>"
 							class="button"
-							onclick="return confirm('<?php echo esc_js( __( 'Revoke ALL sessions for this user?', 'ai-bridge' ) ); ?>');">
-							<?php esc_html_e( 'Revoke All Sessions', 'ai-bridge' ); ?>
+							onclick="return confirm('<?php echo esc_js( __( 'Revoke ALL sessions for this user?', 'albert' ) ); ?>');">
+							<?php esc_html_e( 'Revoke All Sessions', 'albert' ); ?>
 						</a>
 					</p>
 				<?php endif; ?>
@@ -567,12 +567,12 @@ class Settings implements Hookable {
 	public function handle_add_allowed_user(): void {
 		// Verify nonce.
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['aibridge_add_user_nonce'] ?? '' ) ), 'aibridge_add_allowed_user' ) ) {
-			wp_die( esc_html__( 'Security check failed.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'Security check failed.', 'albert' ) );
 		}
 
 		// Check permissions.
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to manage MCP access.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'You do not have permission to manage MCP access.', 'albert' ) );
 		}
 
 		$user_id = isset( $_POST['aibridge_user_id'] ) ? absint( $_POST['aibridge_user_id'] ) : 0;
@@ -590,7 +590,7 @@ class Settings implements Hookable {
 		// Verify user exists.
 		$user = get_user_by( 'id', $user_id );
 		if ( ! $user ) {
-			wp_die( esc_html__( 'Invalid user selected.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'Invalid user selected.', 'albert' ) );
 		}
 
 		// Get current allowed users and add the new one.
@@ -627,12 +627,12 @@ class Settings implements Hookable {
 
 		// Verify nonce.
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'remove_user_' . $user_id ) ) {
-			wp_die( esc_html__( 'Security check failed.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'Security check failed.', 'albert' ) );
 		}
 
 		// Check permissions.
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to manage MCP access.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'You do not have permission to manage MCP access.', 'albert' ) );
 		}
 
 		// Remove user from allowed list.
@@ -646,7 +646,7 @@ class Settings implements Hookable {
 		add_settings_error(
 			'aibridge',
 			'user_removed',
-			__( 'User removed and all their sessions revoked.', 'ai-bridge' ),
+			__( 'User removed and all their sessions revoked.', 'albert' ),
 			'success'
 		);
 
@@ -681,12 +681,12 @@ class Settings implements Hookable {
 
 		// Verify nonce.
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'revoke_session_' . $token_id ) ) {
-			wp_die( esc_html__( 'Security check failed.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'Security check failed.', 'albert' ) );
 		}
 
 		// Check permissions.
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to revoke sessions.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'You do not have permission to revoke sessions.', 'albert' ) );
 		}
 
 		global $wpdb;
@@ -704,7 +704,7 @@ class Settings implements Hookable {
 		add_settings_error(
 			'aibridge',
 			'session_revoked',
-			__( 'Session revoked successfully.', 'ai-bridge' ),
+			__( 'Session revoked successfully.', 'albert' ),
 			'success'
 		);
 
@@ -739,12 +739,12 @@ class Settings implements Hookable {
 
 		// Verify nonce.
 		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'revoke_all_sessions_' . $user_id ) ) {
-			wp_die( esc_html__( 'Security check failed.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'Security check failed.', 'albert' ) );
 		}
 
 		// Check permissions.
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to revoke sessions.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'You do not have permission to revoke sessions.', 'albert' ) );
 		}
 
 		self::revoke_user_tokens( $user_id );
@@ -752,7 +752,7 @@ class Settings implements Hookable {
 		add_settings_error(
 			'aibridge',
 			'all_sessions_revoked',
-			__( 'All sessions revoked successfully.', 'ai-bridge' ),
+			__( 'All sessions revoked successfully.', 'albert' ),
 			'success'
 		);
 
@@ -853,8 +853,8 @@ class Settings implements Hookable {
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'aibridge_oauth_nonce' ),
 				'i18n'    => [
-					'copied'     => __( 'Copied!', 'ai-bridge' ),
-					'copyFailed' => __( 'Copy failed', 'ai-bridge' ),
+					'copied'     => __( 'Copied!', 'albert' ),
+					'copyFailed' => __( 'Copy failed', 'albert' ),
 				],
 			]
 		);

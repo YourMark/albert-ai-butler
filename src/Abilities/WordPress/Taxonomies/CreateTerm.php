@@ -28,8 +28,8 @@ class CreateTerm extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/terms-create';
-		$this->label       = __( 'Create Term', 'ai-bridge' );
-		$this->description = __( 'Create a new term in a taxonomy (category, tag, etc).', 'ai-bridge' );
+		$this->label       = __( 'Create Term', 'albert' );
+		$this->description = __( 'Create a new term in a taxonomy (category, tag, etc).', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'terms';
 
@@ -135,7 +135,7 @@ class CreateTerm extends BaseAbility {
 		if ( empty( $args['name'] ) ) {
 			return new WP_Error(
 				'missing_name',
-				__( 'Term name is required.', 'ai-bridge' ),
+				__( 'Term name is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -179,7 +179,7 @@ class CreateTerm extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while creating the term.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while creating the term.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
@@ -219,7 +219,7 @@ class CreateTerm extends BaseAbility {
 		if ( ! $taxonomy_obj ) {
 			return new WP_Error(
 				'invalid_taxonomy',
-				__( 'Invalid taxonomy.', 'ai-bridge' ),
+				__( 'Invalid taxonomy.', 'albert' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -227,7 +227,7 @@ class CreateTerm extends BaseAbility {
 		if ( empty( $taxonomy_obj->rest_base ) ) {
 			return new WP_Error(
 				'taxonomy_not_rest_enabled',
-				__( 'This taxonomy is not available via REST API.', 'ai-bridge' ),
+				__( 'This taxonomy is not available via REST API.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}

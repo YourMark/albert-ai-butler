@@ -29,8 +29,8 @@ class FindMedia extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/media-find';
-		$this->label       = __( 'Find Media', 'ai-bridge' );
-		$this->description = __( 'Find and search media files with optional filtering and pagination.', 'ai-bridge' );
+		$this->label       = __( 'Find Media', 'albert' );
+		$this->description = __( 'Find and search media files with optional filtering and pagination.', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'media';
 

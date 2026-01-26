@@ -28,8 +28,8 @@ class FindTaxonomies extends BaseAbility {
 	 */
 	public function __construct() {
 		$this->id          = 'core/taxonomies-find';
-		$this->label       = __( 'Find Taxonomies', 'ai-bridge' );
-		$this->description = __( 'Find all registered taxonomies (categories, tags, custom taxonomies).', 'ai-bridge' );
+		$this->label       = __( 'Find Taxonomies', 'albert' );
+		$this->description = __( 'Find all registered taxonomies (categories, tags, custom taxonomies).', 'albert' );
 		$this->category    = 'core';
 		$this->group       = 'taxonomies';
 
@@ -129,7 +129,7 @@ class FindTaxonomies extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while retrieving taxonomies.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while retrieving taxonomies.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
