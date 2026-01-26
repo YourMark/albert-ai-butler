@@ -27,7 +27,7 @@ class SetFeaturedImage extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/media/set-featured-image';
+		$this->id          = 'albert/set-featured-image';
 		$this->label       = __( 'Set Featured Image', 'albert' );
 		$this->description = __( 'Set an existing media attachment as the featured image for a post or page.', 'albert' );
 		$this->category    = 'albert';

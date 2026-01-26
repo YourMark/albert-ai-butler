@@ -28,7 +28,7 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/posts/update';
+		$this->id          = 'albert/update-post';
 		$this->label       = __( 'Update Post', 'albert' );
 		$this->description = __( 'Update an existing WordPress post with new title, content, and metadata.', 'albert' );
 		$this->category    = 'albert';

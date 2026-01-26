@@ -27,7 +27,7 @@ class ViewMedia extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/media/get';
+		$this->id          = 'albert/view-media';
 		$this->label       = __( 'View Media', 'albert' );
 		$this->description = __( 'Retrieve a single media file by ID.', 'albert' );
 		$this->category    = 'albert';

@@ -28,7 +28,7 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/pages/create';
+		$this->id          = 'albert/create-page';
 		$this->label       = __( 'Create Page', 'albert' );
 		$this->description = __( 'Create a new WordPress page with specified title and content.', 'albert' );
 		$this->category    = 'albert';

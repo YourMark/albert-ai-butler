@@ -59,13 +59,13 @@ class AbilitiesManager implements Hookable {
 			return;
 		}
 
-		// Register wordpress-rest category if it doesn't exist.
-		if ( ! wp_has_ability_category( 'core' ) ) {
+		// Register albert category if it doesn't exist.
+		if ( ! wp_has_ability_category( 'albert' ) ) {
 			wp_register_ability_category(
-				'core',
+				'albert',
 				[
-					'label'       => __( 'WordPress', 'albert' ),
-					'description' => __( 'WordPress core functionality abilities.', 'albert' ),
+					'label'       => __( 'Albert', 'albert' ),
+					'description' => __( 'Albert WordPress management abilities.', 'albert' ),
 				]
 			);
 		}
@@ -125,7 +125,7 @@ class AbilitiesManager implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function add_wordpress_abilities_to_settings( array $abilities ): array {
-		$wordpress_abilities = $this->get_abilities_by_category( 'core' );
+		$wordpress_abilities = $this->get_abilities_by_category( 'albert' );
 
 		foreach ( $wordpress_abilities as $ability ) {
 			$abilities[ $ability->get_id() ] = $ability->get_settings_data();

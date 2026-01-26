@@ -28,7 +28,7 @@ class FindMedia extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/media/list';
+		$this->id          = 'albert/find-media';
 		$this->label       = __( 'Find Media', 'albert' );
 		$this->description = __( 'Find and search media files with optional filtering and pagination.', 'albert' );
 		$this->category    = 'albert';

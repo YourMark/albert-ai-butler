@@ -27,7 +27,7 @@ class FindPosts extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/posts/list';
+		$this->id          = 'albert/find-posts';
 		$this->label       = __( 'Find Posts', 'albert' );
 		$this->description = __( 'Find and search WordPress posts with optional filtering and pagination.', 'albert' );
 		$this->category    = 'albert';

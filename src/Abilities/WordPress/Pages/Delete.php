@@ -27,7 +27,7 @@ class Delete extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/pages/delete';
+		$this->id          = 'albert/delete-page';
 		$this->label       = __( 'Delete Page', 'albert' );
 		$this->description = __( 'Delete a WordPress page permanently or move it to trash.', 'albert' );
 		$this->category    = 'albert';

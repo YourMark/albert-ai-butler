@@ -110,7 +110,7 @@ class Server implements Hookable {
 			self::ROUTE,
 			__( 'AI Bridge MCP Server', 'albert' ),
 			__( 'MCP server for AI assistants to interact with WordPress', 'albert' ),
-			AIBRIDGE_VERSION,
+			ALBERT_VERSION,
 			[ HttpTransport::class ],
 			ErrorLogMcpErrorHandler::class,
 			NullMcpObservabilityHandler::class,

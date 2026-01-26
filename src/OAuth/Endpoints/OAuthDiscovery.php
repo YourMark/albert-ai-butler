@@ -69,9 +69,9 @@ class OAuthDiscovery implements Hookable {
 		$rules_version = get_option( 'albert_rewrite_version', '' );
 
 		// Flush rules if version doesn't match (new install or update).
-		if ( AIBRIDGE_VERSION !== $rules_version ) {
+		if ( ALBERT_VERSION !== $rules_version ) {
 			flush_rewrite_rules();
-			update_option( 'albert_rewrite_version', AIBRIDGE_VERSION );
+			update_option( 'albert_rewrite_version', ALBERT_VERSION );
 		}
 	}
 

@@ -28,7 +28,7 @@ class FindUsers extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/users/list';
+		$this->id          = 'albert/find-users';
 		$this->label       = __( 'Find Users', 'albert' );
 		$this->description = __( 'Find and search WordPress users with optional filtering and pagination.', 'albert' );
 		$this->category    = 'albert';

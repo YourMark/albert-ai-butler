@@ -95,16 +95,16 @@ class Dashboard implements Hookable {
 
 		wp_enqueue_style(
 			'albert-admin',
-			AIBRIDGE_PLUGIN_URL . 'assets/css/admin-settings.css',
+			ALBERT_PLUGIN_URL . 'assets/css/admin-settings.css',
 			[],
-			AIBRIDGE_VERSION
+			ALBERT_VERSION
 		);
 
 		wp_enqueue_script(
 			'albert-dashboard',
-			AIBRIDGE_PLUGIN_URL . 'assets/js/admin-dashboard.js',
+			ALBERT_PLUGIN_URL . 'assets/js/admin-dashboard.js',
 			[],
-			AIBRIDGE_VERSION,
+			ALBERT_VERSION,
 			true
 		);
 	}

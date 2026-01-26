@@ -28,7 +28,7 @@ class ViewUser extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/users/get';
+		$this->id          = 'albert/view-user';
 		$this->label       = __( 'View User', 'albert' );
 		$this->description = __( 'Retrieve a single WordPress user by ID.', 'albert' );
 		$this->category    = 'albert';

@@ -356,9 +356,9 @@ class Connections implements Hookable {
 
 		wp_enqueue_style(
 			'albert-user-sessions',
-			AIBRIDGE_PLUGIN_URL . 'assets/css/admin-settings.css',
+			ALBERT_PLUGIN_URL . 'assets/css/admin-settings.css',
 			[],
-			AIBRIDGE_VERSION
+			ALBERT_VERSION
 		);
 	}
 }

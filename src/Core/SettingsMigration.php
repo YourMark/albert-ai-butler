@@ -120,39 +120,39 @@ class SettingsMigration {
 	private static function get_migration_map(): array {
 		return [
 			// Posts - all abilities map to read or write.
-			'albert/posts/list'               => 'posts_read',
-			'albert/posts/get'                => 'posts_read',
-			'albert/posts/create'             => 'posts_write',
-			'albert/posts/update'             => 'posts_write',
-			'albert/posts/delete'             => 'posts_write',
+			'albert/find-posts'         => 'posts_read',
+			'albert/view-post'          => 'posts_read',
+			'albert/create-post'        => 'posts_write',
+			'albert/update-post'        => 'posts_write',
+			'albert/delete-post'        => 'posts_write',
 
 			// Pages.
-			'albert/pages/list'               => 'pages_read',
-			'albert/pages/get'                => 'pages_read',
-			'albert/pages/create'             => 'pages_write',
-			'albert/pages/update'             => 'pages_write',
-			'albert/pages/delete'             => 'pages_write',
+			'albert/find-pages'         => 'pages_read',
+			'albert/view-page'          => 'pages_read',
+			'albert/create-page'        => 'pages_write',
+			'albert/update-page'        => 'pages_write',
+			'albert/delete-page'        => 'pages_write',
 
 			// Users.
-			'albert/users/list'               => 'users_read',
-			'albert/users/get'                => 'users_read',
-			'albert/users/create'             => 'users_write',
-			'albert/users/update'             => 'users_write',
-			'albert/users/delete'             => 'users_write',
+			'albert/find-users'         => 'users_read',
+			'albert/view-user'          => 'users_read',
+			'albert/create-user'        => 'users_write',
+			'albert/update-user'        => 'users_write',
+			'albert/delete-user'        => 'users_write',
 
 			// Media.
-			'albert/media/upload'             => 'media_write',
-			'albert/media/set-featured-image' => 'media_write',
-			'albert/media/list'               => 'media_read',
-			'albert/media/get'                => 'media_read',
+			'albert/upload-media'       => 'media_write',
+			'albert/set-featured-image' => 'media_write',
+			'albert/find-media'         => 'media_read',
+			'albert/view-media'         => 'media_read',
 
 			// Taxonomies/Terms.
-			'albert/taxonomies/list'          => 'taxonomies_read',
-			'albert/terms/list'               => 'taxonomies_read',
-			'albert/terms/get'                => 'taxonomies_read',
-			'albert/terms/create'             => 'taxonomies_write',
-			'albert/terms/update'             => 'taxonomies_write',
-			'albert/terms/delete'             => 'taxonomies_write',
+			'albert/find-taxonomies'    => 'taxonomies_read',
+			'albert/find-terms'         => 'taxonomies_read',
+			'albert/view-term'          => 'taxonomies_read',
+			'albert/create-term'        => 'taxonomies_write',
+			'albert/update-term'        => 'taxonomies_write',
+			'albert/delete-term'        => 'taxonomies_write',
 		];
 	}
 }

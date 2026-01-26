@@ -28,7 +28,7 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/posts/create';
+		$this->id          = 'albert/create-post';
 		$this->label       = __( 'Create Post', 'albert' );
 		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', 'albert' );
 		$this->category    = 'albert';

@@ -27,7 +27,7 @@ class ViewPost extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/posts/get';
+		$this->id          = 'albert/view-post';
 		$this->label       = __( 'View Post', 'albert' );
 		$this->description = __( 'Retrieve a single WordPress post by ID.', 'albert' );
 		$this->category    = 'albert';
