@@ -27,10 +27,10 @@ class FindTerms extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/terms-find';
+		$this->id          = 'albert/terms/list';
 		$this->label       = __( 'Find Terms', 'albert' );
 		$this->description = __( 'Find terms from a specific taxonomy (categories, tags, custom terms).', 'albert' );
-		$this->category    = 'core';
+		$this->category    = 'albert';
 		$this->group       = 'terms';
 
 		$this->input_schema  = $this->get_input_schema();

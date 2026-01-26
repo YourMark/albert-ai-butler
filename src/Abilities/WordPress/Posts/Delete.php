@@ -27,10 +27,10 @@ class Delete extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/posts-delete';
+		$this->id          = 'albert/posts/delete';
 		$this->label       = __( 'Delete Post', 'albert' );
 		$this->description = __( 'Delete a WordPress post permanently or move it to trash.', 'albert' );
-		$this->category    = 'core';
+		$this->category    = 'albert';
 		$this->group       = 'posts';
 
 		$this->input_schema  = $this->get_input_schema();

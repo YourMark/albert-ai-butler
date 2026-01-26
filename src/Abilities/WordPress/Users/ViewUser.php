@@ -28,10 +28,10 @@ class ViewUser extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/users-view';
+		$this->id          = 'albert/users/get';
 		$this->label       = __( 'View User', 'albert' );
 		$this->description = __( 'Retrieve a single WordPress user by ID.', 'albert' );
-		$this->category    = 'core';
+		$this->category    = 'albert';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();

@@ -60,13 +60,13 @@ class AbilitiesRegistry {
 				'read'  => [
 					'label'       => __( 'Read', 'albert' ),
 					'description' => __( 'Find and view posts', 'albert' ),
-					'abilities'   => [ 'core/posts-find', 'core/posts-view' ],
+					'abilities'   => [ 'albert/posts/list', 'albert/posts/get' ],
 					'premium'     => false,
 				],
 				'write' => [
 					'label'       => __( 'Write', 'albert' ),
 					'description' => __( 'Create, edit, and delete posts', 'albert' ),
-					'abilities'   => [ 'core/posts-create', 'core/posts-update', 'core/posts-delete' ],
+					'abilities'   => [ 'albert/posts/create', 'albert/posts/update', 'albert/posts/delete' ],
 					'premium'     => false,
 				],
 			],
@@ -75,13 +75,13 @@ class AbilitiesRegistry {
 				'read'  => [
 					'label'       => __( 'Read', 'albert' ),
 					'description' => __( 'Find and view pages', 'albert' ),
-					'abilities'   => [ 'core/pages-find', 'core/pages-view' ],
+					'abilities'   => [ 'albert/pages/list', 'albert/pages/get' ],
 					'premium'     => false,
 				],
 				'write' => [
 					'label'       => __( 'Write', 'albert' ),
 					'description' => __( 'Create, edit, and delete pages', 'albert' ),
-					'abilities'   => [ 'core/pages-create', 'core/pages-update', 'core/pages-delete' ],
+					'abilities'   => [ 'albert/pages/create', 'albert/pages/update', 'albert/pages/delete' ],
 					'premium'     => false,
 				],
 			],
@@ -90,13 +90,13 @@ class AbilitiesRegistry {
 				'read'  => [
 					'label'       => __( 'Read', 'albert' ),
 					'description' => __( 'Find and view media files', 'albert' ),
-					'abilities'   => [ 'core/media-find', 'core/media-view' ],
+					'abilities'   => [ 'albert/media/list', 'albert/media/get' ],
 					'premium'     => false,
 				],
 				'write' => [
 					'label'       => __( 'Write', 'albert' ),
 					'description' => __( 'Upload and manage media', 'albert' ),
-					'abilities'   => [ 'core/media-upload', 'core/media-set-featured-image' ],
+					'abilities'   => [ 'albert/media/upload', 'albert/media/set-featured-image' ],
 					'premium'     => false,
 				],
 			],
@@ -105,13 +105,13 @@ class AbilitiesRegistry {
 				'read'  => [
 					'label'       => __( 'Read', 'albert' ),
 					'description' => __( 'Find and view users', 'albert' ),
-					'abilities'   => [ 'core/users-find', 'core/users-view' ],
+					'abilities'   => [ 'albert/users/list', 'albert/users/get' ],
 					'premium'     => false,
 				],
 				'write' => [
 					'label'       => __( 'Write', 'albert' ),
 					'description' => __( 'Create, edit, and delete users', 'albert' ),
-					'abilities'   => [ 'core/users-create', 'core/users-update', 'core/users-delete' ],
+					'abilities'   => [ 'albert/users/create', 'albert/users/update', 'albert/users/delete' ],
 					'premium'     => false,
 				],
 			],
@@ -120,25 +120,15 @@ class AbilitiesRegistry {
 				'read'  => [
 					'label'       => __( 'Read', 'albert' ),
 					'description' => __( 'Find categories, tags, and terms', 'albert' ),
-					'abilities'   => [ 'core/taxonomies-find', 'core/terms-view' ],
+					'abilities'   => [ 'albert/taxonomies/list', 'albert/terms/get' ],
 					'premium'     => false,
 				],
 				'write' => [
 					'label'       => __( 'Write', 'albert' ),
 					'description' => __( 'Create, edit, and delete terms', 'albert' ),
-					'abilities'   => [ 'core/terms-create', 'core/terms-update', 'core/terms-delete' ],
+					'abilities'   => [ 'albert/terms/create', 'albert/terms/update', 'albert/terms/delete' ],
 					'premium'     => false,
 				],
-			],
-			'site'       => [
-				'label' => __( 'Site Info', 'albert' ),
-				'read'  => [
-					'label'       => __( 'Read', 'albert' ),
-					'description' => __( 'View site information', 'albert' ),
-					'abilities'   => [ 'core/site-info' ],
-					'premium'     => false,
-				],
-				// No write for site info.
 			],
 		];
 	}

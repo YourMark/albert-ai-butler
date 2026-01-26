@@ -27,10 +27,10 @@ class ViewTerm extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/terms-view';
+		$this->id          = 'albert/terms/get';
 		$this->label       = __( 'View Term', 'albert' );
 		$this->description = __( 'Retrieve a single taxonomy term by ID.', 'albert' );
-		$this->category    = 'core';
+		$this->category    = 'albert';
 		$this->group       = 'terms';
 
 		$this->input_schema  = $this->get_input_schema();

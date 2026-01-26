@@ -28,10 +28,10 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/pages-update';
+		$this->id          = 'albert/pages/update';
 		$this->label       = __( 'Update Page', 'albert' );
 		$this->description = __( 'Update an existing WordPress page with new title and content.', 'albert' );
-		$this->category    = 'core';
+		$this->category    = 'albert';
 		$this->group       = 'pages';
 
 		$this->input_schema  = $this->get_input_schema();

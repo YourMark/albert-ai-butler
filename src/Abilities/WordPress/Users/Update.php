@@ -27,10 +27,10 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/users-update';
+		$this->id          = 'albert/users/update';
 		$this->label       = __( 'Update User', 'albert' );
 		$this->description = __( 'Update an existing WordPress user with new information.', 'albert' );
-		$this->category    = 'core';
+		$this->category    = 'albert';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();

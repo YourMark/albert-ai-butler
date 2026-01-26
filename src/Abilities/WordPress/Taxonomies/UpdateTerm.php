@@ -27,10 +27,10 @@ class UpdateTerm extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/terms-update';
+		$this->id          = 'albert/terms/update';
 		$this->label       = __( 'Update Term', 'albert' );
 		$this->description = __( 'Update an existing term in a taxonomy (category, tag, etc).', 'albert' );
-		$this->category    = 'core';
+		$this->category    = 'albert';
 		$this->group       = 'terms';
 
 		$this->input_schema  = $this->get_input_schema();

@@ -27,10 +27,10 @@ class FindPages extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/pages-find';
+		$this->id          = 'albert/pages/list';
 		$this->label       = __( 'Find Pages', 'albert' );
 		$this->description = __( 'Find and search WordPress pages with optional filtering and pagination.', 'albert' );
-		$this->category    = 'core';
+		$this->category    = 'albert';
 		$this->group       = 'pages';
 
 		$this->input_schema  = $this->get_input_schema();

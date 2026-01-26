@@ -27,10 +27,10 @@ class DeleteTerm extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/terms-delete';
+		$this->id          = 'albert/terms/delete';
 		$this->label       = __( 'Delete Term', 'albert' );
 		$this->description = __( 'Delete a term from a taxonomy (category, tag, etc).', 'albert' );
-		$this->category    = 'core';
+		$this->category    = 'albert';
 		$this->group       = 'terms';
 
 		$this->input_schema  = $this->get_input_schema();

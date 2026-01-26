@@ -34,7 +34,6 @@ use Albert\Abilities\WordPress\Taxonomies\ViewTerm;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\UpdateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
-use Albert\Abilities\WordPress\Site\Info as SiteInfo;
 use Albert\Admin\Abilities;
 use Albert\Admin\Connections;
 use Albert\Admin\Dashboard;
@@ -208,9 +207,6 @@ class Plugin {
 		$this->abilities_manager->add_ability( new CreateTerm() );
 		$this->abilities_manager->add_ability( new UpdateTerm() );
 		$this->abilities_manager->add_ability( new DeleteTerm() );
-
-		// Site abilities.
-		$this->abilities_manager->add_ability( new SiteInfo() );
 
 		// Register abilities manager hooks.
 		$this->abilities_manager->register_hooks();
