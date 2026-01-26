@@ -2,16 +2,16 @@
 /**
  * Base Ability Abstract Class
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abstracts
  * @since      1.0.0
  */
 
-namespace AIBridge\Abstracts;
+namespace Albert\Abstracts;
 
-use AIBridge\Admin\Abilities;
-use AIBridge\Contracts\Interfaces\Ability;
-use AIBridge\Core\AbilitiesRegistry;
+use Albert\Admin\Abilities;
+use Albert\Contracts\Interfaces\Ability;
+use Albert\Core\AbilitiesRegistry;
 use WP_Error;
 
 /**

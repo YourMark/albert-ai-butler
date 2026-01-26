@@ -5,17 +5,17 @@
  * Handles the browser-based OAuth authorization flow.
  * This outputs HTML for user login and consent, not JSON.
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Endpoints
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Endpoints;
+namespace Albert\OAuth\Endpoints;
 
-use AIBridge\Contracts\Interfaces\Hookable;
-use AIBridge\OAuth\Entities\UserEntity;
-use AIBridge\OAuth\Repositories\ClientRepository;
-use AIBridge\OAuth\Server\AuthorizationServerFactory;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\OAuth\Entities\UserEntity;
+use Albert\OAuth\Repositories\ClientRepository;
+use Albert\OAuth\Server\AuthorizationServerFactory;
 use League\OAuth2\Server\Exception\OAuthServerException;
 
 /**
@@ -189,12 +189,12 @@ class AuthorizationPage implements Hookable {
 	/**
 	 * Handle authorization decision (approve/deny).
 	 *
-	 * @param \AIBridge\OAuth\Entities\ClientEntity $client                The client entity.
-	 * @param string                                $redirect_uri          The redirect URI.
-	 * @param string                                $state                 The state parameter.
-	 * @param string                                $scope                 The requested scope.
-	 * @param string                                $code_challenge        PKCE code challenge.
-	 * @param string                                $code_challenge_method PKCE challenge method.
+	 * @param \Albert\OAuth\Entities\ClientEntity $client                The client entity.
+	 * @param string                              $redirect_uri          The redirect URI.
+	 * @param string                              $state                 The state parameter.
+	 * @param string                              $scope                 The requested scope.
+	 * @param string                              $code_challenge        PKCE code challenge.
+	 * @param string                              $code_challenge_method PKCE challenge method.
 	 *
 	 * @return void
 	 * @since 1.0.0
@@ -273,12 +273,12 @@ class AuthorizationPage implements Hookable {
 	/**
 	 * Render the consent page.
 	 *
-	 * @param \AIBridge\OAuth\Entities\ClientEntity $client                The client entity.
-	 * @param string                                $redirect_uri          The redirect URI.
-	 * @param string                                $state                 The state parameter.
-	 * @param string                                $scope                 The requested scope.
-	 * @param string                                $code_challenge        PKCE code challenge.
-	 * @param string                                $code_challenge_method PKCE challenge method.
+	 * @param \Albert\OAuth\Entities\ClientEntity $client                The client entity.
+	 * @param string                              $redirect_uri          The redirect URI.
+	 * @param string                              $state                 The state parameter.
+	 * @param string                              $scope                 The requested scope.
+	 * @param string                              $code_challenge        PKCE code challenge.
+	 * @param string                              $code_challenge_method PKCE challenge method.
 	 *
 	 * @return void
 	 * @since 1.0.0

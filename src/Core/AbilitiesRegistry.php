@@ -4,12 +4,12 @@
  *
  * Defines ability groups and permission mappings.
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Core
  * @since      1.0.0
  */
 
-namespace AIBridge\Core;
+namespace Albert\Core;
 
 /**
  * Abilities Registry class

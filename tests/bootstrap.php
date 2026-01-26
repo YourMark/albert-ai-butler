@@ -1,8 +1,8 @@
 <?php
 /**
- * PHPUnit bootstrap file for AIBridge plugin tests.
+ * PHPUnit bootstrap file for Albert plugin tests.
  *
- * @package AIBridge
+ * @package Albert
  */
 
 // Composer autoloader for the plugin.

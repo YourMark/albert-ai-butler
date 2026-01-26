@@ -2,14 +2,14 @@
 /**
  * Dashboard Admin Page
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Admin
  * @since      1.0.0
  */
 
-namespace AIBridge\Admin;
+namespace Albert\Admin;
 
-use AIBridge\Contracts\Interfaces\Hookable;
+use Albert\Contracts\Interfaces\Hookable;
 
 /**
  * Dashboard class

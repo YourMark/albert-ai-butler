@@ -2,19 +2,19 @@
 /**
  * OAuth Authorization Server Factory
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Server
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Server;
+namespace Albert\OAuth\Server;
 
 use DateInterval;
-use AIBridge\OAuth\Repositories\AccessTokenRepository;
-use AIBridge\OAuth\Repositories\AuthCodeRepository;
-use AIBridge\OAuth\Repositories\ClientRepository;
-use AIBridge\OAuth\Repositories\RefreshTokenRepository;
-use AIBridge\OAuth\Repositories\ScopeRepository;
+use Albert\OAuth\Repositories\AccessTokenRepository;
+use Albert\OAuth\Repositories\AuthCodeRepository;
+use Albert\OAuth\Repositories\ClientRepository;
+use Albert\OAuth\Repositories\RefreshTokenRepository;
+use Albert\OAuth\Repositories\ScopeRepository;
 use League\OAuth2\Server\AuthorizationServer;
 use League\OAuth2\Server\CryptKey;
 use League\OAuth2\Server\Grant\AuthCodeGrant;

@@ -2,14 +2,14 @@
 /**
  * Site Info Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Site
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Site;
+namespace Albert\Abilities\WordPress\Site;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 

@@ -2,14 +2,14 @@
 /**
  * Create Term Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Taxonomies
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Taxonomies;
+namespace Albert\Abilities\WordPress\Taxonomies;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 

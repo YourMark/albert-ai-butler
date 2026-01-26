@@ -2,15 +2,15 @@
 /**
  * OAuth Refresh Token Repository
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Repositories
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Repositories;
+namespace Albert\OAuth\Repositories;
 
-use AIBridge\OAuth\Database\Installer;
-use AIBridge\OAuth\Entities\RefreshTokenEntity;
+use Albert\OAuth\Database\Installer;
+use Albert\OAuth\Entities\RefreshTokenEntity;
 use League\OAuth2\Server\Entities\RefreshTokenEntityInterface;
 use League\OAuth2\Server\Repositories\RefreshTokenRepositoryInterface;
 

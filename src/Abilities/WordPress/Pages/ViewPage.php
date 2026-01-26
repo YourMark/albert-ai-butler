@@ -2,14 +2,14 @@
 /**
  * View Page Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Pages
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Pages;
+namespace Albert\Abilities\WordPress\Pages;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 

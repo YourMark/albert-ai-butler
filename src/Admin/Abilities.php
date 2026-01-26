@@ -2,15 +2,15 @@
 /**
  * Abilities Admin Page
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Admin
  * @since      1.0.0
  */
 
-namespace AIBridge\Admin;
+namespace Albert\Admin;
 
-use AIBridge\Contracts\Interfaces\Hookable;
-use AIBridge\Core\AbilitiesRegistry;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\Core\AbilitiesRegistry;
 
 /**
  * Abilities class

@@ -2,15 +2,15 @@
 /**
  * OAuth Dynamic Client Registration (RFC 7591)
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Endpoints
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Endpoints;
+namespace Albert\OAuth\Endpoints;
 
-use AIBridge\Contracts\Interfaces\Hookable;
-use AIBridge\OAuth\Repositories\ClientRepository;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\OAuth\Repositories\ClientRepository;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;

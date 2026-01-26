@@ -2,14 +2,14 @@
 /**
  * Update User Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Users
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Users;
+namespace Albert\Abilities\WordPress\Users;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 

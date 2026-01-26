@@ -2,15 +2,15 @@
 /**
  * Settings Admin Page
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Admin
  * @since      1.0.0
  */
 
-namespace AIBridge\Admin;
+namespace Albert\Admin;
 
-use AIBridge\Contracts\Interfaces\Hookable;
-use AIBridge\MCP\Server as McpServer;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\MCP\Server as McpServer;
 
 /**
  * Settings class

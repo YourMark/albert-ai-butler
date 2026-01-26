@@ -2,15 +2,15 @@
 /**
  * Abilities Manager
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Core
  * @since      1.0.0
  */
 
-namespace AIBridge\Core;
+namespace Albert\Core;
 
-use AIBridge\Abstracts\BaseAbility;
-use AIBridge\Contracts\Interfaces\Hookable;
+use Albert\Abstracts\BaseAbility;
+use Albert\Contracts\Interfaces\Hookable;
 
 /**
  * Abilities Manager class

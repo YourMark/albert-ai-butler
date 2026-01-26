@@ -2,15 +2,15 @@
 /**
  * MCP Server with OAuth Authentication
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage MCP
  * @since      1.0.0
  */
 
-namespace AIBridge\MCP;
+namespace Albert\MCP;
 
-use AIBridge\Contracts\Interfaces\Hookable;
-use AIBridge\OAuth\Server\TokenValidator;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\OAuth\Server\TokenValidator;
 use WP\MCP\Core\McpAdapter;
 use WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler;
 use WP\MCP\Infrastructure\Observability\NullMcpObservabilityHandler;

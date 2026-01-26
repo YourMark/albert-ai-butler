@@ -2,15 +2,15 @@
 /**
  * Update Post Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Posts
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Posts;
+namespace Albert\Abilities\WordPress\Posts;
 
 use Alley\WP\Block_Converter\Block_Converter;
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 

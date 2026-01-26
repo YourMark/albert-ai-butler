@@ -1,17 +1,17 @@
 <?php
 /**
- * Base test case for AIBridge plugin tests.
+ * Base test case for Albert plugin tests.
  *
- * @package AIBridge
+ * @package Albert
  */
 
-namespace AIBridge\Tests;
+namespace Albert\Tests;
 
 /**
  * Base test case class.
  *
  * Extends WordPress unit test case with common functionality
- * for AIBridge plugin tests.
+ * for Albert plugin tests.
  *
  * @phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
  */

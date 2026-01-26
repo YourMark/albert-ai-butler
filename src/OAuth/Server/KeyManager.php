@@ -2,12 +2,12 @@
 /**
  * OAuth Key Manager
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Server
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Server;
+namespace Albert\OAuth\Server;
 
 use Defuse\Crypto\Key;
 

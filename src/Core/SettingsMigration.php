@@ -4,14 +4,14 @@
  *
  * Handles migration from old ability-based settings to new permission-based settings.
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Core
  * @since      1.0.0
  */
 
-namespace AIBridge\Core;
+namespace Albert\Core;
 
-use AIBridge\Admin\Abilities;
+use Albert\Admin\Abilities;
 
 /**
  * Settings Migration class

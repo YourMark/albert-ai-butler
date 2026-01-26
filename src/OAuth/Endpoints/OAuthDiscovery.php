@@ -2,14 +2,14 @@
 /**
  * OAuth Metadata Discovery Endpoint
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Endpoints
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Endpoints;
+namespace Albert\OAuth\Endpoints;
 
-use AIBridge\Contracts\Interfaces\Hookable;
+use Albert\Contracts\Interfaces\Hookable;
 
 /**
  * OAuthDiscovery class

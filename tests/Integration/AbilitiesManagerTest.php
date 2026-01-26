@@ -2,13 +2,13 @@
 /**
  * AbilitiesManager integration tests.
  *
- * @package AIBridge
+ * @package Albert
  */
 
-namespace AIBridge\Tests\Integration;
+namespace Albert\Tests\Integration;
 
-use AIBridge\Tests\TestCase;
-use AIBridge\Core\AbilitiesManager;
+use Albert\Tests\TestCase;
+use Albert\Core\AbilitiesManager;
 
 /**
  * Test the AbilitiesManager functionality.

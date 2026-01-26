@@ -2,15 +2,15 @@
 /**
  * OAuth Client Repository
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Repositories
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Repositories;
+namespace Albert\OAuth\Repositories;
 
-use AIBridge\OAuth\Database\Installer;
-use AIBridge\OAuth\Entities\ClientEntity;
+use Albert\OAuth\Database\Installer;
+use Albert\OAuth\Entities\ClientEntity;
 use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
 
 /**

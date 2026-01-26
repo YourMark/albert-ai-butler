@@ -2,14 +2,14 @@
 /**
  * Find Media Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Media
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Media;
+namespace Albert\Abilities\WordPress\Media;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 use WP_Query;

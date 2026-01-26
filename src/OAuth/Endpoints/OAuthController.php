@@ -2,18 +2,18 @@
 /**
  * OAuth REST API Controller
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Endpoints
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Endpoints;
+namespace Albert\OAuth\Endpoints;
 
 use Exception;
-use AIBridge\Contracts\Interfaces\Hookable;
-use AIBridge\OAuth\Entities\UserEntity;
-use AIBridge\OAuth\Repositories\ClientRepository;
-use AIBridge\OAuth\Server\AuthorizationServerFactory;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\OAuth\Entities\UserEntity;
+use Albert\OAuth\Repositories\ClientRepository;
+use Albert\OAuth\Server\AuthorizationServerFactory;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use WP_Error;
 use WP_REST_Request;

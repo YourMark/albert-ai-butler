@@ -2,15 +2,15 @@
 /**
  * OAuth Token Validator
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Server
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Server;
+namespace Albert\OAuth\Server;
 
 use Exception;
-use AIBridge\OAuth\Endpoints\Psr7Bridge;
+use Albert\OAuth\Endpoints\Psr7Bridge;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use WP_Error;
 use WP_REST_Request;

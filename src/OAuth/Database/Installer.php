@@ -2,12 +2,12 @@
 /**
  * OAuth Database Installer
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Database
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Database;
+namespace Albert\OAuth\Database;
 
 /**
  * Installer class
