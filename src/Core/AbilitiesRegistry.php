@@ -44,7 +44,7 @@ class AbilitiesRegistry {
 			];
 		}
 
-		return apply_filters( 'aibridge_ability_groups', $groups );
+		return apply_filters( 'albert_ability_groups', $groups );
 	}
 
 	/**

@@ -114,7 +114,7 @@ class Connections implements Hookable {
 		}
 
 		global $wpdb;
-		$table       = $wpdb->prefix . 'aibridge_oauth_access_tokens';
+		$table       = $wpdb->prefix . 'albert_oauth_access_tokens';
 		$current_uid = get_current_user_id();
 
 		// Admins can revoke any connection.
@@ -128,7 +128,7 @@ class Connections implements Hookable {
 		);
 
 		add_settings_error(
-			'aibridge_connections',
+			'albert_connections',
 			'session_revoked',
 			__( 'Session revoked successfully.', 'albert' ),
 			'success'
@@ -163,7 +163,7 @@ class Connections implements Hookable {
 		Settings::revoke_user_tokens( get_current_user_id() );
 
 		add_settings_error(
-			'aibridge_connections',
+			'albert_connections',
 			'all_sessions_revoked',
 			__( 'All sessions revoked successfully.', 'albert' ),
 			'success'
@@ -195,8 +195,8 @@ class Connections implements Hookable {
 
 		global $wpdb;
 
-		$tokens_table  = $wpdb->prefix . 'aibridge_oauth_access_tokens';
-		$clients_table = $wpdb->prefix . 'aibridge_oauth_clients';
+		$tokens_table  = $wpdb->prefix . 'albert_oauth_access_tokens';
+		$clients_table = $wpdb->prefix . 'albert_oauth_clients';
 
 		// Get all active connections (all users) grouped by client.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -223,7 +223,7 @@ class Connections implements Hookable {
 				<?php esc_html_e( 'Active AI assistant connections to your WordPress site. Each connection represents an authorized AI tool that can interact with your site via the MCP protocol.', 'albert' ); ?>
 			</p>
 
-			<?php settings_errors( 'aibridge_connections' ); ?>
+			<?php settings_errors( 'albert_connections' ); ?>
 
 			<?php if ( empty( $sessions ) ) : ?>
 				<div class="aibridge-card" style="margin-top: 20px;">

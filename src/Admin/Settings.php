@@ -127,7 +127,7 @@ class Settings implements Hookable {
 		$show_developer_settings = apply_filters( 'aibridge/settings/developer_mode', false );
 
 		// Only use external URL if developer settings are enabled.
-		$external_url = $show_developer_settings ? get_option( 'aibridge_external_url', '' ) : '';
+		$external_url = $show_developer_settings ? get_option( 'albert_external_url', '' ) : '';
 		$mcp_endpoint = McpServer::get_endpoint_url( $external_url );
 		?>
 		<section class="ea-settings-card">
@@ -156,11 +156,11 @@ class Settings implements Hookable {
 							<?php esc_html_e( 'If your site is behind a tunnel or reverse proxy, enter the public URL here.', 'albert' ); ?>
 						</p>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ea-inline-form">
-							<?php wp_nonce_field( 'aibridge_save_external_url', 'aibridge_external_url_nonce' ); ?>
-							<input type="hidden" name="action" value="aibridge_save_external_url" />
+							<?php wp_nonce_field( 'albert_save_external_url', 'albert_external_url_nonce' ); ?>
+							<input type="hidden" name="action" value="albert_save_external_url" />
 							<input
 								type="url"
-								name="aibridge_external_url"
+								name="albert_external_url"
 								id="ea-external-url"
 								value="<?php echo esc_attr( $external_url ); ?>"
 								placeholder="<?php esc_attr_e( 'https://your-tunnel-url.example.com', 'albert' ); ?>"
@@ -168,7 +168,7 @@ class Settings implements Hookable {
 							/>
 							<button type="submit" class="button"><?php esc_html_e( 'Save', 'albert' ); ?></button>
 							<?php if ( ! empty( $external_url ) ) : ?>
-								<button type="submit" name="aibridge_clear_url" value="1" class="button"><?php esc_html_e( 'Clear', 'albert' ); ?></button>
+								<button type="submit" name="albert_clear_url" value="1" class="button"><?php esc_html_e( 'Clear', 'albert' ); ?></button>
 							<?php endif; ?>
 						</form>
 					</div>
@@ -185,7 +185,7 @@ class Settings implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function render_authentication_section(): void {
-		$allowed_users = get_option( 'aibridge_allowed_users', [] );
+		$allowed_users = get_option( 'albert_allowed_users', [] );
 
 		// Get all users for the dropdown.
 		$all_users = get_users(
@@ -208,9 +208,9 @@ class Settings implements Hookable {
 					</p>
 
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ea-inline-form">
-						<?php wp_nonce_field( 'aibridge_add_allowed_user', 'aibridge_add_user_nonce' ); ?>
-						<input type="hidden" name="action" value="aibridge_add_allowed_user" />
-						<select name="aibridge_user_id" id="ea-add-user-select" class="ea-select-input">
+						<?php wp_nonce_field( 'albert_add_allowed_user', 'albert_add_user_nonce' ); ?>
+						<input type="hidden" name="action" value="albert_add_allowed_user" />
+						<select name="albert_user_id" id="ea-add-user-select" class="ea-select-input">
 							<option value=""><?php esc_html_e( '— Select User —', 'albert' ); ?></option>
 							<?php foreach ( $all_users as $user ) : ?>
 								<?php if ( ! in_array( $user->ID, $allowed_users, true ) ) : ?>
@@ -308,7 +308,7 @@ class Settings implements Hookable {
 	 */
 	public function handle_save_external_url(): void {
 		// Verify nonce.
-		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['aibridge_external_url_nonce'] ?? '' ) ), 'aibridge_save_external_url' ) ) {
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['albert_external_url_nonce'] ?? '' ) ), 'albert_save_external_url' ) ) {
 			wp_die( esc_html__( 'Security check failed.', 'albert' ) );
 		}
 
@@ -318,18 +318,18 @@ class Settings implements Hookable {
 		}
 
 		// Check if clearing.
-		if ( isset( $_POST['aibridge_clear_url'] ) ) {
-			delete_option( 'aibridge_external_url' );
+		if ( isset( $_POST['albert_clear_url'] ) ) {
+			delete_option( 'albert_external_url' );
 		} else {
-			$url = isset( $_POST['aibridge_external_url'] ) ? esc_url_raw( wp_unslash( $_POST['aibridge_external_url'] ) ) : '';
+			$url = isset( $_POST['albert_external_url'] ) ? esc_url_raw( wp_unslash( $_POST['albert_external_url'] ) ) : '';
 
 			// Remove trailing slash for consistency.
 			$url = rtrim( $url, '/' );
 
 			if ( ! empty( $url ) ) {
-				update_option( 'aibridge_external_url', $url );
+				update_option( 'albert_external_url', $url );
 			} else {
-				delete_option( 'aibridge_external_url' );
+				delete_option( 'albert_external_url' );
 			}
 		}
 
@@ -353,7 +353,7 @@ class Settings implements Hookable {
 	 */
 	private function get_user_session_count( int $user_id ): int {
 		global $wpdb;
-		$table = $wpdb->prefix . 'aibridge_oauth_access_tokens';
+		$table = $wpdb->prefix . 'albert_oauth_access_tokens';
 
 		// Count distinct clients with non-revoked tokens (sessions persist via refresh tokens).
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -383,8 +383,8 @@ class Settings implements Hookable {
 			return;
 		}
 
-		$tokens_table  = $wpdb->prefix . 'aibridge_oauth_access_tokens';
-		$clients_table = $wpdb->prefix . 'aibridge_oauth_clients';
+		$tokens_table  = $wpdb->prefix . 'albert_oauth_access_tokens';
+		$clients_table = $wpdb->prefix . 'albert_oauth_clients';
 
 		// Get active sessions grouped by client, with first connection time.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -566,7 +566,7 @@ class Settings implements Hookable {
 	 */
 	public function handle_add_allowed_user(): void {
 		// Verify nonce.
-		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['aibridge_add_user_nonce'] ?? '' ) ), 'aibridge_add_allowed_user' ) ) {
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['albert_add_user_nonce'] ?? '' ) ), 'albert_add_allowed_user' ) ) {
 			wp_die( esc_html__( 'Security check failed.', 'albert' ) );
 		}
 
@@ -575,7 +575,7 @@ class Settings implements Hookable {
 			wp_die( esc_html__( 'You do not have permission to manage MCP access.', 'albert' ) );
 		}
 
-		$user_id = isset( $_POST['aibridge_user_id'] ) ? absint( $_POST['aibridge_user_id'] ) : 0;
+		$user_id = isset( $_POST['albert_user_id'] ) ? absint( $_POST['albert_user_id'] ) : 0;
 
 		if ( ! $user_id ) {
 			wp_safe_redirect(
@@ -594,11 +594,11 @@ class Settings implements Hookable {
 		}
 
 		// Get current allowed users and add the new one.
-		$allowed_users = get_option( 'aibridge_allowed_users', [] );
+		$allowed_users = get_option( 'albert_allowed_users', [] );
 
 		if ( ! in_array( $user_id, $allowed_users, true ) ) {
 			$allowed_users[] = $user_id;
-			update_option( 'aibridge_allowed_users', $allowed_users );
+			update_option( 'albert_allowed_users', $allowed_users );
 		}
 
 		// Redirect back.
@@ -636,9 +636,9 @@ class Settings implements Hookable {
 		}
 
 		// Remove user from allowed list.
-		$allowed_users = get_option( 'aibridge_allowed_users', [] );
+		$allowed_users = get_option( 'albert_allowed_users', [] );
 		$allowed_users = array_filter( $allowed_users, fn( $id ) => $id !== $user_id );
-		update_option( 'aibridge_allowed_users', array_values( $allowed_users ) );
+		update_option( 'albert_allowed_users', array_values( $allowed_users ) );
 
 		// Revoke all their sessions.
 		self::revoke_user_tokens( $user_id );
@@ -690,7 +690,7 @@ class Settings implements Hookable {
 		}
 
 		global $wpdb;
-		$table = $wpdb->prefix . 'aibridge_oauth_access_tokens';
+		$table = $wpdb->prefix . 'albert_oauth_access_tokens';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
@@ -782,8 +782,8 @@ class Settings implements Hookable {
 	public static function revoke_user_tokens( int $user_id ): void {
 		global $wpdb;
 
-		$access_tokens_table  = $wpdb->prefix . 'aibridge_oauth_access_tokens';
-		$refresh_tokens_table = $wpdb->prefix . 'aibridge_oauth_refresh_tokens';
+		$access_tokens_table  = $wpdb->prefix . 'albert_oauth_access_tokens';
+		$refresh_tokens_table = $wpdb->prefix . 'albert_oauth_refresh_tokens';
 
 		// Get all access token IDs for this user.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -851,7 +851,7 @@ class Settings implements Hookable {
 			'aibridgeAdmin',
 			[
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'aibridge_oauth_nonce' ),
+				'nonce'   => wp_create_nonce( 'albert_oauth_nonce' ),
 				'i18n'    => [
 					'copied'     => __( 'Copied!', 'albert' ),
 					'copyFailed' => __( 'Copy failed', 'albert' ),

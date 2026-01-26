@@ -28,7 +28,7 @@ class SettingsMigration {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private const OLD_OPTION_NAME = 'aibridge_options';
+	private const OLD_OPTION_NAME = 'albert_options';
 
 	/**
 	 * New option name (permission keys as values).
@@ -36,7 +36,7 @@ class SettingsMigration {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private const NEW_OPTION_NAME = 'aibridge_enabled_permissions';
+	private const NEW_OPTION_NAME = 'albert_enabled_permissions';
 
 	/**
 	 * Migration status option name.
@@ -44,7 +44,7 @@ class SettingsMigration {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private const MIGRATION_STATUS_OPTION = 'aibridge_settings_migrated';
+	private const MIGRATION_STATUS_OPTION = 'albert_settings_migrated';
 
 	/**
 	 * Run the migration if needed.

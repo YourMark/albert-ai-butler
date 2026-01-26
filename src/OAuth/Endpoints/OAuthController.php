@@ -43,7 +43,7 @@ class OAuthController implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const AUTH_REQUEST_TRANSIENT_PREFIX = 'aibridge_oauth_auth_request_';
+	const AUTH_REQUEST_TRANSIENT_PREFIX = 'albert_oauth_auth_request_';
 
 	/**
 	 * Register WordPress hooks.
@@ -506,7 +506,7 @@ class OAuthController implements Hookable {
 		$show_developer_settings = apply_filters( 'aibridge/settings/developer_mode', false );
 
 		if ( $show_developer_settings ) {
-			$external_url = get_option( 'aibridge_external_url', '' );
+			$external_url = get_option( 'albert_external_url', '' );
 
 			if ( ! empty( $external_url ) ) {
 				return $external_url;

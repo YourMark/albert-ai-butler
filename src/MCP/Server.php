@@ -200,7 +200,7 @@ class Server implements Hookable {
 	 */
 	public static function get_base_url(): string {
 		if ( self::is_developer_mode() ) {
-			$external_url = get_option( 'aibridge_external_url', '' );
+			$external_url = get_option( 'albert_external_url', '' );
 
 			if ( ! empty( $external_url ) ) {
 				return $external_url;
@@ -226,7 +226,7 @@ class Server implements Hookable {
 			}
 
 			// Check for configured external URL.
-			$configured_url = get_option( 'aibridge_external_url', '' );
+			$configured_url = get_option( 'albert_external_url', '' );
 			if ( ! empty( $configured_url ) ) {
 				return $configured_url . '/wp-json/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE;
 			}

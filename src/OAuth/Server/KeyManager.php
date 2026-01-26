@@ -27,7 +27,7 @@ class KeyManager {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const ENCRYPTION_KEY_OPTION = 'aibridge_oauth_encryption_key';
+	const ENCRYPTION_KEY_OPTION = 'albert_oauth_encryption_key';
 
 	/**
 	 * Option name for the private key.
@@ -35,7 +35,7 @@ class KeyManager {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const PRIVATE_KEY_OPTION = 'aibridge_oauth_private_key';
+	const PRIVATE_KEY_OPTION = 'albert_oauth_private_key';
 
 	/**
 	 * Option name for the public key.
@@ -43,7 +43,7 @@ class KeyManager {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const PUBLIC_KEY_OPTION = 'aibridge_oauth_public_key';
+	const PUBLIC_KEY_OPTION = 'albert_oauth_public_key';
 
 	/**
 	 * Get or generate the encryption key.

@@ -50,7 +50,7 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function prevent_canonical_redirect( string $redirect_url, string $requested_url ): string|false {
-		$discovery = get_query_var( 'aibridge_oauth_discovery' );
+		$discovery = get_query_var( 'albert_oauth_discovery' );
 
 		if ( $discovery ) {
 			return false;
@@ -66,12 +66,12 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function maybe_flush_rewrite_rules(): void {
-		$rules_version = get_option( 'aibridge_rewrite_version', '' );
+		$rules_version = get_option( 'albert_rewrite_version', '' );
 
 		// Flush rules if version doesn't match (new install or update).
 		if ( AIBRIDGE_VERSION !== $rules_version ) {
 			flush_rewrite_rules();
-			update_option( 'aibridge_rewrite_version', AIBRIDGE_VERSION );
+			update_option( 'albert_rewrite_version', AIBRIDGE_VERSION );
 		}
 	}
 
@@ -106,7 +106,7 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function add_query_vars( array $vars ): array {
-		$vars[] = 'aibridge_oauth_discovery';
+		$vars[] = 'albert_oauth_discovery';
 		return $vars;
 	}
 
@@ -117,7 +117,7 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function handle_discovery_request(): void {
-		$discovery = get_query_var( 'aibridge_oauth_discovery' );
+		$discovery = get_query_var( 'albert_oauth_discovery' );
 
 		if ( ! $discovery ) {
 			return;
@@ -159,7 +159,7 @@ class OAuthDiscovery implements Hookable {
 
 		// Only use external URL if developer settings are enabled.
 		if ( $show_developer_settings ) {
-			$external_url = get_option( 'aibridge_external_url', '' );
+			$external_url = get_option( 'albert_external_url', '' );
 
 			if ( ! empty( $external_url ) ) {
 				return $external_url;
@@ -246,7 +246,7 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public static function deactivate(): void {
-		delete_option( 'aibridge_rewrite_version' );
+		delete_option( 'albert_rewrite_version' );
 		flush_rewrite_rules();
 	}
 }

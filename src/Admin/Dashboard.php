@@ -250,7 +250,7 @@ class Dashboard implements Hookable {
 	 */
 	private function get_active_connections_count(): int {
 		global $wpdb;
-		$table_name = $wpdb->prefix . 'aibridge_oauth_access_tokens';
+		$table_name = $wpdb->prefix . 'albert_oauth_access_tokens';
 
 		// Count non-expired tokens.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -271,7 +271,7 @@ class Dashboard implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function get_enabled_abilities_count(): string {
-		$options       = get_option( 'aibridge_options', [] );
+		$options       = get_option( 'albert_options', [] );
 		$all_abilities = wp_get_abilities();
 
 		$enabled_count = 0;
@@ -296,8 +296,8 @@ class Dashboard implements Hookable {
 	 */
 	private function get_recent_activity(): array {
 		global $wpdb;
-		$access_tokens_table = $wpdb->prefix . 'aibridge_oauth_access_tokens';
-		$clients_table       = $wpdb->prefix . 'aibridge_oauth_clients';
+		$access_tokens_table = $wpdb->prefix . 'albert_oauth_access_tokens';
+		$clients_table       = $wpdb->prefix . 'albert_oauth_clients';
 
 		// Get most recent token creations.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared

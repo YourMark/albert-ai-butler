@@ -35,7 +35,7 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private string $option_group = 'aibridge_settings';
+	private string $option_group = 'albert_settings';
 
 	/**
 	 * Option name for storing enabled permissions.
@@ -43,7 +43,7 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private string $option_name = 'aibridge_enabled_permissions';
+	private string $option_name = 'albert_enabled_permissions';
 
 	/**
 	 * Available tabs.
@@ -572,7 +572,7 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 */
 	public static function get_enabled_permissions(): array {
-		return get_option( 'aibridge_enabled_permissions', self::get_default_permissions() );
+		return get_option( 'albert_enabled_permissions', self::get_default_permissions() );
 	}
 
 	/**

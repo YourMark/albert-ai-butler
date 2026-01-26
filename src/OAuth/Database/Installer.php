@@ -32,7 +32,7 @@ class Installer {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const DB_VERSION_OPTION = 'aibridge_oauth_db_version';
+	const DB_VERSION_OPTION = 'albert_oauth_db_version';
 
 	/**
 	 * Install database tables.
@@ -80,7 +80,7 @@ class Installer {
 	private static function get_clients_table_sql( string $charset_collate ): string {
 		global $wpdb;
 
-		$table_name = $wpdb->prefix . 'aibridge_oauth_clients';
+		$table_name = $wpdb->prefix . 'albert_oauth_clients';
 
 		return "CREATE TABLE {$table_name} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -109,7 +109,7 @@ class Installer {
 	private static function get_access_tokens_table_sql( string $charset_collate ): string {
 		global $wpdb;
 
-		$table_name = $wpdb->prefix . 'aibridge_oauth_access_tokens';
+		$table_name = $wpdb->prefix . 'albert_oauth_access_tokens';
 
 		return "CREATE TABLE {$table_name} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -140,7 +140,7 @@ class Installer {
 	private static function get_refresh_tokens_table_sql( string $charset_collate ): string {
 		global $wpdb;
 
-		$table_name = $wpdb->prefix . 'aibridge_oauth_refresh_tokens';
+		$table_name = $wpdb->prefix . 'albert_oauth_refresh_tokens';
 
 		return "CREATE TABLE {$table_name} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -168,7 +168,7 @@ class Installer {
 	private static function get_auth_codes_table_sql( string $charset_collate ): string {
 		global $wpdb;
 
-		$table_name = $wpdb->prefix . 'aibridge_oauth_auth_codes';
+		$table_name = $wpdb->prefix . 'albert_oauth_auth_codes';
 
 		return "CREATE TABLE {$table_name} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -198,10 +198,10 @@ class Installer {
 		global $wpdb;
 
 		return [
-			'clients'        => $wpdb->prefix . 'aibridge_oauth_clients',
-			'access_tokens'  => $wpdb->prefix . 'aibridge_oauth_access_tokens',
-			'refresh_tokens' => $wpdb->prefix . 'aibridge_oauth_refresh_tokens',
-			'auth_codes'     => $wpdb->prefix . 'aibridge_oauth_auth_codes',
+			'clients'        => $wpdb->prefix . 'albert_oauth_clients',
+			'access_tokens'  => $wpdb->prefix . 'albert_oauth_access_tokens',
+			'refresh_tokens' => $wpdb->prefix . 'albert_oauth_refresh_tokens',
+			'auth_codes'     => $wpdb->prefix . 'albert_oauth_auth_codes',
 		];
 	}
 
