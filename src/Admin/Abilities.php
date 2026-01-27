@@ -148,6 +148,8 @@ class Abilities implements Hookable {
 
 			<?php settings_errors(); ?>
 
+			<?php $this->render_mobile_nav( $grouped, $disabled_abilities ); ?>
+
 			<div class="ea-page-layout">
 				<?php $this->render_sidebar( $grouped, $disabled_abilities ); ?>
 
@@ -214,6 +216,53 @@ class Abilities implements Hookable {
 	}
 
 	/**
+	 * Render mobile horizontal category navigation.
+	 *
+	 * Shown only on screens where the sidebar is hidden (<= 1200px).
+	 *
+	 * @param array<string, mixed> $grouped             Grouped abilities data.
+	 * @param array<string>        $disabled_abilities  Currently disabled ability slugs.
+	 *
+	 * @return void
+	 * @since 1.1.0
+	 */
+	private function render_mobile_nav( array $grouped, array $disabled_abilities ): void {
+		if ( empty( $grouped ) ) {
+			return;
+		}
+		?>
+		<nav class="ea-sidebar-mobile" aria-label="<?php esc_attr_e( 'Abilities categories', 'albert' ); ?>">
+			<ul class="ea-sidebar-mobile-nav">
+				<?php foreach ( $grouped as $slug => $data ) : ?>
+					<?php
+					$category  = $data['category'];
+					$abilities = $data['abilities'];
+					$icon      = $this->get_category_icon( $slug );
+					$label     = is_object( $category ) && method_exists( $category, 'get_label' ) ? $category->get_label() : ( $category['label'] ?? ucfirst( $slug ) );
+
+					$total   = count( $abilities );
+					$enabled = 0;
+					foreach ( $abilities as $ability ) {
+						$name = is_object( $ability ) && method_exists( $ability, 'get_name' ) ? $ability->get_name() : '';
+						if ( ! in_array( $name, $disabled_abilities, true ) ) {
+							++$enabled;
+						}
+					}
+					?>
+					<li>
+						<a href="#category-<?php echo esc_attr( $slug ); ?>">
+							<span class="dashicons <?php echo esc_attr( $icon ); ?>" aria-hidden="true"></span>
+							<?php echo esc_html( $label ); ?>
+							<span class="ea-nav-count"><?php echo esc_html( $enabled . '/' . $total ); ?></span>
+						</a>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		</nav>
+		<?php
+	}
+
+	/**
 	 * Get icon class for a category.
 	 *
 	 * @param string $category Category slug.
@@ -246,6 +295,25 @@ class Abilities implements Hookable {
 		$icons = apply_filters( 'albert/abilities_icons', $icons );
 
 		return $icons[ $category ] ?? 'dashicons-admin-generic';
+	}
+
+	/**
+	 * Get tooltip text for a source type badge.
+	 *
+	 * @param string $source_type Source type identifier.
+	 *
+	 * @return string Tooltip text.
+	 * @since 1.1.0
+	 */
+	private function get_source_tooltip( string $source_type ): string {
+		$tooltips = [
+			'core'        => __( 'Built into WordPress core', 'albert' ),
+			'albert'      => __( 'Provided by the Albert plugin', 'albert' ),
+			'premium'     => __( 'Requires Albert Pro', 'albert' ),
+			'third-party' => __( 'Provided by a third-party plugin', 'albert' ),
+		];
+
+		return $tooltips[ $source_type ] ?? '';
 	}
 
 	/**
@@ -409,7 +477,10 @@ class Abilities implements Hookable {
 		?>
 		<div class="ability-subgroup" data-subgroup="<?php echo esc_attr( $subgroup_type ); ?>">
 			<div class="ability-subgroup-header">
-				<span class="ability-subgroup-label"><?php echo esc_html( $subgroup_label ); ?></span>
+				<span class="ability-subgroup-label">
+					<span class="dashicons <?php echo esc_attr( 'write' === $subgroup_type ? 'dashicons-edit' : 'dashicons-visibility' ); ?>" aria-hidden="true"></span>
+					<?php echo esc_html( $subgroup_label ); ?>
+				</span>
 				<div class="ability-subgroup-toggle">
 					<label class="albert-toggle albert-toggle--small" for="<?php echo esc_attr( $toggle_id ); ?>">
 						<input
@@ -536,7 +607,7 @@ class Abilities implements Hookable {
 					<label class="ability-item-label" for="<?php echo esc_attr( $field_id ); ?>">
 						<?php echo esc_html( $label ); ?>
 					</label>
-					<span class="ea-source-badge ea-source-<?php echo esc_attr( $source['type'] ); ?>">
+					<span class="ea-source-badge ea-source-<?php echo esc_attr( $source['type'] ); ?>" title="<?php echo esc_attr( $this->get_source_tooltip( $source['type'] ) ); ?>">
 						<?php echo esc_html( $source['label'] ); ?>
 					</span>
 					<?php if ( $is_premium ) : ?>

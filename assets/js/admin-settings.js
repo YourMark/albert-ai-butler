@@ -6,6 +6,50 @@
  */
 
 /**
+ * Dirty state tracking — warns users about unsaved changes.
+ */
+const DirtyStateModule = {
+	isDirty: false,
+
+	init() {
+		this.form = document.getElementById( 'albert-form' );
+		if ( ! this.form ) {
+			return;
+		}
+
+		this.saveButtons = document.querySelectorAll( '#submit, #submit-mobile' );
+
+		// Listen for any checkbox change inside the form.
+		this.form.addEventListener( 'change', () => {
+			this.markDirty();
+		} );
+
+		// Clear dirty state on form submit.
+		this.form.addEventListener( 'submit', () => {
+			this.isDirty = false;
+		} );
+
+		// Warn on navigation away.
+		window.addEventListener( 'beforeunload', ( e ) => {
+			if ( this.isDirty ) {
+				e.preventDefault();
+			}
+		} );
+	},
+
+	markDirty() {
+		if ( this.isDirty ) {
+			return;
+		}
+		this.isDirty = true;
+
+		this.saveButtons.forEach( ( btn ) => {
+			btn.classList.add( 'ea-save-dirty' );
+		} );
+	},
+};
+
+/**
  * Toggle functionality for ability categories.
  */
 const ToggleModule = {
@@ -21,6 +65,25 @@ const ToggleModule = {
 			toggle.addEventListener( 'change', ( e ) => {
 				const category = e.target.dataset.category;
 				const isChecked = e.target.checked;
+
+				// If enabling, check for unchecked write abilities and confirm.
+				if ( isChecked ) {
+					const writeCheckboxes = document.querySelectorAll(
+						`.ability-checkbox-category[data-category="${ category }"][data-subgroup="write"]`
+					);
+					const uncheckedWrites = Array.from( writeCheckboxes ).filter( ( cb ) => ! cb.checked );
+
+					if ( uncheckedWrites.length > 0 ) {
+						const i18n = window.albertAdmin?.i18n || {};
+						const msg = i18n.enableAllWriteConfirm ||
+							`This will enable ${ uncheckedWrites.length } write ability(ies) (create, update, delete). Continue?`;
+
+						if ( ! window.confirm( msg ) ) {
+							e.target.checked = false;
+							return;
+						}
+					}
+				}
 
 				document.querySelectorAll( `.ability-checkbox-category[data-category="${ category }"]` ).forEach( ( checkbox ) => {
 					checkbox.checked = isChecked;
@@ -505,6 +568,7 @@ function init() {
 	AbilityItemModule.init();
 	ClipboardModule.init();
 	ModalModule.init();
+	DirtyStateModule.init();
 }
 
 if ( document.readyState === 'loading' ) {
