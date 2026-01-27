@@ -2,12 +2,12 @@
 /**
  * OAuth Refresh Token Entity
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Entities
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Entities;
+namespace Albert\OAuth\Entities;
 
 use League\OAuth2\Server\Entities\RefreshTokenEntityInterface;
 use League\OAuth2\Server\Entities\Traits\EntityTrait;

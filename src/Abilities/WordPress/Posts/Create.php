@@ -2,15 +2,15 @@
 /**
  * Create Post Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Posts
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Posts;
+namespace Albert\Abilities\WordPress\Posts;
 
 use Alley\WP\Block_Converter\Block_Converter;
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -28,10 +28,10 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/posts/create';
-		$this->label       = __( 'Create Post', 'ai-bridge' );
-		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/create-post';
+		$this->label       = __( 'Create Post', 'albert' );
+		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'posts';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -182,7 +182,7 @@ class Create extends BaseAbility {
 		if ( empty( $args['title'] ) ) {
 			return new WP_Error(
 				'missing_title',
-				__( 'Post title is required.', 'ai-bridge' ),
+				__( 'Post title is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -240,7 +240,7 @@ class Create extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while creating the post.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while creating the post.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

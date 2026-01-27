@@ -1,36 +1,36 @@
 <?php
 /**
- * List Terms Ability
+ * Find Terms Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Taxonomies
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Taxonomies;
+namespace Albert\Abilities\WordPress\Taxonomies;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
 /**
- * List Terms Ability class
+ * Find Terms Ability class
  *
- * Allows AI assistants to list terms from a taxonomy via the abilities API.
+ * Allows AI assistants to find terms from a taxonomy via the abilities API.
  *
  * @since 1.0.0
  */
-class ListTerms extends BaseAbility {
+class FindTerms extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/terms/list';
-		$this->label       = __( 'List Terms', 'ai-bridge' );
-		$this->description = __( 'Retrieve a list of terms from a specific taxonomy (categories, tags, etc).', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/find-terms';
+		$this->label       = __( 'Find Terms', 'albert' );
+		$this->description = __( 'Find terms from a specific taxonomy (categories, tags, custom terms).', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'terms';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -170,7 +170,7 @@ class ListTerms extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while retrieving terms.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while retrieving terms.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
@@ -218,7 +218,7 @@ class ListTerms extends BaseAbility {
 		if ( ! $taxonomy_obj ) {
 			return new WP_Error(
 				'invalid_taxonomy',
-				__( 'Invalid taxonomy.', 'ai-bridge' ),
+				__( 'Invalid taxonomy.', 'albert' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -226,7 +226,7 @@ class ListTerms extends BaseAbility {
 		if ( empty( $taxonomy_obj->rest_base ) ) {
 			return new WP_Error(
 				'taxonomy_not_rest_enabled',
-				__( 'This taxonomy is not available via REST API.', 'ai-bridge' ),
+				__( 'This taxonomy is not available via REST API.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}

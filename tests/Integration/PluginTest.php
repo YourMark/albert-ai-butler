@@ -2,13 +2,13 @@
 /**
  * Plugin integration tests.
  *
- * @package AIBridge
+ * @package Albert
  */
 
-namespace AIBridge\Tests\Integration;
+namespace Albert\Tests\Integration;
 
-use AIBridge\Tests\TestCase;
-use AIBridge\Core\Plugin;
+use Albert\Tests\TestCase;
+use Albert\Core\Plugin;
 
 /**
  * Test plugin initialization and core functionality.

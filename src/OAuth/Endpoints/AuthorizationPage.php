@@ -5,17 +5,17 @@
  * Handles the browser-based OAuth authorization flow.
  * This outputs HTML for user login and consent, not JSON.
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Endpoints
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Endpoints;
+namespace Albert\OAuth\Endpoints;
 
-use AIBridge\Contracts\Interfaces\Hookable;
-use AIBridge\OAuth\Entities\UserEntity;
-use AIBridge\OAuth\Repositories\ClientRepository;
-use AIBridge\OAuth\Server\AuthorizationServerFactory;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\OAuth\Entities\UserEntity;
+use Albert\OAuth\Repositories\ClientRepository;
+use Albert\OAuth\Server\AuthorizationServerFactory;
 use League\OAuth2\Server\Exception\OAuthServerException;
 
 /**
@@ -33,7 +33,7 @@ class AuthorizationPage implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const QUERY_VAR = 'aibridge_oauth_authorize';
+	const QUERY_VAR = 'albert_oauth_authorize';
 
 	/**
 	 * Register WordPress hooks.
@@ -118,8 +118,8 @@ class AuthorizationPage implements Hookable {
 		// Validate required parameters.
 		if ( empty( $client_id ) || empty( $redirect_uri ) || $response_type !== 'code' ) {
 			$this->render_error_page(
-				__( 'Invalid Request', 'ai-bridge' ),
-				__( 'Missing or invalid OAuth parameters.', 'ai-bridge' )
+				__( 'Invalid Request', 'albert' ),
+				__( 'Missing or invalid OAuth parameters.', 'albert' )
 			);
 			return;
 		}
@@ -130,8 +130,8 @@ class AuthorizationPage implements Hookable {
 
 		if ( ! $client ) {
 			$this->render_error_page(
-				__( 'Unknown Application', 'ai-bridge' ),
-				__( 'The application requesting access is not registered.', 'ai-bridge' )
+				__( 'Unknown Application', 'albert' ),
+				__( 'The application requesting access is not registered.', 'albert' )
 			);
 			return;
 		}
@@ -145,8 +145,8 @@ class AuthorizationPage implements Hookable {
 		$is_wildcard = in_array( '*', $allowed_uris, true );
 		if ( ! $is_wildcard && ! in_array( $redirect_uri, $allowed_uris, true ) ) {
 			$this->render_error_page(
-				__( 'Invalid Redirect', 'ai-bridge' ),
-				__( 'The redirect URI is not allowed for this application.', 'ai-bridge' )
+				__( 'Invalid Redirect', 'albert' ),
+				__( 'The redirect URI is not allowed for this application.', 'albert' )
 			);
 			return;
 		}
@@ -159,7 +159,7 @@ class AuthorizationPage implements Hookable {
 		}
 
 		// Check if user is allowed to access MCP.
-		$allowed_users = get_option( 'aibridge_allowed_users', [] );
+		$allowed_users = get_option( 'albert_allowed_users', [] );
 		$current_user  = wp_get_current_user();
 
 		if ( ! in_array( $current_user->ID, $allowed_users, true ) ) {
@@ -189,12 +189,12 @@ class AuthorizationPage implements Hookable {
 	/**
 	 * Handle authorization decision (approve/deny).
 	 *
-	 * @param \AIBridge\OAuth\Entities\ClientEntity $client                The client entity.
-	 * @param string                                $redirect_uri          The redirect URI.
-	 * @param string                                $state                 The state parameter.
-	 * @param string                                $scope                 The requested scope.
-	 * @param string                                $code_challenge        PKCE code challenge.
-	 * @param string                                $code_challenge_method PKCE challenge method.
+	 * @param \Albert\OAuth\Entities\ClientEntity $client                The client entity.
+	 * @param string                              $redirect_uri          The redirect URI.
+	 * @param string                              $state                 The state parameter.
+	 * @param string                              $scope                 The requested scope.
+	 * @param string                              $code_challenge        PKCE code challenge.
+	 * @param string                              $code_challenge_method PKCE challenge method.
 	 *
 	 * @return void
 	 * @since 1.0.0
@@ -264,7 +264,7 @@ class AuthorizationPage implements Hookable {
 			exit;
 		} catch ( \Exception $e ) {
 			$this->render_error_page(
-				__( 'Server Error', 'ai-bridge' ),
+				__( 'Server Error', 'albert' ),
 				$e->getMessage()
 			);
 		}
@@ -273,12 +273,12 @@ class AuthorizationPage implements Hookable {
 	/**
 	 * Render the consent page.
 	 *
-	 * @param \AIBridge\OAuth\Entities\ClientEntity $client                The client entity.
-	 * @param string                                $redirect_uri          The redirect URI.
-	 * @param string                                $state                 The state parameter.
-	 * @param string                                $scope                 The requested scope.
-	 * @param string                                $code_challenge        PKCE code challenge.
-	 * @param string                                $code_challenge_method PKCE challenge method.
+	 * @param \Albert\OAuth\Entities\ClientEntity $client                The client entity.
+	 * @param string                              $redirect_uri          The redirect URI.
+	 * @param string                              $state                 The state parameter.
+	 * @param string                              $scope                 The requested scope.
+	 * @param string                              $code_challenge        PKCE code challenge.
+	 * @param string                              $code_challenge_method PKCE challenge method.
 	 *
 	 * @return void
 	 * @since 1.0.0
@@ -299,7 +299,7 @@ class AuthorizationPage implements Hookable {
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title><?php echo esc_html__( 'Authorize Application', 'ai-bridge' ); ?> - <?php echo esc_html( $site_name ); ?></title>
+	<title><?php echo esc_html__( 'Authorize Application', 'albert' ); ?> - <?php echo esc_html( $site_name ); ?></title>
 	<style>
 		* { box-sizing: border-box; margin: 0; padding: 0; }
 		body {
@@ -391,14 +391,14 @@ class AuthorizationPage implements Hookable {
 <body>
 	<div class="auth-container">
 		<div class="auth-header">
-			<h1><?php esc_html_e( 'Authorize Application', 'ai-bridge' ); ?></h1>
+			<h1><?php esc_html_e( 'Authorize Application', 'albert' ); ?></h1>
 			<p><?php echo esc_html( $site_name ); ?></p>
 		</div>
 
 		<div class="client-info">
 			<div class="client-name"><?php echo esc_html( $client_name ); ?></div>
 			<div class="permission-text">
-				<?php esc_html_e( 'This application wants to access your WordPress site on your behalf.', 'ai-bridge' ); ?>
+				<?php esc_html_e( 'This application wants to access your WordPress site on your behalf.', 'albert' ); ?>
 			</div>
 		</div>
 
@@ -406,7 +406,7 @@ class AuthorizationPage implements Hookable {
 			<?php
 			printf(
 				/* translators: %s: user display name */
-				esc_html__( 'Logged in as %s', 'ai-bridge' ),
+				esc_html__( 'Logged in as %s', 'albert' ),
 				'<strong>' . esc_html( $user_name ) . '</strong>'
 			);
 			?>
@@ -422,10 +422,10 @@ class AuthorizationPage implements Hookable {
 
 			<div class="button-group">
 				<button type="submit" name="approve" value="no" class="button button-secondary">
-					<?php esc_html_e( 'Deny', 'ai-bridge' ); ?>
+					<?php esc_html_e( 'Deny', 'albert' ); ?>
 				</button>
 				<button type="submit" name="approve" value="yes" class="button button-primary">
-					<?php esc_html_e( 'Authorize', 'ai-bridge' ); ?>
+					<?php esc_html_e( 'Authorize', 'albert' ); ?>
 				</button>
 			</div>
 		</form>
@@ -510,7 +510,7 @@ class AuthorizationPage implements Hookable {
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title><?php esc_html_e( 'Access Denied', 'ai-bridge' ); ?> - <?php echo esc_html( $site_name ); ?></title>
+	<title><?php esc_html_e( 'Access Denied', 'albert' ); ?> - <?php echo esc_html( $site_name ); ?></title>
 	<style>
 		* { box-sizing: border-box; margin: 0; padding: 0; }
 		body {
@@ -564,15 +564,15 @@ class AuthorizationPage implements Hookable {
 <body>
 	<div class="access-denied-container">
 		<div class="icon">🚫</div>
-		<h1><?php esc_html_e( 'Access Not Authorized', 'ai-bridge' ); ?></h1>
+		<h1><?php esc_html_e( 'Access Not Authorized', 'albert' ); ?></h1>
 		<p>
-			<?php esc_html_e( 'Your account has not been granted access to connect AI tools to this site.', 'ai-bridge' ); ?>
+			<?php esc_html_e( 'Your account has not been granted access to connect AI tools to this site.', 'albert' ); ?>
 		</p>
 		<div class="user-info">
 			<?php
 			printf(
 				/* translators: %s: user display name */
-				esc_html__( 'Logged in as %s', 'ai-bridge' ),
+				esc_html__( 'Logged in as %s', 'albert' ),
 				'<strong>' . esc_html( $user->display_name ) . '</strong>'
 			);
 			?>
@@ -580,7 +580,7 @@ class AuthorizationPage implements Hookable {
 			<small><?php echo esc_html( $user->user_email ); ?></small>
 		</div>
 		<p class="contact-admin">
-			<?php esc_html_e( 'Please contact your site administrator to request access.', 'ai-bridge' ); ?>
+			<?php esc_html_e( 'Please contact your site administrator to request access.', 'albert' ); ?>
 		</p>
 	</div>
 </body>
@@ -612,7 +612,7 @@ class AuthorizationPage implements Hookable {
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title><?php esc_html_e( 'Authorization Successful', 'ai-bridge' ); ?> - <?php echo esc_html( $site_name ); ?></title>
+	<title><?php esc_html_e( 'Authorization Successful', 'albert' ); ?> - <?php echo esc_html( $site_name ); ?></title>
 	<style>
 		* { box-sizing: border-box; margin: 0; padding: 0; }
 		body {
@@ -694,23 +694,23 @@ class AuthorizationPage implements Hookable {
 				<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
 			</svg>
 		</div>
-		<h1><?php esc_html_e( 'Authorization Successful', 'ai-bridge' ); ?></h1>
+		<h1><?php esc_html_e( 'Authorization Successful', 'albert' ); ?></h1>
 		<p>
 			<?php
 			printf(
 				/* translators: %s: client/application name */
-				esc_html__( '%s has been authorized to access your site.', 'ai-bridge' ),
+				esc_html__( '%s has been authorized to access your site.', 'albert' ),
 				'<span class="client-name">' . esc_html( $client_name ) . '</span>'
 			);
 			?>
 		</p>
 		<p class="close-message">
-			<?php esc_html_e( 'Redirecting back to the application...', 'ai-bridge' ); ?>
+			<?php esc_html_e( 'Redirecting back to the application...', 'albert' ); ?>
 		</p>
 		<p class="fallback-message">
-			<?php esc_html_e( "If the application doesn't open automatically, please click the button below.", 'ai-bridge' ); ?>
+			<?php esc_html_e( "If the application doesn't open automatically, please click the button below.", 'albert' ); ?>
 		</p>
-		<a href="<?php echo esc_url( $redirect_url ); ?>" class="button"><?php esc_html_e( 'Return to Application', 'ai-bridge' ); ?></a>
+		<a href="<?php echo esc_url( $redirect_url ); ?>" class="button"><?php esc_html_e( 'Return to Application', 'albert' ); ?></a>
 	</div>
 	<script>
 		// Redirect to complete the OAuth callback after a brief delay.

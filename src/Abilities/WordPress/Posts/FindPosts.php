@@ -1,36 +1,36 @@
 <?php
 /**
- * List Posts Ability
+ * Find Posts Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Posts
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Posts;
+namespace Albert\Abilities\WordPress\Posts;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
 /**
- * List Posts Ability class
+ * Find Posts Ability class
  *
- * Allows AI assistants to list WordPress posts via the abilities API.
+ * Allows AI assistants to find and search WordPress posts via the abilities API.
  *
  * @since 1.0.0
  */
-class ListPosts extends BaseAbility {
+class FindPosts extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/posts/list';
-		$this->label       = __( 'List Posts', 'ai-bridge' );
-		$this->description = __( 'Retrieve a list of WordPress posts with optional filtering and pagination.', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/find-posts';
+		$this->label       = __( 'Find Posts', 'albert' );
+		$this->description = __( 'Find and search WordPress posts with optional filtering and pagination.', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'posts';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -251,7 +251,7 @@ class ListPosts extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while retrieving posts.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while retrieving posts.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

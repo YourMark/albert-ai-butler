@@ -19,7 +19,7 @@
 	 * Initialize copy to clipboard buttons.
 	 */
 	function initCopyButtons() {
-		const copyButtons = document.querySelectorAll('.aibridge-copy-btn');
+		const copyButtons = document.querySelectorAll('.albert-copy-btn');
 
 		copyButtons.forEach(function(button) {
 			button.addEventListener('click', function(e) {
@@ -94,7 +94,7 @@
 	function showCopyFeedback(button, success) {
 		const originalText = button.textContent;
 		const feedbackText = success ? 'Copied!' : 'Failed!';
-		const feedbackClass = success ? 'aibridge-copy-success' : 'aibridge-copy-error';
+		const feedbackClass = success ? 'albert-copy-success' : 'albert-copy-error';
 
 		// Update button text and add class
 		button.textContent = feedbackText;

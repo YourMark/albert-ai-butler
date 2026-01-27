@@ -2,14 +2,14 @@
 /**
  * Delete Term Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Taxonomies
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Taxonomies;
+namespace Albert\Abilities\WordPress\Taxonomies;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -27,10 +27,10 @@ class DeleteTerm extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/terms/delete';
-		$this->label       = __( 'Delete Term', 'ai-bridge' );
-		$this->description = __( 'Delete a term from a taxonomy (category, tag, etc).', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/delete-term';
+		$this->label       = __( 'Delete Term', 'albert' );
+		$this->description = __( 'Delete a term from a taxonomy (category, tag, etc).', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'terms';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -126,7 +126,7 @@ class DeleteTerm extends BaseAbility {
 		if ( empty( $args['id'] ) ) {
 			return new WP_Error(
 				'missing_id',
-				__( 'Term ID is required.', 'ai-bridge' ),
+				__( 'Term ID is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -161,7 +161,7 @@ class DeleteTerm extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while deleting the term.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while deleting the term.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
@@ -201,7 +201,7 @@ class DeleteTerm extends BaseAbility {
 		if ( ! $taxonomy_obj ) {
 			return new WP_Error(
 				'invalid_taxonomy',
-				__( 'Invalid taxonomy.', 'ai-bridge' ),
+				__( 'Invalid taxonomy.', 'albert' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -209,7 +209,7 @@ class DeleteTerm extends BaseAbility {
 		if ( empty( $taxonomy_obj->rest_base ) ) {
 			return new WP_Error(
 				'taxonomy_not_rest_enabled',
-				__( 'This taxonomy is not available via REST API.', 'ai-bridge' ),
+				__( 'This taxonomy is not available via REST API.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}

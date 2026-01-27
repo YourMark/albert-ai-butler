@@ -2,14 +2,14 @@
 /**
  * OAuth Resource Server Factory
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Server
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Server;
+namespace Albert\OAuth\Server;
 
-use AIBridge\OAuth\Repositories\AccessTokenRepository;
+use Albert\OAuth\Repositories\AccessTokenRepository;
 use League\OAuth2\Server\CryptKey;
 use League\OAuth2\Server\ResourceServer;
 

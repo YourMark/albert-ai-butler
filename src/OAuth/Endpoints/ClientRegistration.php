@@ -2,15 +2,15 @@
 /**
  * OAuth Dynamic Client Registration (RFC 7591)
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Endpoints
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Endpoints;
+namespace Albert\OAuth\Endpoints;
 
-use AIBridge\Contracts\Interfaces\Hookable;
-use AIBridge\OAuth\Repositories\ClientRepository;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\OAuth\Repositories\ClientRepository;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -32,7 +32,7 @@ class ClientRegistration implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const NAMESPACE = 'ai-bridge/v1';
+	const NAMESPACE = 'albert/v1';
 
 	/**
 	 * Register WordPress hooks.
@@ -84,7 +84,7 @@ class ClientRegistration implements Hookable {
 				if ( ! $this->is_valid_redirect_uri( $uri ) ) {
 					return new WP_Error(
 						'invalid_redirect_uri',
-						__( 'Invalid redirect URI provided.', 'ai-bridge' ),
+						__( 'Invalid redirect URI provided.', 'albert' ),
 						[ 'status' => 400 ]
 					);
 				}
@@ -104,7 +104,7 @@ class ClientRegistration implements Hookable {
 		if ( ! $result ) {
 			return new WP_Error(
 				'registration_failed',
-				__( 'Failed to register client.', 'ai-bridge' ),
+				__( 'Failed to register client.', 'albert' ),
 				[ 'status' => 500 ]
 			);
 		}

@@ -2,15 +2,15 @@
 /**
  * OAuth Client Repository
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Repositories
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Repositories;
+namespace Albert\OAuth\Repositories;
 
-use AIBridge\OAuth\Database\Installer;
-use AIBridge\OAuth\Entities\ClientEntity;
+use Albert\OAuth\Database\Installer;
+use Albert\OAuth\Entities\ClientEntity;
 use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
 
 /**
@@ -241,7 +241,7 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * @since 1.0.0
 	 */
 	private function generate_client_id(): string {
-		return 'aibridge_' . bin2hex( random_bytes( 16 ) );
+		return 'albert_' . bin2hex( random_bytes( 16 ) );
 	}
 
 	/**

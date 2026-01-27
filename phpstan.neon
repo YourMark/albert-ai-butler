@@ -17,8 +17,5 @@ parameters:
 		- '#Offset .+ does not exist on array\{_links: array, _embedded: array\}#'
 		# Unused methods/properties kept for future use or extensibility
 		-
-			message: '#Method .+::render_ability_subgroup\(\) is unused#'
-			path: src/Admin/Abilities.php
-		-
 			message: '#Property .+::\$components is never read, only written#'
 			path: src/Core/Plugin.php

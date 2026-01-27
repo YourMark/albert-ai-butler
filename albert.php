@@ -1,41 +1,41 @@
 <?php
 /**
- * Plugin Name: AI Bridge for WordPress
- * Plugin URI: https://aibridgewp.com
- * Description: Connect your WordPress site to AI assistants with secure OAuth 2.0 authentication and the Model Context Protocol (MCP).
+ * Plugin Name: Albert - Your AI Butler for WordPress
+ * Plugin URI: https://albertwp.com
+ * Description: Your AI butler for WordPress - streamline content management, automate tasks, and connect AI assistants with secure OAuth 2.0 and MCP integration.
  * Version: 1.0.0
  * Author: Mark Jansen - Your Mark Media
  * Author URI: https://yourmark.nl
- * Text Domain: ai-bridge
+ * Text Domain: albert
  * Domain Path: /languages
  * Requires at least: 6.9
  * Requires PHP: 8.2
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  *
- * @package AIBridge
+ * @package Albert
  */
 
 // Prevent direct access.
-use AIBridge\Core\Plugin;
+use Albert\Core\Plugin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 // Define plugin constants.
-define( 'AIBRIDGE_VERSION', '1.0.0' );
-define( 'AIBRIDGE_PLUGIN_FILE', __FILE__ );
-define( 'AIBRIDGE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'AIBRIDGE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'AIBRIDGE_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+define( 'ALBERT_VERSION', '1.0.0' );
+define( 'ALBERT_PLUGIN_FILE', __FILE__ );
+define( 'ALBERT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'ALBERT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'ALBERT_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 // Load Composer autoloader if available.
-if ( ! file_exists( AIBRIDGE_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
+if ( ! file_exists( ALBERT_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
 	return;
 }
 
-require_once AIBRIDGE_PLUGIN_DIR . 'vendor/autoload.php';
+require_once ALBERT_PLUGIN_DIR . 'vendor/autoload.php';
 
 /**
  * Initialize the plugin.
@@ -43,7 +43,7 @@ require_once AIBRIDGE_PLUGIN_DIR . 'vendor/autoload.php';
  * @return void
  * @since 1.0.0
  */
-function init_aibridge(): void {
+function init_albert(): void {
 	try {
 		$plugin = Plugin::get_instance();
 		$plugin->init();
@@ -56,7 +56,7 @@ function init_aibridge(): void {
 					echo esc_html(
 						sprintf(
 						/* translators: %s: error message */
-							__( 'AI Bridge Plugin Error: %s', 'ai-bridge' ),
+							__( 'Albert Plugin Error: %s', 'albert' ),
 							$e->getMessage()
 						)
 					);
@@ -68,13 +68,13 @@ function init_aibridge(): void {
 		// Log the error for debugging.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional debug logging when WP_DEBUG_LOG is enabled.
-			error_log( 'AI Bridge Plugin Error: ' . $e->getMessage() );
+			error_log( 'Albert Plugin Error: ' . $e->getMessage() );
 		}
 	}
 }
 
 // Initialize the plugin.
-add_action( 'plugins_loaded', 'init_aibridge' );
+add_action( 'plugins_loaded', 'init_albert' );
 
 /**
  * Plugin activation hook.
@@ -82,11 +82,11 @@ add_action( 'plugins_loaded', 'init_aibridge' );
  * @return void
  * @since 1.0.0
  */
-function activate_aibridge(): void {
+function activate_albert(): void {
 	Plugin::activate();
 }
 
-register_activation_hook( __FILE__, 'activate_aibridge' );
+register_activation_hook( __FILE__, 'activate_albert' );
 
 /**
  * Plugin deactivation hook.
@@ -94,11 +94,11 @@ register_activation_hook( __FILE__, 'activate_aibridge' );
  * @return void
  * @since 1.0.0
  */
-function deactivate_aibridge(): void {
+function deactivate_albert(): void {
 	Plugin::deactivate();
 }
 
-register_deactivation_hook( __FILE__, 'deactivate_aibridge' );
+register_deactivation_hook( __FILE__, 'deactivate_albert' );
 
 /**
  * Add settings link to plugin action links.
@@ -108,11 +108,11 @@ register_deactivation_hook( __FILE__, 'deactivate_aibridge' );
  * @return array Modified plugin action links.
  * @since 1.0.0
  */
-function aibridge_plugin_action_links( array $links ): array {
+function albert_plugin_action_links( array $links ): array {
 	$settings_link = sprintf(
 		'<a href="%s">%s</a>',
-		esc_url( admin_url( 'admin.php?page=ai-bridge-settings' ) ),
-		esc_html__( 'Settings', 'ai-bridge' )
+		esc_url( admin_url( 'admin.php?page=albert-settings' ) ),
+		esc_html__( 'Settings', 'albert' )
 	);
 
 	array_unshift( $links, $settings_link );
@@ -120,4 +120,4 @@ function aibridge_plugin_action_links( array $links ): array {
 	return $links;
 }
 
-add_filter( 'plugin_action_links_' . AIBRIDGE_PLUGIN_BASENAME, 'aibridge_plugin_action_links' );
+add_filter( 'plugin_action_links_' . ALBERT_PLUGIN_BASENAME, 'albert_plugin_action_links' );

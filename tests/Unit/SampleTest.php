@@ -2,10 +2,10 @@
 /**
  * Sample unit tests.
  *
- * @package AIBridge
+ * @package Albert
  */
 
-namespace AIBridge\Tests\Unit;
+namespace Albert\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 
@@ -31,7 +31,7 @@ class SampleTest extends TestCase {
 	 * @return void
 	 */
 	public function test_plugin_file_exists(): void {
-		$plugin_file = dirname( __DIR__, 2 ) . '/ai-bridge.php';
+		$plugin_file = dirname( __DIR__, 2 ) . '/albert.php';
 
 		$this->assertFileExists( $plugin_file );
 	}
@@ -43,7 +43,7 @@ class SampleTest extends TestCase {
 	 */
 	public function test_autoload_is_available(): void {
 		$this->assertTrue(
-			class_exists( 'AIBridge\Core\Plugin' ),
+			class_exists( 'Albert\Core\Plugin' ),
 			'Plugin class should be autoloadable'
 		);
 	}

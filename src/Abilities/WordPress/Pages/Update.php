@@ -2,15 +2,15 @@
 /**
  * Update Page Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Pages
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Pages;
+namespace Albert\Abilities\WordPress\Pages;
 
 use Alley\WP\Block_Converter\Block_Converter;
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -28,10 +28,10 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/pages/update';
-		$this->label       = __( 'Update Page', 'ai-bridge' );
-		$this->description = __( 'Update an existing WordPress page with new title and content.', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/update-page';
+		$this->label       = __( 'Update Page', 'albert' );
+		$this->description = __( 'Update an existing WordPress page with new title and content.', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'pages';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -175,7 +175,7 @@ class Update extends BaseAbility {
 		if ( empty( $args['id'] ) ) {
 			return new WP_Error(
 				'missing_id',
-				__( 'Page ID is required.', 'ai-bridge' ),
+				__( 'Page ID is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -189,7 +189,7 @@ class Update extends BaseAbility {
 		if ( $check_response->is_error() ) {
 			return new WP_Error(
 				'page_not_found',
-				__( 'Page not found.', 'ai-bridge' ),
+				__( 'Page not found.', 'albert' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -236,7 +236,7 @@ class Update extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while updating the page.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while updating the page.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

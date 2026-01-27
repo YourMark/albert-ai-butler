@@ -1,37 +1,37 @@
 <?php
 /**
- * List Users Ability
+ * Find Users Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Users
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Users;
+namespace Albert\Abilities\WordPress\Users;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Server;
 
 /**
- * List Users Ability class
+ * Find Users Ability class
  *
- * Allows AI assistants to list WordPress users via the abilities API.
+ * Allows AI assistants to find and search WordPress users via the abilities API.
  *
  * @since 1.0.0
  */
-class ListUsers extends BaseAbility {
+class FindUsers extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/users/list';
-		$this->label       = __( 'List Users', 'ai-bridge' );
-		$this->description = __( 'Retrieve a list of WordPress users with optional filtering and pagination.', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/find-users';
+		$this->label       = __( 'Find Users', 'albert' );
+		$this->description = __( 'Find and search WordPress users with optional filtering and pagination.', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -223,7 +223,7 @@ class ListUsers extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while retrieving users.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while retrieving users.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

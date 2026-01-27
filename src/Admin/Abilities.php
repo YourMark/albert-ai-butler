@@ -2,14 +2,15 @@
 /**
  * Abilities Admin Page
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Admin
  * @since      1.0.0
  */
 
-namespace AIBridge\Admin;
+namespace Albert\Admin;
 
-use AIBridge\Contracts\Interfaces\Hookable;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\Core\AbilitiesRegistry;
 
 /**
  * Abilities class
@@ -26,7 +27,7 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private string $page_slug = 'ai-bridge-abilities';
+	private string $page_slug = 'albert-abilities';
 
 	/**
 	 * Option group name.
@@ -34,15 +35,15 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private string $option_group = 'aibridge_settings';
+	private string $option_group = 'albert_settings';
 
 	/**
-	 * Option name for storing settings.
+	 * Option name for storing enabled permissions.
 	 *
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private string $option_name = 'aibridge_options';
+	private string $option_name = 'albert_enabled_permissions';
 
 	/**
 	 * Available tabs.
@@ -75,7 +76,7 @@ class Abilities implements Hookable {
 	private function get_tabs(): array {
 		if ( $this->tabs === null ) {
 			$this->tabs = [
-				'core' => __( 'Core', 'ai-bridge' ),
+				'core' => __( 'Core', 'albert' ),
 			];
 
 			/**
@@ -88,7 +89,7 @@ class Abilities implements Hookable {
 			 *
 			 * @since 1.0.0
 			 */
-			$this->tabs = apply_filters( 'aibridge/abilities/tabs', $this->tabs );
+			$this->tabs = apply_filters( 'albert/abilities_tabs', $this->tabs );
 		}
 
 		return $this->tabs;
@@ -123,9 +124,9 @@ class Abilities implements Hookable {
 	public function add_menu_pages(): void {
 		// Add Abilities submenu under AI Bridge (created by Dashboard).
 		add_submenu_page(
-			'ai-bridge', // Parent slug.
-			__( 'Abilities', 'ai-bridge' ),
-			__( 'Abilities', 'ai-bridge' ),
+			'albert', // Parent slug.
+			__( 'Abilities', 'albert' ),
+			__( 'Abilities', 'albert' ),
 			'manage_options',
 			$this->page_slug,
 			[ $this, 'render_page' ]
@@ -164,7 +165,7 @@ class Abilities implements Hookable {
 			return;
 		}
 		?>
-		<nav class="nav-tab-wrapper wp-clearfix" aria-label="<?php esc_attr_e( 'Abilities tabs', 'ai-bridge' ); ?>">
+		<nav class="nav-tab-wrapper wp-clearfix" aria-label="<?php esc_attr_e( 'Abilities tabs', 'albert' ); ?>">
 			<?php foreach ( $tabs as $tab_slug => $tab_label ) : ?>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . $this->page_slug . '&tab=' . $tab_slug ) ); ?>"
 					class="nav-tab <?php echo $current_tab === $tab_slug ? 'nav-tab-active' : ''; ?>"
@@ -184,19 +185,19 @@ class Abilities implements Hookable {
 	 */
 	public function render_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'ai-bridge' ) );
+			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'albert' ) );
 		}
 
 		$current_tab       = $this->get_current_tab();
 		$grouped_abilities = $this->get_abilities_for_tab( $current_tab );
 		?>
-		<div class="wrap aibridge-settings">
+		<div class="wrap albert-settings">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
 			<div class="notice notice-warning">
 				<p>
-					<strong><?php esc_html_e( 'Beta Version:', 'ai-bridge' ); ?></strong>
-					<?php esc_html_e( 'This plugin is currently in beta and is intended for testing purposes only. Please use with caution and do not use on production sites.', 'ai-bridge' ); ?>
+					<strong><?php esc_html_e( 'Beta Version:', 'albert' ); ?></strong>
+					<?php esc_html_e( 'This plugin is currently in beta and is intended for testing purposes only. Please use with caution and do not use on production sites.', 'albert' ); ?>
 				</p>
 			</div>
 
@@ -208,7 +209,7 @@ class Abilities implements Hookable {
 				<?php $this->render_sidebar( $grouped_abilities ); ?>
 
 				<div class="ea-main-content">
-					<div class="aibridge-tab-content">
+					<div class="albert-tab-content">
 						<?php $this->render_abilities_content( $current_tab, $grouped_abilities ); ?>
 					</div>
 				</div>
@@ -232,34 +233,46 @@ class Abilities implements Hookable {
 
 		$options = get_option( $this->option_name, [] );
 		?>
-		<aside class="ea-sidebar" aria-label="<?php esc_attr_e( 'Abilities navigation', 'ai-bridge' ); ?>">
+		<aside class="ea-sidebar" aria-label="<?php esc_attr_e( 'Abilities navigation', 'albert' ); ?>">
 			<div class="ea-sidebar-save">
-				<?php submit_button( __( 'Save Changes', 'ai-bridge' ), 'primary', 'submit', false, [ 'form' => 'aibridge-form' ] ); ?>
+				<?php submit_button( __( 'Save Changes', 'albert' ), 'primary', 'submit', false, [ 'form' => 'albert-form' ] ); ?>
 			</div>
-			<h2 class="ea-sidebar-title"><?php esc_html_e( 'Quick Nav', 'ai-bridge' ); ?></h2>
+			<h2 class="ea-sidebar-title"><?php esc_html_e( 'Quick Nav', 'albert' ); ?></h2>
 			<nav>
 				<ul class="ea-sidebar-nav">
 					<?php foreach ( $grouped_abilities as $category => $data ) : ?>
 						<?php
-						if ( empty( $data['abilities']['groups'] ) ) {
+						if ( empty( $data['types'] ) ) {
 							continue;
 						}
-						foreach ( $data['abilities']['groups'] as $group_id => $group_data ) :
-							$group_anchor  = 'group-' . sanitize_key( $category . '-' . $group_id );
-							$ability_count = count( $group_data['abilities'] );
-							$enabled_count = 0;
-							foreach ( $group_data['abilities'] as $ability_id => $ability ) {
-								if ( ! empty( $options[ $ability_id ] ) ) {
-									++$enabled_count;
-								}
+						foreach ( $data['types'] as $type_key => $type_data ) :
+							$group_anchor = 'group-' . sanitize_key( $category . '-' . $type_key );
+
+							// Count total permissions (read + write).
+							$permission_count = 0;
+							if ( isset( $type_data['read'] ) ) {
+								++$permission_count;
 							}
-							$icon = $this->get_group_icon( $group_id );
+							if ( isset( $type_data['write'] ) ) {
+								++$permission_count;
+							}
+
+							// Count enabled permissions.
+							$enabled_count = 0;
+							if ( isset( $type_data['read'] ) && in_array( $type_key . '_read', $options, true ) ) {
+								++$enabled_count;
+							}
+							if ( isset( $type_data['write'] ) && in_array( $type_key . '_write', $options, true ) ) {
+								++$enabled_count;
+							}
+
+							$icon = $this->get_group_icon( $type_key );
 							?>
 							<li>
 								<a href="#<?php echo esc_attr( $group_anchor ); ?>">
 									<span class="dashicons <?php echo esc_attr( $icon ); ?>" aria-hidden="true"></span>
-									<?php echo esc_html( $group_data['label'] ); ?>
-									<span class="ea-nav-count"><?php echo esc_html( $enabled_count . '/' . $ability_count ); ?></span>
+									<?php echo esc_html( $type_data['label'] ); ?>
+									<span class="ea-nav-count"><?php echo esc_html( $enabled_count . '/' . $permission_count ); ?></span>
 								</a>
 							</li>
 						<?php endforeach; ?>
@@ -288,6 +301,7 @@ class Abilities implements Hookable {
 			'plugins'    => 'dashicons-admin-plugins',
 			'themes'     => 'dashicons-admin-appearance',
 			'taxonomies' => 'dashicons-category',
+			'site'       => 'dashicons-admin-site',
 		];
 
 		/**
@@ -297,7 +311,7 @@ class Abilities implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$icons = apply_filters( 'aibridge/abilities/group_icons', $icons );
+		$icons = apply_filters( 'albert/abilities_icons', $icons );
 
 		return $icons[ $group ] ?? 'dashicons-admin-generic';
 	}
@@ -314,17 +328,17 @@ class Abilities implements Hookable {
 	private function render_abilities_content( string $tab, array $grouped_abilities ): void {
 		$options = get_option( $this->option_name, [] );
 		?>
-		<form method="post" action="options.php" id="aibridge-form" aria-label="<?php esc_attr_e( 'AI Bridge Settings', 'ai-bridge' ); ?>">
+		<form method="post" action="options.php" id="albert-form" aria-label="<?php esc_attr_e( 'AI Bridge Settings', 'albert' ); ?>">
 			<?php settings_fields( $this->option_group ); ?>
 
 			<div class="ea-content-header">
 				<p class="ea-content-description">
-					<?php esc_html_e( 'Select which abilities AI assistants can use on your site. Only enable abilities you trust.', 'ai-bridge' ); ?>
+					<?php esc_html_e( 'Select which abilities AI assistants can use on your site. Only enable abilities you trust.', 'albert' ); ?>
 				</p>
 				<span class="ea-content-actions">
-					<button type="button" class="ea-action-link" id="ea-expand-all"><?php esc_html_e( 'Expand all', 'ai-bridge' ); ?></button>
+					<button type="button" class="ea-action-link" id="ea-expand-all"><?php esc_html_e( 'Expand all', 'albert' ); ?></button>
 					<span class="ea-action-separator" aria-hidden="true">·</span>
-					<button type="button" class="ea-action-link" id="ea-collapse-all"><?php esc_html_e( 'Collapse all', 'ai-bridge' ); ?></button>
+					<button type="button" class="ea-action-link" id="ea-collapse-all"><?php esc_html_e( 'Collapse all', 'albert' ); ?></button>
 				</span>
 			</div>
 
@@ -332,16 +346,11 @@ class Abilities implements Hookable {
 				<div class="ea-groups-grid">
 					<?php foreach ( $grouped_abilities as $category => $data ) : ?>
 						<?php
-						// Render each subgroup as a separate card.
-						if ( ! empty( $data['abilities']['groups'] ) ) {
-							foreach ( $data['abilities']['groups'] as $group_id => $group_data ) {
-								$this->render_ability_group_card( $group_id, $group_data, $category, $options );
+						// Render each content type as a separate card.
+						if ( ! empty( $data['types'] ) ) {
+							foreach ( $data['types'] as $type_key => $type_data ) {
+								$this->render_permission_group_card( $type_key, $type_data, $category, $options );
 							}
-						}
-
-						// Render ungrouped abilities in their own card if any exist.
-						if ( ! empty( $data['abilities']['ungrouped'] ) ) {
-							$this->render_ungrouped_abilities_card( $data['abilities']['ungrouped'], $category, $options );
 						}
 						?>
 					<?php endforeach; ?>
@@ -351,14 +360,14 @@ class Abilities implements Hookable {
 			<?php if ( empty( $grouped_abilities ) ) : ?>
 				<div class="notice notice-info">
 					<p>
-						<?php esc_html_e( 'No abilities are currently registered for this category. Abilities will appear here once they are registered.', 'ai-bridge' ); ?>
+						<?php esc_html_e( 'No abilities are currently registered for this category. Abilities will appear here once they are registered.', 'albert' ); ?>
 					</p>
 				</div>
 			<?php endif; ?>
 
 			<?php if ( ! empty( $grouped_abilities ) ) : ?>
 				<div class="ea-mobile-save">
-					<?php submit_button( __( 'Save Changes', 'ai-bridge' ), 'primary', 'submit-mobile', false ); ?>
+					<?php submit_button( __( 'Save Changes', 'albert' ), 'primary', 'submit-mobile', false ); ?>
 				</div>
 			<?php endif; ?>
 		</form>
@@ -366,22 +375,30 @@ class Abilities implements Hookable {
 	}
 
 	/**
-	 * Render an ability group as a card.
+	 * Render a permission group card (e.g., Posts with Read/Write toggles).
 	 *
-	 * @param string               $group_id   Group identifier.
-	 * @param array<string, mixed> $group_data Group data including label and abilities.
+	 * @param string               $type_key   Content type key (e.g., 'posts', 'pages').
+	 * @param array<string, mixed> $type_data  Type data including label, read, and write permissions.
 	 * @param string               $category   Parent category.
-	 * @param array<string, mixed> $options    Current options.
+	 * @param array<string>        $options    Current enabled permission keys.
 	 *
 	 * @return void
 	 * @since 1.0.0
 	 */
-	private function render_ability_group_card( string $group_id, array $group_data, string $category, array $options ): void {
-		$card_id        = 'group-' . sanitize_key( $category . '-' . $group_id );
-		$toggle_all_id  = 'toggle-all-' . sanitize_key( $category . '-' . $group_id );
-		$items_id       = 'group-items-' . sanitize_key( $category . '-' . $group_id );
-		$subgroup_class = 'subgroup-' . esc_attr( $category . '-' . $group_id );
-		$icon           = $this->get_group_icon( $group_id );
+	private function render_permission_group_card( string $type_key, array $type_data, string $category, array $options ): void {
+		$card_id        = 'group-' . sanitize_key( $category . '-' . $type_key );
+		$toggle_all_id  = 'toggle-all-' . sanitize_key( $category . '-' . $type_key );
+		$items_id       = 'group-items-' . sanitize_key( $category . '-' . $type_key );
+		$subgroup_class = 'subgroup-' . esc_attr( $category . '-' . $type_key );
+		$icon           = $this->get_group_icon( $type_key );
+
+		// Permission keys.
+		$read_permission  = $type_key . '_read';
+		$write_permission = $type_key . '_write';
+
+		// Check if permissions are enabled.
+		$read_enabled  = in_array( $read_permission, $options, true );
+		$write_enabled = in_array( $write_permission, $options, true );
 		?>
 		<section class="ability-group" id="<?php echo esc_attr( $card_id ); ?>" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
 			<div class="ability-group-header">
@@ -396,23 +413,23 @@ class Abilities implements Hookable {
 					</button>
 					<span class="dashicons <?php echo esc_attr( $icon ); ?>" aria-hidden="true" style="color: var(--ea-text-secondary);"></span>
 					<h2 class="ability-group-title" id="<?php echo esc_attr( 'title-' . $card_id ); ?>">
-						<?php echo esc_html( $group_data['label'] ); ?>
+						<?php echo esc_html( $type_data['label'] ); ?>
 					</h2>
 				</div>
 				<div class="ability-group-toggle-all">
-					<label class="aibridge-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
+					<label class="albert-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
 						<input
 								type="checkbox"
 								id="<?php echo esc_attr( $toggle_all_id ); ?>"
 								class="toggle-subgroup-abilities"
 								data-subgroup="<?php echo esc_attr( $subgroup_class ); ?>"
-								<?php /* translators: %s: ability group name */ ?>
-								aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'ai-bridge' ), $group_data['label'] ) ); ?>"
+								<?php /* translators: %s: content type name */ ?>
+								aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s permissions', 'albert' ), $type_data['label'] ) ); ?>"
 						/>
-						<span class="aibridge-toggle-slider" aria-hidden="true"></span>
+						<span class="albert-toggle-slider" aria-hidden="true"></span>
 					</label>
 					<label for="<?php echo esc_attr( $toggle_all_id ); ?>">
-						<?php esc_html_e( 'Enable All', 'ai-bridge' ); ?>
+						<?php esc_html_e( 'Enable All', 'albert' ); ?>
 					</label>
 				</div>
 			</div>
@@ -420,8 +437,14 @@ class Abilities implements Hookable {
 			<div class="ability-group-items" id="<?php echo esc_attr( $items_id ); ?>" role="group" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
 				<div class="ability-subgroup-items">
 					<?php
-					foreach ( $group_data['abilities'] as $ability_id => $ability ) {
-						$this->render_ability_item( $ability_id, $ability, $category, $options, $subgroup_class );
+					// Render Read permission.
+					if ( isset( $type_data['read'] ) ) {
+						$this->render_permission_item( $read_permission, $type_data['read'], $subgroup_class, $read_enabled );
+					}
+
+					// Render Write permission.
+					if ( isset( $type_data['write'] ) ) {
+						$this->render_permission_item( $write_permission, $type_data['write'], $subgroup_class, $write_enabled );
 					}
 					?>
 				</div>
@@ -431,66 +454,57 @@ class Abilities implements Hookable {
 	}
 
 	/**
-	 * Render ungrouped abilities in a card.
+	 * Render a single permission item (Read or Write).
 	 *
-	 * @param array<string, mixed> $abilities Ungrouped abilities.
-	 * @param string               $category  Parent category.
-	 * @param array<string, mixed> $options   Current options.
+	 * @param string               $permission_key  Permission key (e.g., 'posts_read').
+	 * @param array<string, mixed> $permission_data Permission data including label and description.
+	 * @param string               $subgroup_class  CSS class for grouping.
+	 * @param bool                 $enabled         Whether this permission is enabled.
 	 *
 	 * @return void
 	 * @since 1.0.0
 	 */
-	private function render_ungrouped_abilities_card( array $abilities, string $category, array $options ): void {
-		$card_id        = 'group-' . sanitize_key( $category . '-other' );
-		$toggle_all_id  = 'toggle-all-' . sanitize_key( $category . '-other' );
-		$items_id       = 'group-items-' . sanitize_key( $category . '-other' );
-		$subgroup_class = 'subgroup-' . esc_attr( $category . '-other' );
-		?>
-		<section class="ability-group" id="<?php echo esc_attr( $card_id ); ?>" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
-			<div class="ability-group-header">
-				<div class="ability-group-title-wrapper">
-					<button
-							type="button"
-							class="ability-group-collapse-toggle"
-							aria-expanded="true"
-							aria-controls="<?php echo esc_attr( $items_id ); ?>"
-					>
-						<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
-					</button>
-					<span class="dashicons dashicons-admin-generic" aria-hidden="true" style="color: var(--ea-text-secondary);"></span>
-					<h2 class="ability-group-title" id="<?php echo esc_attr( 'title-' . $card_id ); ?>">
-						<?php esc_html_e( 'Other', 'ai-bridge' ); ?>
-					</h2>
-				</div>
-				<div class="ability-group-toggle-all">
-					<label class="aibridge-toggle" for="<?php echo esc_attr( $toggle_all_id ); ?>">
-						<input
-								type="checkbox"
-								id="<?php echo esc_attr( $toggle_all_id ); ?>"
-								class="toggle-subgroup-abilities"
-								data-subgroup="<?php echo esc_attr( $subgroup_class ); ?>"
-								aria-label="<?php esc_attr_e( 'Enable all other abilities', 'ai-bridge' ); ?>"
-						/>
-						<span class="aibridge-toggle-slider" aria-hidden="true"></span>
-					</label>
-					<label for="<?php echo esc_attr( $toggle_all_id ); ?>">
-						<?php esc_html_e( 'Enable All', 'ai-bridge' ); ?>
-					</label>
-				</div>
-			</div>
+	private function render_permission_item( string $permission_key, array $permission_data, string $subgroup_class, bool $enabled ): void {
+		$field_name      = $this->option_name . '[]';
+		$field_id        = 'permission-' . sanitize_key( $permission_key );
+		$has_description = ! empty( $permission_data['description'] );
+		$checkbox_class  = 'ability-checkbox';
 
-			<div class="ability-group-items" id="<?php echo esc_attr( $items_id ); ?>" role="group" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
-				<div class="ability-subgroup-items">
-					<?php
-					foreach ( $abilities as $ability_id => $ability ) {
-						$this->render_ability_item( $ability_id, $ability, $category, $options, $subgroup_class );
-					}
-					?>
-				</div>
+		if ( ! empty( $subgroup_class ) ) {
+			$checkbox_class .= ' ability-checkbox-subgroup ' . esc_attr( $subgroup_class );
+		}
+		?>
+		<div class="ability-item">
+			<div class="ability-item-toggle">
+				<label class="albert-toggle" for="<?php echo esc_attr( $field_id ); ?>">
+					<input
+							type="checkbox"
+							id="<?php echo esc_attr( $field_id ); ?>"
+							name="<?php echo esc_attr( $field_name ); ?>"
+							value="<?php echo esc_attr( $permission_key ); ?>"
+							class="<?php echo esc_attr( $checkbox_class ); ?>"
+						<?php if ( $has_description ) : ?>
+							aria-describedby="<?php echo esc_attr( $field_id . '-description' ); ?>"
+						<?php endif; ?>
+						<?php checked( $enabled ); ?>
+					/>
+					<span class="albert-toggle-slider" aria-hidden="true"></span>
+				</label>
 			</div>
-		</section>
+			<div class="ability-item-content">
+				<label class="ability-item-label" for="<?php echo esc_attr( $field_id ); ?>">
+					<?php echo esc_html( $permission_data['label'] ); ?>
+				</label>
+				<?php if ( $has_description ) : ?>
+					<p class="ability-item-description" id="<?php echo esc_attr( $field_id . '-description' ); ?>">
+						<?php echo esc_html( $permission_data['description'] ); ?>
+					</p>
+				<?php endif; ?>
+			</div>
+		</div>
 		<?php
 	}
+
 
 	/**
 	 * Get abilities for a specific tab.
@@ -501,221 +515,22 @@ class Abilities implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function get_abilities_for_tab( string $tab ): array {
-		$grouped = [];
+		$all_groups = AbilitiesRegistry::get_ability_groups();
+		$grouped    = [];
 
-		if ( $tab === 'core' ) {
-			$wordpress_abilities = apply_filters( 'aibridge/abilities/wordpress', [] );
-			if ( ! empty( $wordpress_abilities ) ) {
-				$grouped['wordpress'] = [
-					'title'     => __( 'WordPress Abilities', 'ai-bridge' ),
-					'abilities' => $this->organize_abilities_by_group( $wordpress_abilities ),
-				];
-			}
-		} else {
-			/**
-			 * Filter to provide abilities for a custom tab.
-			 *
-			 * Use this filter to add abilities to your custom tab.
-			 * The dynamic portion of the hook name, `$tab`, refers to the tab slug.
-			 *
-			 * @param array $abilities Array of ability data.
-			 *
-			 * @since 1.0.0
-			 */
-			$tab_abilities = apply_filters( "aibridge/abilities/{$tab}", [] );
-			if ( ! empty( $tab_abilities ) ) {
-				$grouped[ $tab ] = [
-					'title'     => $this->get_tabs()[ $tab ] ?? ucfirst( $tab ),
-					'abilities' => $this->organize_abilities_by_group( $tab_abilities ),
-				];
-			}
+		// Map tabs to group keys.
+		if ( $tab === 'core' && isset( $all_groups['wordpress'] ) ) {
+			$grouped['wordpress'] = $all_groups['wordpress'];
+		} elseif ( isset( $all_groups[ $tab ] ) ) {
+			$grouped[ $tab ] = $all_groups[ $tab ];
 		}
 
 		return $grouped;
 	}
 
-	/**
-	 * Organize abilities by their group property.
-	 *
-	 * @param array<string, mixed> $abilities Flat array of abilities.
-	 *
-	 * @return array<string, mixed> Organized abilities with groups.
-	 * @since 1.0.0
-	 */
-	private function organize_abilities_by_group( array $abilities ): array {
-		$organized = [
-			'ungrouped' => [],
-			'groups'    => [],
-		];
 
-		foreach ( $abilities as $ability_id => $ability ) {
-			$group = $ability['group'] ?? '';
 
-			if ( empty( $group ) ) {
-				$organized['ungrouped'][ $ability_id ] = $ability;
-			} else {
-				if ( ! isset( $organized['groups'][ $group ] ) ) {
-					$organized['groups'][ $group ] = [
-						'label'     => $this->get_group_label( $group ),
-						'abilities' => [],
-					];
-				}
-				$organized['groups'][ $group ]['abilities'][ $ability_id ] = $ability;
-			}
-		}
 
-		return $organized;
-	}
-
-	/**
-	 * Get human-readable label for a group.
-	 *
-	 * @param string $group Group identifier.
-	 *
-	 * @return string Group label.
-	 * @since 1.0.0
-	 */
-	private function get_group_label( string $group ): string {
-		$labels = [
-			'posts'      => __( 'Posts', 'ai-bridge' ),
-			'pages'      => __( 'Pages', 'ai-bridge' ),
-			'media'      => __( 'Media', 'ai-bridge' ),
-			'users'      => __( 'Users', 'ai-bridge' ),
-			'comments'   => __( 'Comments', 'ai-bridge' ),
-			'plugins'    => __( 'Plugins', 'ai-bridge' ),
-			'themes'     => __( 'Themes', 'ai-bridge' ),
-			'taxonomies' => __( 'Taxonomies', 'ai-bridge' ),
-		];
-
-		/**
-		 * Filter group labels.
-		 *
-		 * @param array $labels Group labels.
-		 *
-		 * @since 1.0.0
-		 */
-		$labels = apply_filters( 'aibridge/abilities/group_labels', $labels );
-
-		return $labels[ $group ] ?? ucfirst( $group );
-	}
-
-	/**
-	 * Render an ability subgroup with toggle all functionality.
-	 *
-	 * @param string               $group_id   Group identifier.
-	 * @param array<string, mixed> $group_data Group data including label and abilities.
-	 * @param string               $category   Parent category.
-	 * @param array<string, mixed> $options    Current options.
-	 *
-	 * @return void
-	 * @since 1.0.0
-	 */
-	private function render_ability_subgroup( string $group_id, array $group_data, string $category, array $options ): void {
-		$subgroup_toggle_id = 'toggle-subgroup-' . esc_attr( $category . '-' . $group_id );
-		$subgroup_class     = 'subgroup-' . esc_attr( $category . '-' . $group_id );
-		$subgroup_items_id  = 'subgroup-items-' . esc_attr( $category . '-' . $group_id );
-		?>
-		<div class="ability-subgroup">
-			<div class="ability-subgroup-header">
-				<div class="ability-subgroup-title-wrapper">
-					<button
-							type="button"
-							class="ability-subgroup-collapse-toggle"
-							aria-expanded="true"
-							aria-controls="<?php echo esc_attr( $subgroup_items_id ); ?>"
-					>
-						<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
-					</button>
-					<h3 class="ability-subgroup-title"><?php echo esc_html( $group_data['label'] ); ?></h3>
-				</div>
-				<div class="ability-subgroup-toggle-all">
-					<label class="aibridge-toggle" for="<?php echo esc_attr( $subgroup_toggle_id ); ?>">
-						<input
-								type="checkbox"
-								id="<?php echo esc_attr( $subgroup_toggle_id ); ?>"
-								class="toggle-subgroup-abilities"
-								data-subgroup="<?php echo esc_attr( $subgroup_class ); ?>"
-								<?php /* translators: %s: ability subgroup name */ ?>
-								aria-label="<?php echo esc_attr( sprintf( __( 'Enable all %s abilities', 'ai-bridge' ), $group_data['label'] ) ); ?>"
-						/>
-						<span class="aibridge-toggle-slider" aria-hidden="true"></span>
-					</label>
-					<label for="<?php echo esc_attr( $subgroup_toggle_id ); ?>">
-						<?php
-						printf(
-							/* translators: %s: group name */
-							esc_html__( 'Enable All %s', 'ai-bridge' ),
-							esc_html( $group_data['label'] )
-						);
-						?>
-					</label>
-				</div>
-			</div>
-			<div class="ability-subgroup-items" id="<?php echo esc_attr( $subgroup_items_id ); ?>">
-				<?php
-				foreach ( $group_data['abilities'] as $ability_id => $ability ) {
-					$this->render_ability_item( $ability_id, $ability, $category, $options, $subgroup_class );
-				}
-				?>
-			</div>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Render a single ability item.
-	 *
-	 * @param string               $ability_id     Ability ID.
-	 * @param array<string, mixed> $ability        Ability data.
-	 * @param string               $category       Parent category.
-	 * @param array<string, mixed> $options        Current options.
-	 * @param string               $subgroup_class Optional subgroup class for grouped abilities.
-	 *
-	 * @return void
-	 * @since 1.0.0
-	 */
-	private function render_ability_item( string $ability_id, array $ability, string $category, array $options, string $subgroup_class = '' ): void {
-		$field_name      = $this->option_name . '[' . $ability_id . ']';
-		$field_id        = 'ability-' . sanitize_key( $ability_id );
-		$checked         = isset( $options[ $ability_id ] ) && $options[ $ability_id ];
-		$has_description = ! empty( $ability['description'] );
-		$checkbox_class  = 'ability-checkbox';
-
-		if ( ! empty( $subgroup_class ) ) {
-			$checkbox_class .= ' ability-checkbox-subgroup ' . esc_attr( $subgroup_class );
-		}
-		?>
-		<div class="ability-item">
-			<div class="ability-item-toggle">
-				<label class="aibridge-toggle" for="<?php echo esc_attr( $field_id ); ?>">
-					<input
-							type="checkbox"
-							id="<?php echo esc_attr( $field_id ); ?>"
-							name="<?php echo esc_attr( $field_name ); ?>"
-							value="1"
-							class="<?php echo esc_attr( $checkbox_class ); ?>"
-							data-group="<?php echo esc_attr( $category ); ?>"
-						<?php if ( $has_description ) : ?>
-							aria-describedby="<?php echo esc_attr( $field_id . '-description' ); ?>"
-						<?php endif; ?>
-						<?php checked( $checked ); ?>
-					/>
-					<span class="aibridge-toggle-slider" aria-hidden="true"></span>
-				</label>
-			</div>
-			<div class="ability-item-content">
-				<label class="ability-item-label" for="<?php echo esc_attr( $field_id ); ?>">
-					<?php echo esc_html( $ability['label'] ); ?>
-				</label>
-				<?php if ( $has_description ) : ?>
-					<p class="ability-item-description" id="<?php echo esc_attr( $field_id . '-description' ); ?>">
-						<?php echo esc_html( $ability['description'] ); ?>
-					</p>
-				<?php endif; ?>
-			</div>
-		</div>
-		<?php
-	}
 
 	/**
 	 * Sanitize settings.
@@ -727,41 +542,75 @@ class Abilities implements Hookable {
 	 * @return array<string, bool>
 	 * @since 1.0.0
 	 */
+	/**
+	 * Sanitize settings.
+	 *
+	 * @param mixed $input Raw input from form submission.
+	 *
+	 * @return array<string> Sanitized array of permission keys.
+	 * @since 1.0.0
+	 */
 	public function sanitize_settings( $input ): array {
 		$sanitized = [];
 
 		if ( is_array( $input ) ) {
-			foreach ( $input as $ability_id => $value ) {
-				if ( $this->is_valid_ability_id( $ability_id ) ) {
-					$sanitized[ $ability_id ] = true;
+			foreach ( $input as $permission_key ) {
+				$permission_key = sanitize_key( $permission_key );
+				if ( $this->is_valid_permission_key( $permission_key ) ) {
+					$sanitized[] = $permission_key;
 				}
 			}
 		}
 
-		return $sanitized;
+		return array_unique( $sanitized );
 	}
 
 	/**
-	 * Check if ability ID is valid.
+	 * Get currently enabled permissions.
 	 *
-	 * @param string $ability_id Ability ID.
+	 * @return array<string> Array of enabled permission keys.
+	 * @since 1.0.0
+	 */
+	public static function get_enabled_permissions(): array {
+		return get_option( 'albert_enabled_permissions', self::get_default_permissions() );
+	}
+
+	/**
+	 * Get default permissions (all read enabled, write disabled).
+	 *
+	 * @return array<string> Array of default permission keys.
+	 * @since 1.0.0
+	 */
+	public static function get_default_permissions(): array {
+		return AbilitiesRegistry::get_default_permissions();
+	}
+
+	/**
+	 * Check if permission key is valid.
+	 *
+	 * @param string $permission_key Permission key (e.g., 'posts_read', 'posts_write').
 	 *
 	 * @return bool
 	 * @since 1.0.0
 	 */
-	private function is_valid_ability_id( string $ability_id ): bool {
-		$all_abilities = apply_filters( 'aibridge/abilities/wordpress', [] );
+	private function is_valid_permission_key( string $permission_key ): bool {
+		$groups = AbilitiesRegistry::get_ability_groups();
 
-		// Include abilities from all registered tabs.
-		$tabs = $this->get_tabs();
-		foreach ( array_keys( $tabs ) as $tab_slug ) {
-			if ( $tab_slug !== 'core' ) {
-				$tab_abilities = apply_filters( "aibridge/abilities/{$tab_slug}", [] );
-				$all_abilities = array_merge( $all_abilities, $tab_abilities );
+		foreach ( $groups as $group ) {
+			foreach ( $group['types'] as $type_key => $type ) {
+				foreach ( [ 'read', 'write' ] as $permission ) {
+					if ( ! isset( $type[ $permission ] ) ) {
+						continue;
+					}
+
+					if ( $type_key . '_' . $permission === $permission_key ) {
+						return true;
+					}
+				}
 			}
 		}
 
-		return array_key_exists( $ability_id, $all_abilities );
+		return false;
 	}
 
 	/**
@@ -774,22 +623,22 @@ class Abilities implements Hookable {
 	 */
 	public function enqueue_assets( string $hook ): void {
 		// Hook format for submenu is: {parent_slug}_page_{menu_slug}.
-		if ( 'ai-bridge_page_' . $this->page_slug !== $hook ) {
+		if ( 'albert_page_' . $this->page_slug !== $hook ) {
 			return;
 		}
 
 		wp_enqueue_style(
-			'aibridge-admin',
-			AIBRIDGE_PLUGIN_URL . 'assets/css/admin-settings.css',
+			'albert-admin',
+			ALBERT_PLUGIN_URL . 'assets/css/admin-settings.css',
 			[],
-			AIBRIDGE_VERSION
+			ALBERT_VERSION
 		);
 
 		wp_enqueue_script(
-			'aibridge-admin',
-			AIBRIDGE_PLUGIN_URL . 'assets/js/admin-settings.js',
+			'albert-admin',
+			ALBERT_PLUGIN_URL . 'assets/js/admin-settings.js',
 			[],
-			AIBRIDGE_VERSION,
+			ALBERT_VERSION,
 			true
 		);
 	}

@@ -2,14 +2,14 @@
 /**
  * OAuth Metadata Discovery Endpoint
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage OAuth\Endpoints
  * @since      1.0.0
  */
 
-namespace AIBridge\OAuth\Endpoints;
+namespace Albert\OAuth\Endpoints;
 
-use AIBridge\Contracts\Interfaces\Hookable;
+use Albert\Contracts\Interfaces\Hookable;
 
 /**
  * OAuthDiscovery class
@@ -50,7 +50,7 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function prevent_canonical_redirect( string $redirect_url, string $requested_url ): string|false {
-		$discovery = get_query_var( 'aibridge_oauth_discovery' );
+		$discovery = get_query_var( 'albert_oauth_discovery' );
 
 		if ( $discovery ) {
 			return false;
@@ -66,12 +66,12 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function maybe_flush_rewrite_rules(): void {
-		$rules_version = get_option( 'aibridge_rewrite_version', '' );
+		$rules_version = get_option( 'albert_rewrite_version', '' );
 
 		// Flush rules if version doesn't match (new install or update).
-		if ( AIBRIDGE_VERSION !== $rules_version ) {
+		if ( ALBERT_VERSION !== $rules_version ) {
 			flush_rewrite_rules();
-			update_option( 'aibridge_rewrite_version', AIBRIDGE_VERSION );
+			update_option( 'albert_rewrite_version', ALBERT_VERSION );
 		}
 	}
 
@@ -85,14 +85,14 @@ class OAuthDiscovery implements Hookable {
 		// OAuth Authorization Server Metadata (RFC 8414).
 		add_rewrite_rule(
 			'^\.well-known/oauth-authorization-server/?$',
-			'index.php?aibridge_oauth_discovery=authorization-server',
+			'index.php?albert_oauth_discovery=authorization-server',
 			'top'
 		);
 
 		// OAuth Protected Resource Metadata (RFC 9728 / MCP spec).
 		add_rewrite_rule(
 			'^\.well-known/oauth-protected-resource/?$',
-			'index.php?aibridge_oauth_discovery=protected-resource',
+			'index.php?albert_oauth_discovery=protected-resource',
 			'top'
 		);
 	}
@@ -106,7 +106,7 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function add_query_vars( array $vars ): array {
-		$vars[] = 'aibridge_oauth_discovery';
+		$vars[] = 'albert_oauth_discovery';
 		return $vars;
 	}
 
@@ -117,7 +117,7 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function handle_discovery_request(): void {
-		$discovery = get_query_var( 'aibridge_oauth_discovery' );
+		$discovery = get_query_var( 'albert_oauth_discovery' );
 
 		if ( ! $discovery ) {
 			return;
@@ -155,11 +155,11 @@ class OAuthDiscovery implements Hookable {
 		 *
 		 * @since 1.0.0
 		 */
-		$show_developer_settings = apply_filters( 'aibridge/settings/developer_mode', false );
+		$show_developer_settings = apply_filters( 'albert/developer_mode', false );
 
 		// Only use external URL if developer settings are enabled.
 		if ( $show_developer_settings ) {
-			$external_url = get_option( 'aibridge_external_url', '' );
+			$external_url = get_option( 'albert_external_url', '' );
 
 			if ( ! empty( $external_url ) ) {
 				return $external_url;
@@ -194,7 +194,7 @@ class OAuthDiscovery implements Hookable {
 		$base_url = $this->get_base_url();
 
 		return [
-			'resource'              => $this->get_rest_url( 'ai-bridge/v1/mcp' ),
+			'resource'              => $this->get_rest_url( 'albert/v1/mcp' ),
 			'authorization_servers' => [ $base_url ],
 			'scopes_supported'      => [ 'default' ],
 		];
@@ -213,8 +213,8 @@ class OAuthDiscovery implements Hookable {
 			// Required fields.
 			'issuer'                                => $base_url,
 			'authorization_endpoint'                => $base_url . '/oauth/authorize',
-			'token_endpoint'                        => $this->get_rest_url( 'ai-bridge/v1/oauth/token' ),
-			'registration_endpoint'                 => $this->get_rest_url( 'ai-bridge/v1/oauth/register' ),
+			'token_endpoint'                        => $this->get_rest_url( 'albert/v1/oauth/token' ),
+			'registration_endpoint'                 => $this->get_rest_url( 'albert/v1/oauth/register' ),
 
 			// Recommended fields.
 			'response_types_supported'              => [ 'code' ],
@@ -246,7 +246,7 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public static function deactivate(): void {
-		delete_option( 'aibridge_rewrite_version' );
+		delete_option( 'albert_rewrite_version' );
 		flush_rewrite_rules();
 	}
 }

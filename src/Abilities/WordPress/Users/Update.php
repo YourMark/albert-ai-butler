@@ -2,14 +2,14 @@
 /**
  * Update User Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Users
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Users;
+namespace Albert\Abilities\WordPress\Users;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -27,10 +27,10 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/users/update';
-		$this->label       = __( 'Update User', 'ai-bridge' );
-		$this->description = __( 'Update an existing WordPress user with new information.', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/update-user';
+		$this->label       = __( 'Update User', 'albert' );
+		$this->description = __( 'Update an existing WordPress user with new information.', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -193,7 +193,7 @@ class Update extends BaseAbility {
 		if ( empty( $args['id'] ) ) {
 			return new WP_Error(
 				'missing_id',
-				__( 'User ID is required.', 'ai-bridge' ),
+				__( 'User ID is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -204,7 +204,7 @@ class Update extends BaseAbility {
 		if ( ! get_userdata( $user_id ) ) {
 			return new WP_Error(
 				'user_not_found',
-				__( 'User not found.', 'ai-bridge' ),
+				__( 'User not found.', 'albert' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -259,7 +259,7 @@ class Update extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while updating the user.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while updating the user.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

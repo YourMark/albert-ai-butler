@@ -2,43 +2,50 @@
 /**
  * Main Plugin Class
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Core
  * @since      1.0.0
  */
 
-namespace AIBridge\Core;
+namespace Albert\Core;
 
-use AIBridge\Abilities\WordPress\Posts\ListPosts;
-use AIBridge\Abilities\WordPress\Posts\Create as CreatePost;
-use AIBridge\Abilities\WordPress\Posts\Update as UpdatePost;
-use AIBridge\Abilities\WordPress\Posts\Delete as DeletePost;
-use AIBridge\Abilities\WordPress\Pages\ListPages;
-use AIBridge\Abilities\WordPress\Pages\Create as CreatePage;
-use AIBridge\Abilities\WordPress\Pages\Update as UpdatePage;
-use AIBridge\Abilities\WordPress\Pages\Delete as DeletePage;
-use AIBridge\Abilities\WordPress\Users\ListUsers;
-use AIBridge\Abilities\WordPress\Users\Create as CreateUser;
-use AIBridge\Abilities\WordPress\Users\Update as UpdateUser;
-use AIBridge\Abilities\WordPress\Users\Delete as DeleteUser;
-use AIBridge\Abilities\WordPress\Media\SetFeaturedImage;
-use AIBridge\Abilities\WordPress\Media\UploadMedia;
-use AIBridge\Abilities\WordPress\Taxonomies\ListTaxonomies;
-use AIBridge\Abilities\WordPress\Taxonomies\ListTerms;
-use AIBridge\Abilities\WordPress\Taxonomies\CreateTerm;
-use AIBridge\Abilities\WordPress\Taxonomies\UpdateTerm;
-use AIBridge\Abilities\WordPress\Taxonomies\DeleteTerm;
-use AIBridge\Admin\Abilities;
-use AIBridge\Admin\Connections;
-use AIBridge\Admin\Dashboard;
-use AIBridge\Admin\Settings;
-use AIBridge\Contracts\Interfaces\Hookable;
-use AIBridge\MCP\Server as McpServer;
-use AIBridge\OAuth\Database\Installer as OAuthInstaller;
-use AIBridge\OAuth\Endpoints\AuthorizationPage;
-use AIBridge\OAuth\Endpoints\ClientRegistration;
-use AIBridge\OAuth\Endpoints\OAuthController;
-use AIBridge\OAuth\Endpoints\OAuthDiscovery;
+use Albert\Abilities\WordPress\Posts\FindPosts;
+use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\Posts\Create as CreatePost;
+use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
+use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
+use Albert\Abilities\WordPress\Pages\FindPages;
+use Albert\Abilities\WordPress\Pages\ViewPage;
+use Albert\Abilities\WordPress\Pages\Create as CreatePage;
+use Albert\Abilities\WordPress\Pages\Update as UpdatePage;
+use Albert\Abilities\WordPress\Pages\Delete as DeletePage;
+use Albert\Abilities\WordPress\Users\FindUsers;
+use Albert\Abilities\WordPress\Users\ViewUser;
+use Albert\Abilities\WordPress\Users\Create as CreateUser;
+use Albert\Abilities\WordPress\Users\Update as UpdateUser;
+use Albert\Abilities\WordPress\Users\Delete as DeleteUser;
+use Albert\Abilities\WordPress\Media\FindMedia;
+use Albert\Abilities\WordPress\Media\ViewMedia;
+use Albert\Abilities\WordPress\Media\SetFeaturedImage;
+use Albert\Abilities\WordPress\Media\UploadMedia;
+use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
+use Albert\Abilities\WordPress\Taxonomies\FindTerms;
+use Albert\Abilities\WordPress\Taxonomies\ViewTerm;
+use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
+use Albert\Abilities\WordPress\Taxonomies\UpdateTerm;
+use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
+use Albert\Admin\Abilities;
+use Albert\Admin\Connections;
+use Albert\Admin\Dashboard;
+use Albert\Admin\Settings;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\MCP\Server as McpServer;
+use Albert\OAuth\Database\Installer as OAuthInstaller;
+use Albert\Core\SettingsMigration;
+use Albert\OAuth\Endpoints\AuthorizationPage;
+use Albert\OAuth\Endpoints\ClientRegistration;
+use Albert\OAuth\Endpoints\OAuthController;
+use Albert\OAuth\Endpoints\OAuthDiscovery;
 use WP\MCP\Core\McpAdapter;
 
 /**
@@ -97,6 +104,9 @@ class Plugin {
 	public function init(): void {
 		// Check for database updates (handles upgrades without re-activation).
 		OAuthInstaller::install();
+
+		// Migrate settings from old format to new format (one-time).
+		SettingsMigration::maybe_migrate();
 
 		// Register admin components.
 		if ( is_admin() ) {
@@ -164,30 +174,36 @@ class Plugin {
 		$this->abilities_manager = new AbilitiesManager();
 
 		// Posts abilities.
-		$this->abilities_manager->add_ability( new ListPosts() );
+		$this->abilities_manager->add_ability( new FindPosts() );
+		$this->abilities_manager->add_ability( new ViewPost() );
 		$this->abilities_manager->add_ability( new CreatePost() );
 		$this->abilities_manager->add_ability( new UpdatePost() );
 		$this->abilities_manager->add_ability( new DeletePost() );
 
 		// Pages abilities.
-		$this->abilities_manager->add_ability( new ListPages() );
+		$this->abilities_manager->add_ability( new FindPages() );
+		$this->abilities_manager->add_ability( new ViewPage() );
 		$this->abilities_manager->add_ability( new CreatePage() );
 		$this->abilities_manager->add_ability( new UpdatePage() );
 		$this->abilities_manager->add_ability( new DeletePage() );
 
 		// Users abilities.
-		$this->abilities_manager->add_ability( new ListUsers() );
+		$this->abilities_manager->add_ability( new FindUsers() );
+		$this->abilities_manager->add_ability( new ViewUser() );
 		$this->abilities_manager->add_ability( new CreateUser() );
 		$this->abilities_manager->add_ability( new UpdateUser() );
 		$this->abilities_manager->add_ability( new DeleteUser() );
 
 		// Media abilities.
+		$this->abilities_manager->add_ability( new FindMedia() );
+		$this->abilities_manager->add_ability( new ViewMedia() );
 		$this->abilities_manager->add_ability( new UploadMedia() );
 		$this->abilities_manager->add_ability( new SetFeaturedImage() );
 
 		// Taxonomy abilities.
-		$this->abilities_manager->add_ability( new ListTaxonomies() );
-		$this->abilities_manager->add_ability( new ListTerms() );
+		$this->abilities_manager->add_ability( new FindTaxonomies() );
+		$this->abilities_manager->add_ability( new FindTerms() );
+		$this->abilities_manager->add_ability( new ViewTerm() );
 		$this->abilities_manager->add_ability( new CreateTerm() );
 		$this->abilities_manager->add_ability( new UpdateTerm() );
 		$this->abilities_manager->add_ability( new DeleteTerm() );
@@ -226,7 +242,7 @@ class Plugin {
 		 *
 		 * @since 1.0.0
 		 */
-		do_action( 'aibridge/core/activated' );
+		do_action( 'albert/activated' );
 	}
 
 	/**
@@ -246,6 +262,6 @@ class Plugin {
 		 *
 		 * @since 1.0.0
 		 */
-		do_action( 'aibridge/core/deactivated' );
+		do_action( 'albert/deactivated' );
 	}
 }

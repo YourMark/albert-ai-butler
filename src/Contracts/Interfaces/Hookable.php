@@ -2,12 +2,12 @@
 /**
  * Hookable Interface
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Contracts\Interfaces
  * @since      1.0.0
  */
 
-namespace AIBridge\Contracts\Interfaces;
+namespace Albert\Contracts\Interfaces;
 
 /**
  * The Hookable interface

@@ -1,36 +1,36 @@
 <?php
 /**
- * List Taxonomies Ability
+ * Find Taxonomies Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Taxonomies
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Taxonomies;
+namespace Albert\Abilities\WordPress\Taxonomies;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
 /**
- * List Taxonomies Ability class
+ * Find Taxonomies Ability class
  *
- * Allows AI assistants to list available taxonomies via the abilities API.
+ * Allows AI assistants to find available taxonomies via the abilities API.
  *
  * @since 1.0.0
  */
-class ListTaxonomies extends BaseAbility {
+class FindTaxonomies extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/taxonomies/list';
-		$this->label       = __( 'List Taxonomies', 'ai-bridge' );
-		$this->description = __( 'Retrieve a list of all registered taxonomies.', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/find-taxonomies';
+		$this->label       = __( 'Find Taxonomies', 'albert' );
+		$this->description = __( 'Find all registered taxonomies (categories, tags, custom taxonomies).', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'taxonomies';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -129,7 +129,7 @@ class ListTaxonomies extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while retrieving taxonomies.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while retrieving taxonomies.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

@@ -2,14 +2,14 @@
 /**
  * Upload Media Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Media
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Media;
+namespace Albert\Abilities\WordPress\Media;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 
 /**
@@ -28,10 +28,10 @@ class UploadMedia extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/media/upload';
-		$this->label       = __( 'Upload Media', 'ai-bridge' );
-		$this->description = __( 'Upload media to WordPress by sideloading from a URL.', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/upload-media';
+		$this->label       = __( 'Upload Media', 'albert' );
+		$this->description = __( 'Upload media to WordPress by sideloading from a URL.', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'media';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -150,7 +150,7 @@ class UploadMedia extends BaseAbility {
 		if ( empty( $args['url'] ) ) {
 			return new WP_Error(
 				'missing_url',
-				__( 'URL is required.', 'ai-bridge' ),
+				__( 'URL is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -161,7 +161,7 @@ class UploadMedia extends BaseAbility {
 		if ( ! preg_match( '/^https?:\/\//i', $url ) ) {
 			return new WP_Error(
 				'invalid_url',
-				__( 'Invalid URL format. Must be a valid HTTP or HTTPS URL.', 'ai-bridge' ),
+				__( 'Invalid URL format. Must be a valid HTTP or HTTPS URL.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -173,7 +173,7 @@ class UploadMedia extends BaseAbility {
 			if ( ! $post ) {
 				return new WP_Error(
 					'invalid_post',
-					__( 'The specified post does not exist.', 'ai-bridge' ),
+					__( 'The specified post does not exist.', 'albert' ),
 					[ 'status' => 404 ]
 				);
 			}
@@ -189,7 +189,7 @@ class UploadMedia extends BaseAbility {
 		if ( is_wp_error( $temp_file ) ) {
 			return new WP_Error(
 				'download_failed',
-				__( 'Failed to download file from URL.', 'ai-bridge' ),
+				__( 'Failed to download file from URL.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -206,7 +206,7 @@ class UploadMedia extends BaseAbility {
 			wp_delete_file( $temp_file );
 			return new WP_Error(
 				'invalid_file_type',
-				__( 'Invalid or unsupported file type.', 'ai-bridge' ),
+				__( 'Invalid or unsupported file type.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}

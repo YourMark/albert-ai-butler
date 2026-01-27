@@ -2,14 +2,14 @@
 /**
  * Delete User Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Users
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Users;
+namespace Albert\Abilities\WordPress\Users;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
@@ -27,10 +27,10 @@ class Delete extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/users/delete';
-		$this->label       = __( 'Delete User', 'ai-bridge' );
-		$this->description = __( 'Delete a WordPress user and optionally reassign their content.', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/delete-user';
+		$this->label       = __( 'Delete User', 'albert' );
+		$this->description = __( 'Delete a WordPress user and optionally reassign their content.', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -148,7 +148,7 @@ class Delete extends BaseAbility {
 		if ( empty( $args['id'] ) ) {
 			return new WP_Error(
 				'missing_id',
-				__( 'User ID is required.', 'ai-bridge' ),
+				__( 'User ID is required.', 'albert' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -160,7 +160,7 @@ class Delete extends BaseAbility {
 		if ( ! $user ) {
 			return new WP_Error(
 				'user_not_found',
-				__( 'User not found.', 'ai-bridge' ),
+				__( 'User not found.', 'albert' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -187,7 +187,7 @@ class Delete extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while deleting the user.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while deleting the user.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

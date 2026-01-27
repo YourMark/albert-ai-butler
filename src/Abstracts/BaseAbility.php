@@ -2,14 +2,16 @@
 /**
  * Base Ability Abstract Class
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abstracts
  * @since      1.0.0
  */
 
-namespace AIBridge\Abstracts;
+namespace Albert\Abstracts;
 
-use AIBridge\Contracts\Interfaces\Ability;
+use Albert\Admin\Abilities;
+use Albert\Contracts\Interfaces\Ability;
+use Albert\Core\AbilitiesRegistry;
 use WP_Error;
 
 /**
@@ -120,7 +122,7 @@ abstract class BaseAbility implements Ability {
 				'description'         => $this->description,
 				'input_schema'        => $this->input_schema,
 				'output_schema'       => $this->output_schema,
-				'category'            => $this->category ?? 'core',
+				'category'            => $this->category ?? 'albert',
 				'execute_callback'    => [ $this, 'execute' ],
 				'permission_callback' => [ $this, 'check_permission' ],
 				'meta'                => $this->meta,
@@ -160,10 +162,23 @@ abstract class BaseAbility implements Ability {
 	 * @return bool
 	 * @since 1.0.0
 	 */
+	/**
+	 * Check if this ability is enabled.
+	 *
+	 * Checks if the ability is enabled based on the permission groups system.
+	 *
+	 * @return bool True if enabled, false otherwise.
+	 * @since 1.0.0
+	 */
 	public function enabled(): bool {
-		$options = get_option( 'aibridge_options', [] );
+		// Get enabled permissions (e.g., ['posts_read', 'posts_write']).
+		$enabled_permissions = Abilities::get_enabled_permissions();
 
-		return isset( $options[ $this->id ] );
+		// Convert permissions to individual ability slugs.
+		$enabled_abilities = AbilitiesRegistry::get_enabled_abilities( $enabled_permissions );
+
+		// Check if this ability's ID is in the enabled list.
+		return in_array( $this->id, $enabled_abilities, true );
 	}
 
 	/**

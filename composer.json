@@ -1,6 +1,6 @@
 {
-    "name": "ai-bridge/ai-bridge",
-    "description": "Connect your WordPress site to AI assistants with secure OAuth 2.0 authentication and the Model Context Protocol (MCP).",
+    "name": "albert/albert",
+    "description": "Your AI butler for WordPress - streamline content management, automate tasks, and connect AI assistants with secure OAuth 2.0 and MCP integration.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "authors": [
@@ -28,12 +28,12 @@
     },
     "autoload": {
         "psr-4": {
-            "AIBridge\\": "src/"
+            "Albert\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "AIBridge\\Tests\\": "tests/"
+            "Albert\\Tests\\": "tests/"
         }
     },
     "scripts": {

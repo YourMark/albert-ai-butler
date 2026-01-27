@@ -237,7 +237,7 @@ const ClipboardModule = {
 	},
 
 	showCopiedFeedback( element, originalText = null ) {
-		const i18n = window.aibridgeAdmin?.i18n || { copied: 'Copied!' };
+		const i18n = window.albertAdmin?.i18n || { copied: 'Copied!' };
 
 		if ( originalText !== null ) {
 			element.textContent = i18n.copied;
@@ -399,7 +399,7 @@ const ModalModule = {
 			this.spinner.classList.add( 'is-active' );
 		}
 
-		const adminData = window.aibridgeAdmin || {};
+		const adminData = window.albertAdmin || {};
 		const i18n = adminData.i18n || { createError: 'Error creating client' };
 
 		try {

@@ -1,36 +1,36 @@
 <?php
 /**
- * List Pages Ability
+ * Find Pages Ability
  *
- * @package    AIBridge
+ * @package Albert
  * @subpackage Abilities\WordPress\Pages
  * @since      1.0.0
  */
 
-namespace AIBridge\Abilities\WordPress\Pages;
+namespace Albert\Abilities\WordPress\Pages;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_REST_Request;
 
 /**
- * List Pages Ability class
+ * Find Pages Ability class
  *
- * Allows AI assistants to list WordPress pages via the abilities API.
+ * Allows AI assistants to find and search WordPress pages via the abilities API.
  *
  * @since 1.0.0
  */
-class ListPages extends BaseAbility {
+class FindPages extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->id          = 'core/pages/list';
-		$this->label       = __( 'List Pages', 'ai-bridge' );
-		$this->description = __( 'Retrieve a list of WordPress pages with optional filtering and pagination.', 'ai-bridge' );
-		$this->category    = 'core';
+		$this->id          = 'albert/find-pages';
+		$this->label       = __( 'Find Pages', 'albert' );
+		$this->description = __( 'Find and search WordPress pages with optional filtering and pagination.', 'albert' );
+		$this->category    = 'albert';
 		$this->group       = 'pages';
 
 		$this->input_schema  = $this->get_input_schema();
@@ -244,7 +244,7 @@ class ListPages extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while retrieving pages.', 'ai-bridge' ),
+				$data['message'] ?? __( 'An error occurred while retrieving pages.', 'albert' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
