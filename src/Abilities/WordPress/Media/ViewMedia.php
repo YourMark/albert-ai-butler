@@ -30,7 +30,7 @@ class ViewMedia extends BaseAbility {
 		$this->id          = 'albert/view-media';
 		$this->label       = __( 'View Media', 'albert' );
 		$this->description = __( 'Retrieve a single media file by ID.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'content';
 		$this->group       = 'media';
 
 		$this->input_schema  = $this->get_input_schema();

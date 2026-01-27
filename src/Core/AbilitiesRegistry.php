@@ -246,4 +246,232 @@ class AbilitiesRegistry {
 
 		return $defaults;
 	}
+
+	/**
+	 * Get all abilities grouped by category.
+	 *
+	 * Calls the WP Abilities API to get all registered abilities and categories,
+	 * and groups abilities by their category slug.
+	 *
+	 * @return array<string, array<string, mixed>> Grouped abilities.
+	 * @since 1.1.0
+	 */
+	public static function get_abilities_grouped_by_category(): array {
+		if ( ! function_exists( 'wp_get_abilities' ) || ! function_exists( 'wp_get_ability_categories' ) ) {
+			return [];
+		}
+
+		$all_abilities  = wp_get_abilities();
+		$all_categories = wp_get_ability_categories();
+		$grouped        = [];
+
+		// Initialize groups for all categories.
+		foreach ( $all_categories as $slug => $category ) {
+			$grouped[ $slug ] = [
+				'category'  => $category,
+				'abilities' => [],
+			];
+		}
+
+		// Group abilities into their categories.
+		foreach ( $all_abilities as $ability ) {
+			$cat_slug = method_exists( $ability, 'get_category' )
+				? $ability->get_category()
+				: 'uncategorized';
+			if ( ! isset( $grouped[ $cat_slug ] ) ) {
+				$grouped[ $cat_slug ] = [
+					'category'  => [
+						'label'       => ucfirst( $cat_slug ),
+						'description' => '',
+					],
+					'abilities' => [],
+				];
+			}
+			$grouped[ $cat_slug ]['abilities'][] = $ability;
+		}
+
+		return $grouped;
+	}
+
+	/**
+	 * Get the predefined sort order for categories.
+	 *
+	 * @return array<string> Ordered category slugs.
+	 * @since 1.1.0
+	 */
+	public static function get_category_sort_order(): array {
+		return [
+			'site',
+			'user',
+			'content',
+			'taxonomy',
+			'comments',
+			'commerce',
+			'seo',
+			'fields',
+			'forms',
+			'lms',
+			'maintenance',
+		];
+	}
+
+	/**
+	 * Sort grouped categories by predefined order, then alphabetical for unknown.
+	 *
+	 * @param array<string, array<string, mixed>> $grouped Grouped abilities.
+	 *
+	 * @return array<string, array<string, mixed>> Sorted grouped abilities.
+	 * @since 1.1.0
+	 */
+	public static function sort_grouped_categories( array $grouped ): array {
+		$order  = self::get_category_sort_order();
+		$sorted = [];
+
+		// Add categories in predefined order.
+		foreach ( $order as $slug ) {
+			if ( isset( $grouped[ $slug ] ) ) {
+				$sorted[ $slug ] = $grouped[ $slug ];
+			}
+		}
+
+		// Add remaining categories alphabetically.
+		$remaining = array_diff_key( $grouped, $sorted );
+		ksort( $remaining );
+		foreach ( $remaining as $slug => $data ) {
+			$sorted[ $slug ] = $data;
+		}
+
+		return $sorted;
+	}
+
+	/**
+	 * Get the source information for an ability.
+	 *
+	 * @param string $ability_name Ability name/slug.
+	 *
+	 * @return array{label: string, type: string} Source info.
+	 * @since 1.1.0
+	 */
+	public static function get_ability_source( string $ability_name ): array {
+		// Core abilities (registered by WordPress itself).
+		if ( str_starts_with( $ability_name, 'core/' ) ) {
+			return [
+				'label' => 'CORE',
+				'type'  => 'core',
+			];
+		}
+
+		// Albert abilities.
+		if ( str_starts_with( $ability_name, 'albert/' ) ) {
+			if ( self::is_premium_ability( $ability_name ) ) {
+				return [
+					'label' => self::get_premium_extension_label( $ability_name ),
+					'type'  => 'premium',
+				];
+			}
+
+			return [
+				'label' => 'ALBERT',
+				'type'  => 'albert',
+			];
+		}
+
+		// Third-party abilities — use namespace as label.
+		$parts     = explode( '/', $ability_name, 2 );
+		$namespace = strtoupper( $parts[0] ?? 'UNKNOWN' );
+
+		return [
+			'label' => $namespace,
+			'type'  => 'third-party',
+		];
+	}
+
+	/**
+	 * Get the list of premium abilities.
+	 *
+	 * @return array<string, string> Map of ability slug to extension type.
+	 * @since 1.1.0
+	 */
+	public static function get_premium_abilities(): array {
+		$list = [
+			'albert/create-order'   => 'commerce',
+			'albert/update-order'   => 'commerce',
+			'albert/create-product' => 'commerce',
+			'albert/update-product' => 'commerce',
+			'albert/delete-product' => 'commerce',
+		];
+
+		/**
+		 * Filter the premium abilities list.
+		 *
+		 * @param array<string, string> $list Map of ability slug to extension type.
+		 *
+		 * @since 1.1.0
+		 */
+		return apply_filters( 'albert/premium_abilities', $list );
+	}
+
+	/**
+	 * Check if an ability is premium.
+	 *
+	 * @param string $ability_name Ability name/slug.
+	 *
+	 * @return bool
+	 * @since 1.1.0
+	 */
+	public static function is_premium_ability( string $ability_name ): bool {
+		$premium = self::get_premium_abilities();
+
+		return isset( $premium[ $ability_name ] );
+	}
+
+	/**
+	 * Get the premium extension label for an ability.
+	 *
+	 * @param string $ability_name Ability name/slug.
+	 *
+	 * @return string Extension label.
+	 * @since 1.1.0
+	 */
+	public static function get_premium_extension_label( string $ability_name ): string {
+		$premium = self::get_premium_abilities();
+
+		if ( ! isset( $premium[ $ability_name ] ) ) {
+			return 'PREMIUM';
+		}
+
+		$labels = [
+			'commerce' => 'E-COMMERCE',
+			'seo'      => 'SEO',
+			'forms'    => 'FORMS',
+			'fields'   => 'CUSTOM FIELDS',
+			'lms'      => 'LEARNING',
+		];
+
+		return $labels[ $premium[ $ability_name ] ] ?? 'PREMIUM';
+	}
+
+	/**
+	 * Get the default set of disabled abilities.
+	 *
+	 * On fresh install, Albert write abilities are disabled by default.
+	 * Everything else (read abilities, core, third-party) is enabled.
+	 *
+	 * @return array<string> Array of ability slugs that are disabled by default.
+	 * @since 1.1.0
+	 */
+	public static function get_default_disabled_abilities(): array {
+		$disabled = [];
+		$groups   = self::get_ability_groups();
+
+		foreach ( $groups as $group ) {
+			foreach ( $group['types'] as $type ) {
+				if ( isset( $type['write'] ) ) {
+					$disabled = array_merge( $disabled, $type['write']['abilities'] );
+				}
+			}
+		}
+
+		return array_unique( $disabled );
+	}
 }

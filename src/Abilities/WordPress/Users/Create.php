@@ -30,7 +30,7 @@ class Create extends BaseAbility {
 		$this->id          = 'albert/create-user';
 		$this->label       = __( 'Create User', 'albert' );
 		$this->description = __( 'Create a new WordPress user with specified username, email, and role.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'user';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();

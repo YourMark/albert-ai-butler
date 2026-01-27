@@ -31,7 +31,7 @@ class Create extends BaseAbility {
 		$this->id          = 'albert/create-post';
 		$this->label       = __( 'Create Post', 'albert' );
 		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'content';
 		$this->group       = 'posts';
 
 		$this->input_schema  = $this->get_input_schema();

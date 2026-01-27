@@ -1,33 +1,34 @@
 /**
- * Extended Abilities Admin Settings Scripts
+ * Albert Admin Settings Scripts
  *
- * @package ExtendedAbilities
+ * @package Albert
  * @since   1.0.0
  */
 
 /**
- * Toggle functionality for ability groups and subgroups.
+ * Toggle functionality for ability categories.
  */
 const ToggleModule = {
 	init() {
-		this.handleToggleAll();
+		this.handleCategoryToggleAll();
 		this.handleSubgroupToggleAll();
 		this.handleIndividualToggles();
 		this.initializeToggleStates();
 	},
 
-	handleToggleAll() {
-		document.querySelectorAll( '.toggle-all-abilities' ).forEach( ( toggle ) => {
+	handleCategoryToggleAll() {
+		document.querySelectorAll( '.toggle-category-abilities' ).forEach( ( toggle ) => {
 			toggle.addEventListener( 'change', ( e ) => {
-				const group = e.target.dataset.group;
+				const category = e.target.dataset.category;
 				const isChecked = e.target.checked;
 
-				document.querySelectorAll( `.ability-checkbox[data-group="${ group }"]` ).forEach( ( checkbox ) => {
+				document.querySelectorAll( `.ability-checkbox-category[data-category="${ category }"]` ).forEach( ( checkbox ) => {
 					checkbox.checked = isChecked;
 				} );
 
-				document.querySelectorAll( '.toggle-subgroup-abilities' ).forEach( ( subgroupToggle ) => {
-					this.updateSubgroupToggleState( subgroupToggle.dataset.subgroup );
+				// Sync subgroup toggles.
+				document.querySelectorAll( `.toggle-subgroup-abilities[data-category="${ category }"]` ).forEach( ( subToggle ) => {
+					subToggle.checked = isChecked;
 				} );
 			} );
 		} );
@@ -36,60 +37,56 @@ const ToggleModule = {
 	handleSubgroupToggleAll() {
 		document.querySelectorAll( '.toggle-subgroup-abilities' ).forEach( ( toggle ) => {
 			toggle.addEventListener( 'change', ( e ) => {
+				const category = e.target.dataset.category;
 				const subgroup = e.target.dataset.subgroup;
 				const isChecked = e.target.checked;
 
-				document.querySelectorAll( `.${ subgroup }` ).forEach( ( checkbox ) => {
+				document.querySelectorAll( `.ability-checkbox-category[data-category="${ category }"][data-subgroup="${ subgroup }"]` ).forEach( ( checkbox ) => {
 					checkbox.checked = isChecked;
 				} );
 
-				const firstCheckbox = document.querySelector( `.${ subgroup }` );
-				if ( firstCheckbox ) {
-					this.updateToggleAllState( firstCheckbox.dataset.group );
-				}
+				// Update the parent category toggle.
+				this.updateCategoryToggleState( category );
 			} );
 		} );
 	},
 
 	handleIndividualToggles() {
-		document.querySelectorAll( '.ability-checkbox' ).forEach( ( checkbox ) => {
+		document.querySelectorAll( '.ability-checkbox-category' ).forEach( ( checkbox ) => {
 			checkbox.addEventListener( 'change', ( e ) => {
-				const group = e.target.dataset.group;
-				this.updateToggleAllState( group );
+				const category = e.target.dataset.category;
+				const subgroup = e.target.dataset.subgroup;
 
-				if ( e.target.classList.contains( 'ability-checkbox-subgroup' ) ) {
-					const subgroupClass = this.getSubgroupClass( e.target );
-					if ( subgroupClass ) {
-						this.updateSubgroupToggleState( subgroupClass );
-					}
-				}
+				this.updateSubgroupToggleState( category, subgroup );
+				this.updateCategoryToggleState( category );
 			} );
 		} );
 	},
 
 	initializeToggleStates() {
-		const processedGroups = new Set();
+		const processedCategories = new Set();
+		const processedSubgroups = new Set();
 
-		document.querySelectorAll( '.toggle-all-abilities' ).forEach( ( toggle ) => {
-			const group = toggle.dataset.group;
-			if ( ! processedGroups.has( group ) ) {
-				processedGroups.add( group );
-				this.updateToggleAllState( group );
+		document.querySelectorAll( '.toggle-subgroup-abilities' ).forEach( ( toggle ) => {
+			const key = toggle.dataset.category + '-' + toggle.dataset.subgroup;
+			if ( ! processedSubgroups.has( key ) ) {
+				processedSubgroups.add( key );
+				this.updateSubgroupToggleState( toggle.dataset.category, toggle.dataset.subgroup );
 			}
 		} );
 
-		document.querySelectorAll( '.toggle-subgroup-abilities' ).forEach( ( toggle ) => {
-			this.updateSubgroupToggleState( toggle.dataset.subgroup );
+		document.querySelectorAll( '.toggle-category-abilities' ).forEach( ( toggle ) => {
+			const category = toggle.dataset.category;
+			if ( ! processedCategories.has( category ) ) {
+				processedCategories.add( category );
+				this.updateCategoryToggleState( category );
+			}
 		} );
 	},
 
-	getSubgroupClass( checkbox ) {
-		return Array.from( checkbox.classList ).find( ( cls ) => cls.startsWith( 'subgroup-' ) ) || null;
-	},
-
-	updateToggleAllState( group ) {
-		const checkboxes = document.querySelectorAll( `.ability-checkbox[data-group="${ group }"]` );
-		const toggleAll = document.querySelector( `.toggle-all-abilities[data-group="${ group }"]` );
+	updateCategoryToggleState( category ) {
+		const checkboxes = document.querySelectorAll( `.ability-checkbox-category[data-category="${ category }"]` );
+		const toggleAll = document.querySelector( `.toggle-category-abilities[data-category="${ category }"]` );
 
 		if ( checkboxes.length === 0 || ! toggleAll ) {
 			return;
@@ -99,9 +96,13 @@ const ToggleModule = {
 		toggleAll.checked = checkedCount === checkboxes.length;
 	},
 
-	updateSubgroupToggleState( subgroup ) {
-		const checkboxes = document.querySelectorAll( `.${ subgroup }` );
-		const toggleAll = document.querySelector( `.toggle-subgroup-abilities[data-subgroup="${ subgroup }"]` );
+	updateSubgroupToggleState( category, subgroup ) {
+		if ( ! subgroup ) {
+			return;
+		}
+
+		const checkboxes = document.querySelectorAll( `.ability-checkbox-category[data-category="${ category }"][data-subgroup="${ subgroup }"]` );
+		const toggleAll = document.querySelector( `.toggle-subgroup-abilities[data-category="${ category }"][data-subgroup="${ subgroup }"]` );
 
 		if ( checkboxes.length === 0 || ! toggleAll ) {
 			return;
@@ -113,13 +114,52 @@ const ToggleModule = {
 };
 
 /**
- * Collapse/Expand functionality for ability groups.
+ * Collapse/Expand functionality for ability groups with localStorage persistence.
  */
 const CollapseModule = {
+	storageKey: 'albert_collapsed_categories',
+
 	init() {
+		this.restoreCollapsedState();
 		this.handleGroupCollapse();
-		this.handleSubgroupCollapse();
 		this.handleExpandCollapseAll();
+	},
+
+	getCollapsedCategories() {
+		try {
+			const stored = localStorage.getItem( this.storageKey );
+			return stored ? JSON.parse( stored ) : [];
+		} catch {
+			return [];
+		}
+	},
+
+	saveCollapsedCategories( collapsed ) {
+		try {
+			localStorage.setItem( this.storageKey, JSON.stringify( collapsed ) );
+		} catch {
+			// Silently fail if localStorage is unavailable.
+		}
+	},
+
+	restoreCollapsedState() {
+		const collapsed = this.getCollapsedCategories();
+
+		collapsed.forEach( ( categoryId ) => {
+			const group = document.getElementById( categoryId );
+			if ( ! group ) {
+				return;
+			}
+
+			const button = group.querySelector( '.ability-group-collapse-toggle' );
+			const items = group.querySelector( '.ability-group-items' );
+
+			if ( button && items ) {
+				button.setAttribute( 'aria-expanded', 'false' );
+				items.classList.add( 'collapsed' );
+				group.classList.add( 'is-collapsed' );
+			}
+		} );
 	},
 
 	handleGroupCollapse() {
@@ -133,21 +173,21 @@ const CollapseModule = {
 				button.setAttribute( 'aria-expanded', String( ! isExpanded ) );
 				target.classList.toggle( 'collapsed' );
 				group.classList.toggle( 'is-collapsed' );
+
+				// Persist state.
+				this.persistCollapseState();
 			} );
 		} );
 	},
 
-	handleSubgroupCollapse() {
-		document.querySelectorAll( '.ability-subgroup-collapse-toggle' ).forEach( ( button ) => {
-			button.addEventListener( 'click', () => {
-				const targetId = button.getAttribute( 'aria-controls' );
-				const target = document.getElementById( targetId );
-				const isExpanded = button.getAttribute( 'aria-expanded' ) === 'true';
-
-				button.setAttribute( 'aria-expanded', String( ! isExpanded ) );
-				target.classList.toggle( 'collapsed' );
-			} );
+	persistCollapseState() {
+		const collapsed = [];
+		document.querySelectorAll( '.ability-group.is-collapsed' ).forEach( ( group ) => {
+			if ( group.id ) {
+				collapsed.push( group.id );
+			}
 		} );
+		this.saveCollapsedCategories( collapsed );
 	},
 
 	handleExpandCollapseAll() {
@@ -166,6 +206,7 @@ const CollapseModule = {
 						group.classList.remove( 'is-collapsed' );
 					}
 				} );
+				this.persistCollapseState();
 			} );
 		}
 
@@ -181,6 +222,7 @@ const CollapseModule = {
 						group.classList.add( 'is-collapsed' );
 					}
 				} );
+				this.persistCollapseState();
 			} );
 		}
 	},
@@ -198,8 +240,13 @@ const AbilityItemModule = {
 					return;
 				}
 
+				// Skip premium items.
+				if ( item.classList.contains( 'ability-item--premium' ) ) {
+					return;
+				}
+
 				// For clicks elsewhere (description, padding, etc.), toggle the checkbox.
-				const checkbox = item.querySelector( '.ability-checkbox' );
+				const checkbox = item.querySelector( '.ability-checkbox:not(:disabled)' );
 				if ( checkbox ) {
 					checkbox.checked = ! checkbox.checked;
 					checkbox.dispatchEvent( new Event( 'change', { bubbles: true } ) );

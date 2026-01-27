@@ -30,7 +30,7 @@ class ViewPost extends BaseAbility {
 		$this->id          = 'albert/view-post';
 		$this->label       = __( 'View Post', 'albert' );
 		$this->description = __( 'Retrieve a single WordPress post by ID.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'content';
 		$this->group       = 'posts';
 
 		$this->input_schema  = $this->get_input_schema();

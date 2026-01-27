@@ -31,7 +31,7 @@ class ViewUser extends BaseAbility {
 		$this->id          = 'albert/view-user';
 		$this->label       = __( 'View User', 'albert' );
 		$this->description = __( 'Retrieve a single WordPress user by ID.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'user';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();

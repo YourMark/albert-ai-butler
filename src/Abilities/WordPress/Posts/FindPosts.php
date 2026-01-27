@@ -30,7 +30,7 @@ class FindPosts extends BaseAbility {
 		$this->id          = 'albert/find-posts';
 		$this->label       = __( 'Find Posts', 'albert' );
 		$this->description = __( 'Find and search WordPress posts with optional filtering and pagination.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'content';
 		$this->group       = 'posts';
 
 		$this->input_schema  = $this->get_input_schema();

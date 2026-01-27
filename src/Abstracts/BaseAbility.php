@@ -9,7 +9,6 @@
 
 namespace Albert\Abstracts;
 
-use Albert\Admin\Abilities;
 use Albert\Contracts\Interfaces\Ability;
 use Albert\Core\AbilitiesRegistry;
 use WP_Error;
@@ -104,14 +103,14 @@ abstract class BaseAbility implements Ability {
 	/**
 	 * Register the ability with WordPress.
 	 *
-	 * This is called automatically if the ability is enabled.
+	 * Always registers so the ability appears in the admin UI.
+	 * The enabled check is performed at execution time, not registration time.
 	 *
 	 * @return void
 	 * @since 1.0.0
 	 */
 	public function register_ability(): void {
-		// Only register if function exists and ability is enabled.
-		if ( ! function_exists( 'wp_register_ability' ) || ! $this->enabled() ) {
+		if ( ! function_exists( 'wp_register_ability' ) ) {
 			return;
 		}
 
@@ -123,11 +122,39 @@ abstract class BaseAbility implements Ability {
 				'input_schema'        => $this->input_schema,
 				'output_schema'       => $this->output_schema,
 				'category'            => $this->category ?? 'albert',
-				'execute_callback'    => [ $this, 'execute' ],
+				'execute_callback'    => [ $this, 'guarded_execute' ],
 				'permission_callback' => [ $this, 'check_permission' ],
 				'meta'                => $this->meta,
 			]
 		);
+	}
+
+	/**
+	 * Execute the ability with an enabled check.
+	 *
+	 * Wraps the actual execute() call with a check against the blocklist.
+	 * This allows all abilities to be registered (visible in admin UI)
+	 * while preventing disabled abilities from being executed.
+	 *
+	 * @param array<string, mixed> $args Input parameters.
+	 *
+	 * @return array<string, mixed>|WP_Error The result or error if disabled.
+	 * @since 1.1.0
+	 */
+	public function guarded_execute( array $args ): array|WP_Error {
+		if ( ! $this->enabled() ) {
+			return new WP_Error(
+				'ability_disabled',
+				sprintf(
+					/* translators: %s: ability name */
+					__( 'The ability "%s" is currently disabled.', 'albert' ),
+					$this->label
+				),
+				[ 'status' => 403 ]
+			);
+		}
+
+		return $this->execute( $args );
 	}
 
 	/**
@@ -155,30 +182,23 @@ abstract class BaseAbility implements Ability {
 	}
 
 	/**
-	 * Check if ability is enabled.
-	 *
-	 * Checks the aibridge_options option to see if this ability is enabled.
-	 *
-	 * @return bool
-	 * @since 1.0.0
-	 */
-	/**
 	 * Check if this ability is enabled.
 	 *
-	 * Checks if the ability is enabled based on the permission groups system.
+	 * Uses a blocklist approach: all abilities are enabled unless explicitly disabled.
+	 * On fresh install (before first save), Albert write abilities are disabled by default.
 	 *
 	 * @return bool True if enabled, false otherwise.
 	 * @since 1.0.0
 	 */
 	public function enabled(): bool {
-		// Get enabled permissions (e.g., ['posts_read', 'posts_write']).
-		$enabled_permissions = Abilities::get_enabled_permissions();
+		$disabled = get_option( 'albert_disabled_abilities', [] );
 
-		// Convert permissions to individual ability slugs.
-		$enabled_abilities = AbilitiesRegistry::get_enabled_abilities( $enabled_permissions );
+		// On fresh install, use default disabled list (Albert write abilities).
+		if ( empty( $disabled ) && ! get_option( 'albert_abilities_saved' ) ) {
+			$disabled = AbilitiesRegistry::get_default_disabled_abilities();
+		}
 
-		// Check if this ability's ID is in the enabled list.
-		return in_array( $this->id, $enabled_abilities, true );
+		return ! in_array( $this->id, (array) $disabled, true );
 	}
 
 	/**

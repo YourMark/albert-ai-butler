@@ -30,7 +30,7 @@ class DeleteTerm extends BaseAbility {
 		$this->id          = 'albert/delete-term';
 		$this->label       = __( 'Delete Term', 'albert' );
 		$this->description = __( 'Delete a term from a taxonomy (category, tag, etc).', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'taxonomy';
 		$this->group       = 'terms';
 
 		$this->input_schema  = $this->get_input_schema();

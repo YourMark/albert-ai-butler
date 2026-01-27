@@ -31,7 +31,7 @@ class FindMedia extends BaseAbility {
 		$this->id          = 'albert/find-media';
 		$this->label       = __( 'Find Media', 'albert' );
 		$this->description = __( 'Find and search media files with optional filtering and pagination.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'content';
 		$this->group       = 'media';
 
 		$this->input_schema  = $this->get_input_schema();

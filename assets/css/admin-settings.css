@@ -356,6 +356,37 @@
 }
 
 
+/* Subgroups (read/write) within a category */
+.ability-subgroup + .ability-subgroup {
+	border-top: 1px solid var(--ea-border-light);
+}
+
+.ability-subgroup-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--ea-spacing-xs) var(--ea-spacing-md);
+	background: var(--ea-bg-light);
+}
+
+.ability-subgroup-label {
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--ea-text-secondary);
+}
+
+.ability-subgroup-toggle {
+	display: flex;
+	align-items: center;
+}
+
+.albert-toggle--small {
+	transform: scale(0.85);
+	transform-origin: center right;
+}
+
 /* Ability items - 2 column grid */
 .ability-item {
 	display: flex;
@@ -451,6 +482,95 @@
 
 .albert-toggle input:checked + .albert-toggle-slider:before {
 	transform: translateX(12px);
+}
+
+/* Category description in header */
+.ability-group-description {
+	font-size: 12px;
+	color: var(--ea-text-secondary);
+	margin: 2px 0 0 0;
+	line-height: 1.4;
+	font-weight: normal;
+}
+
+/* Ability item header with label and badge */
+.ability-item-header {
+	display: flex;
+	align-items: center;
+	gap: var(--ea-spacing-xs);
+	flex-wrap: wrap;
+}
+
+/* Source badges */
+.ea-source-badge {
+	display: inline-block;
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+	padding: 1px 6px;
+	border-radius: 3px;
+	line-height: 1.6;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+.ea-source-core {
+	background: #f0f0f1;
+	color: #50575e;
+	border: 1px solid #dcdcde;
+}
+
+.ea-source-albert {
+	background: rgba(34, 113, 177, 0.1);
+	color: #135e96;
+	border: 1px solid rgba(34, 113, 177, 0.2);
+}
+
+.ea-source-premium {
+	background: rgba(196, 146, 46, 0.1);
+	color: #8a6914;
+	border: 1px solid rgba(196, 146, 46, 0.2);
+}
+
+.ea-source-third-party {
+	background: rgba(0, 163, 42, 0.1);
+	color: #007017;
+	border: 1px solid rgba(0, 163, 42, 0.2);
+}
+
+/* Premium lock */
+.ea-premium-lock {
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+	color: #8a6914;
+	opacity: 0.7;
+}
+
+/* Premium ability row */
+.ability-item--premium {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.ability-item--premium:hover {
+	background: transparent;
+}
+
+/* Disabled toggle */
+.albert-toggle--disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.albert-toggle--disabled .albert-toggle-slider {
+	cursor: not-allowed;
+}
+
+/* Collapsed state */
+.ability-group.is-collapsed .ability-group-items {
+	display: none;
 }
 
 /* Mobile save button - hidden on desktop */

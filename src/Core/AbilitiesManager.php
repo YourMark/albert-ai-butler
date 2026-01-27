@@ -59,15 +59,49 @@ class AbilitiesManager implements Hookable {
 			return;
 		}
 
-		// Register albert category if it doesn't exist.
-		if ( ! wp_has_ability_category( 'albert' ) ) {
-			wp_register_ability_category(
-				'albert',
-				[
-					'label'       => __( 'Albert', 'albert' ),
-					'description' => __( 'Albert WordPress management abilities.', 'albert' ),
-				]
-			);
+		$categories = [
+			'content'     => [
+				'label'       => __( 'Content', 'albert' ),
+				'description' => __( 'Posts, pages, and media management.', 'albert' ),
+			],
+			'taxonomy'    => [
+				'label'       => __( 'Taxonomies', 'albert' ),
+				'description' => __( 'Categories, tags, and custom taxonomies.', 'albert' ),
+			],
+			'comments'    => [
+				'label'       => __( 'Comments', 'albert' ),
+				'description' => __( 'Comment management.', 'albert' ),
+			],
+			'commerce'    => [
+				'label'       => __( 'Commerce', 'albert' ),
+				'description' => __( 'Store and order management.', 'albert' ),
+			],
+			'seo'         => [
+				'label'       => __( 'SEO', 'albert' ),
+				'description' => __( 'Search engine optimization.', 'albert' ),
+			],
+			'fields'      => [
+				'label'       => __( 'Custom Fields', 'albert' ),
+				'description' => __( 'Custom field management.', 'albert' ),
+			],
+			'forms'       => [
+				'label'       => __( 'Forms', 'albert' ),
+				'description' => __( 'Form management.', 'albert' ),
+			],
+			'lms'         => [
+				'label'       => __( 'Learning', 'albert' ),
+				'description' => __( 'Learning management.', 'albert' ),
+			],
+			'maintenance' => [
+				'label'       => __( 'Maintenance', 'albert' ),
+				'description' => __( 'Site maintenance and monitoring.', 'albert' ),
+			],
+		];
+
+		foreach ( $categories as $slug => $args ) {
+			if ( ! wp_has_ability_category( $slug ) ) {
+				wp_register_ability_category( $slug, $args );
+			}
 		}
 	}
 
@@ -100,23 +134,6 @@ class AbilitiesManager implements Hookable {
 	}
 
 	/**
-	 * Get abilities by category.
-	 *
-	 * @param string $category Category to filter by.
-	 *
-	 * @return BaseAbility[]
-	 * @since 1.0.0
-	 */
-	private function get_abilities_by_category( string $category ): array {
-		return array_filter(
-			$this->abilities,
-			function ( BaseAbility $ability ) use ( $category ) {
-				return $ability->get_category() === $category;
-			}
-		);
-	}
-
-	/**
 	 * Add WordPress abilities to settings page.
 	 *
 	 * @param array<string, array<string, string>> $abilities Existing abilities.
@@ -125,9 +142,7 @@ class AbilitiesManager implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function add_wordpress_abilities_to_settings( array $abilities ): array {
-		$wordpress_abilities = $this->get_abilities_by_category( 'albert' );
-
-		foreach ( $wordpress_abilities as $ability ) {
+		foreach ( $this->abilities as $ability ) {
 			$abilities[ $ability->get_id() ] = $ability->get_settings_data();
 		}
 
