@@ -1,4 +1,4 @@
-# AI Bridge for WordPress - Development Plan
+# Albert - Development Plan
 
 **Status**: Active Development - Pre-Launch
 **Version**: 1.0.0-alpha
@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-AI Bridge for WordPress is a plugin that enables site owners to connect their WordPress installation to AI assistants (Claude Desktop, ChatGPT, etc.) via the Model Context Protocol (MCP). The plugin uses OAuth 2.0 for secure authentication and the WordPress Abilities API to expose WordPress operations as AI-callable tools.
+Albert is a plugin that enables site owners to connect their WordPress installation to AI assistants (Claude Desktop, ChatGPT, etc.) via the Model Context Protocol (MCP). The plugin uses OAuth 2.0 for secure authentication and the WordPress Abilities API to expose WordPress operations as AI-callable tools.
 
 ---
 
@@ -17,11 +17,11 @@ AI Bridge for WordPress is a plugin that enables site owners to connect their Wo
 ### ✅ Completed (Phase 1-3)
 
 #### **Core Infrastructure**
-- ✅ Complete rebranding from "Extended Abilities" to "AI Bridge for WordPress"
+- ✅ Complete rebranding from "Albert" to "Albert"
 - ✅ OAuth 2.0 server implementation (RFC 6749, RFC 7591, RFC 8414)
 - ✅ MCP server integration with WordPress Abilities API
 - ✅ Database schema: 4 OAuth tables (clients, access_tokens, refresh_tokens, auth_codes)
-- ✅ REST API endpoints: `/wp-json/ai-bridge/v1/*`
+- ✅ REST API endpoints: `/wp-json/albert/v1/*`
 - ✅ OAuth discovery: `/.well-known/oauth-authorization-server`
 
 #### **Admin Interface**
@@ -73,7 +73,7 @@ Prepare all assets, documentation, and verification for WordPress.org submission
 ### Tasks
 
 #### **Task #14: Verify Slug Availability** ✅ **COMPLETE**
-- ✅ Searched WordPress.org for "ai-bridge" slug
+- ✅ Searched WordPress.org for "albert" slug
 - ✅ No existing plugins with this name
 - ✅ No naming conflicts or similar names found
 - **Result**: Slug is **available** for use
@@ -81,7 +81,7 @@ Prepare all assets, documentation, and verification for WordPress.org submission
 #### **Task #15: Create Plugin Banner** 🎨 (Design Phase)
 - **Specs**: 1544x500px PNG/JPG
 - **Design**: Clean, modern, professional
-- **Content**: "AI Bridge for WordPress" + tagline
+- **Content**: "Albert" + tagline
 - **Method**: SVG design → convert to PNG
 - **Note**: Can be designed using SVG code
 
@@ -110,8 +110,8 @@ Prepare all assets, documentation, and verification for WordPress.org submission
 - Test activation/deactivation
 
 #### **Task #19: Setup Domain & Landing Page** 🌐 (Requires Purchase)
-- **Primary domain**: aibridgewp.com
-- **Redirects**: aibridge4wp.com, aibridgeforwp.com
+- **Primary domain**: albertwp.com
+- **Redirects**: albert4wp.com, albertforwp.com
 - **Content**:
   - Hero section
   - Feature highlights
@@ -167,7 +167,7 @@ Prepare all assets, documentation, and verification for WordPress.org submission
 ## Monetization Strategy
 
 ### Free Version (v1.0)
-**Plugin**: AI Bridge for WordPress (WordPress.org)
+**Plugin**: Albert (WordPress.org)
 - All 19 core abilities
 - OAuth 2.0 authentication
 - Unlimited AI connections
@@ -219,8 +219,8 @@ Prepare all assets, documentation, and verification for WordPress.org submission
 
 ### Plugin Structure
 ```
-ai-bridge/
-├── ai-bridge.php              # Bootstrap
+albert/
+├── albert.php              # Bootstrap
 ├── src/
 │   ├── Core/
 │   │   ├── Plugin.php         # Singleton, initialization
@@ -250,10 +250,10 @@ ai-bridge/
 ```
 
 ### Database Schema
-- `wp_aibridge_oauth_clients` - Registered OAuth clients
-- `wp_aibridge_oauth_access_tokens` - Active access tokens
-- `wp_aibridge_oauth_refresh_tokens` - Refresh tokens
-- `wp_aibridge_oauth_auth_codes` - Authorization codes
+- `wp_albert_oauth_clients` - Registered OAuth clients
+- `wp_albert_oauth_access_tokens` - Active access tokens
+- `wp_albert_oauth_refresh_tokens` - Refresh tokens
+- `wp_albert_oauth_auth_codes` - Authorization codes
 
 ---
 
@@ -310,8 +310,8 @@ ai-bridge/
 ## Support & Documentation
 
 ### Resources
-- **Website**: https://aibridgewp.com (planned)
-- **Documentation**: https://aibridgewp.com/docs (planned)
+- **Website**: https://albertwp.com (planned)
+- **Documentation**: https://albertwp.com/docs (planned)
 - **Support**: WordPress.org forums (free), priority email (premium)
 - **GitHub**: Issues and feature requests
 

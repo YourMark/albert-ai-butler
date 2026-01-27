@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Pre-commit hook for Extended Abilities plugin
+# Pre-commit hook for Albert plugin
 # Runs PHPCS and PHPStan before allowing commits
 #
 

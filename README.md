@@ -1,4 +1,4 @@
-# AI Bridge for WordPress
+# Albert
 
 ![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.2+-blue)
 ![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-6.9+-blue)
@@ -9,7 +9,7 @@
 
 ## Description
 
-AI Bridge for WordPress provides a powerful API that exposes WordPress functionality to AI assistants through the Model Context Protocol (MCP). This plugin acts as a secure bridge between your WordPress site and AI-powered tools like Claude, enabling them to interact with and control various aspects of your website through a standardized interface.
+Albert provides a powerful API that exposes WordPress functionality to AI assistants through the Model Context Protocol (MCP). This plugin acts as a secure bridge between your WordPress site and AI-powered tools like Claude, enabling them to interact with and control various aspects of your website through a standardized interface.
 
 Think of abilities as superpowers that you can grant to AI assistants - from managing content and products to handling complex workflows. The abilities API provides a standardized way for AI assistants to:
 
@@ -35,7 +35,7 @@ Think of abilities as superpowers that you can grant to AI assistants - from man
 ### Manual Installation
 
 1. Download the plugin files
-2. Upload the `ai-bridge` folder to `/wp-content/plugins/`
+2. Upload the `albert` folder to `/wp-content/plugins/`
 3. Activate the plugin through the 'Plugins' menu in WordPress
 
 ## Development
@@ -45,7 +45,7 @@ Think of abilities as superpowers that you can grant to AI assistants - from man
 1. Clone this repository
 2. Navigate to the plugin directory:
    ```bash
-   cd wp-content/plugins/ai-bridge
+   cd wp-content/plugins/albert
    ```
 3. Install dependencies:
    ```bash

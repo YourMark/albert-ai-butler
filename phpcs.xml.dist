@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<ruleset name="AI Bridge">
-	<description>PHPCS ruleset for AI Bridge plugin</description>
+<ruleset name="Albert">
+	<description>PHPCS ruleset for Albert plugin</description>
 
 	<!-- Check all PHP files in directory tree by default. -->
 	<arg name="extensions" value="php"/>
@@ -26,7 +26,7 @@
 		<!-- Allow WP_REST_Request<array<string, mixed>> PHPDoc syntax for PHPStan compatibility -->
 		<exclude name="Squiz.Commenting.FunctionComment.IncorrectTypeHint"/>
 
-		<!-- Allow namespaced hook names with forward slashes (extended_abilities/settings/...) -->
+		<!-- Allow namespaced hook names with forward slashes (albert/settings/...) -->
 		<exclude name="WordPress.NamingConventions.ValidHookName.UseUnderscores"/>
 	</rule>
 

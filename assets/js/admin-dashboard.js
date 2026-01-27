@@ -1,7 +1,7 @@
 /**
- * AI Bridge Dashboard Scripts
+ * Albert Dashboard Scripts
  *
- * @package AIBridge
+ * @package Albert
  * @since 1.0.0
  */
 

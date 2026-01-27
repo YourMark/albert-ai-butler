@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## About This Plugin
 
-AI Bridge for WordPress is a WordPress plugin that exposes WordPress functionality to AI assistants through the MCP (Model Context Protocol). It provides:
+Albert is a WordPress plugin that exposes WordPress functionality to AI assistants through the MCP (Model Context Protocol). It provides:
 
 - **Abilities API**: Register and expose WordPress operations as AI-callable tools
 - **OAuth 2.0 Server**: Full OAuth implementation for secure AI assistant authentication
@@ -21,15 +21,15 @@ AI Bridge for WordPress is a WordPress plugin that exposes WordPress functionali
 ## Directory Structure
 
 ```
-ai-bridge/
-├── ai-bridge.php                       # Main plugin bootstrap
+albert/
+├── albert.php                       # Main plugin bootstrap
 ├── composer.json                       # PSR-4 autoloading & dependencies
 ├── CLAUDE.md                           # This file
 ├── README.md                           # GitHub documentation
 ├── readme.txt                          # WordPress.org format
 ├── DEVELOPER_GUIDE.md                  # Developer documentation
 │
-├── src/                                # Source code (AIBridge\)
+├── src/                                # Source code (Albert\)
 │   ├── Abstracts/
 │   │   └── BaseAbility.php             # Base class for all abilities
 │   │
@@ -153,16 +153,16 @@ Abilities are WordPress operations exposed to AI assistants.
 
 **Creating a New Ability:**
 ```php
-namespace AIBridge\Abilities\WordPress\Example;
+namespace Albert\Abilities\WordPress\Example;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 
 class MyAbility extends BaseAbility {
     public function __construct() {
         $this->id          = 'core/example/my-ability';
-        $this->label       = __( 'My Ability', 'ai-bridge' );
-        $this->description = __( 'Description of what it does.', 'ai-bridge' );
+        $this->label       = __( 'My Ability', 'albert' );
+        $this->description = __( 'Description of what it does.', 'albert' );
         $this->category    = 'core';
         $this->group       = 'example';
 
@@ -206,16 +206,16 @@ Full OAuth 2.0 implementation using `league/oauth2-server`.
 **Endpoints:**
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /wp-json/ai-bridge/v1/oauth/authorize` | Authorization request |
-| `POST /wp-json/ai-bridge/v1/oauth/authorize` | User consent submission |
-| `POST /wp-json/ai-bridge/v1/oauth/token` | Token exchange |
-| `POST /wp-json/ai-bridge/v1/oauth/register` | Dynamic client registration |
+| `GET /wp-json/albert/v1/oauth/authorize` | Authorization request |
+| `POST /wp-json/albert/v1/oauth/authorize` | User consent submission |
+| `POST /wp-json/albert/v1/oauth/token` | Token exchange |
+| `POST /wp-json/albert/v1/oauth/register` | Dynamic client registration |
 | `GET /.well-known/oauth-authorization-server` | Server metadata (RFC 8414) |
-| `GET /wp-json/ai-bridge/v1/oauth/metadata` | Alternative metadata endpoint |
+| `GET /wp-json/albert/v1/oauth/metadata` | Alternative metadata endpoint |
 
 **Token Validation:**
 ```php
-use AIBridge\OAuth\Server\TokenValidator;
+use Albert\OAuth\Server\TokenValidator;
 
 // In a REST endpoint permission callback:
 $user = TokenValidator::validate_request( $request );
@@ -268,7 +268,7 @@ composer phpcbf
 composer test
 
 # Activate plugin
-wp plugin activate ai-bridge
+wp plugin activate albert
 ```
 
 ## Development Guidelines

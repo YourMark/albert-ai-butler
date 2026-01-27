@@ -108,7 +108,7 @@ class Server implements Hookable {
 			self::SERVER_ID,
 			self::ROUTE_NAMESPACE,
 			self::ROUTE,
-			__( 'AI Bridge MCP Server', 'albert' ),
+			__( 'Albert MCP Server', 'albert' ),
 			__( 'MCP server for AI assistants to interact with WordPress', 'albert' ),
 			ALBERT_VERSION,
 			[ HttpTransport::class ],

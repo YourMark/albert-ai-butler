@@ -174,7 +174,7 @@ class Dashboard implements Hookable {
 						<li><?php echo esc_html__( 'Start managing your site with AI!', 'albert' ); ?></li>
 					</ol>
 					<p>
-						<a href="https://aibridgewp.com/docs/setup" target="_blank" class="button button-secondary">
+						<a href="https://albertwp.com/docs/setup" target="_blank" class="button button-secondary">
 							<?php echo esc_html__( 'View Full Documentation', 'albert' ); ?>
 						</a>
 					</p>

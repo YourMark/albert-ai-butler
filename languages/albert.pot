@@ -2,8 +2,8 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Extended Abilities 0.0.1\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/extended-abilities\n"
+"Project-Id-Version: Albert 0.0.1\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/albert\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -12,34 +12,34 @@ msgstr ""
 "POT-Creation-Date: 2025-12-11T22:34:37+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.11.0\n"
-"X-Domain: extended-abilities\n"
+"X-Domain: albert\n"
 
 #. Plugin Name of the plugin
-#: extended-abilities.php
+#: albert.php
 #: src/Admin/Settings.php:67
 #: src/Admin/Settings.php:68
-msgid "Extended Abilities"
+msgid "Albert"
 msgstr ""
 
 #. Plugin URI of the plugin
 #. Author URI of the plugin
-#: extended-abilities.php
+#: albert.php
 msgid "https://yourmark.nl"
 msgstr ""
 
 #. Description of the plugin
-#: extended-abilities.php
-msgid "Extend the abilities of WordPress, WooCommerce and other plugins with the abilities API"
+#: albert.php
+msgid "Connect your WordPress site to AI assistants with secure OAuth 2.0 authentication and the Model Context Protocol (MCP)."
 msgstr ""
 
 #. Author of the plugin
-#: extended-abilities.php
+#: albert.php
 msgid "Mark Jansen - Your Mark Media"
 msgstr ""
 
 #. translators: %s: error message
-#: extended-abilities.php:59
-msgid "Extended Abilities Plugin Error: %s"
+#: albert.php:59
+msgid "Albert Plugin Error: %s"
 msgstr ""
 
 #: src/Abilities/WordPress/Media/SetFeaturedImage.php:31
@@ -435,7 +435,7 @@ msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
 #: src/Admin/Settings.php:219
-msgid "Extended Abilities Settings"
+msgid "Albert Settings"
 msgstr ""
 
 #: src/Admin/Settings.php:223

@@ -1,4 +1,4 @@
-=== AI Bridge for WordPress ===
+=== Albert ===
 Contributors: markjansen
 Tags: ai, mcp, oauth, claude, automation, api
 Requires at least: 6.9
@@ -12,7 +12,7 @@ Connect your WordPress site to AI assistants with secure OAuth 2.0 authenticatio
 
 == Description ==
 
-AI Bridge for WordPress is the secure bridge between your WordPress site and AI assistants like Claude. Using industry-standard OAuth 2.0 and the Model Context Protocol (MCP), AI Bridge enables AI assistants to safely interact with your WordPress content, users, and media.
+Albert is the secure bridge between your WordPress site and AI assistants like Claude. Using industry-standard OAuth 2.0 and the Model Context Protocol (MCP), Albert enables AI assistants to safely interact with your WordPress content, users, and media.
 
 = Key Features =
 
@@ -25,7 +25,7 @@ AI Bridge for WordPress is the secure bridge between your WordPress site and AI 
 
 = What is MCP? =
 
-The Model Context Protocol (MCP) is an open standard that enables AI assistants to securely connect to external data sources and tools. AI Bridge implements MCP to allow AI assistants like Claude to interact with your WordPress site in a standardized, secure way.
+The Model Context Protocol (MCP) is an open standard that enables AI assistants to securely connect to external data sources and tools. Albert implements MCP to allow AI assistants like Claude to interact with your WordPress site in a standardized, secure way.
 
 = Use Cases =
 
@@ -68,7 +68,7 @@ The Model Context Protocol (MCP) is an open standard that enables AI assistants 
 
 = Security =
 
-AI Bridge takes security seriously:
+Albert takes security seriously:
 
 * All API requests require OAuth 2.0 authentication
 * Per-user authorization with WordPress capability checks
@@ -79,7 +79,7 @@ AI Bridge takes security seriously:
 
 = For Developers =
 
-AI Bridge is built for extensibility:
+Albert is built for extensibility:
 
 * Clean, modern PHP architecture with full type safety
 * PSR-4 autoloading via Composer
@@ -88,55 +88,55 @@ AI Bridge is built for extensibility:
 * Easy to add custom abilities
 * Full internationalization support
 
-Learn more at [aibridgewp.com](https://aibridgewp.com)
+Learn more at [albertwp.com](https://albertwp.com)
 
 == Installation ==
 
 = From WordPress.org =
 
-1. Install AI Bridge for WordPress through the WordPress plugin directory
+1. Install Albert through the WordPress plugin directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Navigate to **AI Bridge** in your admin menu
+3. Navigate to **Albert** in your admin menu
 4. Configure your settings and connect your AI assistant
 
 = Manual Installation =
 
 1. Download the plugin files
-2. Upload the `ai-bridge` folder to `/wp-content/plugins/`
+2. Upload the `albert` folder to `/wp-content/plugins/`
 3. Activate the plugin through the 'Plugins' menu in WordPress
-4. Navigate to **AI Bridge** in your admin menu
+4. Navigate to **Albert** in your admin menu
 
 = Connecting Claude Desktop =
 
-1. In WordPress, go to **AI Bridge > Settings**
+1. In WordPress, go to **Albert > Settings**
 2. Note your site's OAuth endpoint URL
 3. In Claude Desktop, add an MCP server configuration pointing to your WordPress site
 4. Authorize Claude when prompted
 5. Claude can now interact with your WordPress site
 
-Full setup guide available at [aibridgewp.com/docs](https://aibridgewp.com/docs)
+Full setup guide available at [albertwp.com/docs](https://albertwp.com/docs)
 
 == Frequently Asked Questions ==
 
 = What AI assistants are supported? =
 
-AI Bridge works with any AI assistant that supports the Model Context Protocol (MCP), including Claude Desktop. As MCP adoption grows, more AI assistants will be supported.
+Albert works with any AI assistant that supports the Model Context Protocol (MCP), including Claude Desktop. As MCP adoption grows, more AI assistants will be supported.
 
 = Is my data secure? =
 
-Yes. AI Bridge uses OAuth 2.0, the same authentication standard used by Google, Facebook, and other major platforms. All operations require proper authentication and respect WordPress's built-in permission system.
+Yes. Albert uses OAuth 2.0, the same authentication standard used by Google, Facebook, and other major platforms. All operations require proper authentication and respect WordPress's built-in permission system.
 
 = Do I need WooCommerce? =
 
-No. AI Bridge works with WordPress core functionality. WooCommerce abilities will be available in a future extension.
+No. Albert works with WordPress core functionality. WooCommerce abilities will be available in a future extension.
 
 = Can I add custom abilities? =
 
-Yes! AI Bridge is designed for extensibility. Developers can easily add custom abilities to expose any WordPress functionality to AI assistants. See the documentation at [aibridgewp.com/docs](https://aibridgewp.com/docs)
+Yes! Albert is designed for extensibility. Developers can easily add custom abilities to expose any WordPress functionality to AI assistants. See the documentation at [albertwp.com/docs](https://albertwp.com/docs)
 
 = Does this work with multisite? =
 
-AI Bridge is primarily designed for single-site installations. Multisite support is on our roadmap.
+Albert is primarily designed for single-site installations. Multisite support is on our roadmap.
 
 = What are the system requirements? =
 
@@ -147,17 +147,17 @@ AI Bridge is primarily designed for single-site installations. Multisite support
 
 = Where can I get support? =
 
-* Documentation: [aibridgewp.com/docs](https://aibridgewp.com/docs)
-* Support Forum: [WordPress.org support forums](https://wordpress.org/support/plugin/ai-bridge/)
-* GitHub: [Report issues](https://github.com/yourmark/ai-bridge/issues)
+* Documentation: [albertwp.com/docs](https://albertwp.com/docs)
+* Support Forum: [WordPress.org support forums](https://wordpress.org/support/plugin/albert/)
+* GitHub: [Report issues](https://github.com/yourmark/albert/issues)
 
 = How can I contribute? =
 
-We welcome contributions! Visit our [GitHub repository](https://github.com/yourmark/ai-bridge) to report issues, submit pull requests, or contribute to documentation.
+We welcome contributions! Visit our [GitHub repository](https://github.com/yourmark/albert) to report issues, submit pull requests, or contribute to documentation.
 
 == Screenshots ==
 
-1. AI Bridge dashboard showing enabled abilities
+1. Albert dashboard showing enabled abilities
 2. OAuth authorization screen for AI assistants
 3. Settings page with external URL configuration
 4. Active OAuth sessions management
@@ -178,17 +178,17 @@ We welcome contributions! Visit our [GitHub repository](https://github.com/yourm
 == Upgrade Notice ==
 
 = 1.0.0 =
-Initial release of AI Bridge for WordPress. Connect your site to AI assistants securely using OAuth 2.0 and MCP.
+Initial release of Albert. Connect your site to AI assistants securely using OAuth 2.0 and MCP.
 
 == Privacy Policy ==
 
-AI Bridge for WordPress does not collect, store, or transmit any user data to external servers. All authentication tokens are stored locally in your WordPress database. When you authorize an AI assistant, that assistant will have access to perform actions on your WordPress site according to the permissions you grant.
+Albert does not collect, store, or transmit any user data to external servers. All authentication tokens are stored locally in your WordPress database. When you authorize an AI assistant, that assistant will have access to perform actions on your WordPress site according to the permissions you grant.
 
 == Credits ==
 
 Developed by Mark Jansen - Your Mark Media
 Website: https://yourmark.nl
-Plugin URL: https://aibridgewp.com
+Plugin URL: https://albertwp.com
 
 Built with:
 * league/oauth2-server for OAuth 2.0 implementation

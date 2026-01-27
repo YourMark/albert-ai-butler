@@ -118,11 +118,11 @@ class Plugin {
 			$abilities = new Abilities();
 			$abilities->register_hooks();
 
-			// Connections page (adds submenu under AI Bridge).
+			// Connections page (adds submenu under Albert).
 			$connections = new Connections();
 			$connections->register_hooks();
 
-			// Settings page (adds submenu under AI Bridge).
+			// Settings page (adds submenu under Albert).
 			$settings = new Settings();
 			$settings->register_hooks();
 		}

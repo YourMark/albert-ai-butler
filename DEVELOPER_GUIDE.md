@@ -1,4 +1,4 @@
-# Developer Guide - AI Bridge for WordPress
+# Developer Guide - Albert for WordPress
 
 ## Adding Custom Abilities
 
@@ -8,12 +8,12 @@ Add your custom ability directly to the abilities manager:
 
 ```php
 add_action( 'plugins_loaded', function() {
-    $manager = \AIBridge\Core\Plugin::get_instance()->get_abilities_manager();
+    $manager = \Albert\Core\Plugin::get_instance()->get_abilities_manager();
 
     if ( $manager ) {
         $manager->add_ability( new MyPlugin\Abilities\CustomAbility() );
     }
-}, 20 ); // Priority 20 to run after AI Bridge initializes
+}, 20 ); // Priority 20 to run after Albert initializes
 ```
 
 ### Creating a Custom Ability
@@ -24,7 +24,7 @@ Extend the `BaseAbility` class and implement the required methods:
 <?php
 namespace MyPlugin\Abilities;
 
-use AIBridge\Abstracts\BaseAbility;
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 
 class CustomAbility extends BaseAbility {

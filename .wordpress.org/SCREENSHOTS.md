@@ -14,20 +14,20 @@ This document tracks screenshots captured for the WordPress.org plugin submissio
 - **File**: screenshot-1.png (to be saved)
 - **Browser ID**: ss_2624041x0
 - **Size**: 1590x773px
-- **URL**: https://wc2025.test/wp-admin/admin.php?page=ai-bridge
+- **URL**: https://wc2025.test/wp-admin/admin.php?page=albert
 - **Shows**:
   - MCP endpoint URL with copy button
   - Quick setup guide (4 steps)
   - Status overview (OAuth Server, MCP Endpoint, Active Connections, Enabled Abilities)
   - Recent activity section (empty state)
   - Professional 2-column card layout
-  - WordPress admin sidebar showing AI Bridge menu
+  - WordPress admin sidebar showing Albert menu
 
 ### Screenshot 2: Abilities Page
 - **File**: screenshot-2.png (to be saved)
 - **Browser ID**: ss_6970ftezu
 - **Size**: 1590x773px
-- **URL**: https://wc2025.test/wp-admin/admin.php?page=ai-bridge-abilities
+- **URL**: https://wc2025.test/wp-admin/admin.php?page=albert-abilities
 - **Shows**:
   - 19 core abilities organized by category
   - Categories: Posts, Pages, Users, Media, Taxonomies, Terms
@@ -40,7 +40,7 @@ This document tracks screenshots captured for the WordPress.org plugin submissio
 - **File**: screenshot-3.png (to be saved)
 - **Browser ID**: ss_7082foi85
 - **Size**: 1590x773px
-- **URL**: https://wc2025.test/wp-admin/admin.php?page=ai-bridge-connections
+- **URL**: https://wc2025.test/wp-admin/admin.php?page=albert-connections
 - **Shows**:
   - Empty state with icon
   - "No Active Connections" message
@@ -52,7 +52,7 @@ This document tracks screenshots captured for the WordPress.org plugin submissio
 - **File**: screenshot-4.png (to be saved)
 - **Browser ID**: ss_8043paeje
 - **Size**: 1590x773px
-- **URL**: https://wc2025.test/wp-admin/admin.php?page=ai-bridge-settings
+- **URL**: https://wc2025.test/wp-admin/admin.php?page=albert-settings
 - **Shows**:
   - MCP Server section with Connection URL
   - Authentication section with Allowed Users
@@ -77,7 +77,7 @@ This document tracks screenshots captured for the WordPress.org plugin submissio
 
 ### Screenshot 7: Admin Menu (Optional)
 - **Status**: Can be extracted from existing screenshots
-- **Shows**: WordPress admin sidebar with AI Bridge menu expanded
+- **Shows**: WordPress admin sidebar with Albert menu expanded
 - **Content**: Top-level menu icon, submenu items (Dashboard, Abilities, Connections, Settings)
 
 ## How to Save Screenshots

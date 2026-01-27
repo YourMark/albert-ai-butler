@@ -44,9 +44,9 @@ class PluginTest extends TestCase {
 	 * @return void
 	 */
 	public function test_plugin_constants_are_defined(): void {
-		$this->assertTrue( defined( 'AIBRIDGE_VERSION' ) );
-		$this->assertTrue( defined( 'AIBRIDGE_PLUGIN_FILE' ) );
-		$this->assertTrue( defined( 'AIBRIDGE_PLUGIN_DIR' ) );
+		$this->assertTrue( defined( 'ALBERT_VERSION' ) );
+		$this->assertTrue( defined( 'ALBERT_PLUGIN_FILE' ) );
+		$this->assertTrue( defined( 'ALBERT_PLUGIN_DIR' ) );
 	}
 
 	/**
@@ -55,7 +55,7 @@ class PluginTest extends TestCase {
 	 * @return void
 	 */
 	public function test_plugin_version_is_valid(): void {
-		$version = AIBRIDGE_VERSION;
+		$version = ALBERT_VERSION;
 
 		$this->assertMatchesRegularExpression(
 			'/^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$/',

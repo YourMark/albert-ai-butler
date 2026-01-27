@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Install git hooks for the Extended Abilities plugin
+# Install git hooks for the Albert plugin
 #
 
 # Get the root directory of the git repository
