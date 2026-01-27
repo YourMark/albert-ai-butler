@@ -11,6 +11,7 @@ namespace Albert\Abilities\WordPress\Pages;
 
 use Alley\WP\Block_Converter\Block_Converter;
 use Albert\Abstracts\BaseAbility;
+use Albert\Core\Annotations;
 use WP_Error;
 use WP_REST_Request;
 
@@ -38,9 +39,10 @@ class Create extends BaseAbility {
 		$this->output_schema = $this->get_output_schema();
 
 		$this->meta = [
-			'mcp' => [
+			'mcp'         => [
 				'public' => true,
 			],
+			'annotations' => Annotations::create(),
 		];
 
 		parent::__construct();

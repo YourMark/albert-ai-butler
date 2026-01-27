@@ -10,6 +10,7 @@
 namespace Albert\Abilities\WordPress\Taxonomies;
 
 use Albert\Abstracts\BaseAbility;
+use Albert\Core\Annotations;
 use WP_Error;
 use WP_REST_Request;
 
@@ -37,9 +38,10 @@ class FindTerms extends BaseAbility {
 		$this->output_schema = $this->get_output_schema();
 
 		$this->meta = [
-			'mcp' => [
+			'mcp'         => [
 				'public' => true,
 			],
+			'annotations' => Annotations::read(),
 		];
 
 		parent::__construct();

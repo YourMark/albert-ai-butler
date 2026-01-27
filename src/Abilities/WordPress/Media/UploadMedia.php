@@ -10,6 +10,7 @@
 namespace Albert\Abilities\WordPress\Media;
 
 use Albert\Abstracts\BaseAbility;
+use Albert\Core\Annotations;
 use WP_Error;
 
 /**
@@ -38,9 +39,10 @@ class UploadMedia extends BaseAbility {
 		$this->output_schema = $this->get_output_schema();
 
 		$this->meta = [
-			'mcp' => [
+			'mcp'         => [
 				'public' => true,
 			],
+			'annotations' => Annotations::create(),
 		];
 
 		parent::__construct();
