@@ -66,14 +66,6 @@ class Plugin {
 	private static ?Plugin $instance = null;
 
 	/**
-	 * Array of registered hookable components.
-	 *
-	 * @since 1.0.0
-	 * @var Hookable[]
-	 */
-	private array $components = [];
-
-	/**
 	 * The abilities manager instance.
 	 *
 	 * @since 1.0.0
