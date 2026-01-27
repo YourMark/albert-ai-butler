@@ -1,6 +1,6 @@
-=== Albert ===
+=== Albert - Your AI Butler for WP ===
 Contributors: markjansen
-Tags: ai, mcp, oauth, claude, automation, api
+Tags: ai, mcp, oauth, claude, automation
 Requires at least: 6.9
 Tested up to: 6.9
 Requires PHP: 8.2

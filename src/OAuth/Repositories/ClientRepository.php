@@ -35,15 +35,15 @@ class ClientRepository implements ClientRepositoryInterface {
 
 		$tables = Installer::get_table_names();
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT * FROM {$tables['clients']} WHERE client_id = %s",
+				'SELECT * FROM %i WHERE client_id = %s',
+				$tables['clients'],
 				$client_identifier
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( ! $row ) {
 			return null;
@@ -185,22 +185,21 @@ class ClientRepository implements ClientRepositoryInterface {
 		$tables = Installer::get_table_names();
 
 		if ( $user_id === null ) {
-			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$rows = $wpdb->get_results(
-				"SELECT * FROM {$tables['clients']} ORDER BY created_at DESC",
+				$wpdb->prepare( 'SELECT * FROM %i ORDER BY created_at DESC', $tables['clients'] ),
 				ARRAY_A
 			);
-			// phpcs:enable
 		} else {
-			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$rows = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT * FROM {$tables['clients']} WHERE user_id = %d ORDER BY created_at DESC",
+					'SELECT * FROM %i WHERE user_id = %d ORDER BY created_at DESC',
+					$tables['clients'],
 					$user_id
 				),
 				ARRAY_A
 			);
-			// phpcs:enable
 		}
 
 		if ( ! $rows ) {

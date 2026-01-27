@@ -102,14 +102,14 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface {
 
 		$tables = Installer::get_table_names();
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$revoked = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT revoked FROM {$tables['auth_codes']} WHERE code_id = %s",
+				'SELECT revoked FROM %i WHERE code_id = %s',
+				$tables['auth_codes'],
 				$code_id
 			)
 		);
-		// phpcs:enable
 
 		// If code not found, consider it revoked.
 		if ( $revoked === null ) {
@@ -130,14 +130,14 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface {
 
 		$tables = Installer::get_table_names();
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$result = $wpdb->query(
 			$wpdb->prepare(
-				"DELETE FROM {$tables['auth_codes']} WHERE expires_at < %s",
+				'DELETE FROM %i WHERE expires_at < %s',
+				$tables['auth_codes'],
 				current_time( 'mysql' )
 			)
 		);
-		// phpcs:enable
 
 		return (int) $result;
 	}

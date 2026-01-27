@@ -10,6 +10,7 @@
 namespace Albert\Admin;
 
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\OAuth\Database\Installer;
 
 /**
  * Dashboard class
@@ -250,13 +251,14 @@ class Dashboard implements Hookable {
 	 */
 	private function get_active_connections_count(): int {
 		global $wpdb;
-		$table_name = $wpdb->prefix . 'albert_oauth_access_tokens';
+		$tables = Installer::get_table_names();
 
 		// Count non-expired tokens.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$count = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(DISTINCT client_id) FROM {$table_name} WHERE expires_at > %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'SELECT COUNT(DISTINCT client_id) FROM %i WHERE expires_at > %s',
+				$tables['access_tokens'],
 				gmdate( 'Y-m-d H:i:s' )
 			)
 		);
@@ -296,22 +298,22 @@ class Dashboard implements Hookable {
 	 */
 	private function get_recent_activity(): array {
 		global $wpdb;
-		$access_tokens_table = $wpdb->prefix . 'albert_oauth_access_tokens';
-		$clients_table       = $wpdb->prefix . 'albert_oauth_clients';
+		$tables = Installer::get_table_names();
 
 		// Get most recent token creations.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$results = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT t.client_id, t.user_id, t.created_at, c.name
-				FROM {$access_tokens_table} t
-				LEFT JOIN {$clients_table} c ON t.client_id = c.client_id
+				'SELECT t.client_id, t.user_id, t.created_at, c.name
+				FROM %i t
+				LEFT JOIN %i c ON t.client_id = c.client_id
 				ORDER BY t.created_at DESC
-				LIMIT %d",
+				LIMIT %d',
+				$tables['access_tokens'],
+				$tables['clients'],
 				5
 			)
 		);
-		// phpcs:enable
 
 		$activity = [];
 		foreach ( $results as $result ) {

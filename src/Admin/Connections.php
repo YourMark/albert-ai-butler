@@ -12,6 +12,7 @@
 namespace Albert\Admin;
 
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\OAuth\Database\Installer;
 
 /**
  * Connections class
@@ -195,26 +196,28 @@ class Connections implements Hookable {
 
 		global $wpdb;
 
-		$tokens_table  = $wpdb->prefix . 'albert_oauth_access_tokens';
-		$clients_table = $wpdb->prefix . 'albert_oauth_clients';
+		$tables = Installer::get_table_names();
 
 		// Get all active connections (all users) grouped by client.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$sessions = $wpdb->get_results(
-			"SELECT
-				t.id,
-				t.client_id,
-				t.user_id,
-				t.token_id,
-				t.created_at,
-				t.expires_at,
-				COALESCE(c.name, 'Unknown Client') as client_name
-			FROM {$tokens_table} t
-			LEFT JOIN {$clients_table} c ON t.client_id = c.client_id
-			WHERE t.revoked = 0 AND t.expires_at > NOW()
-			ORDER BY t.created_at DESC"
+			$wpdb->prepare(
+				"SELECT
+					t.id,
+					t.client_id,
+					t.user_id,
+					t.token_id,
+					t.created_at,
+					t.expires_at,
+					COALESCE(c.name, 'Unknown Client') as client_name
+				FROM %i t
+				LEFT JOIN %i c ON t.client_id = c.client_id
+				WHERE t.revoked = 0 AND t.expires_at > NOW()
+				ORDER BY t.created_at DESC",
+				$tables['access_tokens'],
+				$tables['clients']
+			)
 		);
-		// phpcs:enable
 
 		?>
 		<div class="wrap albert-settings">

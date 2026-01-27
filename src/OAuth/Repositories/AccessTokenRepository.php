@@ -122,14 +122,14 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 
 		$tables = Installer::get_table_names();
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$revoked = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT revoked FROM {$tables['access_tokens']} WHERE token_id = %s",
+				'SELECT revoked FROM %i WHERE token_id = %s',
+				$tables['access_tokens'],
 				$token_id
 			)
 		);
-		// phpcs:enable
 
 		// If token not found, consider it revoked.
 		if ( $revoked === null ) {
@@ -152,22 +152,23 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 
 		$tables = Installer::get_table_names();
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		if ( $user_id === null ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$rows = $wpdb->get_results(
-				"SELECT * FROM {$tables['access_tokens']} ORDER BY created_at DESC",
+				$wpdb->prepare( 'SELECT * FROM %i ORDER BY created_at DESC', $tables['access_tokens'] ),
 				ARRAY_A
 			);
 		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$rows = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT * FROM {$tables['access_tokens']} WHERE user_id = %d ORDER BY created_at DESC",
+					'SELECT * FROM %i WHERE user_id = %d ORDER BY created_at DESC',
+					$tables['access_tokens'],
 					$user_id
 				),
 				ARRAY_A
 			);
 		}
-		// phpcs:enable
 
 		return $rows ? $rows : [];
 	}
@@ -206,14 +207,14 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 
 		$tables = Installer::get_table_names();
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$result = $wpdb->query(
 			$wpdb->prepare(
-				"DELETE FROM {$tables['access_tokens']} WHERE expires_at < %s",
+				'DELETE FROM %i WHERE expires_at < %s',
+				$tables['access_tokens'],
 				current_time( 'mysql' )
 			)
 		);
-		// phpcs:enable
 
 		return (int) $result;
 	}

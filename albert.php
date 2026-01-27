@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Albert - Your AI Butler for WordPress
+ * Plugin Name: Albert - Your AI Butler for WP
  * Plugin URI: https://albertwp.com
  * Description: Your AI butler for WordPress - streamline content management, automate tasks, and connect AI assistants with secure OAuth 2.0 and MCP integration.
  * Version: 1.0.0
@@ -43,7 +43,7 @@ require_once ALBERT_PLUGIN_DIR . 'vendor/autoload.php';
  * @return void
  * @since 1.0.0
  */
-function init_albert(): void {
+function albert_init(): void {
 	try {
 		$plugin = Plugin::get_instance();
 		$plugin->init();
@@ -74,7 +74,7 @@ function init_albert(): void {
 }
 
 // Initialize the plugin.
-add_action( 'plugins_loaded', 'init_albert' );
+add_action( 'plugins_loaded', 'albert_init' );
 
 /**
  * Plugin activation hook.
@@ -82,11 +82,11 @@ add_action( 'plugins_loaded', 'init_albert' );
  * @return void
  * @since 1.0.0
  */
-function activate_albert(): void {
+function albert_activate(): void {
 	Plugin::activate();
 }
 
-register_activation_hook( __FILE__, 'activate_albert' );
+register_activation_hook( __FILE__, 'albert_activate' );
 
 /**
  * Plugin deactivation hook.
@@ -94,11 +94,11 @@ register_activation_hook( __FILE__, 'activate_albert' );
  * @return void
  * @since 1.0.0
  */
-function deactivate_albert(): void {
+function albert_deactivate(): void {
 	Plugin::deactivate();
 }
 
-register_deactivation_hook( __FILE__, 'deactivate_albert' );
+register_deactivation_hook( __FILE__, 'albert_deactivate' );
 
 /**
  * Add settings link to plugin action links.

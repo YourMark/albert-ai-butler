@@ -11,6 +11,7 @@ namespace Albert\Admin;
 
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\MCP\Server as McpServer;
+use Albert\OAuth\Database\Installer;
 
 /**
  * Settings class
@@ -353,13 +354,14 @@ class Settings implements Hookable {
 	 */
 	private function get_user_session_count( int $user_id ): int {
 		global $wpdb;
-		$table = $wpdb->prefix . 'albert_oauth_access_tokens';
+		$tables = Installer::get_table_names();
 
 		// Count distinct clients with non-revoked tokens (sessions persist via refresh tokens).
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(DISTINCT client_id) FROM {$table} WHERE user_id = %d AND revoked = 0", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'SELECT COUNT(DISTINCT client_id) FROM %i WHERE user_id = %d AND revoked = 0',
+				$tables['access_tokens'],
 				$user_id
 			)
 		);
@@ -383,11 +385,10 @@ class Settings implements Hookable {
 			return;
 		}
 
-		$tokens_table  = $wpdb->prefix . 'albert_oauth_access_tokens';
-		$clients_table = $wpdb->prefix . 'albert_oauth_clients';
+		$tables = Installer::get_table_names();
 
 		// Get active sessions grouped by client, with first connection time.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$sessions = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT
@@ -396,15 +397,16 @@ class Settings implements Hookable {
 					MAX(t.token_id) as token_id,
 					COALESCE(c.name, 'Unknown') as client_name,
 					MIN(t.created_at) as first_connected
-				FROM {$tokens_table} t
-				LEFT JOIN {$clients_table} c ON t.client_id = c.client_id
+				FROM %i t
+				LEFT JOIN %i c ON t.client_id = c.client_id
 				WHERE t.user_id = %d AND t.revoked = 0
 				GROUP BY t.client_id
 				ORDER BY first_connected DESC",
+				$tables['access_tokens'],
+				$tables['clients'],
 				$user_id
 			)
 		);
-		// phpcs:enable
 
 		$back_url = add_query_arg(
 			[ 'page' => $this->page_slug ],
@@ -782,14 +784,14 @@ class Settings implements Hookable {
 	public static function revoke_user_tokens( int $user_id ): void {
 		global $wpdb;
 
-		$access_tokens_table  = $wpdb->prefix . 'albert_oauth_access_tokens';
-		$refresh_tokens_table = $wpdb->prefix . 'albert_oauth_refresh_tokens';
+		$tables = Installer::get_table_names();
 
 		// Get all access token IDs for this user.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$token_ids = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT token_id FROM {$access_tokens_table} WHERE user_id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'SELECT token_id FROM %i WHERE user_id = %d',
+				$tables['access_tokens'],
 				$user_id
 			)
 		);
@@ -797,7 +799,7 @@ class Settings implements Hookable {
 		// Revoke access tokens.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
-			$access_tokens_table,
+			$tables['access_tokens'],
 			[ 'revoked' => 1 ],
 			[ 'user_id' => $user_id ],
 			[ '%d' ],
@@ -807,13 +809,15 @@ class Settings implements Hookable {
 		// Revoke associated refresh tokens.
 		if ( ! empty( $token_ids ) ) {
 			$placeholders = implode( ', ', array_fill( 0, count( $token_ids ), '%s' ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 			$wpdb->query(
 				$wpdb->prepare(
-					"UPDATE {$refresh_tokens_table} SET revoked = 1 WHERE access_token_id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+					"UPDATE %i SET revoked = 1 WHERE access_token_id IN ({$placeholders})",
+					$tables['refresh_tokens'],
 					...$token_ids
 				)
 			);
+			// phpcs:enable
 		}
 	}
 
