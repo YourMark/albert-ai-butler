@@ -30,7 +30,7 @@ class Delete extends BaseAbility {
 		$this->id          = 'albert/delete-user';
 		$this->label       = __( 'Delete User', 'albert' );
 		$this->description = __( 'Delete a WordPress user and optionally reassign their content.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'user';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();

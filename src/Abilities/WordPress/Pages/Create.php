@@ -31,7 +31,7 @@ class Create extends BaseAbility {
 		$this->id          = 'albert/create-page';
 		$this->label       = __( 'Create Page', 'albert' );
 		$this->description = __( 'Create a new WordPress page with specified title and content.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'content';
 		$this->group       = 'pages';
 
 		$this->input_schema  = $this->get_input_schema();

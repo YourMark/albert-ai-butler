@@ -31,7 +31,7 @@ class UploadMedia extends BaseAbility {
 		$this->id          = 'albert/upload-media';
 		$this->label       = __( 'Upload Media', 'albert' );
 		$this->description = __( 'Upload media to WordPress by sideloading from a URL.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'content';
 		$this->group       = 'media';
 
 		$this->input_schema  = $this->get_input_schema();

@@ -30,7 +30,7 @@ class Delete extends BaseAbility {
 		$this->id          = 'albert/delete-page';
 		$this->label       = __( 'Delete Page', 'albert' );
 		$this->description = __( 'Delete a WordPress page permanently or move it to trash.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'content';
 		$this->group       = 'pages';
 
 		$this->input_schema  = $this->get_input_schema();

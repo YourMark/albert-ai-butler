@@ -30,7 +30,7 @@ class ViewPage extends BaseAbility {
 		$this->id          = 'albert/view-page';
 		$this->label       = __( 'View Page', 'albert' );
 		$this->description = __( 'Retrieve a single WordPress page by ID.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'content';
 		$this->group       = 'pages';
 
 		$this->input_schema  = $this->get_input_schema();

@@ -30,7 +30,7 @@ class FindTaxonomies extends BaseAbility {
 		$this->id          = 'albert/find-taxonomies';
 		$this->label       = __( 'Find Taxonomies', 'albert' );
 		$this->description = __( 'Find all registered taxonomies (categories, tags, custom taxonomies).', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'taxonomy';
 		$this->group       = 'taxonomies';
 
 		$this->input_schema  = $this->get_input_schema();

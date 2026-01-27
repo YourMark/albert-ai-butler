@@ -30,7 +30,7 @@ class CreateTerm extends BaseAbility {
 		$this->id          = 'albert/create-term';
 		$this->label       = __( 'Create Term', 'albert' );
 		$this->description = __( 'Create a new term in a taxonomy (category, tag, etc).', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'taxonomy';
 		$this->group       = 'terms';
 
 		$this->input_schema  = $this->get_input_schema();

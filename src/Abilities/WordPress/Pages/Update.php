@@ -31,7 +31,7 @@ class Update extends BaseAbility {
 		$this->id          = 'albert/update-page';
 		$this->label       = __( 'Update Page', 'albert' );
 		$this->description = __( 'Update an existing WordPress page with new title and content.', 'albert' );
-		$this->category    = 'albert';
+		$this->category    = 'content';
 		$this->group       = 'pages';
 
 		$this->input_schema  = $this->get_input_schema();
