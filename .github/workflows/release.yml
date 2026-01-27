@@ -41,26 +41,26 @@ jobs:
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-progress
 
       - name: Create plugin directory
-        run: mkdir -p build/ai-bridge
+        run: mkdir -p build/albert
 
       - name: Copy plugin files
         run: |
           # Core plugin files
-          cp ai-bridge.php build/ai-bridge/
-          cp readme.txt build/ai-bridge/
-          cp LICENSE build/ai-bridge/
+          cp albert.php build/albert/
+          cp readme.txt build/albert/
+          cp LICENSE build/albert/
 
           # Directories
-          cp -r src build/ai-bridge/
-          cp -r vendor build/ai-bridge/
+          cp -r src build/albert/
+          cp -r vendor build/albert/
 
           # Optional directories (copy if they exist)
-          [ -d "assets" ] && cp -r assets build/ai-bridge/ || true
-          [ -d "languages" ] && cp -r languages build/ai-bridge/ || true
+          [ -d "assets" ] && cp -r assets build/albert/ || true
+          [ -d "languages" ] && cp -r languages build/albert/ || true
 
       - name: Create zip file
         working-directory: build
-        run: zip -r ai-bridge-${{ steps.version.outputs.version }}.zip ai-bridge
+        run: zip -r albert-${{ steps.version.outputs.version }}.zip albert
 
       - name: Generate changelog
         id: changelog
@@ -83,7 +83,7 @@ jobs:
           name: ${{ steps.prerelease.outputs.is_prerelease == 'true' && format('Pre-release {0}', steps.version.outputs.version) || format('Release {0}', steps.version.outputs.version) }}
           body_path: changelog.txt
           prerelease: ${{ steps.prerelease.outputs.is_prerelease }}
-          files: build/ai-bridge-${{ steps.version.outputs.version }}.zip
+          files: build/albert-${{ steps.version.outputs.version }}.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
