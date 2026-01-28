@@ -835,6 +835,88 @@
 	cursor: pointer;
 }
 
+/* Content type rows - simplified abilities UI */
+.ability-type-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--albert-spacing-sm) var(--albert-spacing-md);
+	border-radius: var(--albert-border-radius);
+	transition: background-color var(--albert-transition);
+}
+
+.ability-type-row:hover {
+	background: var(--albert-bg-light);
+}
+
+.ability-type-row + .ability-type-row {
+	border-top: 1px solid var(--albert-border-light);
+}
+
+.ability-type-label {
+	font-size: var(--albert-font-md);
+	font-weight: 500;
+	color: var(--albert-text-primary);
+}
+
+.ability-type-toggles {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-spacing-xl);
+}
+
+.ability-type-toggle {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-spacing-xs);
+}
+
+.ability-type-toggle-label {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: var(--albert-font-sm);
+	color: var(--albert-text-secondary);
+	cursor: pointer;
+	user-select: none;
+}
+
+.ability-type-toggle-label .dashicons {
+	font-size: var(--albert-font-md);
+	width: 14px;
+	height: 14px;
+}
+
+/* Read toggle styling */
+.ability-type-toggle:has([data-mode="read"]) .ability-type-toggle-label {
+	color: var(--albert-primary);
+}
+
+/* Write toggle styling */
+.ability-type-toggle:has([data-mode="write"]) .ability-type-toggle-label {
+	color: var(--albert-warning);
+}
+
+/* Premium lock in type row */
+.ability-type-toggle .albert-premium-lock {
+	margin-left: 2px;
+}
+
+/* Responsive: Stack toggles on smaller screens */
+@media screen and (max-width: 600px) {
+	.ability-type-row {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--albert-spacing-sm);
+	}
+
+	.ability-type-toggles {
+		width: 100%;
+		justify-content: flex-start;
+		gap: var(--albert-spacing-lg);
+	}
+}
+
 /* Settings page grid */
 .albert-settings-grid {
 	display: grid;

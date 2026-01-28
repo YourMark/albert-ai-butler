@@ -50,16 +50,63 @@ const DirtyStateModule = {
 };
 
 /**
- * Toggle functionality for ability categories.
+ * Toggle functionality for ability categories (simplified UI with grouped toggles).
  */
 const ToggleModule = {
 	init() {
+		this.handleGroupCheckboxes();
 		this.handleCategoryToggleAll();
-		this.handleSubgroupToggleAll();
-		this.handleIndividualToggles();
-		this.initializeToggleStates();
+		this.syncEnabledInputsOnLoad();
 	},
 
+	/**
+	 * Handle group checkbox changes (Read/Write toggles per content type).
+	 * Each group checkbox controls multiple abilities via data-abilities attribute.
+	 */
+	handleGroupCheckboxes() {
+		document.querySelectorAll( '.ability-group-checkbox' ).forEach( ( checkbox ) => {
+			checkbox.addEventListener( 'change', ( e ) => {
+				const abilities = JSON.parse( e.target.dataset.abilities || '[]' );
+				const isChecked = e.target.checked;
+				const category = e.target.dataset.category;
+
+				this.syncAbilitiesForGroup( checkbox, abilities, isChecked );
+				this.updateCategoryToggleState( category );
+			} );
+		} );
+	},
+
+	/**
+	 * Sync hidden inputs for abilities when a group is toggled.
+	 */
+	syncAbilitiesForGroup( checkbox, abilities, isChecked ) {
+		const form = document.getElementById( 'albert-form' );
+		if ( ! form ) {
+			return;
+		}
+
+		abilities.forEach( ( abilityName ) => {
+			// Find or create the hidden input for this ability.
+			let input = form.querySelector( `input[name="albert_enabled_on_page[]"][value="${ abilityName }"]` );
+
+			if ( isChecked && ! input ) {
+				// Create hidden input for enabled ability.
+				input = document.createElement( 'input' );
+				input.type = 'hidden';
+				input.name = 'albert_enabled_on_page[]';
+				input.value = abilityName;
+				input.dataset.groupCheckbox = checkbox.id;
+				form.appendChild( input );
+			} else if ( ! isChecked && input ) {
+				// Remove hidden input for disabled ability.
+				input.remove();
+			}
+		} );
+	},
+
+	/**
+	 * Handle category "Enable All" toggle.
+	 */
 	handleCategoryToggleAll() {
 		document.querySelectorAll( '.toggle-category-abilities' ).forEach( ( toggle ) => {
 			toggle.addEventListener( 'change', ( e ) => {
@@ -69,14 +116,13 @@ const ToggleModule = {
 				// If enabling, check for unchecked write abilities and confirm.
 				if ( isChecked ) {
 					const writeCheckboxes = document.querySelectorAll(
-						`.ability-checkbox-category[data-category="${ category }"][data-subgroup="write"]`
+						`.ability-group-checkbox[data-category="${ category }"][data-mode="write"]:not(:checked)`
 					);
-					const uncheckedWrites = Array.from( writeCheckboxes ).filter( ( cb ) => ! cb.checked );
 
-					if ( uncheckedWrites.length > 0 ) {
+					if ( writeCheckboxes.length > 0 ) {
 						const i18n = window.albertAdmin?.i18n || {};
 						const msg = i18n.enableAllWriteConfirm ||
-							`This will enable ${ uncheckedWrites.length } write ability(ies) (create, update, delete). Continue?`;
+							`This will enable ${ writeCheckboxes.length } write ability group(s) (create, update, delete). Continue?`;
 
 						if ( ! window.confirm( msg ) ) {
 							e.target.checked = false;
@@ -85,59 +131,29 @@ const ToggleModule = {
 					}
 				}
 
-				document.querySelectorAll( `.ability-checkbox-category[data-category="${ category }"]` ).forEach( ( checkbox ) => {
-					checkbox.checked = isChecked;
-				} );
-
-				// Sync subgroup toggles.
-				document.querySelectorAll( `.toggle-subgroup-abilities[data-category="${ category }"]` ).forEach( ( subToggle ) => {
-					subToggle.checked = isChecked;
+				// Toggle all group checkboxes in this category.
+				document.querySelectorAll( `.ability-group-checkbox[data-category="${ category }"]` ).forEach( ( checkbox ) => {
+					if ( checkbox.checked !== isChecked ) {
+						checkbox.checked = isChecked;
+						checkbox.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+					}
 				} );
 			} );
 		} );
 	},
 
-	handleSubgroupToggleAll() {
-		document.querySelectorAll( '.toggle-subgroup-abilities' ).forEach( ( toggle ) => {
-			toggle.addEventListener( 'change', ( e ) => {
-				const category = e.target.dataset.category;
-				const subgroup = e.target.dataset.subgroup;
-				const isChecked = e.target.checked;
-
-				document.querySelectorAll( `.ability-checkbox-category[data-category="${ category }"][data-subgroup="${ subgroup }"]` ).forEach( ( checkbox ) => {
-					checkbox.checked = isChecked;
-				} );
-
-				// Update the parent category toggle.
-				this.updateCategoryToggleState( category );
-			} );
+	/**
+	 * Initialize toggle states on page load.
+	 */
+	syncEnabledInputsOnLoad() {
+		// First, sync hidden inputs for all checked group checkboxes.
+		document.querySelectorAll( '.ability-group-checkbox:checked' ).forEach( ( checkbox ) => {
+			const abilities = JSON.parse( checkbox.dataset.abilities || '[]' );
+			this.syncAbilitiesForGroup( checkbox, abilities, true );
 		} );
-	},
 
-	handleIndividualToggles() {
-		document.querySelectorAll( '.ability-checkbox-category' ).forEach( ( checkbox ) => {
-			checkbox.addEventListener( 'change', ( e ) => {
-				const category = e.target.dataset.category;
-				const subgroup = e.target.dataset.subgroup;
-
-				this.updateSubgroupToggleState( category, subgroup );
-				this.updateCategoryToggleState( category );
-			} );
-		} );
-	},
-
-	initializeToggleStates() {
+		// Then update category toggle states.
 		const processedCategories = new Set();
-		const processedSubgroups = new Set();
-
-		document.querySelectorAll( '.toggle-subgroup-abilities' ).forEach( ( toggle ) => {
-			const key = toggle.dataset.category + '-' + toggle.dataset.subgroup;
-			if ( ! processedSubgroups.has( key ) ) {
-				processedSubgroups.add( key );
-				this.updateSubgroupToggleState( toggle.dataset.category, toggle.dataset.subgroup );
-			}
-		} );
-
 		document.querySelectorAll( '.toggle-category-abilities' ).forEach( ( toggle ) => {
 			const category = toggle.dataset.category;
 			if ( ! processedCategories.has( category ) ) {
@@ -147,25 +163,12 @@ const ToggleModule = {
 		} );
 	},
 
+	/**
+	 * Update category toggle state based on group checkboxes.
+	 */
 	updateCategoryToggleState( category ) {
-		const checkboxes = document.querySelectorAll( `.ability-checkbox-category[data-category="${ category }"]` );
+		const checkboxes = document.querySelectorAll( `.ability-group-checkbox[data-category="${ category }"]` );
 		const toggleAll = document.querySelector( `.toggle-category-abilities[data-category="${ category }"]` );
-
-		if ( checkboxes.length === 0 || ! toggleAll ) {
-			return;
-		}
-
-		const checkedCount = Array.from( checkboxes ).filter( ( cb ) => cb.checked ).length;
-		toggleAll.checked = checkedCount === checkboxes.length;
-	},
-
-	updateSubgroupToggleState( category, subgroup ) {
-		if ( ! subgroup ) {
-			return;
-		}
-
-		const checkboxes = document.querySelectorAll( `.ability-checkbox-category[data-category="${ category }"][data-subgroup="${ subgroup }"]` );
-		const toggleAll = document.querySelector( `.toggle-subgroup-abilities[data-category="${ category }"][data-subgroup="${ subgroup }"]` );
 
 		if ( checkboxes.length === 0 || ! toggleAll ) {
 			return;
@@ -300,28 +303,18 @@ const CollapseModule = {
 };
 
 /**
- * Ability item click-to-toggle functionality.
+ * Content type row click-to-toggle functionality.
  */
-const AbilityItemModule = {
+const ContentTypeRowModule = {
 	init() {
-		document.querySelectorAll( '.ability-item' ).forEach( ( item ) => {
-			item.addEventListener( 'click', ( e ) => {
+		document.querySelectorAll( '.ability-type-row' ).forEach( ( row ) => {
+			row.addEventListener( 'click', ( e ) => {
 				// Let native label/input behavior handle clicks on those elements.
 				if ( e.target.closest( 'label' ) || e.target.closest( 'input' ) ) {
 					return;
 				}
 
-				// Skip premium items.
-				if ( item.classList.contains( 'ability-item--premium' ) ) {
-					return;
-				}
-
-				// For clicks elsewhere (description, padding, etc.), toggle the checkbox.
-				const checkbox = item.querySelector( '.ability-checkbox:not(:disabled)' );
-				if ( checkbox ) {
-					checkbox.checked = ! checkbox.checked;
-					checkbox.dispatchEvent( new Event( 'change', { bubbles: true } ) );
-				}
+				// Don't toggle on row click - let users click specific toggles.
 			} );
 		} );
 	},
@@ -580,7 +573,7 @@ function init() {
 	initLiveRegion();
 	ToggleModule.init();
 	CollapseModule.init();
-	AbilityItemModule.init();
+	ContentTypeRowModule.init();
 	ClipboardModule.init();
 	ModalModule.init();
 	DirtyStateModule.init();
