@@ -12,6 +12,7 @@ namespace Albert\Abstracts;
 use Albert\Contracts\Interfaces\Ability;
 use Albert\Core\AbilitiesRegistry;
 use WP_Error;
+use WP_REST_Request;
 
 /**
  * Base Ability class
@@ -173,12 +174,117 @@ abstract class BaseAbility implements Ability {
 	 * Check if current user has permission to execute this ability.
 	 *
 	 * Child classes should override this with specific permission logic.
+	 * Returns a WP_Error with a descriptive message on failure so AI
+	 * clients can communicate the reason to the user.
 	 *
-	 * @return bool Whether user has permission.
+	 * @return true|WP_Error True if permitted, WP_Error with details otherwise.
 	 * @since 1.0.0
 	 */
-	public function check_permission(): bool {
-		return current_user_can( 'manage_options' );
+	public function check_permission(): true|WP_Error {
+		return $this->require_capability( 'manage_options' );
+	}
+
+	/**
+	 * Require that the current user has a specific capability.
+	 *
+	 * Returns true on success or a descriptive WP_Error on failure,
+	 * so AI clients understand why access was denied.
+	 *
+	 * @param string $capability The capability to check.
+	 *
+	 * @return true|WP_Error True if the user has the capability, WP_Error otherwise.
+	 * @since 1.1.0
+	 */
+	protected function require_capability( string $capability ): true|WP_Error {
+		if ( current_user_can( $capability ) ) {
+			return true;
+		}
+
+		return new WP_Error(
+			'ability_permission_denied',
+			sprintf(
+				/* translators: 1: ability label, 2: capability name */
+				__( 'You do not have permission to use "%1$s". The "%2$s" capability is required.', 'albert' ),
+				$this->label,
+				$capability
+			),
+			[ 'status' => 403 ]
+		);
+	}
+
+	/**
+	 * Check permission via a WordPress REST API endpoint's permission callback.
+	 *
+	 * Delegates to the REST API's own permission callback for the given route
+	 * and HTTP method. If the REST API returns a WP_Error, it is passed through
+	 * so the AI client receives the specific reason. Falls back to a capability
+	 * check when the route is not found.
+	 *
+	 * @param string $route        The REST API route (exact) or route pattern (regex).
+	 * @param string $method       The HTTP method (GET, POST, DELETE, etc.).
+	 * @param string $fallback_cap The capability to check if the route is unavailable.
+	 *
+	 * @return true|WP_Error True if permitted, WP_Error with details otherwise.
+	 * @since 1.1.0
+	 */
+	protected function check_rest_permission( string $route, string $method, string $fallback_cap ): true|WP_Error {
+		$server     = rest_get_server();
+		$routes     = $server->get_routes();
+		$is_pattern = str_contains( $route, '(?P<' );
+
+		if ( $is_pattern ) {
+			foreach ( $routes as $registered_route => $endpoints ) {
+				if ( ! preg_match( '#^' . $route . '$#', $registered_route ) ) {
+					continue;
+				}
+
+				return $this->check_rest_endpoints( $endpoints, $method, $registered_route, $fallback_cap );
+			}
+		} elseif ( isset( $routes[ $route ] ) ) {
+			return $this->check_rest_endpoints( $routes[ $route ], $method, $route, $fallback_cap );
+		}
+
+		// Route not found, fall back to capability check.
+		return $this->require_capability( $fallback_cap );
+	}
+
+	/**
+	 * Check permission against a set of REST API endpoints.
+	 *
+	 * @param array<int, array<string, mixed>> $endpoints    REST API endpoint definitions.
+	 * @param string                           $method       The HTTP method to match.
+	 * @param string                           $route        The resolved route path.
+	 * @param string                           $fallback_cap The capability to check on failure.
+	 *
+	 * @return true|WP_Error True if permitted, WP_Error otherwise.
+	 * @since 1.1.0
+	 */
+	private function check_rest_endpoints( array $endpoints, string $method, string $route, string $fallback_cap ): true|WP_Error {
+		foreach ( $endpoints as $endpoint ) {
+			if ( ! isset( $endpoint['methods'][ $method ], $endpoint['permission_callback'] ) ) {
+				continue;
+			}
+
+			if ( ! is_callable( $endpoint['permission_callback'] ) ) {
+				continue;
+			}
+
+			$request = new WP_REST_Request( $method, $route );
+			$result  = call_user_func( $endpoint['permission_callback'], $request );
+
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+
+			if ( $result ) {
+				return true;
+			}
+
+			return $this->require_capability( $fallback_cap );
+		}
+
+		// No matching endpoint found, fall back to capability check.
+		return $this->require_capability( $fallback_cap );
 	}
 
 	/**

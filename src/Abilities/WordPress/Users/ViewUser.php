@@ -89,11 +89,11 @@ class ViewUser extends BaseAbility {
 	/**
 	 * Check if the current user has permission to execute this ability.
 	 *
-	 * @return bool True if user can execute, false otherwise.
+	 * @return true|WP_Error True if permitted, WP_Error with details otherwise.
 	 * @since 1.0.0
 	 */
-	public function check_permission(): bool {
-		return current_user_can( 'list_users' );
+	public function check_permission(): true|WP_Error {
+		return $this->require_capability( 'list_users' );
 	}
 
 	/**

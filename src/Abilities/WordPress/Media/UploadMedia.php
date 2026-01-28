@@ -124,11 +124,11 @@ class UploadMedia extends BaseAbility {
 	/**
 	 * Check if current user has permission to execute this ability.
 	 *
-	 * @return bool Whether user has permission.
+	 * @return true|WP_Error True if permitted, WP_Error with details otherwise.
 	 * @since 1.0.0
 	 */
-	public function check_permission(): bool {
-		return current_user_can( 'upload_files' );
+	public function check_permission(): true|WP_Error {
+		return $this->require_capability( 'upload_files' );
 	}
 
 	/**

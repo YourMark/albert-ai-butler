@@ -149,46 +149,13 @@ class FindPosts extends BaseAbility {
 	/**
 	 * Check if current user has permission to execute this ability.
 	 *
-	 * Uses the permission callback from the WordPress REST API endpoint.
+	 * Delegates to the REST API endpoint's own permission callback.
 	 *
-	 * @return bool Whether user has permission.
+	 * @return true|WP_Error True if permitted, WP_Error with details otherwise.
 	 * @since 1.0.0
 	 */
-	public function check_permission(): bool {
-		$server = rest_get_server();
-		$routes = $server->get_routes();
-
-		// Get the route for listing posts.
-		$route = '/wp/v2/posts';
-
-		if ( ! isset( $routes[ $route ] ) ) {
-			return false;
-		}
-
-		// Find the GET method endpoint.
-		foreach ( $routes[ $route ] as $endpoint ) {
-			if ( isset( $endpoint['methods']['GET'] ) && isset( $endpoint['permission_callback'] ) ) {
-				// Create a mock request for permission check.
-				$request = new WP_REST_Request( 'GET', $route );
-
-				// Call the permission callback.
-				$permission_callback = $endpoint['permission_callback'];
-
-				if ( is_callable( $permission_callback ) ) {
-					$result = call_user_func( $permission_callback, $request );
-
-					// Handle WP_Error or boolean response.
-					if ( is_wp_error( $result ) ) {
-						return false;
-					}
-
-					return (bool) $result;
-				}
-			}
-		}
-
-		// Fallback to basic capability check.
-		return current_user_can( 'edit_posts' );
+	public function check_permission(): true|WP_Error {
+		return $this->check_rest_permission( '/wp/v2/posts', 'GET', 'edit_posts' );
 	}
 
 	/**

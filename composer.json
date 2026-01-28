@@ -15,7 +15,7 @@
         "alleyinteractive/wp-block-converter": "^1.7",
         "league/oauth2-server": "^9.3",
         "nyholm/psr7": "^1.8",
-        "wordpress/mcp-adapter": "^0.3.0"
+        "wordpress/mcp-adapter": "^0.4.1"
     },
     "require-dev": {
         "phpstan/extension-installer": "*",
