@@ -620,6 +620,28 @@
 	transform: translateX(12px);
 }
 
+/* Indeterminate state - partial selection */
+.albert-toggle input:indeterminate + .albert-toggle-slider {
+	background-color: var(--albert-primary-60);
+}
+
+.albert-toggle input:indeterminate + .albert-toggle-slider:before {
+	transform: translateX(6px);
+}
+
+/* Indeterminate indicator dash */
+.albert-toggle input:indeterminate + .albert-toggle-slider::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 8px;
+	height: 2px;
+	background-color: var(--albert-bg-white);
+	border-radius: 1px;
+}
+
 /* Category description in header */
 .ability-group-description {
 	font-size: var(--albert-font-sm);

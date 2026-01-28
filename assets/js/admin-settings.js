@@ -157,6 +157,7 @@ const ToggleModule = {
 
 	/**
 	 * Update group checkbox state based on individual checkboxes.
+	 * Sets indeterminate state when some (but not all) are checked.
 	 */
 	updateGroupCheckboxState( groupCheckboxId ) {
 		const groupCheckbox = document.getElementById( groupCheckboxId );
@@ -173,10 +174,13 @@ const ToggleModule = {
 			return;
 		}
 
-		const allChecked = individualCheckboxes.every( ( cb ) => cb.checked );
-		if ( groupCheckbox.checked !== allChecked ) {
-			groupCheckbox.checked = allChecked;
-		}
+		const checkedCount = individualCheckboxes.filter( ( cb ) => cb.checked ).length;
+		const allChecked = checkedCount === individualCheckboxes.length;
+		const noneChecked = checkedCount === 0;
+
+		// Set indeterminate state for partial selection.
+		groupCheckbox.indeterminate = ! allChecked && ! noneChecked;
+		groupCheckbox.checked = allChecked;
 
 		// Update category toggle.
 		const category = groupCheckbox.dataset.category;
@@ -252,6 +256,9 @@ const ToggleModule = {
 			this.syncHiddenInputsForGroup( checkbox, abilities, true );
 		} );
 
+		// Initialize indeterminate states for group checkboxes based on individual abilities.
+		this.initializeIndeterminateStates();
+
 		// Update category toggle states.
 		const processedCategories = new Set();
 		document.querySelectorAll( '.toggle-category-abilities' ).forEach( ( toggle ) => {
@@ -264,7 +271,49 @@ const ToggleModule = {
 	},
 
 	/**
+	 * Initialize indeterminate states for group checkboxes.
+	 * Checks if individual ability checkboxes have mixed states.
+	 */
+	initializeIndeterminateStates() {
+		document.querySelectorAll( '.ability-group-checkbox' ).forEach( ( groupCheckbox ) => {
+			const abilities = JSON.parse( groupCheckbox.dataset.abilities || '[]' );
+
+			// Check if there are individual checkboxes for these abilities.
+			const individualCheckboxes = abilities.map( ( name ) =>
+				document.querySelector( `.ability-item-checkbox[value="${ name }"]` )
+			).filter( Boolean );
+
+			// If no individual checkboxes exist, check hidden presented inputs vs enabled.
+			if ( individualCheckboxes.length === 0 ) {
+				const form = document.getElementById( 'albert-form' );
+				if ( ! form ) {
+					return;
+				}
+
+				const enabledCount = abilities.filter( ( name ) =>
+					form.querySelector( `input[name="albert_enabled_on_page[]"][value="${ name }"]` )
+				).length;
+
+				const allEnabled = enabledCount === abilities.length;
+				const noneEnabled = enabledCount === 0;
+
+				groupCheckbox.indeterminate = ! allEnabled && ! noneEnabled;
+				// Note: checked state is already set from PHP.
+			} else {
+				// Use individual checkboxes to determine state.
+				const checkedCount = individualCheckboxes.filter( ( cb ) => cb.checked ).length;
+				const allChecked = checkedCount === individualCheckboxes.length;
+				const noneChecked = checkedCount === 0;
+
+				groupCheckbox.indeterminate = ! allChecked && ! noneChecked;
+				groupCheckbox.checked = allChecked;
+			}
+		} );
+	},
+
+	/**
 	 * Update category toggle state based on group checkboxes.
+	 * Sets indeterminate state when some (but not all) groups are fully enabled.
 	 */
 	updateCategoryToggleState( category ) {
 		const checkboxes = document.querySelectorAll( `.ability-group-checkbox[data-category="${ category }"]` );
@@ -275,7 +324,13 @@ const ToggleModule = {
 		}
 
 		const checkedCount = Array.from( checkboxes ).filter( ( cb ) => cb.checked ).length;
-		toggleAll.checked = checkedCount === checkboxes.length;
+		const hasIndeterminate = Array.from( checkboxes ).some( ( cb ) => cb.indeterminate );
+		const allChecked = checkedCount === checkboxes.length;
+		const noneChecked = checkedCount === 0;
+
+		// Indeterminate if any group is indeterminate, or if some groups are checked.
+		toggleAll.indeterminate = hasIndeterminate || ( ! allChecked && ! noneChecked );
+		toggleAll.checked = allChecked && ! hasIndeterminate;
 	},
 };
 
