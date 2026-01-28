@@ -142,9 +142,19 @@ class Dashboard implements Hookable {
 				<!-- Setup Checklist -->
 				<div class="albert-card albert-setup-checklist-card">
 					<?php if ( $setup_complete ) : ?>
-						<div class="albert-setup-complete-bar">
-							<span class="dashicons dashicons-yes-alt" aria-hidden="true"></span>
-							<?php esc_html_e( 'Setup complete', 'albert' ); ?>
+						<h2><?php esc_html_e( 'Setup', 'albert' ); ?></h2>
+						<div class="albert-setup-complete-wrapper">
+							<div class="albert-setup-complete-bar">
+								<span class="dashicons dashicons-yes-alt" aria-hidden="true"></span>
+								<?php esc_html_e( 'Complete', 'albert' ); ?>
+							</div>
+							<div class="albert-setup-complete-content">
+								<p class="albert-setup-complete-actions">
+									<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-abilities' ) ); ?>" class="button button-primary">
+										<?php esc_html_e( 'Manage Abilities', 'albert' ); ?>
+									</a>
+								</p>
+							</div>
 						</div>
 					<?php else : ?>
 						<h2><?php echo esc_html__( 'Get Started', 'albert' ); ?></h2>
@@ -295,13 +305,12 @@ class Dashboard implements Hookable {
 		global $wpdb;
 		$tables = Installer::get_table_names();
 
-		// Count non-expired tokens.
+		// Count distinct clients with non-revoked tokens (sessions persist via refresh tokens).
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$count = $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COUNT(DISTINCT client_id) FROM %i WHERE expires_at > %s',
-				$tables['access_tokens'],
-				gmdate( 'Y-m-d H:i:s' )
+				'SELECT COUNT(DISTINCT client_id) FROM %i WHERE revoked = 0',
+				$tables['access_tokens']
 			)
 		);
 
@@ -315,16 +324,16 @@ class Dashboard implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function get_enabled_abilities_count(): string {
-		$options       = get_option( 'albert_options', [] );
-		$all_abilities = wp_get_abilities();
+		$disabled_abilities = Abilities::get_disabled_abilities();
+		$all_abilities      = wp_get_abilities();
 
 		$enabled_count = 0;
 		$total_count   = count( $all_abilities );
 
-		foreach ( $all_abilities as $ability_id => $ability_data ) {
-			// Check if ability is enabled (default is enabled).
-			$is_enabled = isset( $options[ $ability_id ] ) ? (bool) $options[ $ability_id ] : true;
-			if ( $is_enabled ) {
+		foreach ( $all_abilities as $ability ) {
+			$name = $ability->get_name();
+			// Ability is enabled if NOT in the disabled list.
+			if ( ! in_array( $name, $disabled_abilities, true ) ) {
 				++$enabled_count;
 			}
 		}

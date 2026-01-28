@@ -2015,20 +2015,76 @@
 	color: var(--albert-primary-dark);
 }
 
+/* Setup complete state - vertical centering */
+.albert-setup-checklist-card:has(.albert-setup-complete-bar) {
+	display: flex;
+	flex-direction: column;
+}
+
+.albert-setup-checklist-card:has(.albert-setup-complete-bar) h2 {
+	flex-shrink: 0;
+}
+
+.albert-setup-complete-wrapper {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: var(--albert-spacing-xl) 20px;
+}
+
 .albert-setup-complete-bar {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	gap: var(--albert-spacing-sm);
-	padding: var(--albert-spacing-md) 20px;
-	font-size: var(--albert-font-base);
-	font-weight: 500;
+	justify-content: center;
+	gap: var(--albert-spacing-md);
+	font-size: var(--albert-font-lg);
+	font-weight: 600;
 	color: var(--albert-success);
+	text-align: center;
 }
 
 .albert-setup-complete-bar .dashicons {
-	font-size: var(--albert-font-2xl);
-	width: 18px;
-	height: 18px;
+	font-size: 48px;
+	width: 48px;
+	height: 48px;
+	background: var(--albert-success-10);
+	border-radius: 50%;
+	padding: 12px;
+	box-sizing: content-box;
+	animation: albert-checkmark-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes albert-checkmark-pop {
+	0% {
+		transform: scale(0);
+		opacity: 0;
+	}
+	50% {
+		transform: scale(1.2);
+	}
+	100% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+.albert-setup-complete-content {
+	margin-top: var(--albert-spacing-lg);
+	text-align: center;
+}
+
+.albert-setup-complete-actions {
+	display: flex;
+	justify-content: center;
+	gap: var(--albert-spacing-sm);
+	flex-wrap: wrap;
+}
+
+.albert-setup-complete-actions .button {
+	font-size: var(--albert-font-base);
 }
 
 .albert-checklist {
