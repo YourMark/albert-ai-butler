@@ -115,9 +115,6 @@ class Plugin {
 			// Dashboard page (creates top-level menu and first submenu).
 			( new Dashboard() )->register_hooks();
 
-			// Connections page (allowed users + active sessions).
-			( new Connections() )->register_hooks();
-
 			// Abilities pages (toggle abilities on/off).
 			( new CoreAbilities() )->register_hooks();
 
@@ -128,6 +125,9 @@ class Plugin {
 			if ( class_exists( 'WooCommerce' ) ) {
 				( new WooCommerceAbilities() )->register_hooks();
 			}
+
+			// Connections page (allowed users + active sessions).
+			( new Connections() )->register_hooks();
 
 			// Settings page (API key, MCP endpoint, developer options).
 			( new Settings() )->register_hooks();
