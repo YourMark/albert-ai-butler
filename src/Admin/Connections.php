@@ -677,12 +677,12 @@ class Connections implements Hookable {
 					t.client_id,
 					t.user_id,
 					t.token_id,
-					t.created_at,
+					CONVERT_TZ(t.created_at, @@session.time_zone, '+00:00') as created_at,
 					t.expires_at,
 					COALESCE(c.name, 'Unknown Client') as client_name
 				FROM %i t
 				LEFT JOIN %i c ON t.client_id = c.client_id
-				WHERE t.revoked = 0 AND t.expires_at > NOW()
+				WHERE t.revoked = 0 AND t.expires_at > UTC_TIMESTAMP()
 				ORDER BY t.created_at DESC",
 				$tables['access_tokens'],
 				$tables['clients']
@@ -694,6 +694,12 @@ class Connections implements Hookable {
 			<div class="albert-settings-card-header">
 				<span class="dashicons dashicons-networking" aria-hidden="true"></span>
 				<h2><?php esc_html_e( 'Active Connections', 'albert' ); ?></h2>
+				<button type="button" class="albert-info-trigger" aria-expanded="false" aria-label="<?php esc_attr_e( 'More info about active connections', 'albert' ); ?>">
+					<span class="dashicons dashicons-editor-help" aria-hidden="true"></span>
+				</button>
+				<div class="albert-info-popover" role="tooltip" hidden>
+					<?php esc_html_e( 'Active connections show current access tokens. Tokens refresh automatically every hour as long as the session is active (up to 30 days).', 'albert' ); ?>
+				</div>
 			</div>
 			<div class="albert-settings-card-body">
 				<?php if ( empty( $sessions ) ) { ?>
@@ -702,102 +708,96 @@ class Connections implements Hookable {
 						<p><?php esc_html_e( 'No active connections yet. Once an allowed user authorizes an AI assistant, connections will appear here.', 'albert' ); ?></p>
 					</div>
 				<?php } else { ?>
-					<div class="albert-connections-grid">
-						<?php foreach ( $sessions as $session ) { ?>
-							<?php
-							$app_name     = ! empty( $session->client_name ) ? $session->client_name : __( 'Unknown Client', 'albert' );
-							$user         = get_userdata( $session->user_id );
-							$connected_at = strtotime( $session->created_at );
-							$expires_at   = strtotime( $session->expires_at );
-							$is_expiring  = ( $expires_at - time() ) < DAY_IN_SECONDS;
-
-							$revoke_url = wp_nonce_url(
-								add_query_arg(
-									[
-										'page'     => $this->page_slug,
-										'action'   => 'revoke',
-										'token_id' => $session->id,
-									],
-									admin_url( 'admin.php' )
-								),
-								'revoke_my_session_' . $session->id
-							);
-							?>
-							<div class="albert-card albert-connection-card">
-								<div class="albert-connection-header">
-									<div class="albert-connection-icon">
-										<span class="dashicons dashicons-admin-plugins" aria-hidden="true"></span>
+					<table class="albert-connections-table">
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Client', 'albert' ); ?></th>
+								<th><?php esc_html_e( 'User', 'albert' ); ?></th>
+								<th><?php esc_html_e( 'Connected', 'albert' ); ?></th>
+								<th>
+									<?php esc_html_e( 'Expires', 'albert' ); ?>
+									<button type="button" class="albert-info-trigger albert-info-trigger-inline" aria-expanded="false" aria-label="<?php esc_attr_e( 'More info about token expiry', 'albert' ); ?>">
+										<span class="dashicons dashicons-editor-help" aria-hidden="true"></span>
+									</button>
+									<div class="albert-info-popover" role="tooltip" hidden>
+										<?php esc_html_e( 'Access tokens expire every hour and are automatically refreshed by the client. The session stays active for up to 30 days.', 'albert' ); ?>
 									</div>
-									<div class="albert-connection-title">
-										<h3><?php echo esc_html( $app_name ); ?></h3>
+								</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php foreach ( $sessions as $session ) { ?>
+								<?php
+								$app_name     = ! empty( $session->client_name ) ? $session->client_name : __( 'Unknown Client', 'albert' );
+								$user         = get_userdata( $session->user_id );
+								$connected_at = strtotime( $session->created_at );
+								$expires_at   = strtotime( $session->expires_at );
+								$is_expiring  = ( $expires_at - time() ) < DAY_IN_SECONDS;
+
+								$revoke_url = wp_nonce_url(
+									add_query_arg(
+										[
+											'page'     => $this->page_slug,
+											'action'   => 'revoke',
+											'token_id' => $session->id,
+										],
+										admin_url( 'admin.php' )
+									),
+									'revoke_my_session_' . $session->id
+								);
+								?>
+								<tr>
+									<td>
+										<strong><?php echo esc_html( $app_name ); ?></strong>
 										<span class="albert-connection-session"><?php echo esc_html( substr( $session->token_id, 0, 12 ) . '...' ); ?></span>
-									</div>
-								</div>
-								<div class="albert-connection-body">
-									<div class="albert-connection-meta">
-										<div class="albert-connection-meta-item">
-											<span class="dashicons dashicons-admin-users" aria-hidden="true"></span>
-											<div>
-												<strong><?php esc_html_e( 'User:', 'albert' ); ?></strong>
-												<span><?php echo $user ? esc_html( $user->display_name ) : esc_html__( 'Unknown', 'albert' ); ?></span>
-											</div>
-										</div>
-										<div class="albert-connection-meta-item">
-											<span class="dashicons dashicons-calendar-alt" aria-hidden="true"></span>
-											<div>
-												<strong><?php esc_html_e( 'Connected:', 'albert' ); ?></strong>
-												<span><?php echo esc_html( human_time_diff( $connected_at, time() ) . ' ' . __( 'ago', 'albert' ) ); ?></span>
-											</div>
-										</div>
-										<div class="albert-connection-meta-item">
-											<span class="dashicons dashicons-clock" aria-hidden="true"></span>
-											<div>
-												<strong><?php esc_html_e( 'Expires:', 'albert' ); ?></strong>
-												<span class="<?php echo $is_expiring ? 'albert-expiring' : ''; ?>">
-													<?php
-													if ( $expires_at > time() ) {
-														echo esc_html( human_time_diff( time(), $expires_at ) . ' ' . __( 'from now', 'albert' ) );
-													} else {
-														echo esc_html__( 'Expired', 'albert' );
-													}
-													?>
-												</span>
-											</div>
-										</div>
-									</div>
-								</div>
-								<div class="albert-connection-footer">
-									<a href="<?php echo esc_url( $revoke_url ); ?>"
-										class="button button-secondary button-small albert-disconnect-btn"
-										onclick="return confirm('<?php echo esc_js( __( 'Disconnect this AI assistant?', 'albert' ) ); ?>');">
-										<span class="dashicons dashicons-dismiss" aria-hidden="true"></span>
-										<?php esc_html_e( 'Disconnect', 'albert' ); ?>
-									</a>
-								</div>
-							</div>
-						<?php } ?>
-					</div>
+									</td>
+									<td><?php echo $user ? esc_html( $user->display_name ) : esc_html__( 'Unknown', 'albert' ); ?></td>
+									<td><?php echo esc_html( human_time_diff( $connected_at, time() ) . ' ' . __( 'ago', 'albert' ) ); ?></td>
+									<td>
+										<span class="<?php echo $is_expiring ? 'albert-expiring' : ''; ?>">
+											<?php
+											if ( $expires_at > time() ) {
+												echo esc_html( human_time_diff( time(), $expires_at ) . ' ' . __( 'from now', 'albert' ) );
+											} else {
+												echo esc_html__( 'Expired', 'albert' );
+											}
+											?>
+										</span>
+									</td>
+									<td class="albert-connections-table-actions">
+										<a href="<?php echo esc_url( $revoke_url ); ?>"
+											class="albert-disconnect-link"
+											onclick="return confirm('<?php echo esc_js( __( 'Disconnect this AI assistant?', 'albert' ) ); ?>');">
+											<?php esc_html_e( 'Disconnect', 'albert' ); ?>
+										</a>
+									</td>
+								</tr>
+							<?php } ?>
+						</tbody>
+					</table>
 
-					<?php
-					$revoke_all_url = wp_nonce_url(
-						add_query_arg(
-							[
-								'page'   => $this->page_slug,
-								'action' => 'revoke_all',
-							],
-							admin_url( 'admin.php' )
-						),
-						'revoke_all_my_sessions'
-					);
-					?>
-					<div class="albert-connections-actions">
-						<a href="<?php echo esc_url( $revoke_all_url ); ?>"
-							class="button albert-disconnect-all-btn"
-							onclick="return confirm('<?php echo esc_js( __( 'Disconnect ALL AI assistants? This action cannot be undone.', 'albert' ) ); ?>');">
-							<span class="dashicons dashicons-dismiss" aria-hidden="true"></span>
-							<?php esc_html_e( 'Disconnect All', 'albert' ); ?>
-						</a>
-					</div>
+					<?php if ( count( $sessions ) > 1 ) { ?>
+						<?php
+						$revoke_all_url = wp_nonce_url(
+							add_query_arg(
+								[
+									'page'   => $this->page_slug,
+									'action' => 'revoke_all',
+								],
+								admin_url( 'admin.php' )
+							),
+							'revoke_all_my_sessions'
+						);
+						?>
+						<div class="albert-connections-actions">
+							<a href="<?php echo esc_url( $revoke_all_url ); ?>"
+								class="albert-disconnect-link albert-disconnect-all-link"
+								onclick="return confirm('<?php echo esc_js( __( 'Disconnect ALL AI assistants? This action cannot be undone.', 'albert' ) ); ?>');">
+								<?php esc_html_e( 'Disconnect All', 'albert' ); ?>
+							</a>
+						</div>
+					<?php } ?>
 				<?php } ?>
 			</div>
 		</section>
@@ -833,7 +833,7 @@ class Connections implements Hookable {
 					MAX(t.id) as id,
 					MAX(t.token_id) as token_id,
 					COALESCE(c.name, 'Unknown') as client_name,
-					MIN(t.created_at) as first_connected
+					MIN(CONVERT_TZ(t.created_at, @@session.time_zone, '+00:00')) as first_connected
 				FROM %i t
 				LEFT JOIN %i c ON t.client_id = c.client_id
 				WHERE t.user_id = %d AND t.revoked = 0
@@ -1028,5 +1028,49 @@ class Connections implements Hookable {
 				],
 			]
 		);
+
+		$popover_js = <<<'JS'
+(function(){
+	var sel = '.albert-info-trigger[aria-expanded="true"]';
+	function closeAll(){
+		document.querySelectorAll(sel).forEach(function(t){
+			t.setAttribute('aria-expanded','false');
+			var p = t.nextElementSibling;
+			if(p) p.hidden = true;
+		});
+	}
+	function position(trigger, popover){
+		var r = trigger.getBoundingClientRect();
+		popover.style.top = (r.bottom + 6) + 'px';
+		popover.style.left = Math.max(8, r.left - 260) + 'px';
+	}
+	document.addEventListener('click', function(e){
+		var trigger = e.target.closest('.albert-info-trigger');
+		if(trigger){
+			var popover = trigger.nextElementSibling;
+			if(!popover || !popover.classList.contains('albert-info-popover')) return;
+			var isOpen = trigger.getAttribute('aria-expanded') === 'true';
+			closeAll();
+			if(!isOpen){
+				trigger.setAttribute('aria-expanded','true');
+				popover.hidden = false;
+				position(trigger, popover);
+			}
+			return;
+		}
+		if(!e.target.closest('.albert-info-popover')){
+			closeAll();
+		}
+	});
+	document.addEventListener('keydown', function(e){
+		if(e.key === 'Escape'){
+			var open = document.querySelector(sel);
+			closeAll();
+			if(open) open.focus();
+		}
+	});
+})();
+JS;
+		wp_add_inline_script( 'albert-admin', $popover_js );
 	}
 }

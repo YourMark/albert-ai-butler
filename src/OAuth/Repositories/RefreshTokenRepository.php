@@ -151,7 +151,7 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface {
 			$wpdb->prepare(
 				'DELETE FROM %i WHERE expires_at < %s',
 				$tables['refresh_tokens'],
-				current_time( 'mysql' )
+				gmdate( 'Y-m-d H:i:s' )
 			)
 		);
 

@@ -94,8 +94,9 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 				'scopes'     => wp_json_encode( $scopes ),
 				'revoked'    => 0,
 				'expires_at' => $access_token_entity->getExpiryDateTime()->format( 'Y-m-d H:i:s' ),
+				'created_at' => gmdate( 'Y-m-d H:i:s' ),
 			],
-			[ '%s', '%s', '%d', '%s', '%d', '%s' ]
+			[ '%s', '%s', '%d', '%s', '%d', '%s', '%s' ]
 		);
 	}
 
@@ -225,7 +226,7 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 			$wpdb->prepare(
 				'DELETE FROM %i WHERE expires_at < %s',
 				$tables['access_tokens'],
-				current_time( 'mysql' )
+				gmdate( 'Y-m-d H:i:s' )
 			)
 		);
 

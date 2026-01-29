@@ -135,7 +135,7 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface {
 			$wpdb->prepare(
 				'DELETE FROM %i WHERE expires_at < %s',
 				$tables['auth_codes'],
-				current_time( 'mysql' )
+				gmdate( 'Y-m-d H:i:s' )
 			)
 		);
 
