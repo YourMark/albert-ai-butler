@@ -9,6 +9,8 @@
 
 namespace Albert\Admin;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\AbilitiesRegistry;
 

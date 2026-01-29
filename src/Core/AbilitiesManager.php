@@ -9,6 +9,8 @@
 
 namespace Albert\Core;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Contracts\Interfaces\Hookable;
 

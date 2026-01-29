@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Endpoints;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\OAuth\Repositories\ClientRepository;
 use WP_Error;

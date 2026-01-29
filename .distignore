@@ -1,0 +1,31 @@
+# Distribution ignore - files excluded from production plugin zip
+
+# Hidden / OS files
+.DS_Store
+.phpunit.result.cache
+
+# Development tooling
+.claude
+.github
+.gitignore
+.distignore
+
+# Dev config
+phpcs.xml.dist
+phpstan.neon
+phpstan-bootstrap.php
+phpunit.xml.dist
+phpunit-unit.xml.dist
+composer.json
+composer.lock
+package.json
+
+# Dev scripts and tests
+bin/
+scripts/
+tests/
+
+# Documentation (dev-only)
+CLAUDE.md
+DEVELOPER_GUIDE.md
+plan.md

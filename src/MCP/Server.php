@@ -9,6 +9,8 @@
 
 namespace Albert\MCP;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\OAuth\Server\TokenValidator;
 use WP\MCP\Core\McpAdapter;

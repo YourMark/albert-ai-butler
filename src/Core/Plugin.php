@@ -9,6 +9,8 @@
 
 namespace Albert\Core;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abilities\WordPress\Posts\FindPosts;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;

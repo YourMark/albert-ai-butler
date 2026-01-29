@@ -12,6 +12,8 @@
 
 namespace Albert\Admin;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\MCP\Server as McpServer;
 use Albert\OAuth\Database\Installer;
