@@ -966,7 +966,7 @@
 
 /* Expanded details panel */
 .ability-type-details {
-	padding: var(--albert-spacing-sm) var(--albert-spacing-md) var(--albert-spacing-md) calc(var(--albert-spacing-md) + 24px);
+	padding: var(--albert-spacing-sm) var(--albert-spacing-md) var(--albert-spacing-md) var(--albert-spacing-md);
 }
 
 .ability-type-details[hidden] {
