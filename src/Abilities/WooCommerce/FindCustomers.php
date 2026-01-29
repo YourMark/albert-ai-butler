@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Abilities\WooCommerce
- * @since      1.3.0
+ * @since      1.0.0
  */
 
 namespace Albert\Abilities\WooCommerce;
@@ -19,13 +19,13 @@ use WP_User_Query;
  *
  * Allows AI assistants to search and list WooCommerce customers.
  *
- * @since 1.3.0
+ * @since 1.0.0
  */
 class FindCustomers extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function __construct() {
 		$this->id          = 'albert/woo-find-customers';
@@ -51,7 +51,7 @@ class FindCustomers extends BaseAbility {
 	 * Get the input schema.
 	 *
 	 * @return array<string, mixed> Input schema.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function get_input_schema(): array {
 		return [
@@ -94,7 +94,7 @@ class FindCustomers extends BaseAbility {
 	 * Get the output schema.
 	 *
 	 * @return array<string, mixed> Output schema.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function get_output_schema(): array {
 		return [
@@ -125,7 +125,7 @@ class FindCustomers extends BaseAbility {
 	 * Check permission.
 	 *
 	 * @return true|WP_Error
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function check_permission(): true|WP_Error {
 		return $this->require_capability( 'list_users' );
@@ -137,7 +137,7 @@ class FindCustomers extends BaseAbility {
 	 * @param array<string, mixed> $args Input parameters.
 	 *
 	 * @return array<string, mixed>|WP_Error
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
 		$page     = absint( $args['page'] ?? 1 );

@@ -244,7 +244,7 @@ class AbilitiesRegistry {
 	 * and groups abilities by their category slug.
 	 *
 	 * @return array<string, array<string, mixed>> Grouped abilities.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function get_abilities_grouped_by_category(): array {
 		if ( ! function_exists( 'wp_get_abilities' ) || ! function_exists( 'wp_get_ability_categories' ) ) {
@@ -287,7 +287,7 @@ class AbilitiesRegistry {
 	 * Get the predefined sort order for categories.
 	 *
 	 * @return array<string> Ordered category slugs.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function get_category_sort_order(): array {
 		return [
@@ -314,7 +314,7 @@ class AbilitiesRegistry {
 	 * @param array<string, array<string, mixed>> $grouped Grouped abilities.
 	 *
 	 * @return array<string, array<string, mixed>> Sorted grouped abilities.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function sort_grouped_categories( array $grouped ): array {
 		$order  = self::get_category_sort_order();
@@ -343,7 +343,7 @@ class AbilitiesRegistry {
 	 * @param string $ability_name Ability name/slug.
 	 *
 	 * @return array{label: string, type: string} Source info.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function get_ability_source( string $ability_name ): array {
 		// Core abilities (registered by WordPress itself).
@@ -383,7 +383,7 @@ class AbilitiesRegistry {
 	 * Get the list of premium abilities.
 	 *
 	 * @return array<string, string> Map of ability slug to extension type.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function get_premium_abilities(): array {
 		$list = [
@@ -399,7 +399,7 @@ class AbilitiesRegistry {
 		 *
 		 * @param array<string, string> $list Map of ability slug to extension type.
 		 *
-		 * @since 1.1.0
+		 * @since 1.0.0
 		 */
 		return apply_filters( 'albert/premium_abilities', $list );
 	}
@@ -410,7 +410,7 @@ class AbilitiesRegistry {
 	 * @param string $ability_name Ability name/slug.
 	 *
 	 * @return bool
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function is_premium_ability( string $ability_name ): bool {
 		$premium = self::get_premium_abilities();
@@ -424,7 +424,7 @@ class AbilitiesRegistry {
 	 * @param string $ability_name Ability name/slug.
 	 *
 	 * @return string Extension label.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function get_premium_extension_label( string $ability_name ): string {
 		$premium = self::get_premium_abilities();
@@ -451,7 +451,7 @@ class AbilitiesRegistry {
 	 * Everything else (read abilities, core, third-party) is enabled.
 	 *
 	 * @return array<string> Array of ability slugs that are disabled by default.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public static function get_default_disabled_abilities(): array {
 		$disabled = [];

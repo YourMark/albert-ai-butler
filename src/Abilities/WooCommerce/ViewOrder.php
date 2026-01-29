@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Abilities\WooCommerce
- * @since      1.3.0
+ * @since      1.0.0
  */
 
 namespace Albert\Abilities\WooCommerce;
@@ -20,13 +20,13 @@ use WP_Error;
  *
  * Allows AI assistants to view a single WooCommerce order by ID.
  *
- * @since 1.3.0
+ * @since 1.0.0
  */
 class ViewOrder extends BaseAbility {
 	/**
 	 * Constructor.
 	 *
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function __construct() {
 		$this->id          = 'albert/woo-view-order';
@@ -52,7 +52,7 @@ class ViewOrder extends BaseAbility {
 	 * Get the input schema.
 	 *
 	 * @return array<string, mixed> Input schema.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function get_input_schema(): array {
 		return [
@@ -72,7 +72,7 @@ class ViewOrder extends BaseAbility {
 	 * Get the output schema.
 	 *
 	 * @return array<string, mixed> Output schema.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function get_output_schema(): array {
 		return [
@@ -90,7 +90,7 @@ class ViewOrder extends BaseAbility {
 	 * Check permission.
 	 *
 	 * @return true|WP_Error
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function check_permission(): true|WP_Error {
 		return $this->require_capability( 'edit_shop_orders' );
@@ -102,7 +102,7 @@ class ViewOrder extends BaseAbility {
 	 * @param array<string, mixed> $args Input parameters.
 	 *
 	 * @return array<string, mixed>|WP_Error
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
 		$order_id = absint( $args['id'] ?? 0 );

@@ -7,7 +7,7 @@
  *
  * @package Albert
  * @subpackage Admin
- * @since      1.3.0
+ * @since      1.0.0
  */
 
 namespace Albert\Admin;
@@ -24,7 +24,7 @@ use Albert\Core\AbilitiesRegistry;
  * a submenu page showing only abilities from its plugin. All pages share
  * the same blocklist option (albert_disabled_abilities).
  *
- * @since 1.3.0
+ * @since 1.0.0
  */
 abstract class AbstractAbilitiesPage implements Hookable {
 
@@ -33,7 +33,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 *
 	 * Shared across all abilities pages.
 	 *
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 * @var string
 	 */
 	const OPTION_NAME = 'albert_disabled_abilities';
@@ -41,7 +41,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	/**
 	 * Option group name.
 	 *
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 * @var string
 	 */
 	const OPTION_GROUP = 'albert_settings';
@@ -50,7 +50,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * Get the page slug.
 	 *
 	 * @return string Page slug (e.g. 'albert-abilities').
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	abstract protected function get_page_slug(): string;
 
@@ -58,7 +58,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * Get the page title shown in the browser tab / page heading.
 	 *
 	 * @return string Page title.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	abstract protected function get_page_title(): string;
 
@@ -66,7 +66,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * Get the menu title shown in the admin sidebar.
 	 *
 	 * @return string Menu title.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	abstract protected function get_menu_title(): string;
 
@@ -76,7 +76,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param array<string, mixed> $grouped Grouped abilities from AbilitiesRegistry.
 	 *
 	 * @return array<string, mixed> Filtered grouped abilities.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	abstract protected function filter_abilities( array $grouped ): array;
 
@@ -84,7 +84,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * Register WordPress hooks.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function register_hooks(): void {
 		add_action( 'admin_menu', [ $this, 'add_menu_pages' ] );
@@ -96,7 +96,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * Add menu pages.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function add_menu_pages(): void {
 		add_submenu_page(
@@ -113,7 +113,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * Register plugin settings.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function register_settings(): void {
 		register_setting(
@@ -131,7 +131,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * Render the page.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function render_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -206,7 +206,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param array<string>        $disabled_abilities  Currently disabled ability slugs.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function render_sidebar( array $grouped, array $disabled_abilities ): void {
 		if ( empty( $grouped ) ) {
@@ -260,7 +260,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param array<string>        $disabled_abilities  Currently disabled ability slugs.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function render_mobile_nav( array $grouped, array $disabled_abilities ): void {
 		if ( empty( $grouped ) ) {
@@ -304,7 +304,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param string $category Category slug.
 	 *
 	 * @return string Dashicon class.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function get_category_icon( string $category ): string {
 		$icons = [
@@ -343,7 +343,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param array<string>        $disabled_abilities  Currently disabled ability slugs.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function render_abilities_content( array $grouped, array $disabled_abilities ): void {
 		?>
@@ -399,7 +399,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * flash of expanded content on page load.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function render_collapse_preload_script(): void {
 		?>
@@ -434,7 +434,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param array<string>        $disabled_abilities  Currently disabled ability slugs.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function render_category_section( string $slug, array $category_data, array $disabled_abilities ): void {
 		$category    = $category_data['category'];
@@ -530,7 +530,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param array<string>        $disabled_abilities  Currently disabled ability slugs.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function render_single_type_section( string $slug, string $card_id, string $items_id, string $icon, string $label, string $description, array $type_data, array $disabled_abilities ): void {
 		$read_abilities  = $type_data['read_abilities'];
@@ -684,7 +684,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param array<object> $abilities     Abilities in this category.
 	 *
 	 * @return array<string, array<string, mixed>> Content types with their abilities.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function get_content_types_for_category( string $category_slug, array $abilities ): array {
 		// Get predefined groupings from AbilitiesRegistry.
@@ -793,7 +793,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param string $source_type Source type identifier.
 	 *
 	 * @return string Tooltip text.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function get_source_tooltip( string $source_type ): string {
 		$tooltips = [
@@ -813,7 +813,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param array<string, object> $write_abilities Write abilities.
 	 *
 	 * @return array{type: string, label: string} Source info.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function get_content_type_source( array $read_abilities, array $write_abilities ): array {
 		$all_abilities = array_merge( array_keys( $read_abilities ), array_keys( $write_abilities ) );
@@ -838,7 +838,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param array<string>        $disabled_abilities  Currently disabled ability slugs.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function render_content_type_row( string $category_slug, string $type_key, array $type_data, array $disabled_abilities ): void {
 		$label           = $type_data['label'];
@@ -1010,7 +1010,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param string        $group_checkbox_id   ID of the parent group checkbox.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function render_ability_item( object $ability, array $disabled_abilities, string $mode, string $group_checkbox_id ): void {
 		$name        = method_exists( $ability, 'get_name' ) ? $ability->get_name() : '';
@@ -1090,7 +1090,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param array<string> $disabled_abilities Currently disabled ability slugs.
 	 *
 	 * @return bool True if all abilities are enabled.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function are_all_abilities_enabled( array $abilities, array $disabled_abilities ): bool {
 		foreach ( $abilities as $ability_name ) {
@@ -1108,7 +1108,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param string $ability_name Ability name/slug.
 	 *
 	 * @return bool True if this is a write ability.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function is_write_ability( string $ability_name ): bool {
 		// Extract the action part after the namespace prefix.
@@ -1136,7 +1136,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param mixed $input Raw input (hidden trigger field value, not used directly).
 	 *
 	 * @return array<string> Sanitized array of disabled ability slugs.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function sanitize_settings( $input ): array {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by settings API; sanitized below with array_map.
@@ -1176,7 +1176,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * Get currently disabled abilities.
 	 *
 	 * @return array<string> Array of disabled ability slugs.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public static function get_disabled_abilities(): array {
 		$disabled = get_option( 'albert_disabled_abilities', [] );
@@ -1197,7 +1197,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param string $ability_slug Ability slug.
 	 *
 	 * @return bool
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	private function is_valid_ability_slug( string $ability_slug ): bool {
 		return (bool) preg_match( '/^[a-z0-9_-]+\/[a-z0-9_-]+$/', $ability_slug );
@@ -1209,7 +1209,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 	 * @param string $hook Current admin page hook.
 	 *
 	 * @return void
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	public function enqueue_assets( string $hook ): void {
 		if ( 'albert_page_' . $this->get_page_slug() !== $hook ) {

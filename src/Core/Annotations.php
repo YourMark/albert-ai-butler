@@ -6,7 +6,7 @@
  *
  * @package Albert
  * @subpackage Core
- * @since      1.1.0
+ * @since      1.0.0
  */
 
 namespace Albert\Core;
@@ -19,13 +19,13 @@ namespace Albert\Core;
  * - destructive: The ability permanently destroys or removes data.
  * - idempotent:  Repeated calls with the same input produce the same result.
  *
- * @since 1.1.0
+ * @since 1.0.0
  */
 class Annotations {
 	/**
 	 * Read-only ability (e.g. Find, View).
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 *
 	 * @return array{readonly: bool, destructive: bool, idempotent: bool}
 	 */
@@ -40,7 +40,7 @@ class Annotations {
 	/**
 	 * Create ability (e.g. Create Post, Upload Media).
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 *
 	 * @return array{readonly: bool, destructive: bool, idempotent: bool}
 	 */
@@ -55,7 +55,7 @@ class Annotations {
 	/**
 	 * Update ability (e.g. Update Post, Set Featured Image).
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 *
 	 * @return array{readonly: bool, destructive: bool, idempotent: bool}
 	 */
@@ -70,7 +70,7 @@ class Annotations {
 	/**
 	 * Delete ability (e.g. Delete Post, Delete Term).
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 *
 	 * @return array{readonly: bool, destructive: bool, idempotent: bool}
 	 */
@@ -85,7 +85,7 @@ class Annotations {
 	/**
 	 * Generic action ability (non-idempotent, non-destructive side effect).
 	 *
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 *
 	 * @return array{readonly: bool, destructive: bool, idempotent: bool}
 	 */

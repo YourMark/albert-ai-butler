@@ -140,7 +140,7 @@ abstract class BaseAbility implements Ability {
 	 * @param array<string, mixed> $args Input parameters.
 	 *
 	 * @return array<string, mixed>|WP_Error The result or error if disabled.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	public function guarded_execute( array $args ): array|WP_Error {
 		if ( ! $this->enabled() ) {
@@ -193,7 +193,7 @@ abstract class BaseAbility implements Ability {
 	 * @param string $capability The capability to check.
 	 *
 	 * @return true|WP_Error True if the user has the capability, WP_Error otherwise.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	protected function require_capability( string $capability ): true|WP_Error {
 		if ( current_user_can( $capability ) ) {
@@ -225,7 +225,7 @@ abstract class BaseAbility implements Ability {
 	 * @param string $fallback_cap The capability to check if the route is unavailable.
 	 *
 	 * @return true|WP_Error True if permitted, WP_Error with details otherwise.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	protected function check_rest_permission( string $route, string $method, string $fallback_cap ): true|WP_Error {
 		$server     = rest_get_server();
@@ -257,7 +257,7 @@ abstract class BaseAbility implements Ability {
 	 * @param string                           $fallback_cap The capability to check on failure.
 	 *
 	 * @return true|WP_Error True if permitted, WP_Error otherwise.
-	 * @since 1.1.0
+	 * @since 1.0.0
 	 */
 	private function check_rest_endpoints( array $endpoints, string $method, string $route, string $fallback_cap ): true|WP_Error {
 		foreach ( $endpoints as $endpoint ) {

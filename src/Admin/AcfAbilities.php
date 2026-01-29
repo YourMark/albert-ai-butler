@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Admin
- * @since      1.3.0
+ * @since      1.0.0
  */
 
 namespace Albert\Admin;
@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
  * Displays abilities with names starting with 'acf/'.
  * Only registered when ACF is active.
  *
- * @since 1.3.0
+ * @since 1.0.0
  */
 class AcfAbilities extends AbstractAbilitiesPage {
 
@@ -25,7 +25,7 @@ class AcfAbilities extends AbstractAbilitiesPage {
 	 * Get the page slug.
 	 *
 	 * @return string
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	protected function get_page_slug(): string {
 		return 'albert-acf-abilities';
@@ -35,7 +35,7 @@ class AcfAbilities extends AbstractAbilitiesPage {
 	 * Get the page title.
 	 *
 	 * @return string
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	protected function get_page_title(): string {
 		return __( 'ACF Abilities', 'albert' );
@@ -45,7 +45,7 @@ class AcfAbilities extends AbstractAbilitiesPage {
 	 * Get the menu title.
 	 *
 	 * @return string
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	protected function get_menu_title(): string {
 		return __( 'ACF', 'albert' );
@@ -57,7 +57,7 @@ class AcfAbilities extends AbstractAbilitiesPage {
 	 * @param array<string, mixed> $grouped Grouped abilities.
 	 *
 	 * @return array<string, mixed> Filtered grouped abilities.
-	 * @since 1.3.0
+	 * @since 1.0.0
 	 */
 	protected function filter_abilities( array $grouped ): array {
 		foreach ( $grouped as $slug => &$data ) {
