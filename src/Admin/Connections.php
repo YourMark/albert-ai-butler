@@ -503,26 +503,26 @@ class Connections implements Hookable {
 						<label for="albert-add-user-select" class="screen-reader-text"><?php esc_html_e( 'Select user to add', 'albert' ); ?></label>
 						<select name="albert_user_id" id="albert-add-user-select" class="albert-select-input">
 							<option value=""><?php esc_html_e( '— Select User —', 'albert' ); ?></option>
-							<?php foreach ( $all_users as $user ) : ?>
-								<?php if ( ! in_array( $user->ID, $allowed_users, true ) ) : ?>
+							<?php foreach ( $all_users as $user ) { ?>
+								<?php if ( ! in_array( $user->ID, $allowed_users, true ) ) { ?>
 									<option value="<?php echo esc_attr( $user->ID ); ?>">
 										<?php echo esc_html( $user->display_name . ' (' . $user->user_email . ')' ); ?>
 									</option>
-								<?php endif; ?>
-							<?php endforeach; ?>
+								<?php } ?>
+							<?php } ?>
 						</select>
 						<button type="submit" class="button button-primary"><?php esc_html_e( 'Add User', 'albert' ); ?></button>
 					</form>
 				</div>
 
-				<?php if ( empty( $allowed_users ) ) : ?>
+				<?php if ( empty( $allowed_users ) ) { ?>
 					<div class="albert-empty-state">
 						<span class="dashicons dashicons-groups" aria-hidden="true"></span>
 						<p><?php esc_html_e( 'No users have access yet. Add users above to allow them to connect AI tools.', 'albert' ); ?></p>
 					</div>
-				<?php else : ?>
+				<?php } else { ?>
 					<div class="albert-users-list">
-						<?php foreach ( $allowed_users as $user_id ) : ?>
+						<?php foreach ( $allowed_users as $user_id ) { ?>
 							<?php
 							$user          = get_user_by( 'id', $user_id );
 							$session_count = $this->get_user_session_count( $user_id );
@@ -561,7 +561,7 @@ class Connections implements Hookable {
 									</div>
 								</div>
 								<div class="albert-user-sessions">
-									<?php if ( $session_count > 0 ) : ?>
+									<?php if ( $session_count > 0 ) { ?>
 										<a href="<?php echo esc_url( $sessions_url ); ?>" class="albert-sessions-link">
 											<?php
 											printf(
@@ -571,9 +571,9 @@ class Connections implements Hookable {
 											);
 											?>
 										</a>
-									<?php else : ?>
+									<?php } else { ?>
 										<span class="albert-no-sessions"><?php esc_html_e( 'No sessions', 'albert' ); ?></span>
-									<?php endif; ?>
+									<?php } ?>
 								</div>
 								<div class="albert-user-actions">
 									<a href="<?php echo esc_url( $remove_url ); ?>"
@@ -583,9 +583,9 @@ class Connections implements Hookable {
 									</a>
 								</div>
 							</div>
-						<?php endforeach; ?>
+						<?php } ?>
 					</div>
-				<?php endif; ?>
+				<?php } ?>
 			</div>
 		</section>
 		<?php
@@ -630,14 +630,14 @@ class Connections implements Hookable {
 				<h2><?php esc_html_e( 'Active Connections', 'albert' ); ?></h2>
 			</div>
 			<div class="albert-settings-card-body">
-				<?php if ( empty( $sessions ) ) : ?>
+				<?php if ( empty( $sessions ) ) { ?>
 					<div class="albert-empty-state">
 						<span class="dashicons dashicons-networking" aria-hidden="true"></span>
 						<p><?php esc_html_e( 'No active connections yet. Once an allowed user authorizes an AI assistant, connections will appear here.', 'albert' ); ?></p>
 					</div>
-				<?php else : ?>
+				<?php } else { ?>
 					<div class="albert-connections-grid">
-						<?php foreach ( $sessions as $session ) : ?>
+						<?php foreach ( $sessions as $session ) { ?>
 							<?php
 							$app_name     = ! empty( $session->client_name ) ? $session->client_name : __( 'Unknown Client', 'albert' );
 							$user         = get_userdata( $session->user_id );
@@ -709,7 +709,7 @@ class Connections implements Hookable {
 									</a>
 								</div>
 							</div>
-						<?php endforeach; ?>
+						<?php } ?>
 					</div>
 
 					<?php
@@ -732,7 +732,7 @@ class Connections implements Hookable {
 							<?php esc_html_e( 'Disconnect All', 'albert' ); ?>
 						</a>
 					</div>
-				<?php endif; ?>
+				<?php } ?>
 			</div>
 		</section>
 		<?php
@@ -815,9 +815,9 @@ class Connections implements Hookable {
 					<?php esc_html_e( 'Each session represents an AI tool that has been authorized. Revoking a session will disconnect that tool.', 'albert' ); ?>
 				</p>
 
-				<?php if ( empty( $sessions ) ) : ?>
+				<?php if ( empty( $sessions ) ) { ?>
 					<p><em><?php esc_html_e( 'No active sessions. The user has not authorized any tools yet.', 'albert' ); ?></em></p>
-				<?php else : ?>
+				<?php } else { ?>
 					<table class="wp-list-table widefat fixed striped">
 						<thead>
 							<tr>
@@ -828,7 +828,7 @@ class Connections implements Hookable {
 							</tr>
 						</thead>
 						<tbody>
-							<?php foreach ( $sessions as $session ) : ?>
+							<?php foreach ( $sessions as $session ) { ?>
 								<tr>
 									<td>
 										<strong><?php echo esc_html( $session->client_name ?? __( 'Unknown', 'albert' ) ); ?></strong>
@@ -868,7 +868,7 @@ class Connections implements Hookable {
 										</a>
 									</td>
 								</tr>
-							<?php endforeach; ?>
+							<?php } ?>
 						</tbody>
 					</table>
 
@@ -892,7 +892,7 @@ class Connections implements Hookable {
 							<?php esc_html_e( 'Revoke All Sessions', 'albert' ); ?>
 						</a>
 					</p>
-				<?php endif; ?>
+				<?php } ?>
 			</div>
 		</div>
 		<?php

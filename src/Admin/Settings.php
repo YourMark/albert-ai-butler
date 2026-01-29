@@ -132,9 +132,9 @@ class Settings implements Hookable {
 							autocomplete="off"
 						/>
 						<button type="submit" class="button button-primary"><?php esc_html_e( 'Save', 'albert' ); ?></button>
-						<?php if ( ! empty( $api_key ) ) : ?>
+						<?php if ( ! empty( $api_key ) ) { ?>
 							<button type="submit" name="albert_clear_api_key" value="1" class="button"><?php esc_html_e( 'Clear', 'albert' ); ?></button>
-						<?php endif; ?>
+						<?php } ?>
 					</form>
 				</div>
 			</div>
@@ -181,7 +181,7 @@ class Settings implements Hookable {
 					</div>
 				</div>
 
-				<?php if ( $show_developer_settings ) : ?>
+				<?php if ( $show_developer_settings ) { ?>
 					<div class="albert-field-group">
 						<label class="albert-field-label" for="albert-external-url"><?php esc_html_e( 'External URL', 'albert' ); ?></label>
 						<p class="albert-field-description">
@@ -199,12 +199,12 @@ class Settings implements Hookable {
 								class="albert-text-input"
 							/>
 							<button type="submit" class="button"><?php esc_html_e( 'Save', 'albert' ); ?></button>
-							<?php if ( ! empty( $external_url ) ) : ?>
+							<?php if ( ! empty( $external_url ) ) { ?>
 								<button type="submit" name="albert_clear_url" value="1" class="button"><?php esc_html_e( 'Clear', 'albert' ); ?></button>
-							<?php endif; ?>
+							<?php } ?>
 						</form>
 					</div>
-				<?php endif; ?>
+				<?php } ?>
 			</div>
 		</section>
 		<?php

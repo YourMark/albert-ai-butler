@@ -184,7 +184,7 @@ class Abilities implements Hookable {
 			<h2 class="albert-sidebar-title"><?php esc_html_e( 'Categories', 'albert' ); ?></h2>
 			<nav>
 				<ul class="albert-sidebar-nav">
-					<?php foreach ( $grouped as $slug => $data ) : ?>
+					<?php foreach ( $grouped as $slug => $data ) { ?>
 						<?php
 						$category  = $data['category'];
 						$abilities = $data['abilities'];
@@ -208,7 +208,7 @@ class Abilities implements Hookable {
 								<span class="albert-nav-count"><?php echo esc_html( $enabled . '/' . $total ); ?></span>
 							</a>
 						</li>
-					<?php endforeach; ?>
+					<?php } ?>
 				</ul>
 			</nav>
 		</aside>
@@ -233,7 +233,7 @@ class Abilities implements Hookable {
 		?>
 		<nav class="albert-sidebar-mobile" aria-label="<?php esc_attr_e( 'Abilities categories', 'albert' ); ?>">
 			<ul class="albert-sidebar-mobile-nav">
-				<?php foreach ( $grouped as $slug => $data ) : ?>
+				<?php foreach ( $grouped as $slug => $data ) { ?>
 					<?php
 					$category  = $data['category'];
 					$abilities = $data['abilities'];
@@ -256,7 +256,7 @@ class Abilities implements Hookable {
 							<span class="albert-nav-count"><?php echo esc_html( $enabled . '/' . $total ); ?></span>
 						</a>
 					</li>
-				<?php endforeach; ?>
+				<?php } ?>
 			</ul>
 		</nav>
 		<?php
@@ -328,26 +328,26 @@ class Abilities implements Hookable {
 				</span>
 			</div>
 
-			<?php if ( ! empty( $grouped ) ) : ?>
+			<?php if ( ! empty( $grouped ) ) { ?>
 				<?php $this->render_collapse_preload_script(); ?>
 				<div class="albert-groups-grid">
-					<?php foreach ( $grouped as $slug => $data ) : ?>
+					<?php foreach ( $grouped as $slug => $data ) { ?>
 						<?php $this->render_category_section( $slug, $data, $disabled_abilities ); ?>
-					<?php endforeach; ?>
+					<?php } ?>
 				</div>
-			<?php else : ?>
+			<?php } else { ?>
 				<div class="notice notice-info">
 					<p>
 						<?php esc_html_e( 'No abilities are currently registered. Abilities will appear here once they are registered.', 'albert' ); ?>
 					</p>
 				</div>
-			<?php endif; ?>
+			<?php } ?>
 
-			<?php if ( ! empty( $grouped ) ) : ?>
+			<?php if ( ! empty( $grouped ) ) { ?>
 				<div class="albert-mobile-save">
 					<?php submit_button( __( 'Save Changes', 'albert' ), 'primary', 'submit-mobile', false ); ?>
 				</div>
-			<?php endif; ?>
+			<?php } ?>
 		</form>
 		<?php
 	}
@@ -433,9 +433,9 @@ class Abilities implements Hookable {
 						<h2 class="ability-group-title" id="<?php echo esc_attr( 'title-' . $card_id ); ?>">
 							<?php echo esc_html( $label ); ?>
 						</h2>
-						<?php if ( ! empty( $description ) ) : ?>
+						<?php if ( ! empty( $description ) ) { ?>
 							<p class="ability-group-description"><?php echo esc_html( $description ); ?></p>
-						<?php endif; ?>
+						<?php } ?>
 					</div>
 				</div>
 				<div class="ability-group-toggle-all">
@@ -461,9 +461,9 @@ class Abilities implements Hookable {
 			</div>
 
 			<div class="ability-group-items" id="<?php echo esc_attr( $items_id ); ?>" role="group" aria-labelledby="<?php echo esc_attr( 'title-' . $card_id ); ?>">
-				<?php foreach ( $content_types as $type_key => $type_data ) : ?>
+				<?php foreach ( $content_types as $type_key => $type_data ) { ?>
 					<?php $this->render_content_type_row( $slug, $type_key, $type_data, $disabled_abilities ); ?>
-				<?php endforeach; ?>
+				<?php } ?>
 			</div>
 		</section>
 		<?php
@@ -677,9 +677,9 @@ class Abilities implements Hookable {
 				</div>
 
 				<div class="ability-type-toggles">
-					<?php if ( $has_read ) : ?>
+					<?php if ( $has_read ) { ?>
 						<div class="ability-type-toggle">
-							<?php if ( $read_premium ) : ?>
+							<?php if ( $read_premium ) { ?>
 								<label class="albert-toggle albert-toggle--disabled" for="<?php echo esc_attr( $read_id ); ?>">
 									<input
 										type="checkbox"
@@ -689,7 +689,7 @@ class Abilities implements Hookable {
 									/>
 									<span class="albert-toggle-slider" aria-hidden="true"></span>
 								</label>
-							<?php else : ?>
+							<?php } else { ?>
 								<label class="albert-toggle" for="<?php echo esc_attr( $read_id ); ?>">
 									<input
 										type="checkbox"
@@ -703,20 +703,20 @@ class Abilities implements Hookable {
 									/>
 									<span class="albert-toggle-slider" aria-hidden="true"></span>
 								</label>
-							<?php endif; ?>
+							<?php } ?>
 							<label class="ability-type-toggle-label" for="<?php echo esc_attr( $read_id ); ?>">
 								<span class="dashicons dashicons-visibility" aria-hidden="true"></span>
 								<?php esc_html_e( 'Read', 'albert' ); ?>
 							</label>
-							<?php if ( $read_premium ) : ?>
+							<?php if ( $read_premium ) { ?>
 								<span class="albert-premium-lock dashicons dashicons-lock" aria-hidden="true"></span>
-							<?php endif; ?>
+							<?php } ?>
 						</div>
-					<?php endif; ?>
+					<?php } ?>
 
-					<?php if ( $has_write ) : ?>
+					<?php if ( $has_write ) { ?>
 						<div class="ability-type-toggle">
-							<?php if ( $write_premium ) : ?>
+							<?php if ( $write_premium ) { ?>
 								<label class="albert-toggle albert-toggle--disabled" for="<?php echo esc_attr( $write_id ); ?>">
 									<input
 										type="checkbox"
@@ -726,7 +726,7 @@ class Abilities implements Hookable {
 									/>
 									<span class="albert-toggle-slider" aria-hidden="true"></span>
 								</label>
-							<?php else : ?>
+							<?php } else { ?>
 								<label class="albert-toggle" for="<?php echo esc_attr( $write_id ); ?>">
 									<input
 										type="checkbox"
@@ -740,21 +740,21 @@ class Abilities implements Hookable {
 									/>
 									<span class="albert-toggle-slider" aria-hidden="true"></span>
 								</label>
-							<?php endif; ?>
+							<?php } ?>
 							<label class="ability-type-toggle-label" for="<?php echo esc_attr( $write_id ); ?>">
 								<span class="dashicons dashicons-edit" aria-hidden="true"></span>
 								<?php esc_html_e( 'Write', 'albert' ); ?>
 							</label>
-							<?php if ( $write_premium ) : ?>
+							<?php if ( $write_premium ) { ?>
 								<span class="albert-premium-lock dashicons dashicons-lock" aria-hidden="true"></span>
-							<?php endif; ?>
+							<?php } ?>
 						</div>
-					<?php endif; ?>
+					<?php } ?>
 				</div>
 			</div>
 
 			<div class="ability-type-details" id="<?php echo esc_attr( $details_id ); ?>" hidden>
-				<?php if ( $has_sub_items ) : ?>
+				<?php if ( $has_sub_items ) { ?>
 					<?php
 					// Render individual ability rows.
 					foreach ( $read_abilities as $ability_name => $ability ) {
@@ -764,7 +764,7 @@ class Abilities implements Hookable {
 						$this->render_ability_item( $ability, $disabled_abilities, 'write', $write_id );
 					}
 					?>
-				<?php else : ?>
+				<?php } else { ?>
 					<?php
 					// Single ability - show description and hidden input.
 					$single_ability = ! empty( $read_abilities ) ? reset( $read_abilities ) : reset( $write_abilities );
@@ -772,10 +772,10 @@ class Abilities implements Hookable {
 					$description    = is_object( $single_ability ) && method_exists( $single_ability, 'get_description' ) ? $single_ability->get_description() : '';
 					?>
 					<input type="hidden" name="albert_presented_abilities[]" value="<?php echo esc_attr( $single_name ); ?>" />
-					<?php if ( ! empty( $description ) ) : ?>
+					<?php if ( ! empty( $description ) ) { ?>
 						<p class="ability-type-description"><?php echo esc_html( $description ); ?></p>
-					<?php endif; ?>
-				<?php endif; ?>
+					<?php } ?>
+				<?php } ?>
 			</div>
 		</div>
 		<?php
@@ -815,7 +815,7 @@ class Abilities implements Hookable {
 			<input type="hidden" name="albert_presented_abilities[]" value="<?php echo esc_attr( $name ); ?>" />
 
 			<div class="ability-item-toggle">
-				<?php if ( $is_premium ) : ?>
+				<?php if ( $is_premium ) { ?>
 					<label class="albert-toggle albert-toggle--disabled" for="<?php echo esc_attr( $field_id ); ?>">
 						<input
 							type="checkbox"
@@ -825,7 +825,7 @@ class Abilities implements Hookable {
 						/>
 						<span class="albert-toggle-slider" aria-hidden="true"></span>
 					</label>
-				<?php else : ?>
+				<?php } else { ?>
 					<label class="albert-toggle" for="<?php echo esc_attr( $field_id ); ?>">
 						<input
 							type="checkbox"
@@ -836,24 +836,24 @@ class Abilities implements Hookable {
 							data-category="<?php echo esc_attr( $category ); ?>"
 							data-mode="<?php echo esc_attr( $mode ); ?>"
 							data-group-checkbox="<?php echo esc_attr( $group_checkbox_id ); ?>"
-							<?php if ( ! empty( $description ) ) : ?>
+							<?php if ( ! empty( $description ) ) { ?>
 								aria-describedby="<?php echo esc_attr( $field_id . '-description' ); ?>"
-							<?php endif; ?>
+							<?php } ?>
 							<?php checked( $is_enabled ); ?>
 						/>
 						<span class="albert-toggle-slider" aria-hidden="true"></span>
 					</label>
-				<?php endif; ?>
+				<?php } ?>
 			</div>
 			<div class="ability-item-content">
 				<label class="ability-item-label" for="<?php echo esc_attr( $field_id ); ?>">
 					<?php echo esc_html( $label ); ?>
 				</label>
-				<?php if ( ! empty( $description ) ) : ?>
+				<?php if ( ! empty( $description ) ) { ?>
 					<p class="ability-item-description" id="<?php echo esc_attr( $field_id . '-description' ); ?>">
 						<?php echo esc_html( $description ); ?>
 					</p>
-				<?php endif; ?>
+				<?php } ?>
 			</div>
 		</div>
 		<?php

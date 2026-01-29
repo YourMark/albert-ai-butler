@@ -20,7 +20,7 @@
 	 * Initialize a live region for screen reader announcements.
 	 */
 	function initLiveRegion() {
-		var liveRegion = document.createElement('div');
+		const liveRegion = document.createElement('div');
 		liveRegion.setAttribute('aria-live', 'polite');
 		liveRegion.setAttribute('aria-atomic', 'true');
 		liveRegion.setAttribute('role', 'status');
@@ -116,7 +116,7 @@
 		button.disabled = true;
 
 		// Announce to screen readers
-		var liveRegion = document.getElementById('albert-copy-status');
+		const liveRegion = document.getElementById('albert-copy-status');
 		if (liveRegion) {
 			liveRegion.textContent = feedbackText;
 		}

@@ -141,7 +141,7 @@ class Dashboard implements Hookable {
 			<div class="albert-dashboard-grid">
 				<!-- Setup Checklist -->
 				<div class="albert-card albert-setup-checklist-card">
-					<?php if ( $setup_complete ) : ?>
+					<?php if ( $setup_complete ) { ?>
 						<h2><?php esc_html_e( 'Setup', 'albert' ); ?></h2>
 						<div class="albert-setup-complete-wrapper">
 							<div class="albert-setup-complete-bar">
@@ -156,7 +156,7 @@ class Dashboard implements Hookable {
 								</p>
 							</div>
 						</div>
-					<?php else : ?>
+					<?php } else { ?>
 						<h2><?php echo esc_html__( 'Get Started', 'albert' ); ?></h2>
 						<ol class="albert-checklist">
 							<li class="albert-checklist-item albert-checklist-done">
@@ -166,28 +166,28 @@ class Dashboard implements Hookable {
 							<li class="albert-checklist-item <?php echo $has_allowed_users ? 'albert-checklist-done' : 'albert-checklist-current'; ?>">
 								<span class="albert-checklist-icon dashicons <?php echo $has_allowed_users ? 'dashicons-yes-alt' : 'dashicons-marker'; ?>" aria-hidden="true"></span>
 								<span class="albert-checklist-text">
-									<?php if ( $has_allowed_users ) : ?>
+									<?php if ( $has_allowed_users ) { ?>
 										<?php esc_html_e( 'Allowed user added', 'albert' ); ?>
-									<?php else : ?>
+									<?php } else { ?>
 										<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>">
 											<?php esc_html_e( 'Add an allowed user', 'albert' ); ?>
 										</a>
-									<?php endif; ?>
+									<?php } ?>
 								</span>
 							</li>
 							<li class="albert-checklist-item <?php echo $has_allowed_users ? ( $has_connections ? 'albert-checklist-done' : 'albert-checklist-current' ) : 'albert-checklist-pending'; ?>">
 								<span class="albert-checklist-icon dashicons <?php echo $has_connections ? 'dashicons-yes-alt' : ( $has_allowed_users ? 'dashicons-marker' : 'dashicons-marker' ); ?>" aria-hidden="true"></span>
 								<span class="albert-checklist-text">
-									<?php if ( $has_connections ) : ?>
+									<?php if ( $has_connections ) { ?>
 										<?php esc_html_e( 'AI assistant connected', 'albert' ); ?>
-									<?php elseif ( $has_allowed_users ) : ?>
+									<?php } elseif ( $has_allowed_users ) { ?>
 										<?php esc_html_e( 'Connect an AI assistant', 'albert' ); ?>
-									<?php else : ?>
+									<?php } else { ?>
 										<?php esc_html_e( 'Connect an AI assistant', 'albert' ); ?>
-									<?php endif; ?>
+									<?php } ?>
 								</span>
 							</li>
-							<?php if ( $has_allowed_users && ! $has_connections ) : ?>
+							<?php if ( $has_allowed_users && ! $has_connections ) { ?>
 								<li class="albert-checklist-endpoint">
 									<label class="albert-field-label"><?php esc_html_e( 'MCP Endpoint URL', 'albert' ); ?></label>
 									<p class="albert-field-description">
@@ -210,9 +210,9 @@ class Dashboard implements Hookable {
 										</button>
 									</div>
 								</li>
-							<?php endif; ?>
+							<?php } ?>
 						</ol>
-					<?php endif; ?>
+					<?php } ?>
 				</div>
 
 				<!-- Status Overview -->
@@ -273,22 +273,22 @@ class Dashboard implements Hookable {
 					<h2><?php echo esc_html__( 'Recent Activity', 'albert' ); ?></h2>
 					<?php
 					$recent_activity = $this->get_recent_activity();
-					if ( ! empty( $recent_activity ) ) :
+					if ( ! empty( $recent_activity ) ) {
 						?>
 						<ul class="albert-activity-list">
-							<?php foreach ( $recent_activity as $activity ) : ?>
+							<?php foreach ( $recent_activity as $activity ) { ?>
 								<li>
 									<span class="albert-activity-icon"><?php echo esc_html( $activity['icon'] ); ?></span>
 									<span class="albert-activity-text"><?php echo esc_html( $activity['text'] ); ?></span>
 									<span class="albert-activity-time"><?php echo esc_html( $activity['time'] ); ?></span>
 								</li>
-							<?php endforeach; ?>
+							<?php } ?>
 						</ul>
-					<?php else : ?>
+					<?php } else { ?>
 						<p class="description">
 							<?php echo esc_html__( 'No recent activity. Connect an AI assistant to get started!', 'albert' ); ?>
 						</p>
-					<?php endif; ?>
+					<?php } ?>
 				</div>
 			</div>
 		</div>

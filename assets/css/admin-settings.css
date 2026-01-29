@@ -171,7 +171,6 @@
 		display: flex;
 		gap: var(--albert-spacing-xs);
 		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
 		list-style: none;
 		margin: 0;
 		padding: 0 0 var(--albert-spacing-xs) 0;
