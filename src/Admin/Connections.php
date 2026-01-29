@@ -18,6 +18,7 @@ use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\Limits;
 use Albert\MCP\Server as McpServer;
 use Albert\OAuth\Database\Installer;
+use Albert\OAuth\Repositories\RefreshTokenRepository;
 
 /**
  * Connections class
@@ -98,6 +99,9 @@ class Connections implements Hookable {
 			case 'revoke':
 				$this->handle_revoke_session();
 				break;
+			case 'revoke_full':
+				$this->handle_revoke_full_session();
+				break;
 			case 'revoke_all':
 				$this->handle_revoke_all_sessions();
 				break;
@@ -149,6 +153,74 @@ class Connections implements Hookable {
 			'albert_connections',
 			'session_revoked',
 			__( 'Session revoked successfully.', 'albert' ),
+			'success'
+		);
+
+		// Redirect back.
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'             => $this->page_slug,
+					'settings-updated' => 'true',
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Handle revoking a full session (access + refresh tokens).
+	 *
+	 * @return void
+	 * @since 1.0.0
+	 */
+	private function handle_revoke_full_session(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified below.
+		$token_id = isset( $_GET['token_id'] ) ? absint( $_GET['token_id'] ) : 0;
+
+		if ( ! $token_id ) {
+			return;
+		}
+
+		// Verify nonce.
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ?? '' ) ), 'revoke_full_session_' . $token_id ) ) {
+			wp_die( esc_html__( 'Security check failed.', 'albert' ) );
+		}
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'albert_oauth_access_tokens';
+
+		// Get the token_id string before revoking.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$token_id_string = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT token_id FROM %i WHERE id = %d',
+				$table,
+				$token_id
+			)
+		);
+
+		// Revoke the access token.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update(
+			$table,
+			[ 'revoked' => 1 ],
+			[ 'id' => $token_id ],
+			[ '%d' ],
+			[ '%d' ]
+		);
+
+		// Revoke associated refresh tokens.
+		if ( $token_id_string ) {
+			$refresh_repo = new RefreshTokenRepository();
+			$refresh_repo->revokeRefreshTokensByAccessToken( $token_id_string );
+		}
+
+		add_settings_error(
+			'albert_connections',
+			'session_ended',
+			__( 'Session ended successfully.', 'albert' ),
 			'success'
 		);
 
@@ -746,6 +818,18 @@ class Connections implements Hookable {
 									),
 									'revoke_my_session_' . $session->id
 								);
+
+								$revoke_full_url = wp_nonce_url(
+									add_query_arg(
+										[
+											'page'     => $this->page_slug,
+											'action'   => 'revoke_full',
+											'token_id' => $session->id,
+										],
+										admin_url( 'admin.php' )
+									),
+									'revoke_full_session_' . $session->id
+								);
 								?>
 								<tr>
 									<td>
@@ -766,9 +850,12 @@ class Connections implements Hookable {
 										</span>
 									</td>
 									<td class="albert-connections-table-actions">
-										<a href="<?php echo esc_url( $revoke_url ); ?>"
-											class="albert-disconnect-link"
-											onclick="return confirm('<?php echo esc_js( __( 'Disconnect this AI assistant?', 'albert' ) ); ?>');">
+										<a href="#"
+											class="albert-disconnect-link albert-disconnect-trigger"
+											data-token-id="<?php echo esc_attr( $session->id ); ?>"
+											data-client-name="<?php echo esc_attr( $app_name ); ?>"
+											data-revoke-url="<?php echo esc_url( $revoke_url ); ?>"
+											data-revoke-full-url="<?php echo esc_url( $revoke_full_url ); ?>">
 											<?php esc_html_e( 'Disconnect', 'albert' ); ?>
 										</a>
 									</td>
@@ -800,6 +887,29 @@ class Connections implements Hookable {
 					<?php } ?>
 				<?php } ?>
 			</div>
+
+			<!-- Disconnect Dialog -->
+			<dialog id="albert-disconnect-dialog">
+				<div class="albert-disconnect-dialog-header">
+					<h2 id="albert-disconnect-dialog-title"><?php esc_html_e( 'Disconnect?', 'albert' ); ?></h2>
+					<button type="button" class="albert-disconnect-dialog-close" aria-label="<?php esc_attr_e( 'Close', 'albert' ); ?>">
+						<span class="dashicons dashicons-no-alt"></span>
+					</button>
+				</div>
+				<div class="albert-disconnect-options">
+					<a href="#" id="albert-disconnect-connection" class="albert-disconnect-option">
+						<strong><?php esc_html_e( 'Disconnect connection', 'albert' ); ?></strong>
+						<span><?php esc_html_e( 'Revokes the current access token. The client will automatically reconnect within the hour.', 'albert' ); ?></span>
+					</a>
+					<a href="#" id="albert-disconnect-session" class="albert-disconnect-option albert-disconnect-option--destructive">
+						<strong><?php esc_html_e( 'End session', 'albert' ); ?></strong>
+						<span><?php esc_html_e( 'Revokes the access token and session. The client must re-authorize to connect again.', 'albert' ); ?></span>
+					</a>
+				</div>
+				<button type="button" class="button albert-disconnect-cancel">
+					<?php esc_html_e( 'Cancel', 'albert' ); ?>
+				</button>
+			</dialog>
 		</section>
 		<?php
 	}

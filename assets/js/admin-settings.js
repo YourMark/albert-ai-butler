@@ -722,6 +722,51 @@ const ModalModule = {
 };
 
 /**
+ * Disconnect dialog — populates and shows a native dialog for disconnect actions.
+ */
+const DisconnectModule = {
+	init() {
+		this.dialog = document.getElementById( 'albert-disconnect-dialog' );
+		if ( ! this.dialog ) {
+			return;
+		}
+
+		this.title = document.getElementById( 'albert-disconnect-dialog-title' );
+		this.connLink = document.getElementById( 'albert-disconnect-connection' );
+		this.sessLink = document.getElementById( 'albert-disconnect-session' );
+
+		document.addEventListener( 'click', ( e ) => {
+			const trigger = e.target.closest( '.albert-disconnect-trigger' );
+			if ( ! trigger ) {
+				return;
+			}
+
+			e.preventDefault();
+
+			this.title.textContent = 'Disconnect ' + ( trigger.dataset.clientName || '' ) + '?';
+			this.connLink.href = trigger.dataset.revokeUrl;
+			this.sessLink.href = trigger.dataset.revokeFullUrl;
+
+			this.dialog.showModal();
+		} );
+
+		// Close on close/cancel button click.
+		this.dialog.addEventListener( 'click', ( e ) => {
+			if ( e.target.closest( '.albert-disconnect-dialog-close' ) || e.target.closest( '.albert-disconnect-cancel' ) ) {
+				this.dialog.close();
+			}
+		} );
+
+		// Close on backdrop click.
+		this.dialog.addEventListener( 'click', ( e ) => {
+			if ( e.target === this.dialog ) {
+				this.dialog.close();
+			}
+		} );
+	},
+};
+
+/**
  * Initialize all modules when DOM is ready.
  */
 function init() {
@@ -732,6 +777,7 @@ function init() {
 	ClipboardModule.init();
 	ModalModule.init();
 	DirtyStateModule.init();
+	DisconnectModule.init();
 }
 
 /**

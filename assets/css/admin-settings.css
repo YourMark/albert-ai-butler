@@ -1969,11 +1969,11 @@
 	border-bottom: 2px solid var(--albert-border-light);
 }
 
-.albert-connections-table th:nth-child(1) { width: 30%; }
-.albert-connections-table th:nth-child(2) { width: 20%; }
+.albert-connections-table th:nth-child(1) { width: 26%; }
+.albert-connections-table th:nth-child(2) { width: 18%; }
 .albert-connections-table th:nth-child(3) { width: 18%; }
-.albert-connections-table th:nth-child(4) { width: 20%; }
-.albert-connections-table th:nth-child(5) { width: 12%; }
+.albert-connections-table th:nth-child(4) { width: 22%; }
+.albert-connections-table th:nth-child(5) { width: 16%; }
 
 .albert-connections-table td {
 	padding: var(--albert-spacing-md);
@@ -1981,7 +1981,6 @@
 	font-size: var(--albert-font-base);
 	color: var(--albert-text-primary);
 	vertical-align: middle;
-	white-space: nowrap;
 }
 
 .albert-connections-table tbody tr:last-child td {
@@ -2421,4 +2420,93 @@
 	.albert-endpoint-bar {
 		flex-wrap: wrap;
 	}
+}
+
+/* Disconnect Dialog */
+#albert-disconnect-dialog {
+	max-width: 440px;
+	width: 90%;
+	padding: 0;
+	border: 1px solid var(--albert-border);
+	border-radius: var(--albert-border-radius-lg);
+	box-shadow: 0 5px 15px var(--albert-black-30);
+}
+
+#albert-disconnect-dialog::backdrop {
+	background: var(--albert-modal-backdrop);
+}
+
+.albert-disconnect-dialog-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--albert-spacing-md) var(--albert-spacing-lg);
+	border-bottom: 1px solid var(--albert-border-light);
+}
+
+.albert-disconnect-dialog-header h2 {
+	margin: 0;
+	font-size: var(--albert-font-2xl);
+}
+
+.albert-disconnect-dialog-close {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	color: var(--albert-text-secondary);
+	display: flex;
+	align-items: center;
+}
+
+.albert-disconnect-dialog-close:hover {
+	color: var(--albert-text-primary);
+}
+
+.albert-disconnect-options {
+	display: flex;
+	flex-direction: column;
+	gap: var(--albert-spacing-sm);
+	padding: var(--albert-spacing-lg);
+}
+
+.albert-disconnect-option {
+	display: block;
+	padding: var(--albert-spacing-md) var(--albert-spacing-lg);
+	border: 1px solid var(--albert-border);
+	border-radius: var(--albert-border-radius);
+	text-decoration: none;
+	color: var(--albert-text-primary);
+	transition: border-color var(--albert-transition), background-color var(--albert-transition);
+}
+
+.albert-disconnect-option:hover {
+	border-color: var(--albert-primary);
+	background: var(--albert-primary-8);
+	color: var(--albert-text-primary);
+}
+
+.albert-disconnect-option strong {
+	display: block;
+	font-size: var(--albert-font-md);
+	margin-bottom: 2px;
+}
+
+.albert-disconnect-option span {
+	display: block;
+	font-size: var(--albert-font-sm);
+	color: var(--albert-text-secondary);
+	line-height: 1.4;
+}
+
+.albert-disconnect-option--destructive:hover {
+	border-color: var(--albert-error);
+	background: oklch(0.52 0.18 25 / 0.06);
+}
+
+#albert-disconnect-dialog .albert-disconnect-cancel {
+	display: block;
+	width: calc(100% - 2 * var(--albert-spacing-lg));
+	margin: 0 var(--albert-spacing-lg) var(--albert-spacing-lg);
+	text-align: center;
 }
