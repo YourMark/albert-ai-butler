@@ -1969,11 +1969,10 @@
 	border-bottom: 2px solid var(--albert-border-light);
 }
 
-.albert-connections-table th:nth-child(1) { width: 26%; }
-.albert-connections-table th:nth-child(2) { width: 18%; }
-.albert-connections-table th:nth-child(3) { width: 18%; }
-.albert-connections-table th:nth-child(4) { width: 22%; }
-.albert-connections-table th:nth-child(5) { width: 16%; }
+.albert-connections-table th:nth-child(1) { width: 35%; }
+.albert-connections-table th:nth-child(2) { width: 25%; }
+.albert-connections-table th:nth-child(3) { width: 25%; }
+.albert-connections-table th:nth-child(4) { width: 15%; }
 
 .albert-connections-table td {
 	padding: var(--albert-spacing-md);
@@ -1998,11 +1997,6 @@
 	font-family: 'Courier New', Courier, monospace;
 	display: block;
 	margin-top: 2px;
-}
-
-.albert-expiring {
-	color: var(--albert-error);
-	font-weight: 500;
 }
 
 .albert-connections-table-actions {

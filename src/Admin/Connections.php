@@ -750,7 +750,6 @@ class Connections implements Hookable {
 					t.user_id,
 					t.token_id,
 					CONVERT_TZ(t.created_at, @@session.time_zone, '+00:00') as created_at,
-					t.expires_at,
 					COALESCE(c.name, 'Unknown Client') as client_name
 				FROM %i t
 				LEFT JOIN %i c ON t.client_id = c.client_id
@@ -786,15 +785,6 @@ class Connections implements Hookable {
 								<th><?php esc_html_e( 'Client', 'albert' ); ?></th>
 								<th><?php esc_html_e( 'User', 'albert' ); ?></th>
 								<th><?php esc_html_e( 'Connected', 'albert' ); ?></th>
-								<th>
-									<?php esc_html_e( 'Expires', 'albert' ); ?>
-									<button type="button" class="albert-info-trigger albert-info-trigger-inline" aria-expanded="false" aria-label="<?php esc_attr_e( 'More info about token expiry', 'albert' ); ?>">
-										<span class="dashicons dashicons-editor-help" aria-hidden="true"></span>
-									</button>
-									<div class="albert-info-popover" role="tooltip" hidden>
-										<?php esc_html_e( 'Access tokens expire every hour and are automatically refreshed by the client. The session stays active for up to 30 days.', 'albert' ); ?>
-									</div>
-								</th>
 								<th></th>
 							</tr>
 						</thead>
@@ -804,8 +794,6 @@ class Connections implements Hookable {
 								$app_name     = ! empty( $session->client_name ) ? $session->client_name : __( 'Unknown Client', 'albert' );
 								$user         = get_userdata( $session->user_id );
 								$connected_at = strtotime( $session->created_at );
-								$expires_at   = strtotime( $session->expires_at );
-								$is_expiring  = ( $expires_at - time() ) < DAY_IN_SECONDS;
 
 								$revoke_url = wp_nonce_url(
 									add_query_arg(
@@ -838,17 +826,6 @@ class Connections implements Hookable {
 									</td>
 									<td><?php echo $user ? esc_html( $user->display_name ) : esc_html__( 'Unknown', 'albert' ); ?></td>
 									<td><?php echo esc_html( human_time_diff( $connected_at, time() ) . ' ' . __( 'ago', 'albert' ) ); ?></td>
-									<td>
-										<span class="<?php echo $is_expiring ? 'albert-expiring' : ''; ?>">
-											<?php
-											if ( $expires_at > time() ) {
-												echo esc_html( human_time_diff( time(), $expires_at ) . ' ' . __( 'from now', 'albert' ) );
-											} else {
-												echo esc_html__( 'Expired', 'albert' );
-											}
-											?>
-										</span>
-									</td>
 									<td class="albert-connections-table-actions">
 										<a href="#"
 											class="albert-disconnect-link albert-disconnect-trigger"
