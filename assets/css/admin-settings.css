@@ -366,6 +366,20 @@
 	overflow: hidden;
 }
 
+.ability-group:target {
+	animation: ability-group-highlight 1.5s ease-out;
+}
+
+@keyframes ability-group-highlight {
+	0%,
+	15% {
+		box-shadow: 0 0 0 3px oklch(0.49 0.12 248 / 0.4);
+	}
+	100% {
+		box-shadow: var(--albert-shadow-sm);
+	}
+}
+
 .ability-group:last-child {
 	margin-bottom: 0;
 }
@@ -871,7 +885,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: var(--albert-spacing-sm) 0;
+	padding: var(--albert-spacing-md) 0;
 	gap: var(--albert-spacing-sm);
 }
 
