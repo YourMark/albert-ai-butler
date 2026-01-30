@@ -1,0 +1,112 @@
+# Albert .gitignore
+
+############
+## IDEs
+############
+
+*.pydevproject
+.project
+.metadata
+*.swp
+*~.nib
+*~
+local.properties
+.classpath
+.settings/
+.loadpath
+.externalToolBuilders/
+*.launch
+.cproject
+.buildpath
+.vscode
+.idea/
+nbproject/
+phpcs.xml
+.phpcs.xml
+phpunit.xml
+phpunit-integration.xml
+phpunit-wp.xml
+.phpunit.result.cache
+
+############
+## OSes
+############
+
+[Tt]humbs.db
+[Dd]esktop.ini
+*.DS_store
+.DS_store?
+.DS_Store
+._*
+.Trashes
+
+############
+## Composer
+############
+
+/vendor/
+composer.lock
+
+############
+## Node/NPM
+############
+
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+bower_components/
+
+############
+## Build files
+############
+
+/build/
+/dist/
+/js/dist/*
+/css/dist/*
+/artifact/
+/artifact.zip
+webpack-stats.json
+
+############
+## Testing
+############
+
+/tests/coverage/
+/coverage
+/.phpunit.result.cache
+
+############
+## Logs
+############
+
+*.log
+debug.log
+
+############
+## Temp files
+############
+
+tmp/
+temp/
+.tmp
+*.tmp
+*.temp
+*.bak
+*.[Cc]ache
+!.cache
+*.cpr
+*.orig
+*.php.in
+.svn
+.env
+
+############
+## Generated files
+############
+
+/src/generated/
+dependencies.json
+dependencies.md

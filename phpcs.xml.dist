@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<ruleset name="Albert">
+	<description>PHPCS ruleset for Albert plugin</description>
+
+	<!-- Check all PHP files in directory tree by default. -->
+	<arg name="extensions" value="php"/>
+	<file>.</file>
+
+	<!-- Exclude vendor directory. -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+
+	<!-- Use WordPress coding standards. -->
+	<rule ref="WordPress">
+		<!-- Allow short array syntax [] instead of array() -->
+		<exclude name="Generic.Arrays.DisallowShortArraySyntax"/>
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+
+		<!-- Allow PascalCase filenames (Plugin.php, Ability.php, etc.) -->
+		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+
+		<!-- Disable Yoda conditions - PHPStan catches assignment-in-condition issues -->
+		<exclude name="WordPress.PHP.YodaConditions.NotYoda"/>
+
+		<!-- Allow WP_REST_Request<array<string, mixed>> PHPDoc syntax for PHPStan compatibility -->
+		<exclude name="Squiz.Commenting.FunctionComment.IncorrectTypeHint"/>
+
+		<!-- Allow namespaced hook names with forward slashes (albert/settings/...) -->
+		<exclude name="WordPress.NamingConventions.ValidHookName.UseUnderscores"/>
+	</rule>
+
+	<!-- Enforce short array syntax. -->
+	<rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+</ruleset>

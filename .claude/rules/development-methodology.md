@@ -1,0 +1,1 @@
+/Users/markjansen/Scripts/albert-claude-rules/rules/development-methodology.md

@@ -1,0 +1,19 @@
+parameters:
+	level: 7
+	paths:
+		- src/
+	excludePaths:
+		- vendor/
+		- tests/
+		- bin/
+	bootstrapFiles:
+		- phpstan-bootstrap.php
+		- vendor/autoload.php
+		- vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+		- vendor/php-stubs/woocommerce-stubs/woocommerce-packages-stubs.php
+	scanDirectories:
+		- vendor/php-stubs/wordpress-stubs/
+	treatPhpDocTypesAsCertain: false
+	ignoreErrors:
+		# REST API response array offsets - PHPStan can't infer the full response structure
+		- '#Offset .+ does not exist on array\{_links: array, _embedded: array\}#'

@@ -1,0 +1,249 @@
+/**
+ * OAuth Pages Styles
+ *
+ * Styles for the standalone OAuth authorization flow pages
+ * (consent, error, access denied, success).
+ *
+ * @package Albert
+ * @since   1.0.0
+ */
+
+/* Common base */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	background: #f0f0f1;
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+}
+
+/* Consent page */
+.auth-container {
+	background: #fff;
+	border-radius: 8px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13);
+	max-width: 400px;
+	width: 100%;
+	padding: 40px;
+}
+
+.auth-header {
+	text-align: center;
+	margin-bottom: 30px;
+}
+
+.auth-header h1 {
+	font-size: 24px;
+	font-weight: 600;
+	color: #1d2327;
+	margin-bottom: 10px;
+}
+
+.auth-header p {
+	color: #50575e;
+	font-size: 14px;
+}
+
+.client-info {
+	background: #f6f7f7;
+	border-radius: 4px;
+	padding: 20px;
+	margin-bottom: 20px;
+}
+
+.client-name {
+	font-size: 18px;
+	font-weight: 600;
+	color: #1d2327;
+	margin-bottom: 8px;
+}
+
+.permission-text {
+	color: #50575e;
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+.user-info {
+	font-size: 13px;
+	color: #646970;
+	margin-bottom: 20px;
+	padding: 10px;
+	background: #fff8e5;
+	border-radius: 4px;
+}
+
+.button-group {
+	display: flex;
+	gap: 10px;
+}
+
+.button {
+	flex: 1;
+	padding: 12px 20px;
+	border: none;
+	border-radius: 4px;
+	font-size: 14px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.button-primary {
+	background: #2271b1;
+	color: #fff;
+}
+
+.button-primary:hover {
+	background: #135e96;
+}
+
+.button-secondary {
+	background: #f0f0f1;
+	color: #50575e;
+}
+
+.button-secondary:hover {
+	background: #dcdcde;
+}
+
+/* Error page */
+.error-container {
+	background: #fff;
+	border-left: 4px solid #d63638;
+	padding: 20px 25px;
+	max-width: 400px;
+}
+
+.error-container h1 {
+	font-size: 18px;
+	color: #1d2327;
+	margin-bottom: 10px;
+}
+
+.error-container p {
+	color: #50575e;
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+/* Access denied page */
+.access-denied-container {
+	background: #fff;
+	border-radius: 8px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13);
+	max-width: 400px;
+	width: 100%;
+	padding: 40px;
+	text-align: center;
+}
+
+.access-denied-container .icon {
+	font-size: 48px;
+	margin-bottom: 20px;
+}
+
+.access-denied-container h1 {
+	font-size: 24px;
+	color: #1d2327;
+	margin-bottom: 15px;
+}
+
+.access-denied-container p {
+	color: #50575e;
+	font-size: 14px;
+	line-height: 1.6;
+	margin-bottom: 10px;
+}
+
+.access-denied-container .user-info {
+	background: #f6f7f7;
+	border-radius: 4px;
+	padding: 15px;
+	margin: 20px 0;
+	font-size: 13px;
+	color: #646970;
+}
+
+.contact-admin {
+	font-size: 13px;
+	color: #646970;
+	margin-top: 20px;
+}
+
+/* Success page */
+.success-container {
+	background: #fff;
+	border-radius: 8px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13);
+	max-width: 400px;
+	width: 100%;
+	padding: 40px;
+	text-align: center;
+}
+
+.success-icon {
+	width: 64px;
+	height: 64px;
+	background: #00a32a;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 auto 20px;
+}
+
+.success-icon svg {
+	width: 32px;
+	height: 32px;
+	fill: #fff;
+}
+
+.success-container h1 {
+	font-size: 24px;
+	color: #1d2327;
+	margin-bottom: 15px;
+}
+
+.success-container p {
+	color: #50575e;
+	font-size: 14px;
+	line-height: 1.6;
+}
+
+.success-container .client-name {
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.close-message {
+	margin-top: 20px;
+	font-size: 14px;
+	color: #1d2327;
+}
+
+.fallback-message {
+	margin-top: 10px;
+	font-size: 13px;
+	color: #646970;
+}
+
+.success-container .button {
+	display: inline-block;
+	margin-top: 20px;
+	padding: 10px 20px;
+	background: #2271b1;
+	color: #fff;
+	text-decoration: none;
+	border-radius: 4px;
+	font-size: 14px;
+	flex: none;
+}
+
+.success-container .button:hover {
+	background: #135e96;
+}
