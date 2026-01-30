@@ -103,11 +103,11 @@ jobs:
         if: github.event.inputs.dry_run != 'true'
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ steps.prerelease.outputs.is_prerelease == 'true' && format('Pre-release {0}', steps.version.outputs.version) || format('Release {0}', steps.version.outputs.version) }}
+          name: "Release ${{ steps.version.outputs.version }}"
           tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', steps.version.outputs.version) || github.ref }}
           body_path: changelog.txt
-          prerelease: ${{ steps.prerelease.outputs.is_prerelease }}
+          prerelease: ${{ steps.prerelease.outputs.is_prerelease == 'true' }}
           files: build/albert-${{ steps.version.outputs.version }}.zip
-          generate_release_notes: true
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
