@@ -175,13 +175,6 @@ abstract class AbstractAbilitiesPage implements Hookable {
 		<div class="wrap albert-settings">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
-			<div class="notice notice-warning">
-				<p>
-					<strong><?php esc_html_e( 'Beta Version:', 'albert' ); ?></strong>
-					<?php esc_html_e( 'This plugin is currently in beta and is intended for testing purposes only. Please use with caution and do not use on production sites.', 'albert' ); ?>
-				</p>
-			</div>
-
 			<?php settings_errors(); ?>
 
 			<?php $this->render_mobile_nav( $grouped, $disabled_abilities ); ?>

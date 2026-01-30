@@ -83,17 +83,6 @@
 	margin-bottom: var(--albert-spacing-lg);
 }
 
-/* Beta notice - more compact */
-.albert-settings > .notice {
-	margin: 0 0 var(--albert-spacing-lg) 0;
-	padding: var(--albert-spacing-sm) var(--albert-spacing-md);
-}
-
-.albert-settings > .notice p {
-	margin: 0;
-	font-size: var(--albert-font-base);
-}
-
 /* Page layout with sidebar */
 .albert-page-layout {
 	display: grid;
