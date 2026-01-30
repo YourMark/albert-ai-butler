@@ -22,6 +22,27 @@ defined( 'ABSPATH' ) || exit;
 class AcfAbilities extends AbstractAbilitiesPage {
 
 	/**
+	 * Only add menu pages if ACF abilities are registered.
+	 *
+	 * @return void
+	 * @since 1.0.0
+	 */
+	public function add_menu_pages(): void {
+		if ( ! function_exists( 'wp_get_abilities' ) ) {
+			return;
+		}
+
+		$abilities = wp_get_abilities();
+		foreach ( $abilities as $ability ) {
+			$name = method_exists( $ability, 'get_name' ) ? $ability->get_name() : '';
+			if ( str_starts_with( $name, 'acf/' ) ) {
+				parent::add_menu_pages();
+				return;
+			}
+		}
+	}
+
+	/**
 	 * Get the page slug.
 	 *
 	 * @return string
