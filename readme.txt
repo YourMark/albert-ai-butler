@@ -166,11 +166,9 @@ Albert is designed for single-site installations. Multisite support is on the ro
 == Screenshots ==
 
 1. Albert dashboard with setup checklist and status overview
-2. Connections page — manage allowed users and active AI assistant connections
-3. Disconnect dialog — choose to disconnect the connection or end the entire session
-4. Abilities page — toggle read and write permissions per content type
-5. MCP endpoint bar — copy the URL and paste it into your AI assistant
-6. OAuth authorization screen — approve the AI assistant's access request
+2. Abilities page — toggle read and write permissions per content type
+3. Connections page — manage allowed users and active AI assistant connections
+4. An active connection with Claude Desktop
 
 == Changelog ==
 
