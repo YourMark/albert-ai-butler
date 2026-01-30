@@ -51,7 +51,8 @@ class Settings implements Hookable {
 		add_action( 'admin_menu', [ $this, 'add_settings_page' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 		add_action( 'admin_post_albert_save_external_url', [ $this, 'handle_save_external_url' ] );
-		add_action( 'admin_post_albert_save_api_key', [ $this, 'handle_save_api_key' ] );
+		// phpcs:ignore Squiz.PHP.CommentedOutCode.Found, Squiz.Commenting.InlineComment.InvalidEndChar -- Re-enable when premium addons are available.
+		// add_action( 'admin_post_albert_save_api_key', [ $this, 'handle_save_api_key' ] );
 	}
 
 	/**
@@ -89,12 +90,13 @@ class Settings implements Hookable {
 
 			<div class="albert-content-header">
 				<p class="albert-content-description">
-					<?php esc_html_e( 'Configure plugin settings, API keys, and connection details.', 'albert' ); ?>
+					<?php esc_html_e( 'Configure plugin settings and connection details.', 'albert' ); ?>
 				</p>
 			</div>
 
 			<div class="albert-settings-grid">
-				<?php $this->render_api_key_section(); ?>
+				<?php // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- Re-enable when premium addons are available. ?>
+				<?php // $this->render_api_key_section(); ?>
 				<?php $this->render_mcp_server_section(); ?>
 			</div>
 		</div>
@@ -106,6 +108,16 @@ class Settings implements Hookable {
 	 *
 	 * @return void
 	 * @since 1.0.0
+	 */
+	/**
+	 * Render the API Key section.
+	 *
+	 * Temporarily unused — re-enable when premium addons are available.
+	 *
+	 * @return void
+	 * @since 1.0.0
+	 *
+	 * @phpstan-ignore-next-line
 	 */
 	private function render_api_key_section(): void {
 		$api_key = get_option( 'albert_api_key', '' );
