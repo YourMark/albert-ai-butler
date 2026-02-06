@@ -51,8 +51,8 @@ class Settings implements Hookable {
 		add_action( 'admin_menu', [ $this, 'add_settings_page' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 		add_action( 'admin_post_albert_save_external_url', [ $this, 'handle_save_external_url' ] );
-		// phpcs:ignore Squiz.PHP.CommentedOutCode.Found, Squiz.Commenting.InlineComment.InvalidEndChar -- Re-enable when premium addons are available.
-		// add_action( 'admin_post_albert_save_api_key', [ $this, 'handle_save_api_key' ] );
+		add_action( 'wp_ajax_albert_activate_license', [ $this, 'handle_activate_license' ] );
+		add_action( 'wp_ajax_albert_deactivate_license', [ $this, 'handle_deactivate_license' ] );
 	}
 
 	/**
@@ -95,8 +95,7 @@ class Settings implements Hookable {
 			</div>
 
 			<div class="albert-settings-grid">
-				<?php // phpcs:ignore Squiz.PHP.CommentedOutCode.Found -- Re-enable when premium addons are available. ?>
-				<?php // $this->render_api_key_section(); ?>
+				<?php $this->render_license_section(); ?>
 				<?php $this->render_mcp_server_section(); ?>
 			</div>
 		</div>
@@ -104,52 +103,56 @@ class Settings implements Hookable {
 	}
 
 	/**
-	 * Render the API Key section.
+	 * Render the License section.
 	 *
 	 * @return void
-	 * @since 1.0.0
+	 * @since 1.1.0
 	 */
-	/**
-	 * Render the API Key section.
-	 *
-	 * Temporarily unused — re-enable when premium addons are available.
-	 *
-	 * @return void
-	 * @since 1.0.0
-	 *
-	 * @phpstan-ignore-next-line
-	 */
-	private function render_api_key_section(): void {
-		$api_key = get_option( 'albert_api_key', '' );
+	private function render_license_section(): void {
+		$license_key = get_option( 'albert_license_key', '' );
+		$status      = get_option( 'albert_license_status', 'inactive' );
+		$is_active   = $status === 'active';
 		?>
-		<section class="albert-settings-card">
+		<section class="albert-settings-card" id="albert-license-card">
 			<div class="albert-settings-card-header">
-				<span class="dashicons dashicons-admin-network" aria-hidden="true"></span>
-				<h2><?php esc_html_e( 'API Key', 'albert' ); ?></h2>
+				<span class="dashicons dashicons-lock" aria-hidden="true"></span>
+				<h2><?php esc_html_e( 'License', 'albert' ); ?></h2>
 			</div>
 			<div class="albert-settings-card-body">
 				<div class="albert-field-group">
-					<label class="albert-field-label" for="albert-api-key"><?php esc_html_e( 'Albert API Key', 'albert' ); ?></label>
+					<label class="albert-field-label" for="albert-license-key"><?php esc_html_e( 'License Key', 'albert' ); ?></label>
 					<p class="albert-field-description">
-						<?php esc_html_e( 'Enter your API key to enable premium features and connect to Albert cloud services.', 'albert' ); ?>
+						<?php esc_html_e( 'Enter your license key to activate premium addons.', 'albert' ); ?>
 					</p>
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="albert-inline-form">
-						<?php wp_nonce_field( 'albert_save_api_key', 'albert_api_key_nonce' ); ?>
-						<input type="hidden" name="action" value="albert_save_api_key" />
+					<div class="albert-license-key-field">
 						<input
 							type="password"
-							name="albert_api_key"
-							id="albert-api-key"
-							value="<?php echo esc_attr( $api_key ); ?>"
-							placeholder="<?php esc_attr_e( 'Enter your API key', 'albert' ); ?>"
+							name="albert_license_key"
+							id="albert-license-key"
+							value="<?php echo esc_attr( $license_key ); ?>"
+							placeholder="<?php esc_attr_e( 'Enter your license key', 'albert' ); ?>"
 							class="albert-text-input"
 							autocomplete="off"
 						/>
-						<button type="submit" class="button button-primary"><?php esc_html_e( 'Save', 'albert' ); ?></button>
-						<?php if ( ! empty( $api_key ) ) { ?>
-							<button type="submit" name="albert_clear_api_key" value="1" class="button"><?php esc_html_e( 'Clear', 'albert' ); ?></button>
+						<button type="button" class="button albert-license-visibility-toggle" aria-label="<?php esc_attr_e( 'Toggle key visibility', 'albert' ); ?>">
+							<span class="dashicons dashicons-visibility" aria-hidden="true"></span>
+						</button>
+					</div>
+				</div>
+				<div class="albert-field-group">
+					<div class="albert-license-status">
+						<span class="albert-license-status-dot<?php echo $is_active ? ' albert-license-status-dot--active' : ''; ?>" aria-hidden="true"></span>
+						<span class="albert-license-status-text"><?php echo $is_active ? esc_html__( 'Active', 'albert' ) : esc_html__( 'Inactive', 'albert' ); ?></span>
+					</div>
+					<div class="albert-license-actions">
+						<?php if ( $is_active ) { ?>
+							<button type="button" class="button albert-license-button" data-action="deactivate"><?php esc_html_e( 'Deactivate', 'albert' ); ?></button>
+						<?php } else { ?>
+							<button type="button" class="button button-primary albert-license-button" data-action="activate"><?php esc_html_e( 'Activate', 'albert' ); ?></button>
 						<?php } ?>
-					</form>
+						<span class="spinner albert-license-spinner"></span>
+					</div>
+					<div class="albert-license-message" role="alert" aria-live="polite"></div>
 				</div>
 			</div>
 		</section>
@@ -268,46 +271,119 @@ class Settings implements Hookable {
 	}
 
 	/**
-	 * Handle saving the API key.
+	 * AJAX handler: activate license.
+	 *
+	 * Stores the license key, fires the activation action for addons,
+	 * and returns a JSON response.
 	 *
 	 * @return void
-	 * @since 1.0.0
+	 * @since 1.1.0
 	 */
-	public function handle_save_api_key(): void {
-		// Verify nonce.
-		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['albert_api_key_nonce'] ?? '' ) ), 'albert_save_api_key' ) ) {
-			wp_die( esc_html__( 'Security check failed.', 'albert' ) );
-		}
+	public function handle_activate_license(): void {
+		check_ajax_referer( 'albert_license', 'nonce' );
 
-		// Check permissions.
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to change this setting.', 'albert' ) );
+			wp_send_json_error( [ 'message' => __( 'You do not have permission to do this.', 'albert' ) ], 403 );
 		}
 
-		// Check if clearing.
-		if ( isset( $_POST['albert_clear_api_key'] ) ) {
-			delete_option( 'albert_api_key' );
-		} else {
-			$api_key = isset( $_POST['albert_api_key'] ) ? sanitize_text_field( wp_unslash( $_POST['albert_api_key'] ) ) : '';
+		$license_key = isset( $_POST['license_key'] ) ? sanitize_text_field( wp_unslash( $_POST['license_key'] ) ) : '';
 
-			if ( ! empty( $api_key ) ) {
-				update_option( 'albert_api_key', $api_key );
-			} else {
-				delete_option( 'albert_api_key' );
+		if ( empty( $license_key ) ) {
+			wp_send_json_error( [ 'message' => __( 'Please enter a license key.', 'albert' ) ] );
+		}
+
+		update_option( 'albert_license_key', $license_key );
+
+		$results = [];
+
+		/**
+		 * Fires when a license key is being activated.
+		 *
+		 * Addons hook into this action to call their own activation logic
+		 * (e.g. WC API Manager) and append results.
+		 *
+		 * @param string  $license_key The license key to activate.
+		 * @param array[] $results     Passed by reference. Each addon appends its result.
+		 *
+		 * @since 1.1.0
+		 */
+		do_action_ref_array( 'albert/license/activate', [ $license_key, &$results ] );
+
+		$any_success = false;
+		foreach ( $results as $result ) {
+			if ( ! empty( $result['success'] ) ) {
+				$any_success = true;
+				break;
 			}
 		}
 
-		// Redirect back.
-		wp_safe_redirect(
-			add_query_arg(
+		if ( $any_success ) {
+			update_option( 'albert_license_status', 'active' );
+			wp_send_json_success(
 				[
-					'page'             => $this->page_slug,
-					'settings-updated' => 'true',
-				],
-				admin_url( 'admin.php' )
-			)
+					'status'  => 'active',
+					'message' => __( 'License activated.', 'albert' ),
+					'results' => $results,
+				]
+			);
+		}
+
+		// No addon responded successfully.
+		$error_message = __( 'License activation failed.', 'albert' );
+		foreach ( $results as $result ) {
+			if ( ! empty( $result['message'] ) ) {
+				$error_message = $result['message'];
+				break;
+			}
+		}
+
+		if ( empty( $results ) ) {
+			$error_message = __( 'No addons are installed to activate.', 'albert' );
+		}
+
+		wp_send_json_error( [ 'message' => $error_message ] );
+	}
+
+	/**
+	 * AJAX handler: deactivate license.
+	 *
+	 * Fires the deactivation action for addons and updates the status.
+	 *
+	 * @return void
+	 * @since 1.1.0
+	 */
+	public function handle_deactivate_license(): void {
+		check_ajax_referer( 'albert_license', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'You do not have permission to do this.', 'albert' ) ], 403 );
+		}
+
+		$license_key = get_option( 'albert_license_key', '' );
+		$results     = [];
+
+		/**
+		 * Fires when a license key is being deactivated.
+		 *
+		 * Addons hook into this action to call their own deactivation logic
+		 * and append results.
+		 *
+		 * @param string  $license_key The license key to deactivate.
+		 * @param array[] $results     Passed by reference. Each addon appends its result.
+		 *
+		 * @since 1.1.0
+		 */
+		do_action_ref_array( 'albert/license/deactivate', [ $license_key, &$results ] );
+
+		update_option( 'albert_license_status', 'inactive' );
+
+		wp_send_json_success(
+			[
+				'status'  => 'inactive',
+				'message' => __( 'License deactivated.', 'albert' ),
+				'results' => $results,
+			]
 		);
-		exit;
 	}
 
 	/**
@@ -391,11 +467,19 @@ class Settings implements Hookable {
 			'albert-admin',
 			'albertAdmin',
 			[
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'albert_oauth_nonce' ),
-				'i18n'    => [
-					'copied'     => __( 'Copied!', 'albert' ),
-					'copyFailed' => __( 'Copy failed', 'albert' ),
+				'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
+				'nonce'        => wp_create_nonce( 'albert_oauth_nonce' ),
+				'licenseNonce' => wp_create_nonce( 'albert_license' ),
+				'i18n'         => [
+					'copied'       => __( 'Copied!', 'albert' ),
+					'copyFailed'   => __( 'Copy failed', 'albert' ),
+					'activating'   => __( 'Activating…', 'albert' ),
+					'deactivating' => __( 'Deactivating…', 'albert' ),
+					'active'       => __( 'Active', 'albert' ),
+					'inactive'     => __( 'Inactive', 'albert' ),
+					'activated'    => __( 'License activated.', 'albert' ),
+					'deactivated'  => __( 'License deactivated.', 'albert' ),
+					'error'        => __( 'An error occurred.', 'albert' ),
 				],
 			]
 		);

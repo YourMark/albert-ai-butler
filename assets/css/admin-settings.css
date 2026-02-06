@@ -1516,6 +1516,86 @@
 
 
 
+/* License section */
+.albert-license-key-field {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-spacing-sm);
+}
+
+.albert-license-key-field .albert-text-input {
+	flex: 1;
+}
+
+.albert-license-visibility-toggle {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 var(--albert-spacing-sm);
+	line-height: 1;
+}
+
+.albert-license-visibility-toggle .dashicons {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+	line-height: 1;
+}
+
+.albert-license-status {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-spacing-sm);
+	margin-bottom: var(--albert-spacing-sm);
+}
+
+.albert-license-status-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--albert-toggle-inactive);
+	flex-shrink: 0;
+}
+
+.albert-license-status-dot--active {
+	background: var(--albert-success);
+}
+
+.albert-license-status-text {
+	font-size: var(--albert-font-base);
+	font-weight: 500;
+	color: var(--albert-text-primary);
+}
+
+.albert-license-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-spacing-sm);
+}
+
+.albert-license-spinner.is-active {
+	visibility: visible;
+}
+
+.albert-license-message {
+	margin-top: var(--albert-spacing-sm);
+	font-size: var(--albert-font-sm);
+	line-height: 1.5;
+}
+
+.albert-license-message:empty {
+	display: none;
+}
+
+.albert-license-message--success {
+	color: var(--albert-success);
+}
+
+.albert-license-message--error {
+	color: var(--albert-error);
+}
+
 /* Responsive - Small screens */
 @media screen and (max-width: 480px) {
 	.ability-group-title {

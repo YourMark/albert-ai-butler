@@ -593,6 +593,168 @@ const DisconnectModule = {
 };
 
 /**
+ * License activation/deactivation via AJAX.
+ */
+const LicenseModule = {
+	init() {
+		this.card = document.getElementById( 'albert-license-card' );
+		if ( ! this.card ) {
+			return;
+		}
+
+		this.keyInput = this.card.querySelector( '#albert-license-key' );
+		this.button = this.card.querySelector( '.albert-license-button' );
+		this.spinner = this.card.querySelector( '.albert-license-spinner' );
+		this.statusDot = this.card.querySelector( '.albert-license-status-dot' );
+		this.statusText = this.card.querySelector( '.albert-license-status-text' );
+		this.message = this.card.querySelector( '.albert-license-message' );
+		this.visibilityToggle = this.card.querySelector( '.albert-license-visibility-toggle' );
+
+		if ( this.button ) {
+			this.button.addEventListener( 'click', () => {
+				const action = this.button.dataset.action;
+				if ( action === 'activate' ) {
+					this.handleActivate();
+				} else {
+					this.handleDeactivate();
+				}
+			} );
+		}
+
+		if ( this.visibilityToggle ) {
+			this.visibilityToggle.addEventListener( 'click', () => {
+				this.toggleKeyVisibility();
+			} );
+		}
+	},
+
+	async handleActivate() {
+		const key = this.keyInput.value.trim();
+		if ( ! key ) {
+			return;
+		}
+
+		this.setLoading( true );
+		this.clearMessage();
+
+		const body = new FormData();
+		body.append( 'action', 'albert_activate_license' );
+		body.append( 'nonce', window.albertAdmin.licenseNonce );
+		body.append( 'license_key', key );
+
+		try {
+			const response = await fetch( window.albertAdmin.ajaxUrl, {
+				method: 'POST',
+				credentials: 'same-origin',
+				body,
+			} );
+			const data = await response.json();
+
+			if ( data.success ) {
+				this.updateStatus( 'active', data.data.message );
+			} else {
+				this.showMessage( data.data.message || window.albertAdmin.i18n.error, 'error' );
+			}
+		} catch {
+			this.showMessage( window.albertAdmin.i18n.error, 'error' );
+		}
+
+		this.setLoading( false );
+	},
+
+	async handleDeactivate() {
+		this.setLoading( true );
+		this.clearMessage();
+
+		const body = new FormData();
+		body.append( 'action', 'albert_deactivate_license' );
+		body.append( 'nonce', window.albertAdmin.licenseNonce );
+
+		try {
+			const response = await fetch( window.albertAdmin.ajaxUrl, {
+				method: 'POST',
+				credentials: 'same-origin',
+				body,
+			} );
+			const data = await response.json();
+
+			if ( data.success ) {
+				this.updateStatus( 'inactive', data.data.message );
+			} else {
+				this.showMessage( data.data.message || window.albertAdmin.i18n.error, 'error' );
+			}
+		} catch {
+			this.showMessage( window.albertAdmin.i18n.error, 'error' );
+		}
+
+		this.setLoading( false );
+	},
+
+	updateStatus( status, message ) {
+		const i18n = window.albertAdmin.i18n;
+		const isActive = status === 'active';
+
+		// Update dot.
+		if ( isActive ) {
+			this.statusDot.classList.add( 'albert-license-status-dot--active' );
+		} else {
+			this.statusDot.classList.remove( 'albert-license-status-dot--active' );
+		}
+
+		// Update status text.
+		this.statusText.textContent = isActive ? i18n.active : i18n.inactive;
+
+		// Update button.
+		this.button.dataset.action = isActive ? 'deactivate' : 'activate';
+
+		if ( isActive ) {
+			this.button.classList.remove( 'button-primary' );
+			this.button.textContent = 'Deactivate';
+		} else {
+			this.button.classList.add( 'button-primary' );
+			this.button.textContent = 'Activate';
+		}
+
+		// Show success message.
+		if ( message ) {
+			this.showMessage( message, 'success' );
+		}
+	},
+
+	toggleKeyVisibility() {
+		const isPassword = this.keyInput.type === 'password';
+		this.keyInput.type = isPassword ? 'text' : 'password';
+
+		const icon = this.visibilityToggle.querySelector( '.dashicons' );
+		if ( icon ) {
+			icon.classList.toggle( 'dashicons-visibility', ! isPassword );
+			icon.classList.toggle( 'dashicons-hidden', isPassword );
+		}
+	},
+
+	setLoading( loading ) {
+		this.button.disabled = loading;
+		this.keyInput.disabled = loading;
+
+		if ( loading ) {
+			this.spinner.classList.add( 'is-active' );
+		} else {
+			this.spinner.classList.remove( 'is-active' );
+		}
+	},
+
+	showMessage( text, type ) {
+		this.message.textContent = text;
+		this.message.className = 'albert-license-message albert-license-message--' + type;
+	},
+
+	clearMessage() {
+		this.message.textContent = '';
+		this.message.className = 'albert-license-message';
+	},
+};
+
+/**
  * Initialize all modules when DOM is ready.
  */
 function init() {
@@ -602,6 +764,7 @@ function init() {
 	ClipboardModule.init();
 	DirtyStateModule.init();
 	DisconnectModule.init();
+	LicenseModule.init();
 }
 
 /**
