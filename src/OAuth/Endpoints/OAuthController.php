@@ -449,7 +449,7 @@ class OAuthController implements Hookable {
 
 		$metadata = [
 			'issuer'                                => $base_url,
-			'authorization_endpoint'                => $base_url . '/oauth/authorize',
+			'authorization_endpoint'                => $base_url . '/albert/oauth/authorize',
 			'token_endpoint'                        => $this->get_rest_url( 'albert/v1/oauth/token' ),
 			'registration_endpoint'                 => $this->get_rest_url( 'albert/v1/oauth/register' ),
 			'response_types_supported'              => [ 'code' ],

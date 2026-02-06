@@ -77,7 +77,7 @@ class AuthorizationPage implements Hookable {
 	public function add_rewrite_rules(): void {
 		// /oauth/authorize - Authorization endpoint.
 		add_rewrite_rule(
-			'^oauth/authorize/?$',
+			'^albert/oauth/authorize/?$',
 			'index.php?' . self::QUERY_VAR . '=1',
 			'top'
 		);
@@ -241,7 +241,7 @@ class AuthorizationPage implements Hookable {
 				'code_challenge_method' => $code_challenge_method,
 			];
 
-			$psr_request = Psr7Bridge::create_server_request( 'GET', home_url( '/oauth/authorize' ) )
+			$psr_request = Psr7Bridge::create_server_request( 'GET', home_url( '/albert/oauth/authorize' ) )
 				->withQueryParams( $query_params );
 
 			// Validate and complete the authorization request.
