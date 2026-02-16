@@ -104,6 +104,13 @@ temp/
 .env
 
 ############
+## Shared Claude rules (symlinks)
+############
+
+.claude/rules/*
+!.claude/rules/patterns.md
+
+############
 ## Generated files
 ############
 
