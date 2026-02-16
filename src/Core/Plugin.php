@@ -226,16 +226,6 @@ class Plugin {
 	}
 
 	/**
-	 * Get the abilities manager instance.
-	 *
-	 * @return AbilitiesManager|null The abilities manager instance.
-	 * @since 1.0.0
-	 */
-	public function get_abilities_manager(): ?AbilitiesManager {
-		return $this->abilities_manager;
-	}
-
-	/**
 	 * Plugin activation hook callback.
 	 *
 	 * Runs when the plugin is activated.
