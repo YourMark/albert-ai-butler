@@ -159,7 +159,7 @@ abstract class BaseAbility implements Ability {
 
 		try {
 			/**
-			 * Fires before an ability is executed.
+			 * Fires before any ability is executed.
 			 *
 			 * @since 1.1.0
 			 *
@@ -167,7 +167,20 @@ abstract class BaseAbility implements Ability {
 			 * @param array  $args       Input parameters.
 			 * @param int    $user_id    Current user ID.
 			 */
-			do_action( 'albert_before_ability_execute', $this->id, $args, $user_id );
+			do_action( 'albert/abilities/before_execute', $this->id, $args, $user_id );
+
+			/**
+			 * Fires before a specific ability is executed.
+			 *
+			 * The dynamic portion of the hook name, `$this->id`, refers to the
+			 * ability identifier (e.g. 'core/posts/create', 'albert/woo-find-products').
+			 *
+			 * @since 1.1.0
+			 *
+			 * @param array $args    Input parameters.
+			 * @param int   $user_id Current user ID.
+			 */
+			do_action( "albert/abilities/before_execute/{$this->id}", $args, $user_id );
 		} catch ( \Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
 			// Log in debug mode but never break execution.
 		}
@@ -176,7 +189,7 @@ abstract class BaseAbility implements Ability {
 
 		try {
 			/**
-			 * Fires after an ability is executed.
+			 * Fires after any ability is executed.
 			 *
 			 * @since 1.1.0
 			 *
@@ -185,7 +198,21 @@ abstract class BaseAbility implements Ability {
 			 * @param array|WP_Error $result     Execution result.
 			 * @param int            $user_id    Current user ID.
 			 */
-			do_action( 'albert_after_ability_execute', $this->id, $args, $result, $user_id );
+			do_action( 'albert/abilities/after_execute', $this->id, $args, $result, $user_id );
+
+			/**
+			 * Fires after a specific ability is executed.
+			 *
+			 * The dynamic portion of the hook name, `$this->id`, refers to the
+			 * ability identifier (e.g. 'core/posts/create', 'albert/woo-find-products').
+			 *
+			 * @since 1.1.0
+			 *
+			 * @param array          $args    Input parameters.
+			 * @param array|WP_Error $result  Execution result.
+			 * @param int            $user_id Current user ID.
+			 */
+			do_action( "albert/abilities/after_execute/{$this->id}", $args, $result, $user_id );
 		} catch ( \Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
 			// Log in debug mode but never break execution.
 		}

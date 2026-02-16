@@ -234,7 +234,7 @@ class Plugin {
 		 *
 		 * @param AbilitiesManager $manager The abilities manager instance.
 		 */
-		do_action( 'albert_register_abilities', $this->abilities_manager );
+		do_action( 'albert/abilities/register', $this->abilities_manager );
 
 		// Register abilities manager hooks.
 		$this->abilities_manager->register_hooks();
@@ -274,7 +274,7 @@ class Plugin {
 		 *                       - string   'capability' Required capability (optional, default 'manage_options').
 		 *                       - int      'position'   Menu position (optional, default 100).
 		 */
-		$pages = apply_filters( 'albert_admin_submenu_pages', [] );
+		$pages = apply_filters( 'albert/admin/submenu_pages', [] );
 
 		if ( ! is_array( $pages ) || empty( $pages ) ) {
 			return;

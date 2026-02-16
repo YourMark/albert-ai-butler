@@ -215,13 +215,13 @@ $this->abilities_manager->add_ability( new MyAbility() );
 
 Albert provides hooks for addon plugins or themes to register custom abilities, add admin pages, and observe ability execution.
 
-#### Registering Custom Abilities (`albert_register_abilities`)
+#### Registering Custom Abilities (`albert/abilities/register`)
 
 **Action** — Fires after built-in abilities are registered on the `init` hook. Addons (or themes via `functions.php`) hook here to register their own abilities by extending `BaseAbility` directly — the same pattern built-in abilities use.
 
 ```php
 // In an addon plugin or theme functions.php:
-add_action( 'albert_register_abilities', function ( $manager ) {
+add_action( 'albert/abilities/register', function ( $manager ) {
     $manager->add_ability( new MyCustomAbility() );
 } );
 ```
@@ -235,30 +235,46 @@ This works from any context that loads before `init`:
 
 #### Execution Hooks
 
-**`albert_before_ability_execute`** (action) — Fires before any ability executes. Useful for logging, rate limiting, or audit trails.
+All execution hooks are wrapped in try/catch — observer errors never break ability execution.
+
+**`albert/abilities/before_execute`** (action) — Fires before any ability executes. Useful for logging, rate limiting, or audit trails.
 
 ```php
-add_action( 'albert_before_ability_execute', function ( string $ability_id, array $args, int $user_id ) {
+add_action( 'albert/abilities/before_execute', function ( string $ability_id, array $args, int $user_id ) {
     // Log, validate, track, etc.
 }, 10, 3 );
 ```
 
-**`albert_after_ability_execute`** (action) — Fires after any ability executes. Receives the result (array or WP_Error).
+**`albert/abilities/before_execute/{ability_id}`** (action) — Fires before a specific ability executes. The ability ID is appended to the hook name (e.g. `albert/abilities/before_execute/core/posts/create`).
 
 ```php
-add_action( 'albert_after_ability_execute', function ( string $ability_id, array $args, $result, int $user_id ) {
+add_action( 'albert/abilities/before_execute/core/posts/create', function ( array $args, int $user_id ) {
+    // Runs only before the core/posts/create ability.
+}, 10, 2 );
+```
+
+**`albert/abilities/after_execute`** (action) — Fires after any ability executes. Receives the result (array or WP_Error).
+
+```php
+add_action( 'albert/abilities/after_execute', function ( string $ability_id, array $args, $result, int $user_id ) {
     // Log result, send notifications, etc.
 }, 10, 4 );
 ```
 
-Both hooks are wrapped in try/catch — observer errors never break ability execution.
+**`albert/abilities/after_execute/{ability_id}`** (action) — Fires after a specific ability executes. The ability ID is appended to the hook name (e.g. `albert/abilities/after_execute/albert/woo-find-products`).
 
-#### Admin Submenu Pages (`albert_admin_submenu_pages`)
+```php
+add_action( 'albert/abilities/after_execute/core/posts/create', function ( array $args, $result, int $user_id ) {
+    // Runs only after the core/posts/create ability.
+}, 10, 3 );
+```
+
+#### Admin Submenu Pages (`albert/admin/submenu_pages`)
 
 **Filter** — Addon plugins can add pages to the Albert admin menu. Fires at `admin_menu` priority 15 (after abilities pages, before Settings at priority 20).
 
 ```php
-add_filter( 'albert_admin_submenu_pages', function ( array $pages ) {
+add_filter( 'albert/admin/submenu_pages', function ( array $pages ) {
     $pages[] = [
         'slug'       => 'my-addon-settings',  // Required.
         'callback'   => 'render_my_page',      // Required, callable.
@@ -273,7 +289,7 @@ add_filter( 'albert_admin_submenu_pages', function ( array $pages ) {
 
 #### CoreAbilities Exclude-List (`filter_abilities`)
 
-The Core abilities admin page uses an exclude-list approach: it shows all registered abilities *except* those handled by dedicated pages (`albert/woo-*`, `acf/*`, `mcp-adapter/*`). Custom abilities registered via `albert_register_abilities` automatically appear on the Core abilities page and are toggleable on/off.
+The Core abilities admin page uses an exclude-list approach: it shows all registered abilities *except* those handled by dedicated pages (`albert/woo-*`, `acf/*`, `mcp-adapter/*`). Custom abilities registered via `albert/abilities/register` automatically appear on the Core abilities page and are toggleable on/off.
 
 #### 3. OAuth 2.0 Server
 Full OAuth 2.0 implementation using `league/oauth2-server`.
