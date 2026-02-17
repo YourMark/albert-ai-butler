@@ -103,7 +103,13 @@ No. Albert works with WordPress core out of the box. WooCommerce abilities appea
 
 = Can I add custom abilities? =
 
-Yes. Developers can register custom abilities using the WordPress Abilities API to expose any functionality to AI assistants. See the documentation at [albertwp.com/docs](https://albertwp.com/docs).
+Yes. Create a class that extends Albert's BaseAbility, implement the `execute()` and `check_permission()` methods, then register it via the `albert_register_abilities` action. This works from an addon plugin, a must-use plugin, or your theme's `functions.php`:
+
+`add_action( 'albert_register_abilities', function ( $manager ) {
+    $manager->add_ability( new MyCustomAbility() );
+} );`
+
+Custom abilities automatically appear in the Albert admin UI, can be toggled on/off, and are available to AI assistants via MCP. See the documentation at [albertwp.com/docs](https://albertwp.com/docs).
 
 = Does this work with multisite? =
 

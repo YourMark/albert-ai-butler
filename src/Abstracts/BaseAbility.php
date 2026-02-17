@@ -148,14 +148,76 @@ abstract class BaseAbility implements Ability {
 				'ability_disabled',
 				sprintf(
 					/* translators: %s: ability name */
-					__( 'The ability "%s" is currently disabled.', 'albert' ),
+					__( 'The ability "%s" is currently disabled. Please contact the site administrator.', 'albert' ),
 					$this->label
 				),
 				[ 'status' => 403 ]
 			);
 		}
 
-		return $this->execute( $args );
+		$user_id = get_current_user_id();
+
+		try {
+			/**
+			 * Fires before any ability is executed.
+			 *
+			 * @since 1.1.0
+			 *
+			 * @param string $ability_id Ability identifier.
+			 * @param array  $args       Input parameters.
+			 * @param int    $user_id    Current user ID.
+			 */
+			do_action( 'albert/abilities/before_execute', $this->id, $args, $user_id );
+
+			/**
+			 * Fires before a specific ability is executed.
+			 *
+			 * The dynamic portion of the hook name, `$this->id`, refers to the
+			 * ability identifier (e.g. 'core/posts/create', 'albert/woo-find-products').
+			 *
+			 * @since 1.1.0
+			 *
+			 * @param array $args    Input parameters.
+			 * @param int   $user_id Current user ID.
+			 */
+			do_action( "albert/abilities/before_execute/{$this->id}", $args, $user_id );
+		} catch ( \Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
+			// Log in debug mode but never break execution.
+		}
+
+		$result = $this->execute( $args );
+
+		try {
+			/**
+			 * Fires after any ability is executed.
+			 *
+			 * @since 1.1.0
+			 *
+			 * @param string         $ability_id Ability identifier.
+			 * @param array          $args       Input parameters.
+			 * @param array|WP_Error $result     Execution result.
+			 * @param int            $user_id    Current user ID.
+			 */
+			do_action( 'albert/abilities/after_execute', $this->id, $args, $result, $user_id );
+
+			/**
+			 * Fires after a specific ability is executed.
+			 *
+			 * The dynamic portion of the hook name, `$this->id`, refers to the
+			 * ability identifier (e.g. 'core/posts/create', 'albert/woo-find-products').
+			 *
+			 * @since 1.1.0
+			 *
+			 * @param array          $args    Input parameters.
+			 * @param array|WP_Error $result  Execution result.
+			 * @param int            $user_id Current user ID.
+			 */
+			do_action( "albert/abilities/after_execute/{$this->id}", $args, $result, $user_id );
+		} catch ( \Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
+			// Log in debug mode but never break execution.
+		}
+
+		return $result;
 	}
 
 	/**
