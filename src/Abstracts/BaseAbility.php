@@ -177,10 +177,10 @@ abstract class BaseAbility implements Ability {
 	 * Returns a WP_Error with a descriptive message on failure so AI
 	 * clients can communicate the reason to the user.
 	 *
-	 * @return true|WP_Error True if permitted, WP_Error with details otherwise.
+	 * @return bool|WP_Error True if permitted, WP_Error with details otherwise.
 	 * @since 1.0.0
 	 */
-	public function check_permission(): true|WP_Error {
+	public function check_permission(): bool|WP_Error {
 		return $this->require_capability( 'manage_options' );
 	}
 
@@ -192,10 +192,10 @@ abstract class BaseAbility implements Ability {
 	 *
 	 * @param string $capability The capability to check.
 	 *
-	 * @return true|WP_Error True if the user has the capability, WP_Error otherwise.
+	 * @return bool|WP_Error True if the user has the capability, WP_Error otherwise.
 	 * @since 1.0.0
 	 */
-	protected function require_capability( string $capability ): true|WP_Error {
+	protected function require_capability( string $capability ): bool|WP_Error {
 		if ( current_user_can( $capability ) ) {
 			return true;
 		}
@@ -224,10 +224,10 @@ abstract class BaseAbility implements Ability {
 	 * @param string $method       The HTTP method (GET, POST, DELETE, etc.).
 	 * @param string $fallback_cap The capability to check if the route is unavailable.
 	 *
-	 * @return true|WP_Error True if permitted, WP_Error with details otherwise.
+	 * @return bool|WP_Error True if permitted, WP_Error with details otherwise.
 	 * @since 1.0.0
 	 */
-	protected function check_rest_permission( string $route, string $method, string $fallback_cap ): true|WP_Error {
+	protected function check_rest_permission( string $route, string $method, string $fallback_cap ): bool|WP_Error {
 		$server     = rest_get_server();
 		$routes     = $server->get_routes();
 		$is_pattern = str_contains( $route, '(?P<' );
@@ -256,10 +256,10 @@ abstract class BaseAbility implements Ability {
 	 * @param string                           $route        The resolved route path.
 	 * @param string                           $fallback_cap The capability to check on failure.
 	 *
-	 * @return true|WP_Error True if permitted, WP_Error otherwise.
+	 * @return bool|WP_Error True if permitted, WP_Error otherwise.
 	 * @since 1.0.0
 	 */
-	private function check_rest_endpoints( array $endpoints, string $method, string $route, string $fallback_cap ): true|WP_Error {
+	private function check_rest_endpoints( array $endpoints, string $method, string $route, string $fallback_cap ): bool|WP_Error {
 		foreach ( $endpoints as $endpoint ) {
 			if ( ! isset( $endpoint['methods'][ $method ], $endpoint['permission_callback'] ) ) {
 				continue;
