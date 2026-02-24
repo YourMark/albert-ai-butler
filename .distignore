@@ -46,4 +46,4 @@ vendor/**/dist/*.asc.sig
 vendor/**/*.bat
 
 # WordPress.org directory assets (screenshots, banners, icons)
-.wordpress.org
+.wordpress-org
