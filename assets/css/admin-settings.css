@@ -78,7 +78,7 @@
 /* Main wrapper — Albert admin pages. Apply to every `.wrap` container. */
 .albert-wrap,
 .albert-settings {
-	max-width: none;
+	max-width: 80rem;
 }
 
 .albert-wrap > h1,
