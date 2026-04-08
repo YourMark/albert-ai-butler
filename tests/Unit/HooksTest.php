@@ -51,9 +51,14 @@ class StubAbility extends BaseAbility {
 	/**
 	 * Check permission (always allowed in tests).
 	 *
-	 * @return true|WP_Error
+	 * The return type is `bool|WP_Error` to match BaseAbility's signature.
+	 * It cannot be narrowed to the literal type `true|WP_Error` because
+	 * standalone `true` / `false` types are a PHP 8.2+ feature and the
+	 * plugin still supports PHP 8.1 in CI.
+	 *
+	 * @return bool|WP_Error
 	 */
-	public function check_permission(): true|WP_Error {
+	public function check_permission(): bool|WP_Error {
 		return true;
 	}
 
@@ -207,7 +212,7 @@ class HooksTest extends TestCase {
 	 */
 	public function test_before_execute_dynamic_receives_args_and_user_id(): void {
 		$GLOBALS['albert_test_user_id'] = 7;
-		$input = [ 'key' => 'value' ];
+		$input                          = [ 'key' => 'value' ];
 
 		$ability = new StubAbility( 'test/example' );
 		$ability->guarded_execute( $input );
