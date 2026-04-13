@@ -26,11 +26,12 @@ composer test:integration # Run integration tests (requires WP test suite)
 
 ```
 src/
-  Abstracts/       # BaseAbility, AbstractAddon (addon registry, singleton, license helpers)
+  Abstracts/       # BaseAbility
   Abilities/       # Ability implementations (WordPress/, WooCommerce/)
-  Admin/           # Admin pages (abilities toggles, settings, connections)
+  Admin/           # Admin pages (AbstractAbilitiesPage, CoreAbilities, AcfAbilities,
+                   #   WooCommerceAbilities, Connections, Dashboard, Settings)
   Contracts/       # Interfaces (Ability, Hookable)
-  Core/            # Plugin bootstrap, AbilitiesManager, AbilitiesRegistry
+  Core/            # Plugin bootstrap, AbilitiesManager, AbilitiesRegistry, Annotations
   MCP/             # MCP protocol server
   OAuth/           # Full OAuth 2.0 server (entities, repos, endpoints)
   Utilities/       # Standalone helpers (BlockConverter)
@@ -40,18 +41,20 @@ tests/
 assets/            # CSS and JS for admin UI
 ```
 
-## Public API (what add-ons may use)
+## Hooks
 
-| Surface | How |
-|---|---|
-| Ability registration | `do_action('albert/abilities/register')` |
-| Admin pages | `apply_filters('albert/admin/submenu_pages', $pages)` |
-| Ability lifecycle | `albert/abilities/before_execute`, `albert/abilities/after_execute` |
-| Group definitions | `apply_filters('albert/abilities/groups', $groups)` |
-| License check | `albert_has_valid_license(string $addon_slug): bool` |
-| Supplier registry | `apply_filters('albert/abilities/suppliers', $suppliers)` |
+All hooks follow `albert/{location}/{hook_name}` convention (except `albert_ability_groups`
+which predates the convention).
 
-Base classes: `Albert\Abstracts\BaseAbility`, `Albert\Abstracts\AbstractAddon`
+| Hook | Type | Purpose |
+|------|------|---------|
+| `albert/abilities_icons` | filter | Customize category icons on the abilities page |
+| `albert/developer_mode` | filter | Toggle developer mode (shows extra OAuth/MCP settings) |
+| `albert_ability_groups` | filter | Modify ability group definitions |
+| `albert/activated` | action | Plugin activated |
+| `albert/deactivated` | action | Plugin deactivated |
+
+Base class: `Albert\Abstracts\BaseAbility`
 
 ## Ecosystem
 
@@ -70,18 +73,6 @@ Addon  → Addon   (NEVER — use Core hooks as mediator)
 | Albert Premium Service | `albert-premium-service` |
 | Albert WooCommerce | `albert-woocommerce` |
 
-### Deprecation policy
-
-Before changing or removing any public function, hook, or class:
-
-1. Keep the old API working — wrap it, do not remove it
-2. Call the appropriate deprecation helper:
-   - Functions/methods: `_deprecated_function( __FUNCTION__, '1.x.0', 'replacement' )`
-   - Actions: `do_action_deprecated( 'old/hook', $args, '1.x.0', 'new/hook' )`
-   - Filters: `apply_filters_deprecated( 'old/hook', $args, '1.x.0', 'new/hook' )`
-3. Minimum deprecation window: 2 minor versions or 1 major version, whichever is longer
-4. Add-ons only see a debug notice — nothing breaks on production
-
 ### Legacy ability ID note
 
 Free WooCommerce read-only abilities predate the naming convention and use
@@ -92,28 +83,12 @@ Never rename the legacy IDs — they are part of the public API.
 
 - **NEVER use alternative PHP syntax** (`: endif`, `: endforeach`). ALWAYS use `{ }` braces.
 - **NEVER use jQuery.** Vanilla ES6+ only.
-- **NEVER commit without explicit request.** Run `composer phpcs` first.
+- **NEVER commit without explicit request.** Run `composer phpcs` and `composer phpstan` first.
 - **NEVER bump version without approval.**
 - The root `CLAUDE.md` is the canonical project reference (checked into git). This file supplements it.
 
 ## WooCommerce mcp-adapter Timing Bug
 
-`Plugin::init()` skips `McpAdapter::instance()` when `is_admin()` to avoid a timing conflict where WooCommerce's REST preloading triggers `wp_get_ability()` for tools that aren't registered yet. See root `CLAUDE.md` for full details.
-
-## Extensibility Hooks
-
-All hooks follow `albert/{location}/{hook_name}` convention:
-
-| Hook | Type | Purpose |
-|------|------|---------|
-| `albert/abilities/register` | action | Register custom abilities |
-| `albert/abilities/before_execute` | action | Before any ability runs |
-| `albert/abilities/after_execute` | action | After any ability runs |
-| `albert/abilities/before_execute/{id}` | action | Before a specific ability |
-| `albert/abilities/after_execute/{id}` | action | After a specific ability |
-| `albert/admin/submenu_pages` | filter | Add addon admin pages |
-| `albert/abilities/groups` | filter | Modify ability group definitions |
-| `albert/abilities_icons` | filter | Customize category icons |
-| `albert/developer_mode` | filter | Toggle developer mode |
-| `albert/activated` | action | Plugin activated |
-| `albert/deactivated` | action | Plugin deactivated |
+`Plugin::init()` skips `McpAdapter::instance()` when `is_admin()` to avoid a timing conflict
+where WooCommerce's REST preloading triggers `wp_get_ability()` for tools that aren't
+registered yet. See root `CLAUDE.md` for full details.
