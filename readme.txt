@@ -4,7 +4,7 @@ Tags: ai, mcp, oauth, claude, chatgpt
 Requires at least: 6.9
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -131,6 +131,12 @@ Albert is designed for single-site installations. Multisite support is on the ro
 
 == Changelog ==
 
+= 1.0.1 =
+Bug fix release.
+
+* **Fix:** OAuth endpoints used a different REST namespace (`albert-ai-butler/v1`) than the MCP server and discovery metadata (`albert/v1`), causing connection failures when clients followed the OAuth discovery spec. All endpoints now use `albert/v1` consistently.
+* **New:** `albert/rest_namespace` filter allows sites with a namespace collision to override the REST namespace.
+
 = 1.0.0 =
 Initial release.
 
@@ -144,6 +150,9 @@ Initial release.
 * **Extensible** — Register custom abilities with the WordPress Abilities API. Hookable architecture with filters and actions.
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Fixes a connection failure caused by mismatched OAuth endpoint namespaces. Recommended for all users.
 
 = 1.0.0 =
 Initial release. Connect Claude Desktop, ChatGPT, and other MCP-compatible AI assistants to your WordPress site.

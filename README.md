@@ -95,6 +95,11 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.0.1
+- Fix OAuth route namespace mismatch (`albert-ai-butler/v1` vs `albert/v1`) that caused connection failures when clients followed the discovery spec
+- Add `albert/rest_namespace` filter for sites with namespace collisions
+- Consolidate all REST namespace references to a single `Plugin::REST_NAMESPACE` constant
+
 ### 1.0.0 - 2025-01-23
 - Initial release
 - Full OAuth 2.0 server implementation
