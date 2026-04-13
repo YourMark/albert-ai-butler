@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Exception;
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\Core\Plugin;
 use Albert\OAuth\Entities\UserEntity;
 use Albert\OAuth\Repositories\ClientRepository;
 use Albert\OAuth\Server\AuthorizationServerFactory;
@@ -34,10 +35,11 @@ class OAuthController implements Hookable {
 	/**
 	 * REST API namespace.
 	 *
-	 * @since 1.0.0
+	 * @deprecated 1.0.1 Use {@see Plugin::rest_namespace()} instead.
+	 * @since      1.0.0
 	 * @var string
 	 */
-	const NAMESPACE = 'albert-ai-butler/v1';
+	const NAMESPACE = 'albert/v1';
 
 	/**
 	 * Transient prefix for authorization requests.
@@ -66,7 +68,7 @@ class OAuthController implements Hookable {
 	public function register_routes(): void {
 		// OAuth Authorization Server Metadata (alternative to .well-known).
 		register_rest_route(
-			self::NAMESPACE,
+			Plugin::rest_namespace(),
 			'/oauth/metadata',
 			[
 				'methods'             => WP_REST_Server::READABLE,
@@ -77,7 +79,7 @@ class OAuthController implements Hookable {
 
 		// OAuth Protected Resource Metadata (alternative to .well-known).
 		register_rest_route(
-			self::NAMESPACE,
+			Plugin::rest_namespace(),
 			'/oauth/resource',
 			[
 				'methods'             => WP_REST_Server::READABLE,
@@ -88,7 +90,7 @@ class OAuthController implements Hookable {
 
 		// Authorization endpoint - initiates the OAuth flow.
 		register_rest_route(
-			self::NAMESPACE,
+			Plugin::rest_namespace(),
 			'/oauth/authorize',
 			[
 				[
@@ -150,7 +152,7 @@ class OAuthController implements Hookable {
 
 		// Token endpoint - exchanges code for tokens.
 		register_rest_route(
-			self::NAMESPACE,
+			Plugin::rest_namespace(),
 			'/oauth/token',
 			[
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -244,7 +246,7 @@ class OAuthController implements Hookable {
 					'display_name' => wp_get_current_user()->display_name,
 				],
 				'scope'           => $auth_request_data['scope'],
-				'approve_url'     => rest_url( self::NAMESPACE . '/oauth/authorize' ),
+				'approve_url'     => rest_url( Plugin::rest_namespace() . '/oauth/authorize' ),
 			],
 			200
 		);
@@ -450,8 +452,8 @@ class OAuthController implements Hookable {
 		$metadata = [
 			'issuer'                                => $base_url,
 			'authorization_endpoint'                => $base_url . '/oauth/authorize',
-			'token_endpoint'                        => $this->get_rest_url( 'albert/v1/oauth/token' ),
-			'registration_endpoint'                 => $this->get_rest_url( 'albert/v1/oauth/register' ),
+			'token_endpoint'                        => $this->get_rest_url( Plugin::rest_namespace() . '/oauth/token' ),
+			'registration_endpoint'                 => $this->get_rest_url( Plugin::rest_namespace() . '/oauth/register' ),
 			'response_types_supported'              => [ 'code' ],
 			'grant_types_supported'                 => [ 'authorization_code', 'refresh_token' ],
 			'token_endpoint_auth_methods_supported' => [ 'client_secret_post', 'client_secret_basic' ],
@@ -477,8 +479,8 @@ class OAuthController implements Hookable {
 		$base_url = $this->get_base_url();
 
 		$metadata = [
-			'resource'              => $this->get_rest_url( 'albert/v1/mcp' ),
-			'authorization_servers' => [ $this->get_rest_url( 'albert/v1/oauth/metadata' ) ],
+			'resource'              => $this->get_rest_url( Plugin::rest_namespace() . '/mcp' ),
+			'authorization_servers' => [ $this->get_rest_url( Plugin::rest_namespace() . '/oauth/metadata' ) ],
 			'scopes_supported'      => [ 'default' ],
 		];
 
