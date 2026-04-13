@@ -94,7 +94,7 @@ class Dashboard implements Hookable {
 	 */
 	public function enqueue_assets( string $hook ): void {
 		// Only load on our dashboard page.
-		if ( 'toplevel_page_albert' !== $hook ) {
+		if ( $hook !== 'toplevel_page_albert' ) {
 			return;
 		}
 

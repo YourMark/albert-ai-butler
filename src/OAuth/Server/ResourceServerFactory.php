@@ -37,7 +37,7 @@ class ResourceServerFactory {
 	 * @since 1.0.0
 	 */
 	public static function create(): ResourceServer {
-		if ( null !== self::$instance ) {
+		if ( self::$instance !== null ) {
 			return self::$instance;
 		}
 

@@ -91,7 +91,7 @@ class Plugin {
 	public static function rest_namespace(): string {
 		static $namespace = null;
 
-		if ( null === $namespace ) {
+		if ( $namespace === null ) {
 			/**
 			 * Filters the REST API namespace used by all Albert endpoints.
 			 *
@@ -128,7 +128,7 @@ class Plugin {
 	 * @since 1.0.0
 	 */
 	public static function get_instance(): Plugin {
-		if ( null === self::$instance ) {
+		if ( self::$instance === null ) {
 			self::$instance = new self();
 		}
 

@@ -179,7 +179,7 @@ class FindProducts extends BaseAbility {
 			$query_args['sku'] = sanitize_text_field( $args['sku'] );
 		}
 
-		if ( ! empty( $args['status'] ) && 'any' !== $args['status'] ) {
+		if ( ! empty( $args['status'] ) && $args['status'] !== 'any' ) {
 			$query_args['status'] = sanitize_key( $args['status'] );
 		}
 

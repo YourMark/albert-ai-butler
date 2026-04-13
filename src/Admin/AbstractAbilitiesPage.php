@@ -427,7 +427,7 @@ abstract class AbstractAbilitiesPage implements Hookable {
 
 		// Single content type: promote Read/Write toggles to card header,
 		// render abilities directly in the card body (no intermediate row).
-		if ( 1 === count( $content_types ) ) {
+		if ( count( $content_types ) === 1 ) {
 			$this->render_single_type_section( $slug, $card_id, $items_id, $icon, $label, $description, reset( $content_types ), $disabled_abilities );
 			return;
 		}

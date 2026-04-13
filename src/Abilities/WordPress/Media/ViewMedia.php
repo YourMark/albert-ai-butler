@@ -111,7 +111,7 @@ class ViewMedia extends BaseAbility {
 
 		$media = get_post( $media_id );
 
-		if ( ! $media || 'attachment' !== $media->post_type ) {
+		if ( ! $media || $media->post_type !== 'attachment' ) {
 			return new WP_Error(
 				'media_not_found',
 				sprintf(

@@ -68,7 +68,7 @@ class AuthorizationServerFactory {
 	 * @since 1.0.0
 	 */
 	public static function create(): AuthorizationServer {
-		if ( null !== self::$instance ) {
+		if ( self::$instance !== null ) {
 			return self::$instance;
 		}
 
