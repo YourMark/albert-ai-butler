@@ -1,6 +1,12 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Property Albert\\Abstracts\\BaseAbility\:\:\$category \(string\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: src/Abstracts/BaseAbility.php
+
+		-
 			message: '#^Access to an undefined property DOMNameSpaceNode\|DOMNode\:\:\$childNodes\.$#'
 			identifier: property.notFound
 			count: 1

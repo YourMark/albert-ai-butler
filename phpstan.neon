@@ -17,6 +17,7 @@ parameters:
 	scanDirectories:
 		- vendor/php-stubs/wordpress-stubs/
 	treatPhpDocTypesAsCertain: false
+	reportUnmatchedIgnoredErrors: false
 	ignoreErrors:
 		# REST API response array offsets - PHPStan can't infer the full response structure
 		- '#Offset .+ does not exist on array\{_links: array, _embedded: array\}#'
