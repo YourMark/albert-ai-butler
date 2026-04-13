@@ -81,7 +81,7 @@ class BlockConverter {
 		}
 
 		$body = $nodes->item( 0 );
-		if ( ! $body || ! $body->hasChildNodes() ) {
+		if ( ! $body instanceof DOMElement || ! $body->hasChildNodes() ) {
 			return '';
 		}
 
@@ -91,7 +91,7 @@ class BlockConverter {
 				$text = trim( $node->nodeValue ?? '' ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 				if ( '' !== $text ) {
 					$block = $this->render_block( 'paragraph', [], '<p>' . esc_html( $text ) . '</p>' );
-					if ( null !== $block ) {
+					if ( '' !== $block ) {
 						$blocks[] = $block;
 					}
 				}
@@ -440,11 +440,11 @@ class BlockConverter {
 	/**
 	 * Build the comment-delimited markup for an embed block.
 	 *
-	 * @param string $url           The embed URL.
-	 * @param string $type          The embed type (video, photo, rich, etc.).
-	 * @param string $provider_slug Provider name slug.
-	 * @param array  $extra_atts    Extra block attributes.
-	 * @param string $aspect_ratio  Aspect ratio class suffix (e.g. '16-9').
+	 * @param string               $url           The embed URL.
+	 * @param string               $type          The embed type (video, photo, rich, etc.).
+	 * @param string               $provider_slug Provider name slug.
+	 * @param array<string, mixed> $extra_atts Extra block attributes.
+	 * @param string               $aspect_ratio  Aspect ratio class suffix (e.g. '16-9').
 	 * @return string Embed block markup.
 	 *
 	 * @since 1.1.0
@@ -485,9 +485,9 @@ class BlockConverter {
 	/**
 	 * Render a Gutenberg block using WordPress core's comment-delimited format.
 	 *
-	 * @param string      $block_name Block name (without core/ prefix).
-	 * @param array       $attributes Block attributes.
-	 * @param string|null $content   Block inner content.
+	 * @param string               $block_name Block name (without core/ prefix).
+	 * @param array<string, mixed> $attributes Block attributes.
+	 * @param string|null          $content   Block inner content.
 	 * @return string Block markup.
 	 *
 	 * @since 1.1.0
@@ -538,7 +538,7 @@ class BlockConverter {
 	 * Parse an HTML string into a DOMNodeList.
 	 *
 	 * @param string $html The HTML to parse.
-	 * @return DOMNodeList|false List of body elements.
+	 * @return DOMNodeList<DOMNode>|false List of body elements.
 	 *
 	 * @since 1.1.0
 	 */
@@ -562,7 +562,9 @@ class BlockConverter {
 	 * @since 1.1.0
 	 */
 	protected function get_node_html( DOMNode $node ): string {
-		return $node->ownerDocument->saveHTML( $node ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$html = $node->ownerDocument->saveHTML( $node ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+
+		return false !== $html ? $html : '';
 	}
 
 	/**
@@ -735,14 +737,14 @@ class BlockConverter {
 		$this->created_attachment_ids[] = (int) $attachment_id;
 
 		// Store original URL for deduplication.
-		update_post_meta( $attachment_id, '_albert_original_url', $src );
+		update_post_meta( (int) $attachment_id, '_albert_original_url', $src );
 
 		// Set alt text.
 		if ( ! empty( $alt ) ) {
-			update_post_meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $alt ) );
+			update_post_meta( (int) $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $alt ) );
 		}
 
-		return (string) wp_get_attachment_url( $attachment_id );
+		return (string) wp_get_attachment_url( (int) $attachment_id );
 	}
 
 	/**
