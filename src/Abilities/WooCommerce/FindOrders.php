@@ -166,7 +166,7 @@ class FindOrders extends BaseAbility {
 			'paginate' => true,
 		];
 
-		if ( ! empty( $args['status'] ) && 'any' !== $args['status'] ) {
+		if ( ! empty( $args['status'] ) && $args['status'] !== 'any' ) {
 			$query_args['status'] = 'wc-' . sanitize_key( $args['status'] );
 		}
 

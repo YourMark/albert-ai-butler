@@ -104,6 +104,11 @@ Website: https://yourmark.nl
 - **Accessibility improvements** — keyboard-reachable chip tooltips, WCAG 2.2 AA contrast on all chip tones, aria-live stats announcements debounced, pagination focus indicators, dropdown caret indicators on the filter selects.
 - **Removed** the deferred-save bulk form, the category-grouped card layout, the per-category subpages, and the "CORE" / "ALBERT" uppercase source badges.
 
+### 1.0.1
+- Fix OAuth route namespace mismatch (`albert-ai-butler/v1` vs `albert/v1`) that caused connection failures when clients followed the discovery spec
+- Add `albert/rest_namespace` filter for sites with namespace collisions
+- Consolidate all REST namespace references to a single `Plugin::REST_NAMESPACE` constant
+
 ### 1.0.0 - 2025-01-23
 - Initial release
 - Full OAuth 2.0 server implementation

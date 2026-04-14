@@ -64,6 +64,44 @@ use WP\MCP\Core\McpAdapter;
  */
 class Plugin {
 	/**
+	 * Default REST API namespace.
+	 *
+	 * Use {@see self::rest_namespace()} to get the (potentially filtered) value.
+	 *
+	 * @since 1.0.1
+	 * @var string
+	 */
+	const REST_NAMESPACE = 'albert/v1';
+
+	/**
+	 * Get the REST API namespace, allowing override via filter.
+	 *
+	 * Sites that have a namespace collision with another plugin can change
+	 * the value via the `albert/rest_namespace` filter. The result is cached
+	 * for the duration of the request so the filter only fires once.
+	 *
+	 * @since 1.0.1
+	 *
+	 * @return string
+	 */
+	public static function rest_namespace(): string {
+		static $namespace = null;
+
+		if ( $namespace === null ) {
+			/**
+			 * Filters the REST API namespace used by all Albert endpoints.
+			 *
+			 * @since 1.0.1
+			 *
+			 * @param string $namespace Default namespace ('albert/v1').
+			 */
+			$namespace = (string) apply_filters( 'albert/rest_namespace', self::REST_NAMESPACE );
+		}
+
+		return $namespace;
+	}
+
+	/**
 	 * The single instance of the plugin.
 	 *
 	 * @since 1.0.0
@@ -86,7 +124,7 @@ class Plugin {
 	 * @since 1.0.0
 	 */
 	public static function get_instance(): Plugin {
-		if ( null === self::$instance ) {
+		if ( self::$instance === null ) {
 			self::$instance = new self();
 		}
 

@@ -12,6 +12,7 @@ namespace Albert\OAuth\Endpoints;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\Core\Plugin;
 
 /**
  * OAuthDiscovery class
@@ -196,7 +197,7 @@ class OAuthDiscovery implements Hookable {
 		$base_url = $this->get_base_url();
 
 		return [
-			'resource'              => $this->get_rest_url( 'albert/v1/mcp' ),
+			'resource'              => $this->get_rest_url( Plugin::rest_namespace() . '/mcp' ),
 			'authorization_servers' => [ $base_url ],
 			'scopes_supported'      => [ 'default' ],
 		];
@@ -215,8 +216,8 @@ class OAuthDiscovery implements Hookable {
 			// Required fields.
 			'issuer'                                => $base_url,
 			'authorization_endpoint'                => $base_url . '/oauth/authorize',
-			'token_endpoint'                        => $this->get_rest_url( 'albert/v1/oauth/token' ),
-			'registration_endpoint'                 => $this->get_rest_url( 'albert/v1/oauth/register' ),
+			'token_endpoint'                        => $this->get_rest_url( Plugin::rest_namespace() . '/oauth/token' ),
+			'registration_endpoint'                 => $this->get_rest_url( Plugin::rest_namespace() . '/oauth/register' ),
 
 			// Recommended fields.
 			'response_types_supported'              => [ 'code' ],

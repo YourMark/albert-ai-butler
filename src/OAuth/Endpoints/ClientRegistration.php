@@ -12,6 +12,7 @@ namespace Albert\OAuth\Endpoints;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\Core\Plugin;
 use Albert\OAuth\Repositories\ClientRepository;
 use WP_Error;
 use WP_REST_Request;
@@ -31,7 +32,8 @@ class ClientRegistration implements Hookable {
 	/**
 	 * REST API namespace.
 	 *
-	 * @since 1.0.0
+	 * @deprecated 1.0.1 Use {@see Plugin::rest_namespace()} instead.
+	 * @since      1.0.0
 	 * @var string
 	 */
 	const NAMESPACE = 'albert/v1';
@@ -55,7 +57,7 @@ class ClientRegistration implements Hookable {
 	public function register_routes(): void {
 		// Dynamic Client Registration endpoint (public per RFC 7591, rate limited in handler).
 		register_rest_route(
-			self::NAMESPACE,
+			Plugin::rest_namespace(),
 			'/oauth/register',
 			[
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -198,6 +200,6 @@ class ClientRegistration implements Hookable {
 	 * @since 1.0.0
 	 */
 	public static function get_endpoint_url(): string {
-		return rest_url( self::NAMESPACE . '/oauth/register' );
+		return rest_url( Plugin::rest_namespace() . '/oauth/register' );
 	}
 }

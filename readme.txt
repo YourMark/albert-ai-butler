@@ -141,6 +141,12 @@ Abilities page redesign. The three separate admin pages (Core, ACF, WooCommerce)
 * **List / Paginated view** — switch between a single long list and 25-per-page pagination. Preference is persisted server-side so there's no flash on page load.
 * **Accessibility** — keyboard-reachable tooltips on the annotation labels, WCAG 2.2 AA contrast on every chip colour, aria-live stats announcements debounced during search, focus indicators on pagination buttons, dropdown caret indicators on the filter selects.
 
+= 1.0.1 =
+Bug fix release.
+
+* **Fix:** OAuth endpoints used a different REST namespace (`albert-ai-butler/v1`) than the MCP server and discovery metadata (`albert/v1`), causing connection failures when clients followed the OAuth discovery spec. All endpoints now use `albert/v1` consistently.
+* **New:** `albert/rest_namespace` filter allows sites with a namespace collision to override the REST namespace.
+
 = 1.0.0 =
 Initial release.
 
@@ -157,6 +163,9 @@ Initial release.
 
 = 1.1.0 =
 Abilities page redesign: one unified list, instant save, plain-language labels. Existing enabled / disabled settings are preserved; no migration needed.
+
+= 1.0.1 =
+Fixes a connection failure caused by mismatched OAuth endpoint namespaces. Recommended for all users.
 
 = 1.0.0 =
 Initial release. Connect Claude Desktop, ChatGPT, and other MCP-compatible AI assistants to your WordPress site.

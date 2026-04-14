@@ -12,6 +12,7 @@ namespace Albert\MCP;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\Core\Plugin;
 use Albert\OAuth\Server\TokenValidator;
 use WP\MCP\Core\McpAdapter;
 use WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler;
@@ -41,7 +42,8 @@ class Server implements Hookable {
 	/**
 	 * Server route namespace.
 	 *
-	 * @since 1.0.0
+	 * @deprecated 1.0.1 Use {@see Plugin::rest_namespace()} instead.
+	 * @since      1.0.0
 	 * @var string
 	 */
 	const ROUTE_NAMESPACE = 'albert/v1';
@@ -81,7 +83,7 @@ class Server implements Hookable {
 	public function add_oauth_discovery_headers( $response, $handler, $request ) {
 		// Only handle our MCP endpoint.
 		$route = $request->get_route();
-		if ( strpos( $route, '/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE ) === false ) {
+		if ( strpos( $route, '/' . Plugin::rest_namespace() . '/' . self::ROUTE ) === false ) {
 			return $response;
 		}
 
@@ -90,7 +92,7 @@ class Server implements Hookable {
 		if ( empty( $token ) ) {
 			// Send headers for OAuth discovery per MCP spec (RFC 6750).
 			// Point to REST API resource endpoint for OAuth discovery.
-			$resource_url = self::get_base_url() . '/wp-json/albert/v1/oauth/resource';
+			$resource_url = self::get_base_url() . '/wp-json/' . Plugin::rest_namespace() . '/oauth/resource';
 			header( 'WWW-Authenticate: Bearer realm="MCP", resource="' . $resource_url . '"' );
 		}
 
@@ -108,7 +110,7 @@ class Server implements Hookable {
 	public function create_server( McpAdapter $adapter ): void {
 		$adapter->create_server(
 			self::SERVER_ID,
-			self::ROUTE_NAMESPACE,
+			Plugin::rest_namespace(),
 			self::ROUTE,
 			__( 'Albert MCP Server', 'albert-ai-butler' ),
 			__( 'MCP server for AI assistants to interact with WordPress', 'albert-ai-butler' ),
@@ -224,16 +226,16 @@ class Server implements Hookable {
 		// Only use external URL if developer mode is enabled.
 		if ( self::is_developer_mode() ) {
 			if ( ! empty( $external_url ) ) {
-				return $external_url . '/wp-json/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE;
+				return $external_url . '/wp-json/' . Plugin::rest_namespace() . '/' . self::ROUTE;
 			}
 
 			// Check for configured external URL.
 			$configured_url = get_option( 'albert_external_url', '' );
 			if ( ! empty( $configured_url ) ) {
-				return $configured_url . '/wp-json/' . self::ROUTE_NAMESPACE . '/' . self::ROUTE;
+				return $configured_url . '/wp-json/' . Plugin::rest_namespace() . '/' . self::ROUTE;
 			}
 		}
 
-		return rest_url( self::ROUTE_NAMESPACE . '/' . self::ROUTE );
+		return rest_url( Plugin::rest_namespace() . '/' . self::ROUTE );
 	}
 }

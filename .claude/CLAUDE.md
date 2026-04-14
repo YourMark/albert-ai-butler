@@ -17,6 +17,7 @@ WordPress plugin that exposes WordPress functionality to AI assistants via MCP (
 composer install          # Install dependencies
 composer phpcs            # Check coding standards (WordPress CS)
 composer phpcbf           # Auto-fix coding standards
+composer phpstan          # Static analysis (level 7)
 composer test             # Run unit tests
 composer test:integration # Run integration tests (requires WP test suite)
 ```
@@ -32,17 +33,41 @@ src/
   Core/            # Plugin bootstrap, AbilitiesManager, AbilitiesRegistry
   MCP/             # MCP protocol server
   OAuth/           # Full OAuth 2.0 server (entities, repos, endpoints)
+  Utilities/       # Standalone helpers (BlockConverter)
 tests/
   Unit/            # PHPUnit tests (no WordPress dependency)
   Integration/     # WP_UnitTestCase tests
 assets/            # CSS and JS for admin UI
 ```
 
+## Ecosystem
+
+Free is the **core**. All add-ons depend on it. The core never depends on add-ons.
+
+```
+Addons → Core    (allowed)
+Core   → Addons  (NEVER)
+Addon  → Addon   (NEVER — use Core hooks as mediator)
+```
+
+### Known add-ons
+
+| Plugin | Folder |
+|---|---|
+| Albert Premium Service | `albert-premium-service` |
+| Albert WooCommerce | `albert-woocommerce` |
+
+### Legacy ability ID note
+
+Free WooCommerce read-only abilities predate the naming convention and use
+`albert/woo-find-products` style IDs. All new abilities use `{namespace}/{resource}/{action}`.
+Never rename the legacy IDs — they are part of the public API.
+
 ## Critical Warnings
 
 - **NEVER use alternative PHP syntax** (`: endif`, `: endforeach`). ALWAYS use `{ }` braces.
 - **NEVER use jQuery.** Vanilla ES6+ only.
-- **NEVER commit without explicit request.** Run `composer phpcs` first.
+- **NEVER commit without explicit request.** Run `composer phpcs` and `composer phpstan` first.
 - **NEVER bump version without approval.**
 - The root `CLAUDE.md` is the canonical project reference (checked into git). This file supplements it.
 

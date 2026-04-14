@@ -20,7 +20,7 @@
 		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
 		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
 
-		<!-- Disable Yoda conditions - PHPStan catches assignment-in-condition issues -->
+		<!-- Disable WPCS's "require Yoda" rule and enforce the opposite -->
 		<exclude name="WordPress.PHP.YodaConditions.NotYoda"/>
 
 		<!-- Allow WP_REST_Request<array<string, mixed>> PHPDoc syntax for PHPStan compatibility -->
@@ -32,6 +32,9 @@
 
 	<!-- Enforce short array syntax. -->
 	<rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+
+	<!-- Enforce non-Yoda conditions ($variable === 'value', not 'value' === $variable). -->
+	<rule ref="Generic.ControlStructures.DisallowYodaConditions"/>
 
 	<!-- Relax rules for test files — method names are self-documenting. -->
 	<rule ref="Squiz.Commenting.FunctionComment">
