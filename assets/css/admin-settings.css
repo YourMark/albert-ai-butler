@@ -38,6 +38,10 @@
 	--albert-warning-20: oklch(0.50 0.12 75 / 0.2);
 	--albert-success-10: oklch(0.55 0.17 145 / 0.1);
 	--albert-success-20: oklch(0.55 0.17 145 / 0.2);
+	--albert-danger-10: oklch(0.52 0.18 25 / 0.1);
+	--albert-danger-20: oklch(0.52 0.18 25 / 0.2);
+	--albert-info-10: oklch(0.49 0.12 248 / 0.1);
+	--albert-info-20: oklch(0.49 0.12 248 / 0.2);
 	--albert-black-5: oklch(0 0 0 / 0.05);
 	--albert-black-8: oklch(0 0 0 / 0.08);
 	--albert-black-10: oklch(0 0 0 / 0.1);
@@ -69,540 +73,625 @@
 	--albert-transition: 0.2s;
 	--albert-shadow-sm: 0 1px 2px var(--albert-black-5);
 	--albert-shadow-md: 0 1px 3px var(--albert-black-10);
-	--albert-sidebar-width: 200px;
 }
 
-/* Main wrapper */
-.albert-wrap {
+/* Main wrapper — Albert admin pages. Apply to every `.wrap` container. */
+.albert-wrap,
+.albert-settings {
 	max-width: 80rem;
 }
 
-/* Page header */
-.albert-wrap > h1 {
+.albert-wrap > h1,
+.albert-settings > h1 {
 	margin-bottom: var(--albert-spacing-lg);
 }
 
-/* Page layout with sidebar */
-.albert-page-layout {
-	display: grid;
-	grid-template-columns: var(--albert-sidebar-width) 1fr;
-	gap: var(--albert-spacing-xl);
-	align-items: start;
-}
+/* --------------------------------------------------------------
+   Abilities page — flat list
+   -------------------------------------------------------------- */
 
-/* Sidebar navigation */
-.albert-sidebar {
-	position: sticky;
-	top: 32px;
-	background: var(--albert-bg-white);
-	border: 1px solid var(--albert-border);
-	border-radius: var(--albert-border-radius-lg);
-	padding: var(--albert-spacing-md);
-	box-shadow: var(--albert-shadow-sm);
-}
-
-.albert-sidebar-title {
-	font-size: var(--albert-font-xs);
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-	color: var(--albert-text-secondary);
-	margin: 0 0 var(--albert-spacing-sm) 0;
-	padding: 0 var(--albert-spacing-sm);
-}
-
-.albert-sidebar-nav {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-}
-
-.albert-sidebar-nav li {
-	margin: 0;
-}
-
-.albert-sidebar-nav a {
-	display: flex;
-	align-items: center;
-	gap: var(--albert-spacing-sm);
-	padding: var(--albert-spacing-sm) var(--albert-spacing-sm);
-	color: var(--albert-text-primary);
-	text-decoration: none;
-	font-size: var(--albert-font-base);
-	border-radius: var(--albert-border-radius);
-	transition: background-color var(--albert-transition), color var(--albert-transition);
-}
-
-.albert-sidebar-nav a:hover {
-	background: var(--albert-bg-light);
-	color: var(--albert-primary);
-}
-
-.albert-sidebar-nav a.active {
-	background: var(--albert-primary-10);
-	color: var(--albert-primary);
-	font-weight: 500;
-}
-
-/* Mobile sidebar as horizontal nav */
-.albert-sidebar-mobile {
-	display: none;
-}
-
-@media screen and (max-width: 1200px) {
-	.albert-sidebar-mobile {
-		display: block;
-		margin-bottom: var(--albert-spacing-lg);
-	}
-
-	.albert-sidebar-mobile-nav {
-		display: flex;
-		gap: var(--albert-spacing-xs);
-		overflow-x: auto;
-		list-style: none;
-		margin: 0;
-		padding: 0 0 var(--albert-spacing-xs) 0;
-	}
-
-	.albert-sidebar-mobile-nav a {
-		display: flex;
-		align-items: center;
-		gap: var(--albert-spacing-xs);
-		white-space: nowrap;
-		padding: var(--albert-spacing-xs) var(--albert-spacing-md);
-		background: var(--albert-bg-white);
-		border: 1px solid var(--albert-border-light);
-		border-radius: 20px;
-		color: var(--albert-text-primary);
-		text-decoration: none;
-		font-size: var(--albert-font-base);
-		transition: background-color var(--albert-transition), border-color var(--albert-transition);
-	}
-
-	.albert-sidebar-mobile-nav a:hover {
-		background: var(--albert-bg-light);
-		border-color: var(--albert-border);
-	}
-
-	.albert-sidebar-mobile-nav .dashicons {
-		font-size: var(--albert-font-md);
-		width: 14px;
-		height: 14px;
-	}
-
-	.albert-sidebar-mobile-nav .albert-nav-count {
-		font-size: var(--albert-font-xs);
-		color: var(--albert-text-secondary);
-	}
-}
-
-.albert-sidebar-nav .dashicons {
-	font-size: var(--albert-font-xl);
-	width: 16px;
-	height: 16px;
-}
-
-.albert-sidebar-nav .albert-nav-count {
-	margin-left: auto;
-	font-size: var(--albert-font-xs);
-	color: var(--albert-text-secondary);
-	background: var(--albert-bg-light);
-	padding: 2px 6px;
-	border-radius: 10px;
-}
-
-/* Sidebar save button */
-.albert-sidebar-save {
-	margin-bottom: var(--albert-spacing-lg);
-	padding-bottom: var(--albert-spacing-lg);
-	border-bottom: 1px solid var(--albert-border-light);
-}
-
-.albert-sidebar-save .button-primary {
-	width: 100%;
-	justify-content: center;
-}
-
-/* Main content area */
-.albert-main-content {
+.albert-abilities-page {
 	display: flex;
 	flex-direction: column;
 	gap: var(--albert-spacing-lg);
-	min-width: 0;
-	max-width: 80rem;
+	max-width: none;
 }
 
-/* Tab navigation */
-.albert-wrap .nav-tab-wrapper {
-	margin-bottom: 0;
-	border-bottom: 1px solid var(--albert-border);
+.albert-abilities-header {
+	margin: 0;
 }
 
-.albert-wrap .nav-tab {
-	background: transparent;
-	border: 1px solid transparent;
-	border-bottom: none;
-	margin-left: 0;
-	margin-right: 4px;
-	padding: 8px 12px;
+.albert-abilities-intro {
+	margin: 0;
 	font-size: var(--albert-font-md);
-	line-height: 1.4;
 	color: var(--albert-text-secondary);
+	line-height: 1.5;
+	max-width: 72ch;
 }
 
-.albert-wrap .nav-tab:hover {
-	background: var(--albert-bg-white);
-	color: var(--albert-text-primary);
-}
-
-.albert-wrap .nav-tab-active {
-	background: var(--albert-bg-white);
-	border-color: var(--albert-border);
-	border-bottom: 1px solid var(--albert-bg-white);
-	margin-bottom: -1px;
-	color: var(--albert-text-primary);
-}
-
-/* Tab content area */
-.albert-tab-content {
-	background: transparent;
-	border: none;
-	padding: 0;
-	margin-bottom: var(--albert-spacing-lg);
-}
-
-/* Remove form background when inside tab content */
-.albert-tab-content form {
-	background: none;
-	border: none;
-	padding: 0;
-	margin: 0;
-}
-
-/* Groups grid layout */
-.albert-groups-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
-	gap: var(--albert-spacing-lg);
-}
-
-/* Authentication tab */
-.albert-auth-tab .notice.inline {
-	margin: var(--albert-spacing-lg) 0;
-}
-
-/* Content header with description and actions */
-.albert-content-header {
+.albert-abilities-form {
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
+	flex-direction: column;
 	gap: var(--albert-spacing-md);
-	margin: 0 0 var(--albert-spacing-lg) 0;
 }
 
-.albert-content-description {
-	margin: 0;
+/* Filter toolbar */
+.albert-abilities-toolbar {
+	position: sticky;
+	top: 32px;
+	z-index: 10;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--albert-spacing-md);
+	justify-content: space-between;
+	align-items: flex-end;
+	padding: var(--albert-spacing-md) var(--albert-spacing-lg);
+	background: var(--albert-bg-white);
+	border: 1px solid var(--albert-border);
+	border-radius: var(--albert-border-radius-lg);
+	box-shadow: var(--albert-shadow-sm);
+}
+
+.albert-toolbar-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--albert-spacing-md);
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.albert-toolbar-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 160px;
+}
+
+.albert-toolbar-field--search {
+	flex: 2 1 260px;
+}
+
+.albert-toolbar-label {
+	font-size: var(--albert-font-xs);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
 	color: var(--albert-text-secondary);
+}
+
+.albert-abilities-toolbar .albert-search,
+.albert-abilities-toolbar .albert-filter-category,
+.albert-abilities-toolbar .albert-filter-supplier {
+	width: 100%;
+	padding: var(--albert-spacing-xs) var(--albert-spacing-sm);
+	border: 1px solid var(--albert-border);
+	border-radius: var(--albert-border-radius);
+	background: var(--albert-bg-white);
 	font-size: var(--albert-font-base);
 	line-height: 1.5;
 }
 
-.albert-content-actions {
-	display: flex;
-	align-items: center;
-	gap: var(--albert-spacing-xs);
-	flex-shrink: 0;
+.albert-abilities-toolbar .albert-filter-category,
+.albert-abilities-toolbar .albert-filter-supplier {
+	appearance: none;
+	/* Caret icon as inline SVG so it inherits theme colors without an HTTP request. */
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='none' stroke='%234a5568' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5l5 5 5-5'/></svg>");
+	background-repeat: no-repeat;
+	background-position: right var(--albert-spacing-sm) center;
+	background-size: 12px 8px;
+	padding-right: calc(var(--albert-spacing-sm) * 2 + 12px);
 }
 
-.albert-action-link {
-	background: none;
-	border: none;
-	padding: 0;
-	margin: 0;
-	font-size: var(--albert-font-base);
-	color: var(--albert-primary);
-	cursor: pointer;
-	text-decoration: none;
-}
-
-.albert-action-link:hover {
-	color: var(--albert-primary-hover);
-	text-decoration: underline;
-}
-
-.albert-action-link:focus-visible {
-	outline: 2px solid var(--albert-primary);
-	outline-offset: 2px;
-	border-radius: 2px;
-}
-
-.albert-action-separator {
-	color: var(--albert-text-secondary);
-}
-
-/* Settings form container */
-.albert-wrap form {
-	background: transparent;
-	border: none;
-	padding: 0;
-	margin: 0;
-}
-
-/* Ability group container - Card style */
-.ability-group {
-	background: var(--albert-bg-white);
-	border: 1px solid var(--albert-border);
-	border-radius: var(--albert-border-radius-lg);
-	box-shadow: var(--albert-shadow-sm);
-	overflow: hidden;
-}
-
-.ability-group:target {
-	animation: ability-group-highlight 1.5s ease-out;
-}
-
-@keyframes ability-group-highlight {
-	0%,
-	15% {
-		box-shadow: 0 0 0 3px oklch(0.49 0.12 248 / 0.4);
-	}
-	100% {
-		box-shadow: var(--albert-shadow-sm);
-	}
-}
-
-.ability-group:last-child {
-	margin-bottom: 0;
-}
-
-.ability-group-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: var(--albert-spacing-md) var(--albert-spacing-lg);
-	background: var(--albert-bg-light);
-	border-bottom: 1px solid var(--albert-border-light);
-	margin: 0;
-}
-
-.ability-group-title-wrapper {
-	display: flex;
-	align-items: center;
-	gap: var(--albert-spacing-xs);
-}
-
-.ability-group-collapse-toggle {
-	background: none;
-	border: none;
-	padding: 2px;
-	margin: 0;
-	cursor: pointer;
-	color: var(--albert-text-secondary);
-	display: flex;
-	align-items: center;
-	border-radius: var(--albert-border-radius);
-	transition: background-color var(--albert-transition);
-}
-
-.ability-group-collapse-toggle .dashicons {
-	transition: transform 0.2s ease-out;
-	font-size: var(--albert-font-2xl);
-	width: 18px;
-	height: 18px;
-}
-
-.ability-group-collapse-toggle:hover {
-	background: var(--albert-black-5);
-	color: var(--albert-primary);
-}
-
-.ability-group-collapse-toggle:focus-visible {
+.albert-abilities-toolbar .albert-search:focus-visible,
+.albert-abilities-toolbar .albert-filter-category:focus-visible,
+.albert-abilities-toolbar .albert-filter-supplier:focus-visible {
 	outline: 2px solid var(--albert-primary);
 	outline-offset: 1px;
+	border-color: var(--albert-primary);
 }
 
-.ability-group-collapse-toggle[aria-expanded="false"] .dashicons {
-	transform: rotate(-90deg);
-}
-
-.ability-group-title {
-	font-size: var(--albert-font-base);
-	font-weight: 600;
-	color: var(--albert-text-primary);
-	margin: 0;
-	text-transform: uppercase;
-	letter-spacing: 0.3px;
-}
-
-.ability-group-items {
-	display: block;
-	padding: var(--albert-spacing-md) var(--albert-spacing-lg);
-}
-
-.ability-group-items.collapsed {
-	display: none;
-}
-
-/* Collapsed card state */
-.ability-group.is-collapsed {
-	background: var(--albert-bg-white);
-	border: 1px solid var(--albert-border-light);
-	box-shadow: none;
-	align-self: start;
-}
-
-.ability-group.is-collapsed .ability-group-header {
-	border-bottom: none;
-}
-
-.ability-group-toggle-all {
+.albert-toolbar-meta {
 	display: flex;
-	align-items: center;
+	flex-direction: column;
+	align-items: flex-end;
 	gap: var(--albert-spacing-xs);
-	font-size: var(--albert-font-xs);
+	flex-shrink: 0;
+}
+
+.albert-view-toggle {
+	display: inline-flex;
+	border: 1px solid var(--albert-border);
+	border-radius: var(--albert-border-radius);
+	overflow: hidden;
+	background: var(--albert-bg-white);
+}
+
+.albert-view-toggle-btn {
+	appearance: none;
+	background: transparent;
+	border: none;
+	padding: var(--albert-spacing-xs) var(--albert-spacing-md);
+	font-size: var(--albert-font-sm);
+	font-weight: 500;
+	color: var(--albert-text-secondary);
+	cursor: pointer;
+	transition: background-color var(--albert-transition), color var(--albert-transition);
+}
+
+.albert-view-toggle-btn + .albert-view-toggle-btn {
+	border-left: 1px solid var(--albert-border);
+}
+
+.albert-view-toggle-btn:hover {
+	background: var(--albert-bg-light);
+	color: var(--albert-text-primary);
+}
+
+.albert-view-toggle-btn.is-active {
+	background: var(--albert-primary);
+	color: var(--albert-bg-white);
+}
+
+.albert-view-toggle-btn:focus-visible {
+	outline: 2px solid var(--albert-primary);
+	outline-offset: 2px;
+}
+
+.albert-toolbar-stats {
+	margin: 0;
+	font-size: var(--albert-font-sm);
 	color: var(--albert-text-secondary);
 }
 
-.ability-group-toggle-all > label:last-child {
-	cursor: pointer;
-}
-
-
-/* Subgroups (read/write) within a category */
-.ability-subgroup + .ability-subgroup {
-	border-top: 1px solid var(--albert-border-light);
-}
-
-.ability-subgroup-header {
+/* Abilities list */
+.albert-abilities-list {
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: var(--albert-spacing-sm) var(--albert-spacing-md);
+	flex-direction: column;
+	gap: var(--albert-spacing-xs);
 }
 
-.ability-subgroup-label {
+.albert-abilities-empty {
+	padding: var(--albert-spacing-xl);
+	text-align: center;
+	color: var(--albert-text-secondary);
+	font-size: var(--albert-font-md);
+	background: var(--albert-bg-white);
+	border: 1px dashed var(--albert-border);
+	border-radius: var(--albert-border-radius-lg);
+}
+
+/* Ability row */
+.ability-row {
+	background: var(--albert-bg-white);
+	border: 1px solid var(--albert-border-light);
+	border-radius: var(--albert-border-radius);
+	transition: border-color var(--albert-transition), box-shadow var(--albert-transition);
+}
+
+.ability-row:hover {
+	border-color: var(--albert-border);
+	box-shadow: var(--albert-shadow-sm);
+}
+
+.ability-row.is-expanded {
+	border-color: var(--albert-primary-20);
+	box-shadow: var(--albert-shadow-sm);
+}
+
+.ability-row-main {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: var(--albert-spacing-md);
+	padding: var(--albert-spacing-md) var(--albert-spacing-lg);
+}
+
+.ability-row-expand {
+	appearance: none;
+	background: transparent;
+	border: none;
+	padding: 4px;
+	cursor: pointer;
+	color: var(--albert-text-secondary);
 	display: inline-flex;
 	align-items: center;
-	gap: 5px;
-	font-size: var(--albert-font-xs);
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-	color: var(--albert-primary);
-	background: var(--albert-primary-8);
-	padding: 3px 10px 3px 7px;
-	border-radius: 4px;
-	line-height: 1.4;
+	justify-content: center;
+	border-radius: 50%;
+	width: 28px;
+	height: 28px;
+	transition: background-color var(--albert-transition), color var(--albert-transition);
 }
 
-.ability-subgroup-label .dashicons {
-	font-size: var(--albert-font-base);
-	width: 13px;
-	height: 13px;
-}
-
-/* Write subgroup label variant */
-.ability-subgroup[data-subgroup="write"] .ability-subgroup-label {
-	color: var(--albert-warning);
-	background: var(--albert-warning-10);
-}
-
-.ability-subgroup-toggle {
-	display: flex;
-	align-items: center;
-}
-
-.albert-toggle--small {
-	transform: scale(0.85);
-	transform-origin: center right;
-}
-
-/* Ability items - 2 column grid */
-.ability-item {
-	display: flex;
-	align-items: flex-start;
-	gap: var(--albert-spacing-sm);
-	padding: var(--albert-spacing-sm) var(--albert-spacing-md);
-	border-radius: var(--albert-border-radius);
-	transition: background-color var(--albert-transition);
-	cursor: pointer;
-}
-
-.ability-item:hover {
+.ability-row-expand:hover {
 	background: var(--albert-bg-light);
+	color: var(--albert-primary);
 }
 
-.ability-item:active {
-	background: var(--albert-primary-8);
+.ability-row-expand:focus-visible {
+	outline: 2px solid var(--albert-primary);
+	outline-offset: 2px;
 }
 
-.ability-item-toggle {
-	flex-shrink: 0;
-	padding-top: 1px;
+.ability-row-expand[aria-expanded="true"] .dashicons {
+	transform: rotate(90deg);
 }
 
-.ability-item-content {
-	flex: 1;
+.ability-row-expand .dashicons {
+	transition: transform var(--albert-transition);
+}
+
+.ability-row-body {
 	min-width: 0;
 }
 
-.ability-item-label {
-	font-weight: 500;
-	color: var(--albert-text-primary);
-	margin: 0;
+.ability-row-label {
 	display: block;
-	font-size: var(--albert-font-base);
-	line-height: 1.3;
+	font-size: var(--albert-font-md);
+	font-weight: 600;
+	color: var(--albert-text-primary);
+	line-height: 1.4;
 	cursor: pointer;
 }
 
-.ability-item-description {
+.ability-row-description {
+	margin: 2px 0 0 0;
 	font-size: var(--albert-font-sm);
 	color: var(--albert-text-secondary);
-	line-height: 1.4;
-	margin: 2px 0 0 0;
+	line-height: 1.5;
 }
 
-/* Toggle switch */
+.ability-row-annotations {
+	list-style: none;
+	margin: var(--albert-spacing-xs) 0 0 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--albert-spacing-xs);
+}
+
+.ability-row-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	flex-shrink: 0;
+}
+
+/* Annotation chips */
+.ability-chip {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	border-radius: 12px;
+	font-size: var(--albert-font-xs);
+	font-weight: 500;
+	line-height: 1.6;
+	border: 1px solid transparent;
+}
+
+.ability-chip:focus-visible {
+	outline: 2px solid var(--albert-primary);
+	outline-offset: 2px;
+}
+
+.ability-chip .dashicons {
+	font-size: var(--albert-font-md);
+	width: 14px;
+	height: 14px;
+}
+
+/*
+ * Chip description: in the DOM for screen readers at all times
+ * (.screen-reader-text clip pattern), revealed as a positioned overlay
+ * on hover OR keyboard focus. Because the overlay stays inside the
+ * chip's DOM subtree, moving the pointer onto the overlay still
+ * satisfies `.ability-chip:hover`, which meets WCAG 1.4.13's hoverable
+ * requirement. Keyboard users reach the chip via tabindex=0 and see the
+ * overlay on :focus-visible; pressing Escape toggles `.is-dismissed` on
+ * the chip (handled in admin-settings.js) to satisfy dismissibility.
+ */
+.ability-chip-desc {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+	word-break: normal;
+}
+
+.ability-chip:hover:not(.is-dismissed) .ability-chip-desc,
+.ability-chip:focus-visible:not(.is-dismissed) .ability-chip-desc {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	width: max-content;
+	max-width: 260px;
+	height: auto;
+	padding: 8px 10px;
+	margin: 0;
+	overflow: visible;
+	clip: auto;
+	white-space: normal;
+	background: var(--albert-text-primary);
+	color: var(--albert-bg-white);
+	border-radius: var(--albert-border-radius);
+	font-size: var(--albert-font-xs);
+	font-weight: 400;
+	line-height: 1.45;
+	box-shadow: var(--albert-shadow-md);
+	z-index: 20;
+	pointer-events: auto;
+}
+
+.ability-chip--neutral {
+	background: var(--albert-source-core-bg);
+	color: var(--albert-source-core-text);
+	border-color: var(--albert-border-light);
+}
+
+.ability-chip--info {
+	background: var(--albert-info-10);
+	color: var(--albert-primary-hover);
+	border-color: var(--albert-info-20);
+}
+
+/*
+ * Warning and danger chip text is darkened vs the raw --albert-warning /
+ * --albert-error tokens so the ~11px label meets WCAG 1.4.3 (4.5:1)
+ * against the 10%-tinted backgrounds. Using dedicated --*-chip-text
+ * tokens keeps the surrounding component colors unchanged.
+ */
+.ability-chip--warning {
+	background: var(--albert-warning-10);
+	color: oklch(0.38 0.13 75);
+	border-color: var(--albert-warning-20);
+}
+
+.ability-chip--danger {
+	background: var(--albert-danger-10);
+	color: oklch(0.40 0.18 25);
+	border-color: var(--albert-danger-20);
+}
+
+/* Expanded details panel */
+.ability-row-details {
+	padding: var(--albert-spacing-md) var(--albert-spacing-lg) var(--albert-spacing-lg) 52px;
+	border-top: 1px solid var(--albert-border-light);
+	background: var(--albert-bg-light);
+	border-bottom-left-radius: var(--albert-border-radius);
+	border-bottom-right-radius: var(--albert-border-radius);
+}
+
+.ability-row-details[hidden] {
+	display: none;
+}
+
+.ability-row-details-grid {
+	display: grid;
+	grid-template-columns: 120px 1fr;
+	gap: var(--albert-spacing-xs) var(--albert-spacing-md);
+	margin: 0;
+	font-size: var(--albert-font-sm);
+}
+
+.ability-row-details-grid dt {
+	font-weight: 600;
+	color: var(--albert-text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	font-size: var(--albert-font-xs);
+	align-self: center;
+}
+
+.ability-row-details-grid dd {
+	margin: 0;
+	color: var(--albert-text-primary);
+	display: flex;
+	align-items: center;
+	gap: var(--albert-spacing-sm);
+	flex-wrap: wrap;
+}
+
+.ability-row-id {
+	background: var(--albert-bg-white);
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-family: 'Courier New', Courier, monospace;
+	font-size: var(--albert-font-sm);
+	border: 1px solid var(--albert-border-light);
+}
+
+/* Hide filtered-out rows */
+.ability-row.is-filtered-out {
+	display: none;
+}
+
+/* Pagination */
+.albert-abilities-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--albert-spacing-sm);
+	padding: var(--albert-spacing-md) 0;
+}
+
+.albert-abilities-pagination[hidden] {
+	display: none;
+}
+
+.albert-pagination-pages {
+	display: inline-flex;
+	gap: 4px;
+}
+
+.albert-pagination-page.is-current {
+	background: var(--albert-primary);
+	color: var(--albert-bg-white);
+	border-color: var(--albert-primary);
+}
+
+.albert-pagination-page:focus-visible,
+.albert-pagination-prev:focus-visible,
+.albert-pagination-next:focus-visible {
+	outline: 2px solid var(--albert-primary);
+	outline-offset: 2px;
+}
+
+/*
+ * Inline error notice for AJAX failures (toggle save).
+ *
+ * Sits above the list, role="alert" so screen readers announce it,
+ * dismissed automatically after a few seconds by the JS.
+ */
+.albert-abilities-error {
+	margin: 0 0 var(--albert-spacing-md) 0;
+	padding: var(--albert-spacing-sm) var(--albert-spacing-md);
+	background: var(--albert-danger-10);
+	border: 1px solid var(--albert-danger-20);
+	border-radius: var(--albert-border-radius);
+	color: oklch(0.40 0.18 25);
+	font-size: var(--albert-font-base);
+	line-height: 1.5;
+}
+
+.albert-abilities-error[hidden] {
+	display: none;
+}
+
+/*
+ * Toggle switch — flex container with the state text + slider on one row.
+ *
+ * The whole thing is wrapped in a `<label for="…">` so clicking either the
+ * "Enabled / Disabled" word or the pill flips the underlying checkbox.
+ * Doubling the click target is the cheapest accessibility win we can offer
+ * here.
+ */
 .albert-toggle {
 	position: relative;
-	display: inline-block;
-	width: 28px;
-	height: 16px;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--albert-spacing-sm);
 	margin: 0;
 	cursor: pointer;
+	user-select: none;
 }
 
 .albert-toggle::after {
 	content: "";
 	position: absolute;
 	top: 50%;
-	left: 50%;
+	right: 0;
 	width: 44px;
 	height: 44px;
-	transform: translate(-50%, -50%);
+	transform: translateY(-50%);
 }
 
+/*
+ * Hide the native checkbox without breaking focus / form semantics.
+ *
+ * wp-admin's forms.css injects `input[type="checkbox"]:checked::before`
+ * with a blue SVG checkmark. `opacity: 0` on the input alone isn't
+ * always enough to suppress that: the ::before can paint for a frame
+ * on state change before compositing settles, which shows up as a
+ * visible flash the user has to ignore. Clipping the input to a 1×1
+ * box with `overflow: hidden` and `clip-path: inset(50%)` (the
+ * canonical WP .screen-reader-text pattern) guarantees any generated
+ * content is clipped out regardless of how opacity inherits.
+ */
 .albert-toggle input {
-	opacity: 0;
-	width: 0;
-	height: 0;
 	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+/*
+ * State text — "Enabled" and "Disabled" both live in the DOM, stacked
+ * in the same grid cell, and cross-fade via opacity when the checkbox
+ * state changes. CSS grid sizes the container to the longer of the two
+ * words automatically, so there's no layout shift and no need to
+ * hard-code a width. Both words are aria-hidden because the checkbox
+ * itself carries the accessible state.
+ */
+.albert-toggle-state {
+	display: inline-grid;
+	grid-template-areas: "state";
+	font-size: var(--albert-font-sm);
+	font-weight: 500;
+	line-height: 1;
+	color: var(--albert-text-secondary);
+	transition: color var(--albert-transition);
+	white-space: nowrap;
+}
+
+.albert-toggle:has( input:checked ) .albert-toggle-state {
+	color: var(--albert-primary);
+}
+
+.albert-toggle-state-word {
+	grid-area: state;
+	transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.albert-toggle-state-word--on {
+	opacity: 0;
+	transform: translateY( -2px );
+}
+
+.albert-toggle-state-word--off {
+	opacity: 1;
+	transform: translateY( 0 );
+}
+
+.albert-toggle:has( input:checked ) .albert-toggle-state-word--on {
+	opacity: 1;
+	transform: translateY( 0 );
+}
+
+.albert-toggle:has( input:checked ) .albert-toggle-state-word--off {
+	opacity: 0;
+	transform: translateY( 2px );
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.albert-toggle-state-word {
+		transition: opacity 0s;
+		transform: none;
+	}
+
+	.albert-toggle:has( input:checked ) .albert-toggle-state-word--on,
+	.albert-toggle:has( input:checked ) .albert-toggle-state-word--off {
+		transform: none;
+	}
 }
 
 .albert-toggle-slider {
-	position: absolute;
-	inset: 0;
+	position: relative;
+	display: inline-block;
+	width: 32px;
+	height: 18px;
+	flex-shrink: 0;
 	background-color: var(--albert-toggle-track);
-	border-radius: 16px;
-	transition: background-color var(--albert-transition);
+	border-radius: 18px;
+	/* Track colour snaps — only the knob below animates. */
 }
 
 .albert-toggle-slider::before {
 	content: "";
 	position: absolute;
-	height: 10px;
-	width: 10px;
+	height: 12px;
+	width: 12px;
 	top: 3px;
 	left: 3px;
 	background-color: var(--albert-bg-white);
@@ -611,409 +700,93 @@
 	box-shadow: 0 1px 1px var(--albert-black-10);
 }
 
-.albert-toggle input:checked + .albert-toggle-slider {
+@media ( prefers-reduced-motion: reduce ) {
+	.albert-toggle-slider::before {
+		transition: none;
+	}
+}
+
+.albert-toggle input:checked + .albert-toggle-state + .albert-toggle-slider {
 	background-color: var(--albert-primary);
 }
 
-.albert-toggle input:focus-visible + .albert-toggle-slider {
+.albert-toggle input:focus-visible + .albert-toggle-state + .albert-toggle-slider {
 	outline: 2px solid var(--albert-primary);
 	outline-offset: 2px;
 	box-shadow: none;
 }
 
-.albert-toggle input:checked + .albert-toggle-slider:before {
-	transform: translateX(12px);
+.albert-toggle input:checked + .albert-toggle-state + .albert-toggle-slider::before {
+	transform: translateX(14px);
 }
 
-/* Indeterminate state - partial selection */
-.albert-toggle input:indeterminate + .albert-toggle-slider {
-	background-color: var(--albert-primary-60);
+.albert-toggle input:disabled + .albert-toggle-state + .albert-toggle-slider {
+	opacity: 0.5;
+	cursor: progress;
 }
 
-.albert-toggle input:indeterminate + .albert-toggle-slider:before {
-	transform: translateX(6px);
-}
+/*
+ * Disabled-row treatment intentionally does NOT fade text.
+ *
+ * An earlier version dropped the description and chip opacity to 0.55
+ * as an ambient cue, but that blended the text with the background and
+ * broke WCAG 1.4.3 contrast for users with low vision. State is now
+ * signalled by four high-contrast cues instead: the "Enabled"/"Disabled"
+ * word, the toggle slider position, the toggle slider color, and the
+ * primary-color row accent above — none of which degrade any text.
+ */
 
-/* Indeterminate indicator dash */
-.albert-toggle input:indeterminate + .albert-toggle-slider::after {
-	content: "";
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	width: 8px;
-	height: 2px;
-	background-color: var(--albert-bg-white);
-	border-radius: 1px;
-}
-
-/* Category description in header */
-.ability-group-description {
-	font-size: var(--albert-font-sm);
-	color: var(--albert-text-secondary);
-	margin: 2px 0 0 0;
-	line-height: 1.4;
-	font-weight: normal;
-}
-
-/* Ability item header with label and badge */
-.ability-item-header {
-	display: flex;
-	align-items: center;
-	gap: var(--albert-spacing-xs);
-	flex-wrap: wrap;
-}
-
-/* Source badges */
-.albert-source-badge {
-	display: inline-block;
-	font-size: var(--albert-font-2xs);
-	font-weight: 700;
-	letter-spacing: 0.5px;
-	text-transform: uppercase;
-	padding: 1px 6px;
-	border-radius: 3px;
-	line-height: 1.6;
-	white-space: nowrap;
-	vertical-align: middle;
-}
-
-.albert-source-core {
-	background: var(--albert-source-core-bg);
-	color: var(--albert-source-core-text);
-	border: 1px solid var(--albert-border-light);
-}
-
-.albert-source-albert {
-	background: var(--albert-primary-10);
-	color: var(--albert-primary-hover);
-	border: 1px solid var(--albert-primary-20);
-}
-
-.albert-source-third-party {
-	background: var(--albert-success-10);
-	color: var(--albert-third-party-text);
-	border: 1px solid var(--albert-success-20);
-}
-
-/* Collapsed state */
-.ability-group.is-collapsed .ability-group-items {
-	display: none;
-}
-
-/* Mobile save button - hidden on desktop */
-.albert-mobile-save {
-	display: none;
-	margin-top: var(--albert-spacing-lg);
-}
-
-.albert-mobile-save .button-primary {
-	width: 100%;
-}
-
-/* Footer */
-.albert-footer {
-	background: var(--albert-bg-white);
-	border: 1px solid var(--albert-border);
-	padding: var(--albert-spacing-md) var(--albert-spacing-lg);
-	margin: var(--albert-spacing-lg) 0;
-	border-radius: var(--albert-border-radius);
-	text-align: center;
-}
-
-.albert-footer p {
-	margin: 0;
-	color: var(--albert-text-secondary);
-	font-size: var(--albert-font-base);
-}
-
-.albert-footer a {
-	color: var(--albert-primary);
-	text-decoration: none;
-}
-
-.albert-footer a:hover {
-	text-decoration: underline;
-}
-
-/* Ability subgroups */
-.ability-subgroup {
-	margin-top: var(--albert-spacing-md);
-	padding: var(--albert-spacing-sm) 0;
-	border-top: 1px solid var(--albert-border-light);
-}
-
-.ability-subgroup:first-child {
-	margin-top: 0;
-	padding-top: 0;
-	border-top: none;
-}
-
-.ability-subgroup-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: var(--albert-spacing-sm);
-	padding: var(--albert-spacing-sm) var(--albert-spacing-sm);
-}
-
-.ability-subgroup-title-wrapper {
-	display: flex;
-	align-items: center;
-	gap: var(--albert-spacing-xs);
-}
-
-.ability-subgroup-collapse-toggle {
-	background: none;
-	border: none;
-	padding: 2px;
-	margin: 0;
-	cursor: pointer;
-	color: var(--albert-text-secondary);
-	display: flex;
-	align-items: center;
-	border-radius: var(--albert-border-radius);
-	transition: background-color var(--albert-transition);
-}
-
-.ability-subgroup-collapse-toggle .dashicons {
-	transition: transform 0.2s ease-out;
-	font-size: var(--albert-font-xl);
-	width: 16px;
-	height: 16px;
-}
-
-.ability-subgroup-collapse-toggle:hover {
-	background: var(--albert-black-5);
-	color: var(--albert-primary);
-}
-
-.ability-subgroup-collapse-toggle:focus-visible {
-	outline: 2px solid var(--albert-primary);
-	outline-offset: 1px;
-}
-
-.ability-subgroup-collapse-toggle[aria-expanded="false"] .dashicons {
-	transform: rotate(-90deg);
-}
-
-.ability-subgroup-title {
-	font-size: var(--albert-font-sm);
-	font-weight: 600;
-	color: var(--albert-text-primary);
-	margin: 0;
-}
-
-/* 2-column grid for ability items in subgroups */
-.ability-subgroup-items {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: var(--albert-spacing-xs);
-}
-
-.ability-subgroup-items.collapsed {
-	display: none;
-}
-
-.ability-subgroup-toggle-all {
-	display: flex;
-	align-items: center;
-	gap: var(--albert-spacing-xs);
-	font-size: var(--albert-font-xs);
-	color: var(--albert-text-secondary);
-}
-
-.ability-subgroup-toggle-all > label:last-child {
-	cursor: pointer;
-}
-
-/* Content type rows - simplified abilities UI */
-.ability-type-row {
-	border-radius: var(--albert-border-radius);
-	transition: background-color var(--albert-transition);
-}
-
-.ability-type-row + .ability-type-row {
-	border-top: 1px solid var(--albert-border-light);
-}
-
-.ability-type-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: var(--albert-spacing-md) 0;
-	gap: var(--albert-spacing-sm);
-}
-
-/* Expand button */
-.ability-type-expand {
-	background: none;
-	border: none;
-	padding: 2px;
-	margin: 0;
-	cursor: pointer;
-	color: var(--albert-text-secondary);
-	display: flex;
-	align-items: center;
-	border-radius: var(--albert-border-radius);
-	transition: background-color var(--albert-transition), transform var(--albert-transition);
-	flex-shrink: 0;
-}
-
-.ability-type-expand .dashicons {
-	font-size: var(--albert-font-xl);
-	width: 16px;
-	height: 16px;
-	transition: transform 0.2s ease-out;
-}
-
-.ability-type-expand:hover {
-	color: var(--albert-primary);
-}
-
-.ability-type-expand[aria-expanded="true"] .dashicons {
-	transform: rotate(90deg);
-}
-
-.ability-type-label {
-	flex: 1;
-	display: flex;
-	align-items: center;
-	gap: var(--albert-spacing-sm);
-	font-size: var(--albert-font-md);
-	font-weight: 500;
-	color: var(--albert-text-primary);
-	min-width: 0;
-}
-
-.ability-type-label .albert-source-badge {
-	flex-shrink: 0;
-}
-
-.ability-type-toggles {
-	display: flex;
-	align-items: center;
-	gap: var(--albert-spacing-xl);
-	flex-shrink: 0;
-}
-
-.ability-type-toggle {
-	display: flex;
-	align-items: center;
-	gap: var(--albert-spacing-xs);
-}
-
-.ability-type-toggle-label {
-	display: flex;
-	align-items: center;
-	gap: 4px;
-	font-size: var(--albert-font-sm);
-	color: var(--albert-text-secondary);
-	cursor: pointer;
-	user-select: none;
-}
-
-.ability-type-toggle-label .dashicons {
-	font-size: var(--albert-font-md);
-	width: 14px;
-	height: 14px;
-}
-
-/* Read toggle styling */
-.ability-type-toggle:has([data-mode="read"]) .ability-type-toggle-label {
-	color: var(--albert-primary);
-}
-
-/* Write toggle styling */
-.ability-type-toggle:has([data-mode="write"]) .ability-type-toggle-label {
-	color: var(--albert-warning);
-}
-
-/* Expanded details panel */
-.ability-type-details {
-	padding: var(--albert-spacing-sm) var(--albert-spacing-md) var(--albert-spacing-md) var(--albert-spacing-md);
-}
-
-.ability-type-details[hidden] {
-	display: none;
-}
-
-.ability-type-description {
-	margin: 0;
-	font-size: var(--albert-font-sm);
-	color: var(--albert-text-secondary);
-	line-height: 1.5;
-}
-
-.ability-type-details .ability-item {
-	border-top: 1px solid var(--albert-border-light);
-	border-bottom: none;
-	border-radius: 0;
-	margin-left: calc(-1 * var(--albert-spacing-md));
-	margin-right: calc(-1 * var(--albert-spacing-md));
-	padding-left: var(--albert-spacing-md);
-	padding-right: var(--albert-spacing-md);
-}
-
-.ability-type-details .ability-item:first-child {
-	border-top: none;
-}
-
-.ability-mode-label {
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	font-size: var(--albert-font-xs);
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-	color: var(--albert-success);
-	background: var(--albert-success-10);
-	padding: 3px 10px 3px 7px;
-	border-radius: 4px;
-	line-height: 1.4;
-	margin: var(--albert-spacing-xs) 0;
-}
-
-.ability-mode-label + .ability-item {
-	border-top: none;
-}
-
-.ability-mode-label .dashicons {
-	font-size: var(--albert-font-base);
-	width: 13px;
-	height: 13px;
-}
-
-.ability-mode-label--write {
-	color: var(--albert-warning);
-	background: var(--albert-warning-10);
-	margin-top: var(--albert-spacing-lg);
-}
-
-/* Responsive: Stack toggles on smaller screens */
-@media screen and (max-width: 600px) {
-	.ability-type-header {
-		flex-wrap: wrap;
+/* Responsive - Abilities toolbar wraps */
+@media screen and (max-width: 960px) {
+	.albert-abilities-toolbar {
+		position: static;
 	}
 
-	.ability-type-label {
-		flex-basis: calc(100% - 30px);
-	}
-
-	.ability-type-toggles {
+	.albert-toolbar-meta {
+		align-items: stretch;
 		width: 100%;
-		justify-content: flex-start;
-		gap: var(--albert-spacing-lg);
-		margin-left: 24px;
 	}
 
-	.ability-type-details {
-		padding-left: var(--albert-spacing-md);
+	.albert-view-toggle {
+		align-self: flex-start;
 	}
 }
 
-/* Settings page grid */
+@media screen and (max-width: 600px) {
+	.ability-row-main {
+		grid-template-columns: auto 1fr;
+		grid-template-areas:
+			"expand body"
+			"toggle toggle";
+	}
+
+	.ability-row-expand {
+		grid-area: expand;
+	}
+
+	.ability-row-body {
+		grid-area: body;
+	}
+
+	.ability-row-toggle {
+		grid-area: toggle;
+		justify-content: flex-start;
+		padding-left: 40px;
+	}
+
+	.ability-row-details {
+		padding-left: var(--albert-spacing-lg);
+	}
+
+	.ability-row-details-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* --------------------------------------------------------------
+   Settings page grid
+   -------------------------------------------------------------- */
+
 .albert-settings-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
@@ -1355,34 +1128,10 @@
 	margin-bottom: 0;
 }
 
-/* Responsive - Large tablets and below */
-@media screen and (max-width: 1200px) {
-	.albert-page-layout {
-		grid-template-columns: 1fr;
-	}
-
-	.albert-sidebar {
-		position: static;
-		display: none;
-	}
-
-	.albert-groups-grid,
-	.albert-settings-grid {
-		grid-template-columns: 1fr;
-	}
-
-	/* Show mobile save button when sidebar is hidden */
-	.albert-mobile-save {
-		display: block;
-	}
-}
-
 /* Responsive - Tablets */
 @media screen and (max-width: 782px) {
-	.albert-content-header {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: var(--albert-spacing-sm);
+	.albert-settings-grid {
+		grid-template-columns: 1fr;
 	}
 
 	.albert-inline-form {
@@ -1410,32 +1159,6 @@
 		margin-left: 40px;
 	}
 
-	.ability-group-header {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: var(--albert-spacing-sm);
-		padding: var(--albert-spacing-sm) var(--albert-spacing-md);
-	}
-
-	.ability-group-items {
-		padding: var(--albert-spacing-sm) var(--albert-spacing-md);
-	}
-
-	.ability-subgroup-header {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: var(--albert-spacing-xs);
-	}
-
-	/* Single column on mobile */
-	.ability-subgroup-items {
-		grid-template-columns: 1fr;
-	}
-
-	.ability-item {
-		padding: var(--albert-spacing-sm) var(--albert-spacing-xs);
-	}
-
 	.albert-oauth-info-box .form-table th {
 		width: auto;
 		display: block;
@@ -1445,26 +1168,16 @@
 		display: block;
 	}
 
-	.albert-wrap .submit {
+	.albert-wrap .submit,
+	.albert-settings .submit {
 		margin: var(--albert-spacing-md) 0 0 0;
 		padding: var(--albert-spacing-sm) var(--albert-spacing-md);
 	}
 }
 
-/* Save button dirty state highlight */
-.albert-save-dirty {
-	animation: albert-pulse 1.5s ease-in-out;
-	box-shadow: 0 0 0 3px var(--albert-primary-40);
-}
-
-@keyframes albert-pulse {
-	0% { box-shadow: 0 0 0 0 var(--albert-primary-60); }
-	70% { box-shadow: 0 0 0 6px oklch(0.49 0.12 248 / 0); }
-	100% { box-shadow: 0 0 0 3px var(--albert-primary-40); }
-}
-
 /* Save success notice prominence */
-.albert-wrap .notice-success {
+.albert-wrap .notice-success,
+.albert-settings .notice-success {
 	border-left-color: var(--albert-success);
 	border-left-width: 4px;
 	background: var(--albert-success-bg);
@@ -1476,24 +1189,10 @@
 	to { opacity: 1; transform: translateY(0); }
 }
 
+/* --------------------------------------------------------------
+   Dashboard page
+   -------------------------------------------------------------- */
 
-
-/* Responsive - Small screens */
-@media screen and (max-width: 480px) {
-	.ability-group-title {
-		font-size: var(--albert-font-sm);
-	}
-
-	.ability-item-label {
-		font-size: var(--albert-font-sm);
-	}
-
-	.ability-item-description {
-		font-size: var(--albert-font-xs);
-	}
-}
-
-/* Dashboard Styles */
 .albert-dashboard-grid {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
@@ -1687,9 +1386,6 @@
 }
 
 /* Activity Card */
-.albert-activity-card {
-}
-
 .albert-activity-list {
 	list-style: none;
 	margin: 0;
@@ -1750,7 +1446,6 @@
 	}
 }
 
-
 @media screen and (max-width: 782px) {
 	.albert-endpoint-box {
 		flex-direction: column;
@@ -1786,7 +1481,10 @@
 	}
 }
 
-/* Connections Page Styles */
+/* --------------------------------------------------------------
+   Connections page
+   -------------------------------------------------------------- */
+
 .albert-connections-table {
 	width: 100%;
 	border-collapse: collapse;
@@ -1973,8 +1671,6 @@
 	flex-shrink: 0;
 }
 
-/* Setup Checklist Card */
-
 /* Resources List */
 .albert-resources-list {
 	list-style: none;
@@ -2015,7 +1711,7 @@
 
 .albert-resources-list a:hover {
 	text-decoration: underline;
-	color: var(--albert-primary-dark);
+	color: var(--albert-primary-hover);
 }
 
 /* Setup complete state - vertical centering */

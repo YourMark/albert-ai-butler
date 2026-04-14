@@ -26,12 +26,11 @@ composer test:integration # Run integration tests (requires WP test suite)
 
 ```
 src/
-  Abstracts/       # BaseAbility
+  Abstracts/       # BaseAbility (all abilities extend this)
   Abilities/       # Ability implementations (WordPress/, WooCommerce/)
-  Admin/           # Admin pages (AbstractAbilitiesPage, CoreAbilities, AcfAbilities,
-                   #   WooCommerceAbilities, Connections, Dashboard, Settings)
+  Admin/           # Admin pages (abilities toggles, settings, connections)
   Contracts/       # Interfaces (Ability, Hookable)
-  Core/            # Plugin bootstrap, AbilitiesManager, AbilitiesRegistry, Annotations
+  Core/            # Plugin bootstrap, AbilitiesManager, AbilitiesRegistry
   MCP/             # MCP protocol server
   OAuth/           # Full OAuth 2.0 server (entities, repos, endpoints)
   Utilities/       # Standalone helpers (BlockConverter)
@@ -40,21 +39,6 @@ tests/
   Integration/     # WP_UnitTestCase tests
 assets/            # CSS and JS for admin UI
 ```
-
-## Hooks
-
-All hooks follow `albert/{location}/{hook_name}` convention (except `albert_ability_groups`
-which predates the convention).
-
-| Hook | Type | Purpose |
-|------|------|---------|
-| `albert/abilities_icons` | filter | Customize category icons on the abilities page |
-| `albert/developer_mode` | filter | Toggle developer mode (shows extra OAuth/MCP settings) |
-| `albert_ability_groups` | filter | Modify ability group definitions |
-| `albert/activated` | action | Plugin activated |
-| `albert/deactivated` | action | Plugin deactivated |
-
-Base class: `Albert\Abstracts\BaseAbility`
 
 ## Ecosystem
 
@@ -89,6 +73,21 @@ Never rename the legacy IDs — they are part of the public API.
 
 ## WooCommerce mcp-adapter Timing Bug
 
-`Plugin::init()` skips `McpAdapter::instance()` when `is_admin()` to avoid a timing conflict
-where WooCommerce's REST preloading triggers `wp_get_ability()` for tools that aren't
-registered yet. See root `CLAUDE.md` for full details.
+`Plugin::init()` skips `McpAdapter::instance()` when `is_admin()` to avoid a timing conflict where WooCommerce's REST preloading triggers `wp_get_ability()` for tools that aren't registered yet. See root `CLAUDE.md` for full details.
+
+## Extensibility Hooks
+
+All hooks follow `albert/{location}/{hook_name}` convention:
+
+| Hook | Type | Purpose |
+|------|------|---------|
+| `albert/abilities/register` | action | Register custom abilities |
+| `albert/abilities/before_execute` | action | Before any ability runs |
+| `albert/abilities/after_execute` | action | After any ability runs |
+| `albert/abilities/before_execute/{id}` | action | Before a specific ability |
+| `albert/abilities/after_execute/{id}` | action | After a specific ability |
+| `albert/admin/submenu_pages` | filter | Add addon admin pages |
+| `albert/abilities_icons` | filter | Customize category icons |
+| `albert/developer_mode` | filter | Toggle developer mode |
+| `albert/activated` | action | Plugin activated |
+| `albert/deactivated` | action | Plugin deactivated |

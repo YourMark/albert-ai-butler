@@ -42,15 +42,12 @@ use Albert\Abilities\WooCommerce\FindProducts;
 use Albert\Abilities\WooCommerce\ViewCustomer;
 use Albert\Abilities\WooCommerce\ViewOrder;
 use Albert\Abilities\WooCommerce\ViewProduct;
-use Albert\Admin\AcfAbilities;
-use Albert\Admin\CoreAbilities;
+use Albert\Admin\AbilitiesPage;
 use Albert\Admin\Connections;
-use Albert\Admin\WooCommerceAbilities;
 use Albert\Admin\Dashboard;
 use Albert\Admin\Settings;
 use Albert\MCP\Server as McpServer;
 use Albert\OAuth\Database\Installer as OAuthInstaller;
-use Albert\Core\SettingsMigration;
 use Albert\OAuth\Endpoints\AuthorizationPage;
 use Albert\OAuth\Endpoints\ClientRegistration;
 use Albert\OAuth\Endpoints\OAuthController;
@@ -66,6 +63,44 @@ use WP\MCP\Core\McpAdapter;
  * @since 1.0.0
  */
 class Plugin {
+	/**
+	 * Default REST API namespace.
+	 *
+	 * Use {@see self::rest_namespace()} to get the (potentially filtered) value.
+	 *
+	 * @since 1.0.1
+	 * @var string
+	 */
+	const REST_NAMESPACE = 'albert/v1';
+
+	/**
+	 * Get the REST API namespace, allowing override via filter.
+	 *
+	 * Sites that have a namespace collision with another plugin can change
+	 * the value via the `albert/rest_namespace` filter. The result is cached
+	 * for the duration of the request so the filter only fires once.
+	 *
+	 * @since 1.0.1
+	 *
+	 * @return string
+	 */
+	public static function rest_namespace(): string {
+		static $namespace = null;
+
+		if ( $namespace === null ) {
+			/**
+			 * Filters the REST API namespace used by all Albert endpoints.
+			 *
+			 * @since 1.0.1
+			 *
+			 * @param string $namespace Default namespace ('albert/v1').
+			 */
+			$namespace = (string) apply_filters( 'albert/rest_namespace', self::REST_NAMESPACE );
+		}
+
+		return $namespace;
+	}
+
 	/**
 	 * The single instance of the plugin.
 	 *
@@ -89,7 +124,7 @@ class Plugin {
 	 * @since 1.0.0
 	 */
 	public static function get_instance(): Plugin {
-		if ( null === self::$instance ) {
+		if ( self::$instance === null ) {
 			self::$instance = new self();
 		}
 
@@ -106,24 +141,13 @@ class Plugin {
 		// Check for database updates (handles upgrades without re-activation).
 		OAuthInstaller::install();
 
-		// Migrate settings from old format to new format (one-time).
-		SettingsMigration::maybe_migrate();
-
 		// Register admin components.
 		if ( is_admin() ) {
 			// Dashboard page (creates top-level menu and first submenu).
 			( new Dashboard() )->register_hooks();
 
-			// Abilities pages (toggle abilities on/off).
-			( new CoreAbilities() )->register_hooks();
-
-			if ( class_exists( 'ACF' ) ) {
-				( new AcfAbilities() )->register_hooks();
-			}
-
-			if ( class_exists( 'WooCommerce' ) ) {
-				( new WooCommerceAbilities() )->register_hooks();
-			}
+			// Unified abilities page (toggle abilities on/off).
+			( new AbilitiesPage() )->register_hooks();
 
 			// Connections page (allowed users + active sessions).
 			( new Connections() )->register_hooks();

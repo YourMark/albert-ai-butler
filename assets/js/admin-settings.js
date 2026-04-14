@@ -6,544 +6,542 @@
  */
 
 /**
- * Dirty state tracking — warns users about unsaved changes.
+ * Flat abilities list: filtering, view toggle, pagination, row expand,
+ * destructive-confirmation, and stats updates.
+ *
+ * Every ability row is rendered once by the server inside #albert-abilities-list.
+ * All navigation is client-side via the `hidden` attribute so form submit still
+ * includes every row regardless of the current filter/page.
  */
-const DirtyStateModule = {
-	isDirty: false,
-
+const AbilitiesListModule = {
 	init() {
-		this.form = document.getElementById( 'albert-form' );
-		if ( ! this.form ) {
+		this.list = document.getElementById( 'albert-abilities-list' );
+		if ( ! this.list ) {
 			return;
 		}
 
-		this.saveButtons = document.querySelectorAll( '#submit, #submit-mobile' );
+		this.rows = Array.from( this.list.querySelectorAll( '.ability-row' ) );
+		this.emptyState = this.list.querySelector( '.albert-abilities-empty' );
+		this.searchInput = document.getElementById( 'albert-abilities-search' );
+		this.categoryFilter = document.getElementById( 'albert-abilities-filter-category' );
+		this.supplierFilter = document.getElementById( 'albert-abilities-filter-supplier' );
+		this.annotationFilter = document.getElementById( 'albert-abilities-filter-annotation' );
+		this.statsNode = document.getElementById( 'albert-abilities-stats' );
+		this.pagination = document.querySelector( '.albert-abilities-pagination' );
+		this.pagesNode = this.pagination ? this.pagination.querySelector( '.albert-pagination-pages' ) : null;
+		this.viewButtons = Array.from( document.querySelectorAll( '.albert-view-toggle-btn' ) );
+		this.errorNode = document.getElementById( 'albert-abilities-error' );
 
-		// Listen for any checkbox change inside the form.
-		this.form.addEventListener( 'change', () => {
-			this.markDirty();
-		} );
+		this.total = parseInt( this.statsNode?.dataset.total || String( this.rows.length ), 10 );
+		this.enabled = parseInt( this.statsNode?.dataset.enabledCount || '0', 10 );
+		this.statsTemplate = this.statsNode?.dataset.templateAll || 'Showing %1$s of %2$s · %3$s enabled';
 
-		// Clear dirty state on form submit.
-		this.form.addEventListener( 'submit', () => {
-			this.isDirty = false;
-		} );
+		// Initial view mode + rows-per-page come from data attributes the
+		// server rendered, so the page paints in the correct state with no
+		// flicker or JS-driven re-layout. localStorage is intentionally NOT
+		// consulted — the preference lives in wp_options.
+		this.viewMode = AbilitiesListModule.normalizeViewMode( this.list.dataset.viewMode );
+		this.rowsPerPage = parseInt( this.list.dataset.rowsPerPage, 10 );
+		this.currentPage = 1;
 
-		// Warn on navigation away.
-		window.addEventListener( 'beforeunload', ( e ) => {
-			if ( this.isDirty ) {
-				e.preventDefault();
-			}
-		} );
+		this.bindSearch();
+		this.bindFilters();
+		this.bindViewToggle();
+		this.bindRowExpand();
+		this.bindRowToggle();
+		this.bindPagination();
+		this.bindChipDismiss();
+
+		// Server already pre-rendered the correct view mode (toggle button
+		// state, pagination nav visibility, rows beyond page 1 hidden when
+		// paginated), so we don't call applyViewMode on init — calling it
+		// would trigger renderPaginationWindow() which writes `hidden` on
+		// every row and causes the visible flash we're trying to avoid.
+		// We do still need an initial filter/stats pass to set things like
+		// the enabled count and the pagination pager numbers.
+		if ( 'paginated' === this.viewMode ) {
+			this.renderPaginationWindow();
+		} else {
+			this.updateStats( this.rows.length );
+		}
 	},
 
-	markDirty() {
-		if ( this.isDirty ) {
+	/**
+	 * Coerce an arbitrary string to a valid view mode.
+	 *
+	 * Mirrors the PHP `AbilitiesPage::normalize_view_mode()` so the two
+	 * sides apply identical validation. Anything that isn't `paginated`
+	 * collapses to `list`.
+	 */
+	normalizeViewMode( mode ) {
+		return 'paginated' === mode ? 'paginated' : 'list';
+	},
+
+	/**
+	 * Escape dismisses any visible chip tooltip (WCAG 1.4.13 dismissible).
+	 *
+	 * Pressing Escape while a chip is focused hides its overlay until the
+	 * user moves away; moving focus or pointer away clears the dismissed
+	 * state so the next hover/focus shows the tooltip again.
+	 */
+	bindChipDismiss() {
+		if ( ! this.list ) {
 			return;
 		}
-		this.isDirty = true;
 
-		this.saveButtons.forEach( ( btn ) => {
-			btn.classList.add( 'albert-save-dirty' );
-		} );
-	},
-};
-
-/**
- * Toggle functionality for ability categories (simplified UI with grouped toggles).
- */
-const ToggleModule = {
-	init() {
-		this.handleGroupCheckboxes();
-		this.handleIndividualCheckboxes();
-		this.handleCategoryToggleAll();
-		this.handleContentTypeExpand();
-		this.initializeToggleStates();
-	},
-
-	/**
-	 * Handle group checkbox changes (Read/Write toggles per content type).
-	 * Each group checkbox controls multiple abilities via data-abilities attribute.
-	 */
-	handleGroupCheckboxes() {
-		document.querySelectorAll( '.ability-group-checkbox' ).forEach( ( checkbox ) => {
-			checkbox.addEventListener( 'change', ( e ) => {
-				const abilities = JSON.parse( e.target.dataset.abilities || '[]' );
-				const isChecked = e.target.checked;
-				const category = e.target.dataset.category;
-
-				// Sync individual checkboxes if details panel is expanded.
-				this.syncIndividualCheckboxes( checkbox.id, abilities, isChecked );
-
-				// Sync hidden inputs for abilities not shown in expanded panel.
-				this.syncHiddenInputsForGroup( checkbox, abilities, isChecked );
-
-				this.updateCategoryToggleState( category );
-			} );
-		} );
-	},
-
-	/**
-	 * Handle individual ability checkbox changes within expanded panels.
-	 */
-	handleIndividualCheckboxes() {
-		document.addEventListener( 'change', ( e ) => {
-			if ( ! e.target.classList.contains( 'ability-item-checkbox' ) ) {
+		this.list.addEventListener( 'keydown', ( e ) => {
+			if ( e.key !== 'Escape' ) {
 				return;
 			}
-
-			const groupCheckboxId = e.target.dataset.groupCheckbox;
-			if ( ! groupCheckboxId ) {
+			const chip = e.target.closest( '.ability-chip' );
+			if ( ! chip ) {
 				return;
 			}
-
-			// Update the group checkbox state based on individual checkboxes.
-			this.updateGroupCheckboxState( groupCheckboxId );
+			chip.classList.add( 'is-dismissed' );
 		} );
-	},
 
-	/**
-	 * Sync individual checkboxes when group checkbox changes.
-	 */
-	syncIndividualCheckboxes( groupCheckboxId, abilities, isChecked ) {
-		abilities.forEach( ( abilityName ) => {
-			const checkbox = document.querySelector(
-				`.ability-item-checkbox[data-group-checkbox="${ groupCheckboxId }"][value="${ abilityName }"]`
-			);
-			if ( checkbox && checkbox.checked !== isChecked ) {
-				checkbox.checked = isChecked;
-			}
-		} );
-	},
-
-	/**
-	 * Sync hidden inputs for abilities when a group is toggled.
-	 * Only needed for single-ability types without expanded panel.
-	 */
-	syncHiddenInputsForGroup( checkbox, abilities, isChecked ) {
-		const form = document.getElementById( 'albert-form' );
-		if ( ! form ) {
-			return;
-		}
-
-		abilities.forEach( ( abilityName ) => {
-			// Skip if there's already a visible checkbox for this ability.
-			const visibleCheckbox = form.querySelector(
-				`.ability-item-checkbox[value="${ abilityName }"]`
-			);
-			if ( visibleCheckbox ) {
-				return;
-			}
-
-			// Find or create the hidden input for this ability.
-			let input = form.querySelector(
-				`input[type="hidden"][name="albert_enabled_on_page[]"][value="${ abilityName }"]`
-			);
-
-			if ( isChecked && ! input ) {
-				// Create hidden input for enabled ability.
-				input = document.createElement( 'input' );
-				input.type = 'hidden';
-				input.name = 'albert_enabled_on_page[]';
-				input.value = abilityName;
-				input.dataset.groupCheckbox = checkbox.id;
-				form.appendChild( input );
-			} else if ( ! isChecked && input && input.type === 'hidden' ) {
-				// Remove hidden input for disabled ability.
-				input.remove();
-			}
-		} );
-	},
-
-	/**
-	 * Update group checkbox state based on individual checkboxes.
-	 * Sets indeterminate state when some (but not all) are checked.
-	 */
-	updateGroupCheckboxState( groupCheckboxId ) {
-		const groupCheckbox = document.getElementById( groupCheckboxId );
-		if ( ! groupCheckbox ) {
-			return;
-		}
-
-		const abilities = JSON.parse( groupCheckbox.dataset.abilities || '[]' );
-		const individualCheckboxes = abilities.map( ( name ) =>
-			document.querySelector( `.ability-item-checkbox[value="${ name }"]` )
-		).filter( Boolean );
-
-		if ( individualCheckboxes.length === 0 ) {
-			return;
-		}
-
-		const checkedCount = individualCheckboxes.filter( ( cb ) => cb.checked ).length;
-		const allChecked = checkedCount === individualCheckboxes.length;
-		const noneChecked = checkedCount === 0;
-
-		// Set indeterminate state for partial selection.
-		groupCheckbox.indeterminate = ! allChecked && ! noneChecked;
-		groupCheckbox.checked = allChecked;
-
-		// Update category toggle.
-		const category = groupCheckbox.dataset.category;
-		if ( category ) {
-			this.updateCategoryToggleState( category );
-		}
-	},
-
-	/**
-	 * Handle category "Enable All" toggle.
-	 */
-	handleCategoryToggleAll() {
-		document.querySelectorAll( '.toggle-category-abilities' ).forEach( ( toggle ) => {
-			toggle.addEventListener( 'change', ( e ) => {
-				const category = e.target.dataset.category;
-				const isChecked = e.target.checked;
-
-				// If enabling, check for unchecked write abilities and confirm.
-				if ( isChecked ) {
-					const writeCheckboxes = document.querySelectorAll(
-						`.ability-group-checkbox[data-category="${ category }"][data-mode="write"]:not(:checked)`
-					);
-
-					if ( writeCheckboxes.length > 0 ) {
-						const i18n = window.albertAdmin?.i18n || {};
-						const msg = i18n.enableAllWriteConfirm ||
-							`This will enable ${ writeCheckboxes.length } write ability group(s) (create, update, delete). Continue?`;
-
-						if ( ! window.confirm( msg ) ) {
-							e.target.checked = false;
-							return;
-						}
-					}
+		// Clear the dismissed state when the chip loses focus/hover, so the
+		// tooltip is available again the next time the user lands on it.
+		this.list.addEventListener(
+			'focusout',
+			( e ) => {
+				const chip = e.target.closest( '.ability-chip' );
+				if ( chip ) {
+					chip.classList.remove( 'is-dismissed' );
 				}
+			},
+			true
+		);
 
-				// Toggle all group checkboxes in this category.
-				document.querySelectorAll( `.ability-group-checkbox[data-category="${ category }"]` ).forEach( ( checkbox ) => {
-					if ( checkbox.checked !== isChecked ) {
-						checkbox.checked = isChecked;
-						checkbox.dispatchEvent( new Event( 'change', { bubbles: true } ) );
-					}
-				} );
-			} );
-		} );
-	},
-
-	/**
-	 * Handle expand/collapse of content type rows.
-	 */
-	handleContentTypeExpand() {
-		document.querySelectorAll( '.ability-type-expand' ).forEach( ( button ) => {
-			button.addEventListener( 'click', () => {
-				const isExpanded = button.getAttribute( 'aria-expanded' ) === 'true';
-				const detailsId = button.getAttribute( 'aria-controls' );
-				const details = document.getElementById( detailsId );
-
-				button.setAttribute( 'aria-expanded', String( ! isExpanded ) );
-
-				if ( details ) {
-					details.hidden = isExpanded;
+		this.list.addEventListener(
+			'mouseleave',
+			( e ) => {
+				const chip = e.target.closest( '.ability-chip' );
+				if ( chip ) {
+					chip.classList.remove( 'is-dismissed' );
 				}
+			},
+			true
+		);
+	},
+
+	/**
+	 * Persist the view-mode preference to wp_options via admin-ajax.
+	 *
+	 * Fire-and-forget — failures are logged but don't block the UI. The
+	 * preference is server-rendered on next page load, so a failed save
+	 * just means the current session keeps the new mode but the next page
+	 * load reverts to the previous one.
+	 */
+	saveViewMode( mode ) {
+		const cfg = window.albertAdmin || {};
+		if ( ! cfg.ajaxUrl || ! cfg.viewModeNonce ) {
+			return;
+		}
+		Albert.ajax.post( cfg.ajaxUrl, {
+			action: 'albert_save_view_mode',
+			nonce: cfg.viewModeNonce,
+			mode,
+		} ).catch( ( err ) => {
+			// eslint-disable-next-line no-console
+			console.warn( 'Albert: failed to persist view mode', err );
+		} );
+	},
+
+	bindSearch() {
+		if ( ! this.searchInput ) {
+			return;
+		}
+		let searchDebounceTimer;
+		this.searchInput.addEventListener( 'input', () => {
+			clearTimeout( searchDebounceTimer );
+			searchDebounceTimer = setTimeout( () => {
+				this.currentPage = 1;
+				this.applyFilters();
+			}, 120 );
+		} );
+	},
+
+	bindFilters() {
+		[ this.categoryFilter, this.supplierFilter, this.annotationFilter ].forEach( ( select ) => {
+			if ( ! select ) {
+				return;
+			}
+			select.addEventListener( 'change', () => {
+				this.currentPage = 1;
+				this.applyFilters();
 			} );
 		} );
 	},
 
-	/**
-	 * Initialize toggle states on page load.
-	 */
-	initializeToggleStates() {
-		// Sync hidden inputs for checked group checkboxes without expanded panels.
-		document.querySelectorAll( '.ability-group-checkbox:checked' ).forEach( ( checkbox ) => {
-			const abilities = JSON.parse( checkbox.dataset.abilities || '[]' );
-			this.syncHiddenInputsForGroup( checkbox, abilities, true );
+	bindViewToggle() {
+		this.viewButtons.forEach( ( btn ) => {
+			btn.addEventListener( 'click', () => {
+				this.applyViewMode( AbilitiesListModule.normalizeViewMode( btn.dataset.view ) );
+			} );
 		} );
+	},
 
-		// Initialize indeterminate states for group checkboxes based on individual abilities.
-		this.initializeIndeterminateStates();
-
-		// Update category toggle states.
-		const processedCategories = new Set();
-		document.querySelectorAll( '.toggle-category-abilities' ).forEach( ( toggle ) => {
-			const category = toggle.dataset.category;
-			if ( ! processedCategories.has( category ) ) {
-				processedCategories.add( category );
-				this.updateCategoryToggleState( category );
+	bindRowExpand() {
+		this.list.addEventListener( 'click', ( e ) => {
+			const button = e.target.closest( '.ability-row-expand' );
+			if ( ! button ) {
+				return;
 			}
+			const row = button.closest( '.ability-row' );
+			const targetId = button.getAttribute( 'aria-controls' );
+			const target = targetId ? document.getElementById( targetId ) : null;
+			if ( ! row || ! target ) {
+				return;
+			}
+			const isExpanded = button.getAttribute( 'aria-expanded' ) === 'true';
+			button.setAttribute( 'aria-expanded', String( ! isExpanded ) );
+			target.hidden = isExpanded;
+			row.classList.toggle( 'is-expanded', ! isExpanded );
 		} );
 	},
 
 	/**
-	 * Initialize indeterminate states for group checkboxes.
-	 * Checks if individual ability checkboxes have mixed states.
+	 * Per-row toggle handler with optimistic UI + AJAX save + revert.
+	 *
+	 * The flow on click is:
+	 *
+	 *   1. Confirm destructive abilities BEFORE optimistic update; if the
+	 *      user cancels, snap the checkbox back and stop.
+	 *   2. Apply the optimistic state immediately (data-enabled, the
+	 *      visible "Enabled / Disabled" word, the live enabled count) so
+	 *      sighted users see instant feedback.
+	 *   3. Disable the checkbox so a rapid double-click can't race the
+	 *      pending request, and POST to wp_ajax_albert_toggle_ability.
+	 *   4. On success, re-enable the checkbox.
+	 *      On failure, revert every optimistic mutation, re-enable the
+	 *      checkbox, and surface the error in the inline notice.
 	 */
-	initializeIndeterminateStates() {
-		document.querySelectorAll( '.ability-group-checkbox' ).forEach( ( groupCheckbox ) => {
-			const abilities = JSON.parse( groupCheckbox.dataset.abilities || '[]' );
+	bindRowToggle() {
+		this.list.addEventListener( 'change', ( e ) => {
+			const checkbox = e.target.closest( '.ability-row-checkbox' );
+			if ( ! checkbox ) {
+				return;
+			}
+			const row = checkbox.closest( '.ability-row' );
+			if ( ! row ) {
+				return;
+			}
 
-			// Check if there are individual checkboxes for these abilities.
-			const individualCheckboxes = abilities.map( ( name ) =>
-				document.querySelector( `.ability-item-checkbox[value="${ name }"]` )
-			).filter( Boolean );
+			const i18n = window.albertAdmin?.i18n || {};
+			const nextEnabled = checkbox.checked;
 
-			// If no individual checkboxes exist, check hidden presented inputs vs enabled.
-			if ( individualCheckboxes.length === 0 ) {
-				const form = document.getElementById( 'albert-form' );
-				if ( ! form ) {
+			// Destructive confirm before any optimistic update.
+			if ( nextEnabled && row.dataset.destructive === '1' ) {
+				const confirmText = i18n.destructiveConfirm || 'This ability can permanently delete data. Are you sure you want to enable it?';
+				// eslint-disable-next-line no-alert
+				if ( ! window.confirm( confirmText ) ) {
+					checkbox.checked = false;
 					return;
 				}
-
-				const enabledCount = abilities.filter( ( name ) =>
-					form.querySelector( `input[name="albert_enabled_on_page[]"][value="${ name }"]` )
-				).length;
-
-				const allEnabled = enabledCount === abilities.length;
-				const noneEnabled = enabledCount === 0;
-
-				groupCheckbox.indeterminate = ! allEnabled && ! noneEnabled;
-				// Note: checked state is already set from PHP.
-			} else {
-				// Use individual checkboxes to determine state.
-				const checkedCount = individualCheckboxes.filter( ( cb ) => cb.checked ).length;
-				const allChecked = checkedCount === individualCheckboxes.length;
-				const noneChecked = checkedCount === 0;
-
-				groupCheckbox.indeterminate = ! allChecked && ! noneChecked;
-				groupCheckbox.checked = allChecked;
 			}
+
+			this.applyToggleState( row, nextEnabled );
+			this.persistAbilityToggle( row, checkbox, nextEnabled );
 		} );
 	},
 
 	/**
-	 * Update category toggle state based on group checkboxes.
-	 * Sets indeterminate state when some (but not all) groups are fully enabled.
+	 * Apply the visual state of an ability row to match its checkbox.
+	 *
+	 * Updates `data-enabled` and the running enabled count. The visible
+	 * "Enabled / Disabled" text is handled entirely by CSS — both words
+	 * are rendered in the DOM and cross-fade based on
+	 * `.albert-toggle:has(input:checked)`, so there's no JS text swap.
 	 */
-	updateCategoryToggleState( category ) {
-		const checkboxes = document.querySelectorAll( `.ability-group-checkbox[data-category="${ category }"]` );
-		const toggleAll = document.querySelector( `.toggle-category-abilities[data-category="${ category }"]` );
+	applyToggleState( row, enabled ) {
+		row.dataset.enabled = enabled ? '1' : '0';
+		this.enabled += enabled ? 1 : -1;
+		this.updateStats();
+	},
 
-		if ( checkboxes.length === 0 || ! toggleAll ) {
+	/**
+	 * POST the new state to wp_ajax_albert_toggle_ability.
+	 *
+	 * Disables the checkbox while in flight (to block double-clicks racing
+	 * each other), reverts on failure, and surfaces an error notice if the
+	 * request can't complete.
+	 */
+	persistAbilityToggle( row, checkbox, enabled ) {
+		const cfg = window.albertAdmin || {};
+		if ( ! cfg.ajaxUrl || ! cfg.toggleAbilityNonce ) {
+			this.revertToggle( row, checkbox, ! enabled );
+			this.showError( ( cfg.i18n && cfg.i18n.saveError ) || 'Could not save your change. Please try again.' );
 			return;
 		}
 
-		const checkedCount = Array.from( checkboxes ).filter( ( cb ) => cb.checked ).length;
-		const hasIndeterminate = Array.from( checkboxes ).some( ( cb ) => cb.indeterminate );
-		const allChecked = checkedCount === checkboxes.length;
-		const noneChecked = checkedCount === 0;
+		checkbox.disabled = true;
 
-		// Indeterminate if any group is indeterminate, or if some groups are checked.
-		toggleAll.indeterminate = hasIndeterminate || ( ! allChecked && ! noneChecked );
-		toggleAll.checked = allChecked && ! hasIndeterminate;
+		Albert.ajax.post( cfg.ajaxUrl, {
+			action: 'albert_toggle_ability',
+			nonce: cfg.toggleAbilityNonce,
+			ability_id: row.dataset.abilityId || '',
+			enabled: enabled ? '1' : '0',
+		} )
+			.then( ( response ) => {
+				if ( ! response.ok ) {
+					const msg = response.status === 403
+						? ( cfg.i18n && cfg.i18n.sessionExpired ) || 'Your session has expired. Reload the page and try again.'
+						: ( cfg.i18n && cfg.i18n.saveError ) || 'Could not save your change. Please try again.';
+					throw new Error( msg );
+				}
+				checkbox.disabled = false;
+			} )
+			.catch( ( err ) => {
+				checkbox.disabled = false;
+				this.revertToggle( row, checkbox, ! enabled );
+				this.showError( err.message || ( cfg.i18n && cfg.i18n.saveError ) || 'Could not save your change. Please try again.' );
+			} );
 	},
-};
 
-/**
- * Collapse/Expand functionality for ability groups with localStorage persistence.
- */
-const CollapseModule = {
-	storageKey: 'albert_collapsed_categories',
-
-	init() {
-		this.restoreCollapsedState();
-		this.removePreloadStyle();
-		this.handleGroupCollapse();
-		this.handleExpandCollapseAll();
+	/**
+	 * Roll a row back to a previous state after a failed save.
+	 *
+	 * Resets the checkbox first so `applyToggleState` re-derives every
+	 * dependent piece of UI from a consistent source. The optimistic
+	 * `applyToggleState` + this revert form a +1/-1 pair on the enabled
+	 * counter, so the running total ends at its original value.
+	 */
+	revertToggle( row, checkbox, previousEnabled ) {
+		checkbox.checked = previousEnabled;
+		this.applyToggleState( row, previousEnabled );
 	},
 
-	removePreloadStyle() {
-		const preload = document.getElementById( 'albert-collapse-preload' );
-		if ( preload ) {
-			preload.remove();
+	/**
+	 * Show an error notice in the dedicated inline alert region.
+	 *
+	 * Auto-dismisses after a few seconds so a transient failure doesn't
+	 * leave a permanent banner; the role="alert" attribute on the element
+	 * means screen readers announce it as soon as it appears.
+	 */
+	showError( message ) {
+		if ( ! this.errorNode ) {
+			// eslint-disable-next-line no-console
+			console.error( 'Albert:', message );
+			return;
 		}
+		this.errorNode.textContent = message;
+		this.errorNode.hidden = false;
+
+		clearTimeout( this.errorDismissTimer );
+		this.errorDismissTimer = setTimeout( () => {
+			this.errorNode.hidden = true;
+		}, 6000 );
 	},
 
-	getCollapsedCategories() {
-		try {
-			const stored = localStorage.getItem( this.storageKey );
-			return stored ? JSON.parse( stored ) : [];
-		} catch {
-			return [];
+	bindPagination() {
+		if ( ! this.pagination ) {
+			return;
 		}
-	},
-
-	saveCollapsedCategories( collapsed ) {
-		try {
-			localStorage.setItem( this.storageKey, JSON.stringify( collapsed ) );
-		} catch {
-			// Silently fail if localStorage is unavailable.
-		}
-	},
-
-	restoreCollapsedState() {
-		const collapsed = this.getCollapsedCategories();
-
-		collapsed.forEach( ( categoryId ) => {
-			const group = document.getElementById( categoryId );
-			if ( ! group ) {
+		this.pagination.addEventListener( 'click', ( e ) => {
+			const button = e.target.closest( 'button[data-direction], button[data-page]' );
+			if ( ! button ) {
 				return;
 			}
-
-			const button = group.querySelector( '.ability-group-collapse-toggle' );
-			const items = group.querySelector( '.ability-group-items' );
-
-			if ( button && items ) {
-				button.setAttribute( 'aria-expanded', 'false' );
-				items.classList.add( 'collapsed' );
-				group.classList.add( 'is-collapsed' );
+			if ( button.dataset.direction === 'prev' ) {
+				this.currentPage = Math.max( 1, this.currentPage - 1 );
+			} else if ( button.dataset.direction === 'next' ) {
+				this.currentPage = Math.min( this.totalPages(), this.currentPage + 1 );
+			} else if ( button.dataset.page ) {
+				this.currentPage = parseInt( button.dataset.page, 10 );
 			}
+			this.renderPaginationWindow();
 		} );
 	},
 
-	handleGroupCollapse() {
-		document.querySelectorAll( '.ability-group-collapse-toggle' ).forEach( ( button ) => {
-			button.addEventListener( 'click', () => {
-				const group = button.closest( '.ability-group' );
-				const targetId = button.getAttribute( 'aria-controls' );
-				const target = document.getElementById( targetId );
-				const isExpanded = button.getAttribute( 'aria-expanded' ) === 'true';
+	applyViewMode( mode ) {
+		this.viewMode = mode;
+		this.viewButtons.forEach( ( btn ) => {
+			const active = btn.dataset.view === mode;
+			btn.classList.toggle( 'is-active', active );
+			btn.setAttribute( 'aria-pressed', String( active ) );
+		} );
+		if ( this.pagination ) {
+			this.pagination.hidden = mode !== 'paginated';
+		}
+		this.saveViewMode( mode );
+		this.currentPage = 1;
+		this.renderPaginationWindow();
+	},
 
-				button.setAttribute( 'aria-expanded', String( ! isExpanded ) );
-				target.classList.toggle( 'collapsed' );
-				group.classList.toggle( 'is-collapsed' );
+	applyFilters() {
+		const query = ( this.searchInput?.value || '' ).trim().toLowerCase();
+		const categoryFilter = this.categoryFilter?.value || '';
+		const supplierFilter = this.supplierFilter?.value || '';
+		const annotationFilter = this.annotationFilter?.value || '';
 
-				// Persist state.
-				this.persistCollapseState();
+		this.rows.forEach( ( row ) => {
+			const haystack = row.dataset.search || '';
+			const matchesSearch = '' === query || haystack.includes( query );
+			const matchesCategory = '' === categoryFilter || row.dataset.category === categoryFilter;
+			const matchesSupplier = '' === supplierFilter || row.dataset.supplier === supplierFilter;
+			const matchesAnnotation = '' === annotationFilter || row.dataset.annotation === annotationFilter;
+
+			const visible = matchesSearch && matchesCategory && matchesSupplier && matchesAnnotation;
+			row.classList.toggle( 'is-filtered-out', ! visible );
+		} );
+
+		this.renderPaginationWindow();
+	},
+
+	filteredRows() {
+		return this.rows.filter( ( row ) => ! row.classList.contains( 'is-filtered-out' ) );
+	},
+
+	totalPages() {
+		const visible = this.filteredRows().length;
+		return Math.max( 1, Math.ceil( visible / this.rowsPerPage ) );
+	},
+
+	renderPaginationWindow() {
+		const visible = this.filteredRows();
+
+		// In list mode, show every filtered row and hide the rest.
+		if ( this.viewMode !== 'paginated' ) {
+			this.rows.forEach( ( row ) => {
+				const isFilteredOut = row.classList.contains( 'is-filtered-out' );
+				row.hidden = isFilteredOut;
 			} );
-		} );
-	},
-
-	persistCollapseState() {
-		const collapsed = [];
-		document.querySelectorAll( '.ability-group.is-collapsed' ).forEach( ( group ) => {
-			if ( group.id ) {
-				collapsed.push( group.id );
-			}
-		} );
-		this.saveCollapsedCategories( collapsed );
-	},
-
-	handleExpandCollapseAll() {
-		const expandAllBtn = document.getElementById( 'albert-expand-all' );
-		const collapseAllBtn = document.getElementById( 'albert-collapse-all' );
-
-		if ( expandAllBtn ) {
-			expandAllBtn.addEventListener( 'click', () => {
-				document.querySelectorAll( '.ability-group' ).forEach( ( group ) => {
-					const button = group.querySelector( '.ability-group-collapse-toggle' );
-					const items = group.querySelector( '.ability-group-items' );
-
-					if ( button && items ) {
-						button.setAttribute( 'aria-expanded', 'true' );
-						items.classList.remove( 'collapsed' );
-						group.classList.remove( 'is-collapsed' );
-					}
-				} );
-				this.persistCollapseState();
-			} );
+			this.toggleEmptyState( visible.length === 0 );
+			this.updateStats( visible.length );
+			return;
 		}
 
-		if ( collapseAllBtn ) {
-			collapseAllBtn.addEventListener( 'click', () => {
-				document.querySelectorAll( '.ability-group' ).forEach( ( group ) => {
-					const button = group.querySelector( '.ability-group-collapse-toggle' );
-					const items = group.querySelector( '.ability-group-items' );
-
-					if ( button && items ) {
-						button.setAttribute( 'aria-expanded', 'false' );
-						items.classList.add( 'collapsed' );
-						group.classList.add( 'is-collapsed' );
-					}
-				} );
-				this.persistCollapseState();
-			} );
+		const pages = this.totalPages();
+		if ( this.currentPage > pages ) {
+			this.currentPage = pages;
 		}
+		const start = ( this.currentPage - 1 ) * this.rowsPerPage;
+		const end = start + this.rowsPerPage;
+
+		// Hide everything first, then reveal the current slice.
+		this.rows.forEach( ( row ) => {
+			row.hidden = true;
+		} );
+		visible.slice( start, end ).forEach( ( row ) => {
+			row.hidden = false;
+		} );
+
+		this.toggleEmptyState( visible.length === 0 );
+		this.updateStats( visible.length );
+		this.renderPager( pages );
+	},
+
+	renderPager( pages ) {
+		if ( ! this.pagesNode ) {
+			return;
+		}
+		this.pagesNode.innerHTML = '';
+
+		for ( let i = 1; i <= pages; i++ ) {
+			const btn = document.createElement( 'button' );
+			btn.type = 'button';
+			btn.className = 'button albert-pagination-page';
+			btn.textContent = String( i );
+			btn.dataset.page = String( i );
+			if ( i === this.currentPage ) {
+				btn.classList.add( 'is-current' );
+				btn.setAttribute( 'aria-current', 'page' );
+			}
+			this.pagesNode.appendChild( btn );
+		}
+
+		const prev = this.pagination.querySelector( '.albert-pagination-prev' );
+		const next = this.pagination.querySelector( '.albert-pagination-next' );
+		if ( prev ) {
+			prev.disabled = this.currentPage <= 1;
+		}
+		if ( next ) {
+			next.disabled = this.currentPage >= pages;
+		}
+	},
+
+	toggleEmptyState( isEmpty ) {
+		if ( this.emptyState ) {
+			this.emptyState.hidden = ! isEmpty;
+		}
+	},
+
+	/**
+	 * Update the stats line.
+	 *
+	 * The stats node is `aria-live="polite"`, so every textContent change
+	 * would queue a screen-reader announcement — spammy while the user is
+	 * typing in the search box. We split the write into two steps:
+	 *   - The visible text is updated immediately (sighted users need to
+	 *     see the filter results live).
+	 *   - The announcement is debounced (~400ms): we temporarily remove
+	 *     aria-live while updating, then restore it after a short delay so
+	 *     only the settled value is announced.
+	 */
+	updateStats( visibleCount ) {
+		if ( ! this.statsNode ) {
+			return;
+		}
+		const visible = typeof visibleCount === 'number' ? visibleCount : this.filteredRows().length;
+		const text = this.statsTemplate
+			.replace( '%1$s', String( visible ) )
+			.replace( '%2$s', String( this.total ) )
+			.replace( '%3$s', String( this.enabled ) );
+
+		// Suppress the live announcement while the value is changing.
+		this.statsNode.setAttribute( 'aria-live', 'off' );
+		this.statsNode.textContent = text;
+
+		clearTimeout( this.statsAnnounceTimer );
+		this.statsAnnounceTimer = setTimeout( () => {
+			this.statsNode.setAttribute( 'aria-live', 'polite' );
+		}, 400 );
 	},
 };
 
 /**
- * Clipboard functionality for copy buttons and text.
+ * Clipboard bindings for inline copy-text spans and explicit copy buttons.
+ *
+ * Both flows share `Albert.clipboard` (copy + flashButton). Inline text
+ * uses a `data-copied` attribute (CSS renders a tooltip); buttons swap
+ * their label for the duration of the feedback.
  */
 const ClipboardModule = {
 	init() {
-		this.handleCopyText();
-		this.handleCopyButton();
-	},
-
-	async copyToClipboard( text ) {
-		try {
-			await navigator.clipboard.writeText( text );
-			return true;
-		} catch {
-			// Fallback for older browsers.
-			const textarea = document.createElement( 'textarea' );
-			textarea.value = text;
-			textarea.style.position = 'fixed';
-			textarea.style.opacity = '0';
-			document.body.appendChild( textarea );
-			textarea.select();
-			document.execCommand( 'copy' );
-			document.body.removeChild( textarea );
-			return true;
-		}
-	},
-
-	showCopiedFeedback( element, originalText = null ) {
-		const i18n = window.albertAdmin?.i18n || { copied: 'Copied!' };
-
-		// Announce to screen readers.
-		const liveRegion = document.getElementById( 'albert-copy-status' );
-		if ( liveRegion ) {
-			liveRegion.textContent = i18n.copied;
-		}
-
-		if ( originalText !== null ) {
-			element.textContent = i18n.copied;
-			element.classList.add( 'copied' );
-
-			setTimeout( () => {
-				element.textContent = originalText;
-				element.classList.remove( 'copied' );
-			}, 2000 );
-		} else {
-			element.classList.add( 'copied' );
-			element.setAttribute( 'data-copied', i18n.copied );
-
-			setTimeout( () => {
-				element.classList.remove( 'copied' );
-				element.removeAttribute( 'data-copied' );
-			}, 2000 );
-		}
-	},
-
-	handleCopyText() {
 		document.addEventListener( 'click', async ( e ) => {
 			const copyText = e.target.closest( '.albert-copy-text' );
-			if ( ! copyText ) {
+			if ( copyText ) {
+				const ok = await Albert.clipboard.copy( copyText.textContent.trim() );
+				if ( ok ) {
+					Albert.clipboard.flashButton( copyText, { label: ClipboardModule.label() } );
+				}
 				return;
 			}
 
-			const text = copyText.textContent.trim();
-			await this.copyToClipboard( text );
-			this.showCopiedFeedback( copyText );
-		} );
-	},
-
-	handleCopyButton() {
-		document.addEventListener( 'click', async ( e ) => {
 			const button = e.target.closest( '.albert-copy-button' );
 			if ( ! button ) {
 				return;
 			}
 
-			const targetId = button.dataset.copyTarget;
-			const target = document.getElementById( targetId );
+			const target = document.getElementById( button.dataset.copyTarget );
 			if ( ! target ) {
 				return;
 			}
 
-			const text = target.value !== undefined ? target.value : target.textContent.trim();
-			const originalText = button.textContent;
+			const text = target.value !== undefined && null !== target.value
+				? target.value
+				: target.textContent.trim();
 
-			await this.copyToClipboard( text );
-			this.showCopiedFeedback( button, originalText );
+			const ok = await Albert.clipboard.copy( text );
+			if ( ok ) {
+				Albert.clipboard.flashButton( button, { label: ClipboardModule.label(), swap: true } );
+			}
 		} );
+	},
+
+	label() {
+		return window.albertAdmin?.i18n?.copied || 'Copied!';
 	},
 };
 
@@ -576,14 +574,12 @@ const DisconnectModule = {
 			this.dialog.showModal();
 		} );
 
-		// Close on close/cancel button click.
 		this.dialog.addEventListener( 'click', ( e ) => {
 			if ( e.target.closest( '.albert-disconnect-dialog-close' ) || e.target.closest( '.albert-disconnect-cancel' ) ) {
 				this.dialog.close();
 			}
 		} );
 
-		// Close on backdrop click.
 		this.dialog.addEventListener( 'click', ( e ) => {
 			if ( e.target === this.dialog ) {
 				this.dialog.close();
@@ -596,28 +592,10 @@ const DisconnectModule = {
  * Initialize all modules when DOM is ready.
  */
 function init() {
-	initLiveRegion();
-	ToggleModule.init();
-	CollapseModule.init();
+	Albert.liveRegion.ensure();
+	AbilitiesListModule.init();
 	ClipboardModule.init();
-	DirtyStateModule.init();
 	DisconnectModule.init();
-}
-
-/**
- * Initialize a live region for screen reader announcements.
- */
-function initLiveRegion() {
-	if ( document.getElementById( 'albert-copy-status' ) ) {
-		return;
-	}
-	const liveRegion = document.createElement( 'div' );
-	liveRegion.setAttribute( 'aria-live', 'polite' );
-	liveRegion.setAttribute( 'aria-atomic', 'true' );
-	liveRegion.setAttribute( 'role', 'status' );
-	liveRegion.className = 'screen-reader-text';
-	liveRegion.id = 'albert-copy-status';
-	document.body.appendChild( liveRegion );
 }
 
 if ( document.readyState === 'loading' ) {

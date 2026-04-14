@@ -2,7 +2,7 @@
 /**
  * Abilities Registry
  *
- * Defines ability groups and permission mappings.
+ * Supplier map, source lookup, and default-state logic for registered abilities.
  *
  * @package Albert
  * @subpackage Core
@@ -14,369 +14,142 @@ namespace Albert\Core;
 /**
  * Abilities Registry class
  *
- * Manages ability grouping and permission-to-ability mapping.
+ * Supplier map, category grouping, and source lookup for registered abilities.
  *
  * @since 1.0.0
  */
 class AbilitiesRegistry {
 
 	/**
-	 * Get all ability groups.
+	 * Cached supplier map, populated on first call to get_suppliers().
 	 *
-	 * @return array<string, array<string, mixed>> Ability groups structure.
-	 * @since 1.0.0
+	 * @since 1.1.0
+	 * @var array<string, string>|null
 	 */
-	public static function get_ability_groups(): array {
-		$groups = [
-			'wordpress' => [
-				'label'       => __( 'WordPress Core', 'albert-ai-butler' ),
-				'description' => __( 'Core WordPress content management.', 'albert-ai-butler' ),
-				'types'       => self::get_wordpress_types(),
-			],
+	private static ?array $suppliers_cache = null;
+
+	/**
+	 * Get the curated supplier map.
+	 *
+	 * Maps an ability-id prefix (the namespace before the first `/`) to a
+	 * human-readable supplier label. Addons can register their own suppliers
+	 * via the `albert/abilities/suppliers` filter so that a custom prefix like
+	 * `mycompany/` shows up with a branded label in the admin filter dropdown.
+	 *
+	 * Built-in entries cover the prefixes Albert knows about today. Anything
+	 * not listed falls through to a prettified version of the prefix in
+	 * {@see self::get_ability_source()}.
+	 *
+	 * @return array<string, string> Prefix => supplier label.
+	 * @since 1.1.0
+	 */
+	public static function get_suppliers(): array {
+		if ( self::$suppliers_cache !== null ) {
+			return self::$suppliers_cache;
+		}
+
+		$suppliers = [
+			'core'   => __( 'WordPress core', 'albert-ai-butler' ),
+			'albert' => __( 'Albert', 'albert-ai-butler' ),
+			'woo'    => __( 'WooCommerce', 'albert-ai-butler' ),
+			'acf'    => __( 'ACF', 'albert-ai-butler' ),
 		];
 
-		// Add WooCommerce if active.
-		if ( class_exists( 'WooCommerce' ) ) {
-			$groups['woocommerce'] = [
-				'label'       => __( 'WooCommerce', 'albert-ai-butler' ),
-				'description' => __( 'Store and order management.', 'albert-ai-butler' ),
-				'types'       => self::get_woocommerce_types(),
-			];
-		}
+		/**
+		 * Filters the curated supplier map.
+		 *
+		 * Allows addons and site code to register their own ability-id prefix
+		 * under a branded supplier label. The array is keyed by prefix (the
+		 * namespace before the first `/` in an ability id) and maps to the
+		 * human-readable label shown in the admin filter dropdown and the
+		 * expanded row details.
+		 *
+		 * @since 1.1.0
+		 *
+		 * @param array<string, string> $suppliers Prefix => supplier label.
+		 */
+		self::$suppliers_cache = apply_filters( 'albert/abilities/suppliers', $suppliers );
 
-		return apply_filters( 'albert/abilities/groups', $groups );
+		return self::$suppliers_cache;
 	}
 
 	/**
-	 * Get WordPress content types.
+	 * Get the supplier information for an ability.
 	 *
-	 * @return array<string, array<string, mixed>> WordPress content types with read/write permissions.
-	 * @since 1.0.0
-	 */
-	private static function get_wordpress_types(): array {
-		return [
-			'posts'      => [
-				'label' => __( 'Posts', 'albert-ai-butler' ),
-				'read'  => [
-					'label'       => __( 'Read', 'albert-ai-butler' ),
-					'description' => __( 'Find and view posts', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/find-posts', 'albert/view-post' ],
-				],
-				'write' => [
-					'label'       => __( 'Write', 'albert-ai-butler' ),
-					'description' => __( 'Create, edit, and delete posts', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/create-post', 'albert/update-post', 'albert/delete-post' ],
-				],
-			],
-			'pages'      => [
-				'label' => __( 'Pages', 'albert-ai-butler' ),
-				'read'  => [
-					'label'       => __( 'Read', 'albert-ai-butler' ),
-					'description' => __( 'Find and view pages', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/find-pages', 'albert/view-page' ],
-				],
-				'write' => [
-					'label'       => __( 'Write', 'albert-ai-butler' ),
-					'description' => __( 'Create, edit, and delete pages', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/create-page', 'albert/update-page', 'albert/delete-page' ],
-				],
-			],
-			'media'      => [
-				'label' => __( 'Media', 'albert-ai-butler' ),
-				'read'  => [
-					'label'       => __( 'Read', 'albert-ai-butler' ),
-					'description' => __( 'Find and view media files', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/find-media', 'albert/view-media' ],
-				],
-				'write' => [
-					'label'       => __( 'Write', 'albert-ai-butler' ),
-					'description' => __( 'Upload and manage media', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/upload-media', 'albert/set-featured-image' ],
-				],
-			],
-			'users'      => [
-				'label' => __( 'Users', 'albert-ai-butler' ),
-				'read'  => [
-					'label'       => __( 'Read', 'albert-ai-butler' ),
-					'description' => __( 'Find and view users', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/find-users', 'albert/view-user' ],
-				],
-				'write' => [
-					'label'       => __( 'Write', 'albert-ai-butler' ),
-					'description' => __( 'Create, edit, and delete users', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/create-user', 'albert/update-user', 'albert/delete-user' ],
-				],
-			],
-			'taxonomies' => [
-				'label' => __( 'Taxonomies', 'albert-ai-butler' ),
-				'read'  => [
-					'label'       => __( 'Read', 'albert-ai-butler' ),
-					'description' => __( 'Find categories, tags, and terms', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/find-taxonomies', 'albert/find-terms', 'albert/view-term' ],
-				],
-				'write' => [
-					'label'       => __( 'Write', 'albert-ai-butler' ),
-					'description' => __( 'Create, edit, and delete terms', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/create-term', 'albert/update-term', 'albert/delete-term' ],
-				],
-			],
-		];
-	}
-
-	/**
-	 * Get WooCommerce content types.
+	 * Looks the ability's prefix up in the curated supplier map
+	 * ({@see self::get_suppliers()}). Unknown prefixes fall back to a
+	 * prettified version of the prefix itself so every ability always
+	 * has a supplier label in the UI.
 	 *
-	 * @return array<string, array<string, mixed>> WooCommerce content types with read/write permissions.
-	 * @since 1.0.0
-	 */
-	private static function get_woocommerce_types(): array {
-		return [
-			'products'  => [
-				'label' => __( 'Products', 'albert-ai-butler' ),
-				'read'  => [
-					'label'       => __( 'Read', 'albert-ai-butler' ),
-					'description' => __( 'Find and view products', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/woo-find-products', 'albert/woo-view-product' ],
-				],
-				'write' => [
-					'label'       => __( 'Write', 'albert-ai-butler' ),
-					'description' => __( 'Create, edit, and delete products', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/woo-create-product', 'albert/woo-update-product', 'albert/woo-delete-product' ],
-				],
-			],
-			'orders'    => [
-				'label' => __( 'Orders', 'albert-ai-butler' ),
-				'read'  => [
-					'label'       => __( 'Read', 'albert-ai-butler' ),
-					'description' => __( 'Find and view orders', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/woo-find-orders', 'albert/woo-view-order' ],
-				],
-				'write' => [
-					'label'       => __( 'Write', 'albert-ai-butler' ),
-					'description' => __( 'Create and update orders', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/woo-create-order', 'albert/woo-update-order' ],
-				],
-			],
-			'customers' => [
-				'label' => __( 'Customers', 'albert-ai-butler' ),
-				'read'  => [
-					'label'       => __( 'Read', 'albert-ai-butler' ),
-					'description' => __( 'Find and view customers', 'albert-ai-butler' ),
-					'abilities'   => [ 'albert/woo-find-customers', 'albert/woo-view-customer' ],
-				],
-			],
-		];
-	}
-
-	/**
-	 * Get all individual ability slugs from enabled permissions.
+	 * @param string $ability_name Ability name/slug, e.g. `albert/create-post`.
 	 *
-	 * @param array<string> $enabled_permissions Array of enabled permission keys (e.g., 'posts_read', 'posts_write').
-	 * @return array<string> Array of individual ability slugs.
-	 * @since 1.0.0
-	 */
-	public static function get_enabled_abilities( array $enabled_permissions ): array {
-		$abilities = [];
-		$groups    = self::get_ability_groups();
-
-		foreach ( $groups as $group_key => $group ) {
-			foreach ( $group['types'] as $type_key => $type ) {
-				foreach ( [ 'read', 'write' ] as $permission ) {
-					if ( ! isset( $type[ $permission ] ) ) {
-						continue;
-					}
-
-					$permission_key = $type_key . '_' . $permission;
-
-					if ( in_array( $permission_key, $enabled_permissions, true ) ) {
-						$abilities = array_merge( $abilities, $type[ $permission ]['abilities'] );
-					}
-				}
-			}
-		}
-
-		return array_unique( $abilities );
-	}
-
-	/**
-	 * Get default permissions (all read enabled, write disabled).
-	 *
-	 * @return array<string> Array of default permission keys.
-	 * @since 1.0.0
-	 */
-	public static function get_default_permissions(): array {
-		$defaults = [];
-		$groups   = self::get_ability_groups();
-
-		foreach ( $groups as $group ) {
-			foreach ( $group['types'] as $type_key => $type ) {
-				// Enable read by default.
-				if ( isset( $type['read'] ) ) {
-					$defaults[] = $type_key . '_read';
-				}
-				// Write disabled by default.
-			}
-		}
-
-		return $defaults;
-	}
-
-	/**
-	 * Get all abilities grouped by category.
-	 *
-	 * Calls the WP Abilities API to get all registered abilities and categories,
-	 * and groups abilities by their category slug.
-	 *
-	 * @return array<string, array<string, mixed>> Grouped abilities.
-	 * @since 1.0.0
-	 */
-	public static function get_abilities_grouped_by_category(): array {
-		if ( ! function_exists( 'wp_get_abilities' ) || ! function_exists( 'wp_get_ability_categories' ) ) {
-			return [];
-		}
-
-		$all_abilities  = wp_get_abilities();
-		$all_categories = wp_get_ability_categories();
-		$grouped        = [];
-
-		// Initialize groups for all categories.
-		foreach ( $all_categories as $slug => $category ) {
-			$grouped[ $slug ] = [
-				'category'  => $category,
-				'abilities' => [],
-			];
-		}
-
-		// Group abilities into their categories.
-		foreach ( $all_abilities as $ability ) {
-			$cat_slug = method_exists( $ability, 'get_category' )
-				? $ability->get_category()
-				: 'uncategorized';
-			if ( ! isset( $grouped[ $cat_slug ] ) ) {
-				$grouped[ $cat_slug ] = [
-					'category'  => [
-						'label'       => ucfirst( $cat_slug ),
-						'description' => '',
-					],
-					'abilities' => [],
-				];
-			}
-			$grouped[ $cat_slug ]['abilities'][] = $ability;
-		}
-
-		return $grouped;
-	}
-
-	/**
-	 * Get the predefined sort order for categories.
-	 *
-	 * @return array<string> Ordered category slugs.
-	 * @since 1.0.0
-	 */
-	public static function get_category_sort_order(): array {
-		return [
-			'site',
-			'user',
-			'content',
-			'taxonomy',
-			'comments',
-			'commerce',
-			'woo-products',
-			'woo-orders',
-			'woo-customers',
-			'seo',
-			'fields',
-			'forms',
-			'lms',
-			'maintenance',
-		];
-	}
-
-	/**
-	 * Sort grouped categories by predefined order, then alphabetical for unknown.
-	 *
-	 * @param array<string, array<string, mixed>> $grouped Grouped abilities.
-	 *
-	 * @return array<string, array<string, mixed>> Sorted grouped abilities.
-	 * @since 1.0.0
-	 */
-	public static function sort_grouped_categories( array $grouped ): array {
-		$order  = self::get_category_sort_order();
-		$sorted = [];
-
-		// Add categories in predefined order.
-		foreach ( $order as $slug ) {
-			if ( isset( $grouped[ $slug ] ) ) {
-				$sorted[ $slug ] = $grouped[ $slug ];
-			}
-		}
-
-		// Add remaining categories alphabetically.
-		$remaining = array_diff_key( $grouped, $sorted );
-		ksort( $remaining );
-		foreach ( $remaining as $slug => $data ) {
-			$sorted[ $slug ] = $data;
-		}
-
-		return $sorted;
-	}
-
-	/**
-	 * Get the source information for an ability.
-	 *
-	 * @param string $ability_name Ability name/slug.
-	 *
-	 * @return array{label: string, type: string} Source info.
+	 * @return array{slug: string, label: string} Supplier slug + human label.
 	 * @since 1.0.0
 	 */
 	public static function get_ability_source( string $ability_name ): array {
-		// Core abilities (registered by WordPress itself).
-		if ( str_starts_with( $ability_name, 'core/' ) ) {
+		$parts  = explode( '/', $ability_name, 2 );
+		$prefix = $parts[0] ?? '';
+
+		if ( $prefix === '' ) {
 			return [
-				'label' => 'CORE',
-				'type'  => 'core',
+				'slug'  => 'unknown',
+				'label' => __( 'Unknown', 'albert-ai-butler' ),
 			];
 		}
 
-		// Albert abilities.
-		if ( str_starts_with( $ability_name, 'albert/' ) ) {
+		$suppliers = self::get_suppliers();
+
+		if ( isset( $suppliers[ $prefix ] ) ) {
 			return [
-				'label' => 'ALBERT',
-				'type'  => 'albert',
+				'slug'  => $prefix,
+				'label' => $suppliers[ $prefix ],
 			];
 		}
 
-		// Third-party abilities — use namespace as label.
-		$parts     = explode( '/', $ability_name, 2 );
-		$namespace = strtoupper( $parts[0] ?? 'UNKNOWN' );
-
+		// Unknown prefix — prettify so it at least reads nicely.
 		return [
-			'label' => $namespace,
-			'type'  => 'third-party',
+			'slug'  => $prefix,
+			'label' => ucfirst( str_replace( [ '-', '_' ], ' ', $prefix ) ),
 		];
 	}
 
 	/**
 	 * Get the default set of disabled abilities.
 	 *
-	 * On fresh install, Albert write abilities are disabled by default.
-	 * Everything else (read abilities, core, third-party) is enabled.
+	 * On fresh install, non-readonly abilities (write / delete) are disabled
+	 * by default. Derives the list from each registered ability's annotations
+	 * so it stays in sync automatically — no hardcoded slug lists.
 	 *
-	 * @return array<string> Array of ability slugs that are disabled by default.
+	 * @return array<string> Ability IDs that are disabled by default.
 	 * @since 1.0.0
 	 */
 	public static function get_default_disabled_abilities(): array {
-		$disabled = [];
-		$groups   = self::get_ability_groups();
+		if ( ! function_exists( 'wp_get_abilities' ) ) {
+			return [];
+		}
 
-		foreach ( $groups as $group ) {
-			foreach ( $group['types'] as $type ) {
-				if ( isset( $type['write'] ) ) {
-					$disabled = array_merge( $disabled, $type['write']['abilities'] );
+		$disabled = [];
+
+		foreach ( wp_get_abilities() as $ability ) {
+			$meta        = (array) $ability->get_meta();
+			$annotations = isset( $meta['annotations'] ) && is_array( $meta['annotations'] ) ? $meta['annotations'] : [];
+
+			$id = $ability->get_name();
+
+			// No annotations — fall back to the slug heuristic.
+			if ( empty( $annotations ) ) {
+				$chips = AnnotationPresenter::heuristic_chips( $id );
+				if ( ! empty( $chips ) && $chips[0]['key'] !== 'read' ) {
+					$disabled[] = $id;
 				}
+				continue;
+			}
+
+			if ( empty( $annotations['readonly'] ) ) {
+				$disabled[] = $id;
 			}
 		}
 
-		return array_unique( $disabled );
+		return $disabled;
 	}
 }

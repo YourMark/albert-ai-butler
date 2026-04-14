@@ -14,10 +14,12 @@ namespace Albert\Core;
 /**
  * Annotations class
  *
- * Static factory for ability annotation arrays describing behavior characteristics:
- * - readonly:   The ability only reads data and never modifies state.
- * - destructive: The ability permanently destroys or removes data.
- * - idempotent:  Repeated calls with the same input produce the same result.
+ * Static factory for ability annotation arrays. The two boolean flags
+ * combine into three behavior categories surfaced in the admin UI:
+ *
+ * - **Read** — `readonly: true, destructive: false` — only reads data.
+ * - **Write** — `readonly: false, destructive: false` — creates or updates data.
+ * - **Delete** — `readonly: false, destructive: true` — permanently removes data.
  *
  * @since 1.0.0
  */
@@ -27,13 +29,12 @@ class Annotations {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array{readonly: bool, destructive: bool, idempotent: bool}
+	 * @return array{readonly: bool, destructive: bool}
 	 */
 	public static function read(): array {
 		return [
 			'readonly'    => true,
 			'destructive' => false,
-			'idempotent'  => true,
 		];
 	}
 
@@ -42,13 +43,12 @@ class Annotations {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array{readonly: bool, destructive: bool, idempotent: bool}
+	 * @return array{readonly: bool, destructive: bool}
 	 */
 	public static function create(): array {
 		return [
 			'readonly'    => false,
 			'destructive' => false,
-			'idempotent'  => false,
 		];
 	}
 
@@ -57,13 +57,12 @@ class Annotations {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array{readonly: bool, destructive: bool, idempotent: bool}
+	 * @return array{readonly: bool, destructive: bool}
 	 */
 	public static function update(): array {
 		return [
 			'readonly'    => false,
 			'destructive' => false,
-			'idempotent'  => true,
 		];
 	}
 
@@ -72,28 +71,26 @@ class Annotations {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array{readonly: bool, destructive: bool, idempotent: bool}
+	 * @return array{readonly: bool, destructive: bool}
 	 */
 	public static function delete(): array {
 		return [
 			'readonly'    => false,
 			'destructive' => true,
-			'idempotent'  => true,
 		];
 	}
 
 	/**
-	 * Generic action ability (non-idempotent, non-destructive side effect).
+	 * Generic action ability (non-destructive side effect).
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array{readonly: bool, destructive: bool, idempotent: bool}
+	 * @return array{readonly: bool, destructive: bool}
 	 */
 	public static function action(): array {
 		return [
 			'readonly'    => false,
 			'destructive' => false,
-			'idempotent'  => false,
 		];
 	}
 }

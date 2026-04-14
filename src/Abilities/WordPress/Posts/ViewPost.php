@@ -111,7 +111,7 @@ class ViewPost extends BaseAbility {
 
 		$post = get_post( $post_id );
 
-		if ( ! $post || 'post' !== $post->post_type ) {
+		if ( ! $post || $post->post_type !== 'post' ) {
 			return new WP_Error(
 				'post_not_found',
 				sprintf(

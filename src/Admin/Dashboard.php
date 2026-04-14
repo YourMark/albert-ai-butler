@@ -94,7 +94,7 @@ class Dashboard implements Hookable {
 	 */
 	public function enqueue_assets( string $hook ): void {
 		// Only load on our dashboard page.
-		if ( 'toplevel_page_albert' !== $hook ) {
+		if ( $hook !== 'toplevel_page_albert' ) {
 			return;
 		}
 
@@ -106,9 +106,17 @@ class Dashboard implements Hookable {
 		);
 
 		wp_enqueue_script(
+			'albert-admin-utils',
+			ALBERT_PLUGIN_URL . 'assets/js/albert-admin-utils.js',
+			[],
+			ALBERT_VERSION,
+			true
+		);
+
+		wp_enqueue_script(
 			'albert-dashboard',
 			ALBERT_PLUGIN_URL . 'assets/js/admin-dashboard.js',
-			[],
+			[ 'albert-admin-utils' ],
 			ALBERT_VERSION,
 			true
 		);
@@ -326,7 +334,7 @@ class Dashboard implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function get_enabled_abilities_count(): string {
-		$disabled_abilities = AbstractAbilitiesPage::get_disabled_abilities();
+		$disabled_abilities = AbilitiesPage::get_disabled_abilities();
 		$all_abilities      = wp_get_abilities();
 
 		$enabled_count = 0;

@@ -40,13 +40,12 @@ albert-ai-butler/
 │   │
 │   ├── Core/
 │   │   ├── Plugin.php                  # Main singleton, bootstraps everything
-│   │   └── AbilitiesManager.php        # Registers abilities with WordPress
+│   │   ├── AbilitiesManager.php        # Registers abilities with WordPress
+│   │   ├── AbilitiesRegistry.php       # Supplier map, category grouping, source lookup
+│   │   └── AnnotationPresenter.php     # Annotation → chip DTO mapping for the admin UI
 │   │
 │   ├── Admin/
-│   │   ├── AbstractAbilitiesPage.php   # Base class for abilities admin pages
-│   │   ├── CoreAbilities.php           # Core abilities page (albert/*, core/*)
-│   │   ├── AcfAbilities.php            # ACF abilities page (acf/*)
-│   │   ├── WooCommerceAbilities.php    # WooCommerce abilities page (albert/woo-*)
+│   │   ├── AbilitiesPage.php           # Unified flat-list abilities page (Core/ACF/Woo merged)
 │   │   ├── Connections.php             # Allowed users & active connections
 │   │   ├── Settings.php                # Plugin settings page
 │   │   └── UserSessions.php            # OAuth sessions management
@@ -287,9 +286,22 @@ add_filter( 'albert/admin/submenu_pages', function ( array $pages ) {
 } );
 ```
 
-#### CoreAbilities Exclude-List (`filter_abilities`)
+#### Unified AbilitiesPage (1.1+)
 
-The Core abilities admin page uses an exclude-list approach: it shows all registered abilities *except* those handled by dedicated pages (`albert/woo-*`, `acf/*`, `mcp-adapter/*`). Custom abilities registered via `albert/abilities/register` automatically appear on the Core abilities page and are toggleable on/off.
+Since 1.1, the Core / ACF / WooCommerce admin pages are merged into a single `Albert → Abilities` page rendered by `src/Admin/AbilitiesPage.php`. Every registered ability appears as a row in a flat, filterable list. Filtering (text search, category, supplier) is entirely client-side; pagination and view-mode (list vs paginated) are server-rendered on every request to avoid a flash of content. Toggles save instantly via `wp_ajax_albert_toggle_ability` — there is no Save Changes button. Custom abilities registered via `albert/abilities/register` appear in the same list automatically.
+
+#### Supplier Registry (`albert/abilities/suppliers`)
+
+The filter dropdown's supplier labels come from a curated prefix→label map in `AbilitiesRegistry::get_suppliers()`. Built-in entries cover `core` → "WordPress core", `albert` → "Albert", `woo` → "WooCommerce", and `acf` → "ACF". Addons can register their own prefix under a branded name via the `albert/abilities/suppliers` filter:
+
+```php
+add_filter( 'albert/abilities/suppliers', function ( array $suppliers ): array {
+    $suppliers['mycompany'] = 'My Company';
+    return $suppliers;
+} );
+```
+
+Unknown prefixes fall back to a prettified version of the prefix itself, so every ability always has a sensible supplier label.
 
 #### 3. OAuth 2.0 Server
 Full OAuth 2.0 implementation using `league/oauth2-server`.

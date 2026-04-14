@@ -35,11 +35,7 @@ Think of abilities as superpowers that you can grant to AI assistants - from man
 ### Manual Installation
 
 1. Download the plugin files
-<<<<<<< HEAD
-2. Upload the `albert` folder to `/wp-content/plugins/`
-=======
 2. Upload the `albert-ai-butler` folder to `/wp-content/plugins/`
->>>>>>> main
 3. Activate the plugin through the 'Plugins' menu in WordPress
 
 ## Development
@@ -49,11 +45,7 @@ Think of abilities as superpowers that you can grant to AI assistants - from man
 1. Clone this repository
 2. Navigate to the plugin directory:
    ```bash
-<<<<<<< HEAD
-   cd wp-content/plugins/albert
-=======
    cd wp-content/plugins/albert-ai-butler
->>>>>>> main
    ```
 3. Install dependencies:
    ```bash
@@ -102,6 +94,20 @@ Developed by Mark Jansen - Your Mark Media
 Website: https://yourmark.nl
 
 ## Changelog
+
+### 1.1.0
+- **Redesigned abilities admin page** — single unified page (Core / ACF / WooCommerce pages merged) showing every registered ability as a flat, filterable list. Filter by text, category, or supplier.
+- **Instant per-row save** — each toggle saves immediately via AJAX. No more Save Changes button, no more lost work.
+- **Plain-language annotation chips** — each ability is labelled "Read", "Write", or "Delete" with accessible tooltips that explain what each label means.
+- **Curated supplier registry** — new `albert/abilities/suppliers` filter lets addons register branded supplier names (WordPress core, Albert, WooCommerce, ACF) for the filter dropdown.
+- **List / Paginated view toggle** — preference persisted server-side, no flash of content on page load.
+- **Accessibility improvements** — keyboard-reachable chip tooltips, WCAG 2.2 AA contrast on all chip tones, aria-live stats announcements debounced, pagination focus indicators, dropdown caret indicators on the filter selects.
+- **Removed** the deferred-save bulk form, the category-grouped card layout, the per-category subpages, and the "CORE" / "ALBERT" uppercase source badges.
+
+### 1.0.1
+- Fix OAuth route namespace mismatch (`albert-ai-butler/v1` vs `albert/v1`) that caused connection failures when clients followed the discovery spec
+- Add `albert/rest_namespace` filter for sites with namespace collisions
+- Consolidate all REST namespace references to a single `Plugin::REST_NAMESPACE` constant
 
 ### 1.0.0 - 2025-01-23
 - Initial release

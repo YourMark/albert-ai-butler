@@ -4,7 +4,7 @@ Tags: ai, mcp, oauth, claude, chatgpt
 Requires at least: 6.9
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,7 +95,7 @@ When WooCommerce is active, additional abilities are available for products, ord
 
 = Can I control what my AI assistant is allowed to do? =
 
-Yes. The abilities page lets you toggle read and write permissions per content type. Write abilities are disabled by default — you choose exactly what to enable. All actions also respect WordPress user capabilities, so your AI assistant can never do more than the authorized user could do manually.
+Yes. The abilities page lists every action your AI assistant can perform on your site, clearly labelled as Read, Write, or Delete. You toggle each one on or off individually — changes save instantly, no form to submit. Filter the list by text, category, or supplier to find what you're looking for. Write and delete abilities are off by default — you choose exactly what to enable. All actions also respect WordPress user capabilities, so your AI assistant can never do more than the authorized user could do manually.
 
 = Do I need WooCommerce? =
 
@@ -125,11 +125,27 @@ Albert is designed for single-site installations. Multisite support is on the ro
 == Screenshots ==
 
 1. Albert dashboard with setup checklist and status overview
-2. Abilities page — toggle read and write permissions per content type
+2. Abilities page — every ability as a filterable list with instant-save toggles and Read / Write / Delete labels
 3. Connections page — manage allowed users and active AI assistant connections
 4. An active connection with Claude Desktop
 
 == Changelog ==
+
+= 1.1.0 =
+Abilities page redesign. The three separate admin pages (Core, ACF, WooCommerce) are now a single unified list, every ability saves instantly when you toggle it, and labels use plain words.
+
+* **Unified abilities page** — one place for every registered ability, regardless of which plugin provides it. Filter the list by text, category, or supplier.
+* **Instant save** — toggling an ability on or off saves immediately. No Save Changes button, no unsaved-work warnings, no risk of losing progress on a long list.
+* **Plain-language labels** — each ability is tagged Read, Write, or Delete instead of the old developer-facing "Destructive / Idempotent / Readonly" annotations. Hover or keyboard-focus a label for a full explanation.
+* **Supplier registry** — the filter dropdown shows "WordPress core", "Albert", "WooCommerce", "ACF" instead of raw `CORE` / `ALBERT` strings. Addons can register their own supplier names via the `albert/abilities/suppliers` filter.
+* **List / Paginated view** — switch between a single long list and 25-per-page pagination. Preference is persisted server-side so there's no flash on page load.
+* **Accessibility** — keyboard-reachable tooltips on the annotation labels, WCAG 2.2 AA contrast on every chip colour, aria-live stats announcements debounced during search, focus indicators on pagination buttons, dropdown caret indicators on the filter selects.
+
+= 1.0.1 =
+Bug fix release.
+
+* **Fix:** OAuth endpoints used a different REST namespace (`albert-ai-butler/v1`) than the MCP server and discovery metadata (`albert/v1`), causing connection failures when clients followed the OAuth discovery spec. All endpoints now use `albert/v1` consistently.
+* **New:** `albert/rest_namespace` filter allows sites with a namespace collision to override the REST namespace.
 
 = 1.0.0 =
 Initial release.
@@ -144,6 +160,12 @@ Initial release.
 * **Extensible** — Register custom abilities with the WordPress Abilities API. Hookable architecture with filters and actions.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Abilities page redesign: one unified list, instant save, plain-language labels. Existing enabled / disabled settings are preserved; no migration needed.
+
+= 1.0.1 =
+Fixes a connection failure caused by mismatched OAuth endpoint namespaces. Recommended for all users.
 
 = 1.0.0 =
 Initial release. Connect Claude Desktop, ChatGPT, and other MCP-compatible AI assistants to your WordPress site.

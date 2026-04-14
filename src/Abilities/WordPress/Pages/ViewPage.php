@@ -111,7 +111,7 @@ class ViewPage extends BaseAbility {
 
 		$page = get_post( $page_id );
 
-		if ( ! $page || 'page' !== $page->post_type ) {
+		if ( ! $page || $page->post_type !== 'page' ) {
 			return new WP_Error(
 				'page_not_found',
 				sprintf(

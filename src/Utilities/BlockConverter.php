@@ -76,7 +76,7 @@ class BlockConverter {
 		$nodes  = $this->parse_html( $this->html );
 		$blocks = [];
 
-		if ( ! $nodes instanceof DOMNodeList || 0 === $nodes->length ) {
+		if ( ! $nodes instanceof DOMNodeList || $nodes->length === 0 ) {
 			return '';
 		}
 
@@ -87,11 +87,11 @@ class BlockConverter {
 
 		foreach ( $body->childNodes as $node ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 			// Skip plain text nodes at the top level.
-			if ( '#text' === $node->nodeName ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+			if ( $node->nodeName === '#text' ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 				$text = trim( $node->nodeValue ?? '' ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-				if ( '' !== $text ) {
+				if ( $text !== '' ) {
 					$block = $this->render_block( 'paragraph', [], '<p>' . esc_html( $text ) . '</p>' );
-					if ( '' !== $block ) {
+					if ( $block !== '' ) {
 						$blocks[] = $block;
 					}
 				}
@@ -99,12 +99,12 @@ class BlockConverter {
 			}
 
 			// Skip comment nodes.
-			if ( '#comment' === $node->nodeName ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+			if ( $node->nodeName === '#comment' ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 				continue;
 			}
 
 			$block = $this->convert_node( $node );
-			if ( null !== $block ) {
+			if ( $block !== null ) {
 				$blocks[] = $this->minify_block( $block );
 			}
 		}
@@ -184,9 +184,9 @@ class BlockConverter {
 		$text = trim( $node->textContent ?? '' ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
 		// Check if the paragraph contains only a URL that can be oEmbedded.
-		if ( ! empty( $text ) && false !== filter_var( $text, FILTER_VALIDATE_URL ) ) {
+		if ( ! empty( $text ) && filter_var( $text, FILTER_VALIDATE_URL ) !== false ) {
 			$embed = $this->maybe_embed( $text );
-			if ( null !== $embed ) {
+			if ( $embed !== null ) {
 				return $embed;
 			}
 		}
@@ -194,7 +194,7 @@ class BlockConverter {
 		$content = $this->get_node_html( $node );
 
 		// Wrap non-paragraph inline elements in <p> tags.
-		if ( 'p' !== strtolower( $node->nodeName ) ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		if ( strtolower( $node->nodeName ) !== 'p' ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 			$content = '<p>' . $content . '</p>';
 		}
 
@@ -383,7 +383,7 @@ class BlockConverter {
 		}
 
 		// Generic oEmbed check.
-		if ( function_exists( 'wp_oembed_get' ) && false !== wp_oembed_get( $url ) ) {
+		if ( function_exists( 'wp_oembed_get' ) && wp_oembed_get( $url ) !== false ) {
 			return $this->build_oembed_block( $url );
 		}
 
@@ -418,9 +418,9 @@ class BlockConverter {
 
 		if ( $width > 0 && $height > 0 ) {
 			$ratio = round( $width / $height, 2 );
-			if ( 1.78 === $ratio ) {
+			if ( $ratio === 1.78 ) {
 				$aspect_ratio = '16-9';
-			} elseif ( 1.33 === $ratio ) {
+			} elseif ( $ratio === 1.33 ) {
 				$aspect_ratio = '4-3';
 			}
 		}
@@ -511,18 +511,18 @@ class BlockConverter {
 		$children = '';
 
 		foreach ( $node->childNodes as $child ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-			if ( '#text' === $child->nodeName ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+			if ( $child->nodeName === '#text' ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 				$children .= $child->nodeValue; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 				continue;
 			}
 
-			if ( 'cite' === strtolower( $child->nodeName ) ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+			if ( strtolower( $child->nodeName ) === 'cite' ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 				$children .= trim( $this->get_node_html( $child ) );
 				continue;
 			}
 
 			$child_block = $this->convert_node( $child );
-			if ( null !== $child_block ) {
+			if ( $child_block !== null ) {
 				$children .= $this->minify_block( $child_block );
 			}
 		}
@@ -584,7 +584,7 @@ class BlockConverter {
 			$pattern = '/(\s){2,}/s';
 		}
 
-		if ( 1 === preg_match( $pattern, $block ) ) {
+		if ( preg_match( $pattern, $block ) === 1 ) {
 			return preg_replace( $pattern, '', $block );
 		}
 
@@ -674,7 +674,7 @@ class BlockConverter {
 		}
 
 		foreach ( $node->childNodes as $child ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-			if ( 'img' === $child->nodeName && $child instanceof DOMElement ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+			if ( $child->nodeName === 'img' && $child instanceof DOMElement ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 				$this->maybe_sideload_image( $child );
 			} elseif ( $child->hasChildNodes() ) {
 				$this->sideload_child_images( $child );
