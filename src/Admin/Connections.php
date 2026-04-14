@@ -1048,9 +1048,17 @@ class Connections implements Hookable {
 		);
 
 		wp_enqueue_script(
+			'albert-admin-utils',
+			ALBERT_PLUGIN_URL . 'assets/js/albert-admin-utils.js',
+			[],
+			ALBERT_VERSION,
+			true
+		);
+
+		wp_enqueue_script(
 			'albert-admin',
 			ALBERT_PLUGIN_URL . 'assets/js/admin-settings.js',
-			[],
+			[ 'albert-admin-utils' ],
 			ALBERT_VERSION,
 			true
 		);

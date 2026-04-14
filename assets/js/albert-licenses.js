@@ -54,19 +54,12 @@ const AlbertLicenses = {
 		this.hideNotice();
 
 		const promises = ( cfg.addons || [] ).map( ( addon ) => {
-			const params = new URLSearchParams( {
+			return Albert.ajax.post( cfg.ajaxUrl || window.ajaxurl, {
 				action: 'edd_sl_sdk_activate_' + addon.option_slug,
 				license: key,
 				token: cfg.token || '',
 				timestamp: cfg.timestamp || '',
 				nonce: cfg.eddNonce || '',
-			} );
-
-			return fetch( cfg.ajaxUrl || window.ajaxurl, {
-				method: 'POST',
-				credentials: 'same-origin',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body: params,
 			} )
 				.then( ( r ) => r.json() )
 				.then( ( r ) => ( { addon: addon.name, success: r.success, data: r.data } ) )
@@ -107,19 +100,12 @@ const AlbertLicenses = {
 		this.setButtonLoading( btn, true, i18n.deactivating || 'Deactivating...' );
 		this.hideNotice();
 
-		const params = new URLSearchParams( {
+		Albert.ajax.post( cfg.ajaxUrl || window.ajaxurl, {
 			action: 'edd_sl_sdk_deactivate_' + optionSlug,
 			license: licenseKey,
 			token: cfg.token || '',
 			timestamp: cfg.timestamp || '',
 			nonce: cfg.eddNonce || '',
-		} );
-
-		fetch( cfg.ajaxUrl || window.ajaxurl, {
-			method: 'POST',
-			credentials: 'same-origin',
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: params,
 		} )
 			.then( ( r ) => r.json() )
 			.then( ( r ) => {
@@ -141,16 +127,9 @@ const AlbertLicenses = {
 	refreshTable() {
 		const cfg = window.albertLicenses || {};
 
-		const params = new URLSearchParams( {
+		Albert.ajax.post( cfg.ajaxUrl || window.ajaxurl, {
 			action: 'albert_refresh_licenses_table',
 			nonce: cfg.nonce || '',
-		} );
-
-		fetch( cfg.ajaxUrl || window.ajaxurl, {
-			method: 'POST',
-			credentials: 'same-origin',
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: params,
 		} )
 			.then( ( r ) => r.json() )
 			.then( ( r ) => {

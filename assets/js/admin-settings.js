@@ -138,15 +138,10 @@ const AbilitiesListModule = {
 		if ( ! cfg.ajaxUrl || ! cfg.viewModeNonce ) {
 			return;
 		}
-		const body = new URLSearchParams();
-		body.set( 'action', 'albert_save_view_mode' );
-		body.set( 'nonce', cfg.viewModeNonce );
-		body.set( 'mode', mode );
-
-		fetch( cfg.ajaxUrl, {
-			method: 'POST',
-			credentials: 'same-origin',
-			body,
+		Albert.ajax.post( cfg.ajaxUrl, {
+			action: 'albert_save_view_mode',
+			nonce: cfg.viewModeNonce,
+			mode,
 		} ).catch( ( err ) => {
 			// eslint-disable-next-line no-console
 			console.warn( 'Albert: failed to persist view mode', err );
@@ -282,16 +277,11 @@ const AbilitiesListModule = {
 
 		checkbox.disabled = true;
 
-		const body = new URLSearchParams();
-		body.set( 'action', 'albert_toggle_ability' );
-		body.set( 'nonce', cfg.toggleAbilityNonce );
-		body.set( 'ability_id', row.dataset.abilityId || '' );
-		body.set( 'enabled', enabled ? '1' : '0' );
-
-		fetch( cfg.ajaxUrl, {
-			method: 'POST',
-			credentials: 'same-origin',
-			body,
+		Albert.ajax.post( cfg.ajaxUrl, {
+			action: 'albert_toggle_ability',
+			nonce: cfg.toggleAbilityNonce,
+			ability_id: row.dataset.abilityId || '',
+			enabled: enabled ? '1' : '0',
 		} )
 			.then( ( response ) => {
 				if ( ! response.ok ) {
@@ -511,90 +501,47 @@ const AbilitiesListModule = {
 };
 
 /**
- * Clipboard functionality for copy buttons and text.
+ * Clipboard bindings for inline copy-text spans and explicit copy buttons.
+ *
+ * Both flows share `Albert.clipboard` (copy + flashButton). Inline text
+ * uses a `data-copied` attribute (CSS renders a tooltip); buttons swap
+ * their label for the duration of the feedback.
  */
 const ClipboardModule = {
 	init() {
-		this.handleCopyText();
-		this.handleCopyButton();
-	},
-
-	async copyToClipboard( text ) {
-		try {
-			await navigator.clipboard.writeText( text );
-			return true;
-		} catch {
-			const textarea = document.createElement( 'textarea' );
-			textarea.value = text;
-			textarea.style.position = 'fixed';
-			textarea.style.opacity = '0';
-			document.body.appendChild( textarea );
-			textarea.select();
-			document.execCommand( 'copy' );
-			document.body.removeChild( textarea );
-			return true;
-		}
-	},
-
-	showCopiedFeedback( element, originalText = null ) {
-		const i18n = window.albertAdmin?.i18n || { copied: 'Copied!' };
-
-		const liveRegion = document.getElementById( 'albert-copy-status' );
-		if ( liveRegion ) {
-			liveRegion.textContent = i18n.copied;
-		}
-
-		if ( originalText !== null ) {
-			element.textContent = i18n.copied;
-			element.classList.add( 'copied' );
-
-			setTimeout( () => {
-				element.textContent = originalText;
-				element.classList.remove( 'copied' );
-			}, 2000 );
-		} else {
-			element.classList.add( 'copied' );
-			element.setAttribute( 'data-copied', i18n.copied );
-
-			setTimeout( () => {
-				element.classList.remove( 'copied' );
-				element.removeAttribute( 'data-copied' );
-			}, 2000 );
-		}
-	},
-
-	handleCopyText() {
 		document.addEventListener( 'click', async ( e ) => {
 			const copyText = e.target.closest( '.albert-copy-text' );
-			if ( ! copyText ) {
+			if ( copyText ) {
+				const ok = await Albert.clipboard.copy( copyText.textContent.trim() );
+				if ( ok ) {
+					Albert.clipboard.flashButton( copyText, { label: ClipboardModule.label() } );
+				}
 				return;
 			}
 
-			const text = copyText.textContent.trim();
-			await this.copyToClipboard( text );
-			this.showCopiedFeedback( copyText );
-		} );
-	},
-
-	handleCopyButton() {
-		document.addEventListener( 'click', async ( e ) => {
 			const button = e.target.closest( '.albert-copy-button' );
 			if ( ! button ) {
 				return;
 			}
 
-			const targetId = button.dataset.copyTarget;
-			const target = document.getElementById( targetId );
+			const target = document.getElementById( button.dataset.copyTarget );
 			if ( ! target ) {
 				return;
 			}
 
-			const text = target.value !== undefined && null !== target.value ? target.value : target.textContent.trim();
-			const originalText = button.textContent;
+			const text = target.value !== undefined && null !== target.value
+				? target.value
+				: target.textContent.trim();
 
-			await this.copyToClipboard( text );
-			this.showCopiedFeedback( button, originalText );
+			const ok = await Albert.clipboard.copy( text );
+			if ( ok ) {
+				Albert.clipboard.flashButton( button, { label: ClipboardModule.label(), swap: true } );
+			}
 		} );
+	},
+
+	label() {
+		return window.albertAdmin?.i18n?.copied || 'Copied!';
 	},
 };
 
@@ -642,26 +589,10 @@ const DisconnectModule = {
 };
 
 /**
- * Initialize a live region for screen reader announcements.
- */
-function initLiveRegion() {
-	if ( document.getElementById( 'albert-copy-status' ) ) {
-		return;
-	}
-	const liveRegion = document.createElement( 'div' );
-	liveRegion.setAttribute( 'aria-live', 'polite' );
-	liveRegion.setAttribute( 'aria-atomic', 'true' );
-	liveRegion.setAttribute( 'role', 'status' );
-	liveRegion.className = 'screen-reader-text';
-	liveRegion.id = 'albert-copy-status';
-	document.body.appendChild( liveRegion );
-}
-
-/**
  * Initialize all modules when DOM is ready.
  */
 function init() {
-	initLiveRegion();
+	Albert.liveRegion.ensure();
 	AbilitiesListModule.init();
 	ClipboardModule.init();
 	DisconnectModule.init();
