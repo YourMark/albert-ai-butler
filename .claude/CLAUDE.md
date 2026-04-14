@@ -69,6 +69,7 @@ Never rename the legacy IDs — they are part of the public API.
 - **NEVER use jQuery.** Vanilla ES6+ only.
 - **NEVER commit without explicit request.** Run `composer phpcs` and `composer phpstan` first.
 - **NEVER bump version without approval.**
+- **Version bumps only happen in release branches** — never on `development`, feature branches, or `main`.
 - The root `CLAUDE.md` is the canonical project reference (checked into git). This file supplements it.
 
 ## WooCommerce mcp-adapter Timing Bug

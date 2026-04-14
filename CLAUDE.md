@@ -401,6 +401,7 @@ wp plugin activate albert
 ### Version Control
 - **Never commit without explicit request**
 - **Never bump version without approval**
+- **Version bumps only happen in release branches** — never on `development`, feature branches, or `main`
 - Run `composer phpcs` before committing
 
 ## Known Compatibility Issues

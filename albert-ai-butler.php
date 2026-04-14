@@ -3,7 +3,7 @@
  * Plugin Name: Albert - The AI Butler
  * Plugin URI: https://github.com/YourMark/albert-ai-butler
  * Description: At your service — Albert connects AI assistants to your WordPress site so they can manage content, handle tasks, and keep things running smoothly.
- * Version: 1.1.0
+ * Version: 1.0.1
  * Author: Albert
  * Author URI: https://yourmark.nl
  * Text Domain: albert-ai-butler
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants.
-define( 'ALBERT_VERSION', '1.1.0' );
+define( 'ALBERT_VERSION', '1.0.1' );
 define( 'ALBERT_PLUGIN_FILE', __FILE__ );
 define( 'ALBERT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ALBERT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
