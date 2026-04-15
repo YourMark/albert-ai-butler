@@ -122,10 +122,10 @@ class Update extends BaseAbility {
 	 *
 	 * Uses the permission callback from the WordPress REST API endpoint.
 	 *
-	 * @return true|WP_Error True if permitted, WP_Error with details otherwise.
+	 * @return bool|WP_Error True if permitted, WP_Error with details otherwise.
 	 * @since 1.0.0
 	 */
-	public function check_permission(): true|WP_Error {
+	public function check_permission(): bool|WP_Error {
 		return $this->check_rest_permission( '/wp/v2/posts/(?P<id>[\\d]+)', 'POST', 'edit_posts' );
 	}
 

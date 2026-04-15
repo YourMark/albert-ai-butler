@@ -45,9 +45,9 @@ class StubAbility extends BaseAbility {
 	/**
 	 * Check permission (always allowed in tests).
 	 *
-	 * @return true|WP_Error
+	 * @return bool|WP_Error
 	 */
-	public function check_permission(): true|WP_Error {
+	public function check_permission(): bool|WP_Error {
 		return true;
 	}
 
