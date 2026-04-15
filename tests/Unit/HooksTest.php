@@ -11,68 +11,10 @@
 namespace Albert\Tests\Unit;
 
 require_once __DIR__ . '/stubs/wordpress.php';
+require_once __DIR__ . '/stubs/StubAbility.php';
 
-use Albert\Abstracts\BaseAbility;
 use PHPUnit\Framework\TestCase;
 use WP_Error;
-
-/**
- * Concrete ability stub for testing hooks.
- *
- * Returns a configurable result from execute().
- */
-class StubAbility extends BaseAbility {
-
-	/**
-	 * Value to return from execute().
-	 *
-	 * @var array<string, mixed>|WP_Error
-	 */
-	private array|WP_Error $return_value;
-
-	/**
-	 * Constructor.
-	 *
-	 * @param string               $id           Ability identifier.
-	 * @param array<string, mixed>|WP_Error $return_value Value returned by execute().
-	 */
-	public function __construct( string $id = 'test/my-ability', array|WP_Error $return_value = [] ) {
-		$this->id           = $id;
-		$this->label        = 'Test Ability';
-		$this->description  = 'A stub ability for testing hooks.';
-		$this->category     = 'test';
-		$this->return_value = ! empty( $return_value ) || $return_value instanceof WP_Error
-			? $return_value
-			: [ 'ok' => true ];
-
-		parent::__construct();
-	}
-
-	/**
-	 * Check permission (always allowed in tests).
-	 *
-	 * The return type is `bool|WP_Error` to match BaseAbility's signature.
-	 * It cannot be narrowed to the literal type `true|WP_Error` because
-	 * standalone `true` / `false` types are a PHP 8.2+ feature and the
-	 * plugin still supports PHP 8.1 in CI.
-	 *
-	 * @return bool|WP_Error
-	 */
-	public function check_permission(): bool|WP_Error {
-		return true;
-	}
-
-	/**
-	 * Execute the ability.
-	 *
-	 * @param array<string, mixed> $args Input parameters.
-	 *
-	 * @return array<string, mixed>|WP_Error
-	 */
-	public function execute( array $args ): array|WP_Error {
-		return $this->return_value;
-	}
-}
 
 /**
  * Tests for Albert extensibility hooks.
