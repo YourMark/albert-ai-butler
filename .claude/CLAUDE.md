@@ -2,7 +2,7 @@
 
 WordPress plugin that exposes WordPress functionality to AI assistants via MCP (Model Context Protocol).
 
-**Stack:** PHP 8.2+ | WordPress 6.9+ | OAuth 2.0 (league/oauth2-server) | PSR-4 autoloading
+**Stack:** PHP 8.1+ | WordPress 6.9+ | OAuth 2.0 (league/oauth2-server) | PSR-4 autoloading
 
 ## Rules
 

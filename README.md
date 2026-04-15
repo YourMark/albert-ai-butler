@@ -1,6 +1,6 @@
 # Albert
 
-![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.2+-blue)
+![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.1+-blue)
 ![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-6.9+-blue)
 ![Tested up to](https://img.shields.io/badge/Tested%20up%20to-6.9-blue)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
@@ -21,7 +21,7 @@ Think of abilities as superpowers that you can grant to AI assistants - from man
 ## Requirements
 
 - **WordPress**: 6.9 or higher
-- **PHP**: 8.2 or higher (8.3+ recommended)
+- **PHP**: 8.1 or higher (8.3+ recommended)
 - **WooCommerce**: 10.4 or higher (if WooCommerce integration is used)
 - **MySQL**: 8.0+ or MariaDB 10.5+
 
