@@ -161,6 +161,86 @@ install_db() {
 	fi
 }
 
+resolve_wc_version() {
+	# Resolve a WC_VERSION shorthand to a concrete MAJOR.MINOR.PATCH the
+	# wordpress.org plugin CDN serves. Accepts:
+	#   - 'latest' or empty   → printed as-is (the caller uses the simple URL)
+	#   - 'MAJOR.MINOR.PATCH' → printed as-is (already concrete)
+	#   - 'MAJOR.MINOR'       → resolved to the highest stable patch in that series
+	# Stable patches are versions matching ^X.Y.Z$ (no -beta, -rc, etc.).
+	local input=$1
+
+	if [ "$input" = 'latest' ] || [ -z "$input" ]; then
+		echo "$input"
+		return
+	fi
+
+	if [[ "$input" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		echo "$input"
+		return
+	fi
+
+	if [[ "$input" =~ ^[0-9]+\.[0-9]+$ ]]; then
+		download 'https://api.wordpress.org/plugins/info/1.0/woocommerce.json' "$TMPDIR/wc-info.json"
+		# Pull every "X.Y.Z" key from the versions map, filter to this MAJOR.MINOR,
+		# and pick the highest by version sort. grep -oE keeps just the version strings.
+		local resolved
+		resolved=$(grep -oE "\"${input}\.[0-9]+\"" "$TMPDIR/wc-info.json" \
+			| tr -d '"' \
+			| sort -V \
+			| tail -1)
+
+		if [ -z "$resolved" ]; then
+			echo "Could not resolve WC_VERSION '$input' to a concrete release." >&2
+			exit 1
+		fi
+
+		echo "$resolved"
+		return
+	fi
+
+	echo "Unrecognised WC_VERSION format: '$input'" >&2
+	exit 1
+}
+
+install_woocommerce() {
+	# Skip when no WC_VERSION was provided.
+	if [ -z "${WC_VERSION:-}" ]; then
+		return 0
+	fi
+
+	local PLUGINS_DIR=$WP_CORE_DIR/wp-content/plugins
+	local WC_DIR=$PLUGINS_DIR/woocommerce
+
+	# Idempotent: reuse an existing install if it's already in place.
+	if [ -d $WC_DIR ]; then
+		echo "WooCommerce already installed at $WC_DIR — reusing."
+		return 0
+	fi
+
+	mkdir -p $PLUGINS_DIR
+
+	local RESOLVED_VERSION
+	RESOLVED_VERSION=$(resolve_wc_version "$WC_VERSION")
+
+	local ARCHIVE_URL
+	if [ "$RESOLVED_VERSION" = 'latest' ]; then
+		ARCHIVE_URL='https://downloads.wordpress.org/plugin/woocommerce.zip'
+	else
+		ARCHIVE_URL="https://downloads.wordpress.org/plugin/woocommerce.${RESOLVED_VERSION}.zip"
+	fi
+
+	echo "Installing WooCommerce $RESOLVED_VERSION from $ARCHIVE_URL"
+	download "$ARCHIVE_URL" "$TMPDIR/woocommerce.zip"
+	unzip -q -o "$TMPDIR/woocommerce.zip" -d "$PLUGINS_DIR"
+
+	if [ ! -f "$WC_DIR/woocommerce.php" ]; then
+		echo "WooCommerce install failed: $WC_DIR/woocommerce.php is missing."
+		exit 1
+	fi
+}
+
 install_wp
 install_test_suite
 install_db
+install_woocommerce

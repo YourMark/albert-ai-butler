@@ -22,9 +22,19 @@ if ( ! $_tests_dir ) {
 require_once $_tests_dir . '/includes/functions.php';
 
 /**
- * Manually load the plugin being tested.
+ * Manually load WooCommerce (when installed) and the plugin being tested.
+ *
+ * WooCommerce must load before Albert so class_exists('WooCommerce') is true
+ * by the time AbilitiesManager registers the Woo abilities. The file path is
+ * resolved against the WP test core dir so the same bootstrap works for both
+ * the standard and the with-WooCommerce CI jobs.
  */
 function _manually_load_plugin() {
+	$wc_main = ABSPATH . 'wp-content/plugins/woocommerce/woocommerce.php';
+	if ( file_exists( $wc_main ) ) {
+		require_once $wc_main;
+	}
+
 	require dirname( __DIR__ ) . '/albert-ai-butler.php';
 }
 

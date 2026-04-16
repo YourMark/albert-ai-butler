@@ -7,13 +7,21 @@
  * WP_Error (not `false`), registration shape is correct, IDs match the
  * canonical regex, input schema is a valid JSON Schema object.
  *
- * Each assertion runs once per ability via the data provider.
+ * Each assertion runs once per ability via the data provider. Woo abilities
+ * are only fully exercised in the with-WooCommerce CI job; the standard job
+ * skips registration-dependent assertions for them.
  *
  * @package Albert
  */
 
 namespace Albert\Tests\Integration\Abilities;
 
+use Albert\Abilities\WooCommerce\FindCustomers;
+use Albert\Abilities\WooCommerce\FindOrders;
+use Albert\Abilities\WooCommerce\FindProducts;
+use Albert\Abilities\WooCommerce\ViewCustomer;
+use Albert\Abilities\WooCommerce\ViewOrder;
+use Albert\Abilities\WooCommerce\ViewProduct;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
 use Albert\Abilities\WordPress\Media\UploadMedia;
@@ -53,51 +61,77 @@ use WP_Error;
 class AbilityContractTest extends TestCase {
 
 	/**
-	 * Every built-in non-Woo ability class.
+	 * Every built-in ability class — WordPress core and WooCommerce.
 	 *
-	 * WooCommerce abilities only load when WooCommerce is active and are
-	 * tested in the albert-woocommerce addon's own suite. The ecosystem
-	 * separation is intentional.
+	 * Woo abilities only register at runtime when WooCommerce is active
+	 * (Plugin::register_abilities guards the calls). Tests that depend on
+	 * runtime registration use markTestSkipped via {@see self::skip_if_not_loadable()}
+	 * when WC is missing; class-only assertions (id regex, schema shape) run
+	 * regardless because the PHP class itself is autoloaded by Composer.
 	 *
 	 * @return array<string, array{0: class-string<BaseAbility>}>
 	 */
 	public static function provideAbilities(): array {
 		return [
 			// Posts.
-			'find-posts'      => [ FindPosts::class ],
-			'view-post'       => [ ViewPost::class ],
-			'create-post'     => [ CreatePost::class ],
-			'update-post'     => [ UpdatePost::class ],
-			'delete-post'     => [ DeletePost::class ],
+			'find-posts'         => [ FindPosts::class ],
+			'view-post'          => [ ViewPost::class ],
+			'create-post'        => [ CreatePost::class ],
+			'update-post'        => [ UpdatePost::class ],
+			'delete-post'        => [ DeletePost::class ],
 
 			// Pages.
-			'find-pages'      => [ FindPages::class ],
-			'view-page'       => [ ViewPage::class ],
-			'create-page'     => [ CreatePage::class ],
-			'update-page'     => [ UpdatePage::class ],
-			'delete-page'     => [ DeletePage::class ],
+			'find-pages'         => [ FindPages::class ],
+			'view-page'          => [ ViewPage::class ],
+			'create-page'        => [ CreatePage::class ],
+			'update-page'        => [ UpdatePage::class ],
+			'delete-page'        => [ DeletePage::class ],
 
 			// Users.
-			'find-users'      => [ FindUsers::class ],
-			'view-user'       => [ ViewUser::class ],
-			'create-user'     => [ CreateUser::class ],
-			'update-user'     => [ UpdateUser::class ],
-			'delete-user'     => [ DeleteUser::class ],
+			'find-users'         => [ FindUsers::class ],
+			'view-user'          => [ ViewUser::class ],
+			'create-user'        => [ CreateUser::class ],
+			'update-user'        => [ UpdateUser::class ],
+			'delete-user'        => [ DeleteUser::class ],
 
 			// Media.
-			'find-media'      => [ FindMedia::class ],
-			'view-media'      => [ ViewMedia::class ],
-			'upload-media'    => [ UploadMedia::class ],
-			'set-featured'    => [ SetFeaturedImage::class ],
+			'find-media'         => [ FindMedia::class ],
+			'view-media'         => [ ViewMedia::class ],
+			'upload-media'       => [ UploadMedia::class ],
+			'set-featured'       => [ SetFeaturedImage::class ],
 
 			// Taxonomies.
-			'find-taxonomies' => [ FindTaxonomies::class ],
-			'find-terms'      => [ FindTerms::class ],
-			'view-term'       => [ ViewTerm::class ],
-			'create-term'     => [ CreateTerm::class ],
-			'update-term'     => [ UpdateTerm::class ],
-			'delete-term'     => [ DeleteTerm::class ],
+			'find-taxonomies'    => [ FindTaxonomies::class ],
+			'find-terms'         => [ FindTerms::class ],
+			'view-term'          => [ ViewTerm::class ],
+			'create-term'        => [ CreateTerm::class ],
+			'update-term'        => [ UpdateTerm::class ],
+			'delete-term'        => [ DeleteTerm::class ],
+
+			// WooCommerce.
+			'woo-find-products'  => [ FindProducts::class ],
+			'woo-view-product'   => [ ViewProduct::class ],
+			'woo-find-orders'    => [ FindOrders::class ],
+			'woo-view-order'     => [ ViewOrder::class ],
+			'woo-find-customers' => [ FindCustomers::class ],
+			'woo-view-customer'  => [ ViewCustomer::class ],
 		];
+	}
+
+	/**
+	 * Skip the current test when the ability needs WooCommerce but it isn't loaded.
+	 *
+	 * Used by tests whose assertions depend on the ability actually being
+	 * registered at runtime (registration only happens when WC is active).
+	 *
+	 * @param class-string<BaseAbility> $ability_class Ability class.
+	 *
+	 * @return void
+	 */
+	private function skip_if_not_loadable( string $ability_class ): void {
+		if ( str_contains( $ability_class, '\\WooCommerce\\' ) && ! class_exists( 'WooCommerce' ) ) {
+			$this->markTestSkipped( 'WooCommerce is not active in this CI job.' );
+		}
 	}
 
 	/**
@@ -209,6 +243,8 @@ class AbilityContractTest extends TestCase {
 		if ( ! function_exists( 'wp_get_ability' ) ) {
 			$this->markTestSkipped( 'wp_get_ability not available.' );
 		}
+
+		$this->skip_if_not_loadable( $ability_class );
 
 		$ability    = new $ability_class();
 		$registered = wp_get_ability( $ability->get_id() );
