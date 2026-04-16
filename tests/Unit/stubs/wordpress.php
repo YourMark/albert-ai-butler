@@ -11,56 +11,22 @@
 
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
-// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound
 
-if ( ! class_exists( 'WP_Error' ) ) {
+// Class stubs live in their own files so this file can stay
+// functions-only (keeps PHPCS's OO/function separation rule happy).
+require_once __DIR__ . '/WP_Error.php';
+require_once __DIR__ . '/WP_REST_Request.php';
+
+if ( ! function_exists( 'is_wp_error' ) ) {
 	/**
-	 * Stub WP_Error for unit tests.
+	 * Stub is_wp_error that mirrors the WordPress implementation.
+	 *
+	 * @param mixed $thing Value to check.
+	 *
+	 * @return bool
 	 */
-	class WP_Error {
-
-		/**
-		 * Error code.
-		 *
-		 * @var string
-		 */
-		protected string $code;
-
-		/**
-		 * Error message.
-		 *
-		 * @var string
-		 */
-		protected string $message;
-
-		/**
-		 * Error data.
-		 *
-		 * @var mixed
-		 */
-		protected mixed $data;
-
-		/**
-		 * Constructor.
-		 *
-		 * @param string $code    Error code.
-		 * @param string $message Error message.
-		 * @param mixed  $data    Error data.
-		 */
-		public function __construct( string $code = '', string $message = '', mixed $data = '' ) {
-			$this->code    = $code;
-			$this->message = $message;
-			$this->data    = $data;
-		}
-
-		/**
-		 * Get the error code.
-		 *
-		 * @return string
-		 */
-		public function get_error_code(): string {
-			return $this->code;
-		}
+	function is_wp_error( mixed $thing ): bool {
+		return $thing instanceof WP_Error;
 	}
 }
 
@@ -113,13 +79,13 @@ if ( ! function_exists( 'get_option' ) ) {
 	/**
 	 * Stub get_option that reads from $GLOBALS['albert_test_options'].
 	 *
-	 * @param string $option  Option name.
-	 * @param mixed  $default Default value.
+	 * @param string $option   Option name.
+	 * @param mixed  $fallback Value returned when the option is not set.
 	 *
 	 * @return mixed
 	 */
-	function get_option( string $option, mixed $default = false ): mixed {
-		return $GLOBALS['albert_test_options'][ $option ] ?? $default;
+	function get_option( string $option, mixed $fallback = false ): mixed {
+		return $GLOBALS['albert_test_options'][ $option ] ?? $fallback;
 	}
 }
 
@@ -136,25 +102,53 @@ if ( ! function_exists( 'get_current_user_id' ) ) {
 
 if ( ! function_exists( 'current_user_can' ) ) {
 	/**
-	 * Stub current_user_can that always returns true.
+	 * Stub current_user_can that reads from $GLOBALS['albert_test_caps'].
+	 *
+	 * Defaults to `true` when no cap map is configured so legacy tests that
+	 * do not set the global keep passing. When `$GLOBALS['albert_test_caps']`
+	 * is set (array of allowed capability names), only those return true.
 	 *
 	 * @param string $capability Capability name.
 	 *
 	 * @return bool
 	 */
 	function current_user_can( string $capability ): bool {
-		return true;
+		if ( ! isset( $GLOBALS['albert_test_caps'] ) ) {
+			return true;
+		}
+
+		return in_array( $capability, (array) $GLOBALS['albert_test_caps'], true );
+	}
+}
+
+if ( ! function_exists( 'wp_get_abilities' ) ) {
+	/**
+	 * Stub wp_get_abilities that reads from $GLOBALS['albert_test_abilities'].
+	 *
+	 * Returns an array of ability-like objects that expose get_name() and
+	 * get_meta(). Tests populate the global with test doubles.
+	 *
+	 * @return array<int, object>
+	 */
+	function wp_get_abilities(): array {
+		return (array) ( $GLOBALS['albert_test_abilities'] ?? [] );
 	}
 }
 
 if ( ! function_exists( 'wp_register_ability' ) ) {
 	/**
-	 * Stub wp_register_ability (no-op).
+	 * Stub wp_register_ability that records calls to $GLOBALS['albert_test_registered_abilities'].
 	 *
 	 * @param string               $name Ability name.
 	 * @param array<string, mixed> $args Ability arguments.
 	 */
-	function wp_register_ability( string $name, array $args ): void {}
+	function wp_register_ability( string $name, array $args ): void {
+		if ( ! isset( $GLOBALS['albert_test_registered_abilities'] ) ) {
+			$GLOBALS['albert_test_registered_abilities'] = [];
+		}
+
+		$GLOBALS['albert_test_registered_abilities'][ $name ] = $args;
+	}
 }
 
 if ( ! function_exists( '__' ) ) {
