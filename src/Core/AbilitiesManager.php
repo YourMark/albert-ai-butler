@@ -69,6 +69,10 @@ class AbilitiesManager implements Hookable {
 				'label'       => __( 'Content', 'albert-ai-butler' ),
 				'description' => __( 'Posts, pages, and media management.', 'albert-ai-butler' ),
 			],
+			'user'        => [
+				'label'       => __( 'Users', 'albert-ai-butler' ),
+				'description' => __( 'User accounts, roles, and profiles.', 'albert-ai-butler' ),
+			],
 			'taxonomy'    => [
 				'label'       => __( 'Taxonomies', 'albert-ai-butler' ),
 				'description' => __( 'Categories, tags, and custom taxonomies.', 'albert-ai-butler' ),
