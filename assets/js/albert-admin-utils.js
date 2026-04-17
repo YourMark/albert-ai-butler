@@ -11,7 +11,7 @@
  *   - Albert.ajax        — admin-ajax.php POST helper
  *
  * @package Albert
- * @since   1.2.0
+ * @since   1.1.0
  */
 
 ( function () {

@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Logging
- * @since      1.2.0
+ * @since      1.1.0
  */
 
 namespace Albert\Logging;
