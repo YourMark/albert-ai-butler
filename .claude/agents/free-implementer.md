@@ -1,6 +1,6 @@
 ---
 name: albert-free-implementer
-model: claude-opus-4-5
+model: opus
 description: Implements changes in Albert Free. Verifies actual file structure before building. Applies deprecation wrappers when changing existing APIs.
 ---
 
