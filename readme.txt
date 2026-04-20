@@ -4,7 +4,7 @@ Tags: ai, mcp, oauth, claude, chatgpt
 Requires at least: 6.9
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.1
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -132,14 +132,37 @@ Albert is designed for single-site installations. Multisite support is on the ro
 == Changelog ==
 
 = 1.1.0 =
-Abilities page redesign. The three separate admin pages (Core, ACF, WooCommerce) are now a single unified list, every ability saves instantly when you toggle it, and labels use plain words.
+Major admin redesign, new activity logging, and a stack of reliability fixes.
 
-* **Unified abilities page** — one place for every registered ability, regardless of which plugin provides it. Filter the list by text, category, or supplier.
-* **Instant save** — toggling an ability on or off saves immediately. No Save Changes button, no unsaved-work warnings, no risk of losing progress on a long list.
-* **Plain-language labels** — each ability is tagged Read, Write, or Delete instead of the old developer-facing "Destructive / Idempotent / Readonly" annotations. Hover or keyboard-focus a label for a full explanation.
-* **Supplier registry** — the filter dropdown shows "WordPress core", "Albert", "WooCommerce", "ACF" instead of raw `CORE` / `ALBERT` strings. Addons can register their own supplier names via the `albert/abilities/suppliers` filter.
-* **List / Paginated view** — switch between a single long list and 25-per-page pagination. Preference is persisted server-side so there's no flash on page load.
-* **Accessibility** — keyboard-reachable tooltips on the annotation labels, WCAG 2.2 AA contrast on every chip colour, aria-live stats announcements debounced during search, focus indicators on pagination buttons, dropdown caret indicators on the filter selects.
+**New features**
+
+* **Unified abilities page** — the three separate admin pages (Core, ACF, WooCommerce) are now one filterable list of every registered ability. Search, filter by category or supplier, and see read/write/delete at a glance.
+* **Instant save** — toggle an ability on or off and it saves immediately. No more Save Changes button or lost progress.
+* **Activity logging** — a new dashboard widget shows the most recent ability execution, and every ability now displays its "Last run" time in the expanded details.
+* **Plain-language labels** — each ability is tagged Read, Write, or Delete (replacing developer-facing "Destructive / Idempotent / Readonly" terms). Hover or keyboard-focus a label for a full explanation.
+* **Supplier filtering** — the filter dropdown shows "WordPress core", "Albert", "WooCommerce", "ACF" instead of raw prefixes. Addons can register their own branded supplier name via the `albert/abilities/suppliers` filter.
+* **List / Paginated view** — switch between one long list and 25-per-page pagination. Your choice is persisted on the server, so no flash of the wrong view on page load.
+
+**Bug fixes**
+
+* Ability categories now register at the default hook priority, preventing collisions with WordPress core's built-in categories on WP 6.9+.
+* Fixed a missing 'user' category that Users abilities depend on — abilities now register reliably on fresh installs.
+* The `password` field on the Create User ability is now correctly flagged as required, so AI assistants get a clear validation error when it's missing instead of a vague failure.
+* OAuth endpoints, MCP, and discovery metadata now share one consistent REST namespace reference.
+
+**Accessibility**
+
+* Keyboard-reachable tooltips on every annotation chip.
+* WCAG 2.2 AA contrast on all chip colours.
+* aria-live stats announcements debounced during search.
+* Visible focus indicators on pagination buttons and dropdown caret indicators on filter selects.
+
+**Under the hood**
+
+* Comprehensive automated test suite covering input validation, output schema, permissions, and per-parameter behaviour on every ability.
+* Continuous integration now runs against PHP 8.1–8.4, WordPress 6.9 and latest, and WooCommerce 10.5–latest.
+* Removed redundant manual input validation from every ability — WordPress core validates the schema before the ability runs.
+* Unified internal settings API for cleaner state management.
 
 = 1.0.1 =
 Bug fix release.
@@ -162,7 +185,7 @@ Initial release.
 == Upgrade Notice ==
 
 = 1.1.0 =
-Abilities page redesign: one unified list, instant save, plain-language labels. Existing enabled / disabled settings are preserved; no migration needed.
+Redesigned abilities page, new activity logging, and several reliability fixes. Existing enabled / disabled settings are preserved; no migration needed.
 
 = 1.0.1 =
 Fixes a connection failure caused by mismatched OAuth endpoint namespaces. Recommended for all users.
