@@ -42,3 +42,12 @@ tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
+
+// WooCommerce roles and capabilities (edit_products, edit_shop_orders, etc.)
+// are created during WC activation via WC_Install::create_roles(). The test
+// suite loads WC without activating it, so the administrator role is missing
+// these custom caps. Run create_roles() once after bootstrap to match a real
+// site where WC has been activated.
+if ( class_exists( 'WC_Install' ) ) {
+	WC_Install::create_roles();
+}

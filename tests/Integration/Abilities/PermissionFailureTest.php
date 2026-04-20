@@ -116,16 +116,7 @@ class PermissionFailureTest extends TestCase {
 	public function test_administrator_is_granted( string $ability_class ): void {
 		$this->skip_if_woocommerce_required( $ability_class );
 
-		$admin_id = self::factory()->user->create( [ 'role' => 'administrator' ] );
-		wp_set_current_user( $admin_id );
-
-		// WooCommerce custom caps aren't granted to admin by default in
-		// the test suite. Grant them explicitly when WC is active.
-		if ( self::is_woocommerce_ability( $ability_class ) ) {
-			$user = get_userdata( $admin_id );
-			$user->add_cap( 'edit_products' );
-			$user->add_cap( 'edit_shop_orders' );
-		}
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'administrator' ] ) );
 
 		$ability = new $ability_class();
 		$result  = $ability->check_permission();
