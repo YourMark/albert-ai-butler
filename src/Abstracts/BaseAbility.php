@@ -122,7 +122,7 @@ abstract class BaseAbility implements Ability {
 				'description'         => $this->description,
 				'input_schema'        => $this->input_schema,
 				'output_schema'       => $this->output_schema,
-				'category'            => $this->category ?? 'albert',
+				'category'            => $this->category !== '' ? $this->category : 'albert',
 				'execute_callback'    => [ $this, 'guarded_execute' ],
 				'permission_callback' => [ $this, 'check_permission' ],
 				'meta'                => $this->meta,
