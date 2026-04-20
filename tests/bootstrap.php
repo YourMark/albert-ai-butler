@@ -42,3 +42,12 @@ tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
+
+// WooCommerce's full activation (custom tables, roles, caps, default pages)
+// normally runs during plugin activation. The test suite loads WC without
+// activating it, leaving tables missing and admin role without WC caps
+// (edit_products, edit_shop_orders, etc.). Run the full install routine
+// once after bootstrap to match a real site.
+if ( class_exists( 'WC_Install' ) ) {
+	WC_Install::install();
+}

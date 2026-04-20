@@ -113,23 +113,6 @@ class SetFeaturedImage extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		// Validate required fields.
-		if ( empty( $args['post_id'] ) ) {
-			return new WP_Error(
-				'missing_post_id',
-				__( 'Post ID is required.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
-		if ( empty( $args['attachment_id'] ) ) {
-			return new WP_Error(
-				'missing_attachment_id',
-				__( 'Attachment ID is required.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		$post_id       = absint( $args['post_id'] );
 		$attachment_id = absint( $args['attachment_id'] );
 

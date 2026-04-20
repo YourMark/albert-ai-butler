@@ -105,13 +105,8 @@ class ViewOrder extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$order_id = absint( $args['id'] ?? 0 );
-
-		if ( ! $order_id ) {
-			return new WP_Error( 'missing_order_id', __( 'Order ID is required.', 'albert-ai-butler' ) );
-		}
-
-		$order = wc_get_order( $order_id );
+		$order_id = absint( $args['id'] );
+		$order    = wc_get_order( $order_id );
 
 		if ( ! $order instanceof WC_Order ) {
 			return new WP_Error(

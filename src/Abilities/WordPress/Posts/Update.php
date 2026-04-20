@@ -147,15 +147,6 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		// Validate input.
-		if ( empty( $args['id'] ) ) {
-			return new WP_Error(
-				'missing_id',
-				__( 'Post ID is required.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		$post_id = absint( $args['id'] );
 
 		// Check if post exists using REST API.

@@ -133,15 +133,6 @@ class CreateTerm extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		// Validate required fields.
-		if ( empty( $args['name'] ) ) {
-			return new WP_Error(
-				'missing_name',
-				__( 'Term name is required.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		$taxonomy = $args['taxonomy'] ?? 'category';
 
 		// Determine REST base for taxonomy.

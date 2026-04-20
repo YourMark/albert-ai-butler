@@ -139,15 +139,6 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		// Validate input.
-		if ( empty( $args['title'] ) ) {
-			return new WP_Error(
-				'missing_title',
-				__( 'Page title is required.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		// Process content with Block Converter.
 		$content = ! empty( $args['content'] ) ? ( new BlockConverter( $args['content'] ) )->convert() : '';
 

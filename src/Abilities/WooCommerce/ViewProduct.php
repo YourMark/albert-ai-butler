@@ -103,13 +103,8 @@ class ViewProduct extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$product_id = absint( $args['id'] ?? 0 );
-
-		if ( ! $product_id ) {
-			return new WP_Error( 'missing_product_id', __( 'Product ID is required.', 'albert-ai-butler' ) );
-		}
-
-		$product = wc_get_product( $product_id );
+		$product_id = absint( $args['id'] );
+		$product    = wc_get_product( $product_id );
 
 		if ( ! $product ) {
 			return new WP_Error(

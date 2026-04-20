@@ -103,13 +103,8 @@ class ViewPost extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post_id = absint( $args['id'] ?? 0 );
-
-		if ( ! $post_id ) {
-			return new WP_Error( 'missing_post_id', __( 'Post ID is required.', 'albert-ai-butler' ) );
-		}
-
-		$post = get_post( $post_id );
+		$post_id = absint( $args['id'] );
+		$post    = get_post( $post_id );
 
 		if ( ! $post || $post->post_type !== 'post' ) {
 			return new WP_Error(

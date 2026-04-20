@@ -86,18 +86,6 @@ class WriteAbilitySmokeTest extends TestCase {
 	}
 
 	/**
-	 * Creating without a title returns a 400 WP_Error.
-	 *
-	 * @return void
-	 */
-	public function test_create_post_missing_title_returns_wp_error(): void {
-		$result = ( new CreatePost() )->execute( [] );
-
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'missing_title', $result->get_error_code() );
-	}
-
-	/**
 	 * Updating a post actually changes the stored title.
 	 *
 	 * @return void

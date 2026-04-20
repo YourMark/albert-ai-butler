@@ -16,39 +16,9 @@
 
 namespace Albert\Tests\Integration\Abilities;
 
-use Albert\Abilities\WooCommerce\FindCustomers;
-use Albert\Abilities\WooCommerce\FindOrders;
-use Albert\Abilities\WooCommerce\FindProducts;
-use Albert\Abilities\WooCommerce\ViewCustomer;
-use Albert\Abilities\WooCommerce\ViewOrder;
-use Albert\Abilities\WooCommerce\ViewProduct;
-use Albert\Abilities\WordPress\Media\FindMedia;
-use Albert\Abilities\WordPress\Media\SetFeaturedImage;
-use Albert\Abilities\WordPress\Media\UploadMedia;
-use Albert\Abilities\WordPress\Media\ViewMedia;
-use Albert\Abilities\WordPress\Pages\Create as CreatePage;
-use Albert\Abilities\WordPress\Pages\Delete as DeletePage;
-use Albert\Abilities\WordPress\Pages\FindPages;
-use Albert\Abilities\WordPress\Pages\Update as UpdatePage;
-use Albert\Abilities\WordPress\Pages\ViewPage;
-use Albert\Abilities\WordPress\Posts\Create as CreatePost;
-use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
-use Albert\Abilities\WordPress\Posts\FindPosts;
-use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
-use Albert\Abilities\WordPress\Posts\ViewPost;
-use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
-use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
-use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
-use Albert\Abilities\WordPress\Taxonomies\FindTerms;
-use Albert\Abilities\WordPress\Taxonomies\UpdateTerm;
-use Albert\Abilities\WordPress\Taxonomies\ViewTerm;
-use Albert\Abilities\WordPress\Users\Create as CreateUser;
-use Albert\Abilities\WordPress\Users\Delete as DeleteUser;
-use Albert\Abilities\WordPress\Users\FindUsers;
-use Albert\Abilities\WordPress\Users\Update as UpdateUser;
-use Albert\Abilities\WordPress\Users\ViewUser;
 use Albert\Abstracts\BaseAbility;
 use Albert\Tests\TestCase;
+use Albert\Tests\Traits\ProvidesAbilities;
 use WP_Error;
 
 /**
@@ -60,79 +30,7 @@ use WP_Error;
  */
 class AbilityContractTest extends TestCase {
 
-	/**
-	 * Every built-in ability class — WordPress core and WooCommerce.
-	 *
-	 * Woo abilities only register at runtime when WooCommerce is active
-	 * (Plugin::register_abilities guards the calls). Tests that depend on
-	 * runtime registration use markTestSkipped via {@see self::skip_if_not_loadable()}
-	 * when WC is missing; class-only assertions (id regex, schema shape) run
-	 * regardless because the PHP class itself is autoloaded by Composer.
-	 *
-	 * @return array<string, array{0: class-string<BaseAbility>}>
-	 */
-	public static function provideAbilities(): array {
-		return [
-			// Posts.
-			'find-posts'         => [ FindPosts::class ],
-			'view-post'          => [ ViewPost::class ],
-			'create-post'        => [ CreatePost::class ],
-			'update-post'        => [ UpdatePost::class ],
-			'delete-post'        => [ DeletePost::class ],
-
-			// Pages.
-			'find-pages'         => [ FindPages::class ],
-			'view-page'          => [ ViewPage::class ],
-			'create-page'        => [ CreatePage::class ],
-			'update-page'        => [ UpdatePage::class ],
-			'delete-page'        => [ DeletePage::class ],
-
-			// Users.
-			'find-users'         => [ FindUsers::class ],
-			'view-user'          => [ ViewUser::class ],
-			'create-user'        => [ CreateUser::class ],
-			'update-user'        => [ UpdateUser::class ],
-			'delete-user'        => [ DeleteUser::class ],
-
-			// Media.
-			'find-media'         => [ FindMedia::class ],
-			'view-media'         => [ ViewMedia::class ],
-			'upload-media'       => [ UploadMedia::class ],
-			'set-featured'       => [ SetFeaturedImage::class ],
-
-			// Taxonomies.
-			'find-taxonomies'    => [ FindTaxonomies::class ],
-			'find-terms'         => [ FindTerms::class ],
-			'view-term'          => [ ViewTerm::class ],
-			'create-term'        => [ CreateTerm::class ],
-			'update-term'        => [ UpdateTerm::class ],
-			'delete-term'        => [ DeleteTerm::class ],
-
-			// WooCommerce.
-			'woo-find-products'  => [ FindProducts::class ],
-			'woo-view-product'   => [ ViewProduct::class ],
-			'woo-find-orders'    => [ FindOrders::class ],
-			'woo-view-order'     => [ ViewOrder::class ],
-			'woo-find-customers' => [ FindCustomers::class ],
-			'woo-view-customer'  => [ ViewCustomer::class ],
-		];
-	}
-
-	/**
-	 * Skip the current test when the ability needs WooCommerce but it isn't loaded.
-	 *
-	 * Used by tests whose assertions depend on the ability actually being
-	 * registered at runtime (registration only happens when WC is active).
-	 *
-	 * @param class-string<BaseAbility> $ability_class Ability class.
-	 *
-	 * @return void
-	 */
-	private function skip_if_not_loadable( string $ability_class ): void {
-		if ( str_contains( $ability_class, '\\WooCommerce\\' ) && ! class_exists( 'WooCommerce' ) ) {
-			$this->markTestSkipped( 'WooCommerce is not active in this CI job.' );
-		}
-	}
+	use ProvidesAbilities;
 
 	/**
 	 * Reset state between tests — logged-out user, no disabled list.
@@ -244,7 +142,7 @@ class AbilityContractTest extends TestCase {
 			$this->markTestSkipped( 'wp_get_ability not available.' );
 		}
 
-		$this->skip_if_not_loadable( $ability_class );
+		$this->skip_if_woocommerce_required( $ability_class );
 
 		$ability    = new $ability_class();
 		$registered = wp_get_ability( $ability->get_id() );
@@ -252,6 +150,53 @@ class AbilityContractTest extends TestCase {
 		$this->assertNotNull(
 			$registered,
 			sprintf( '%s (%s) is not registered after plugin bootstrap.', $ability_class, $ability->get_id() )
+		);
+	}
+
+	/**
+	 * WooCommerce abilities must NOT be registered when WooCommerce is inactive.
+	 *
+	 * Locks the guard in Plugin::register_abilities() — WC abilities depend on
+	 * wc_get_product(), wc_get_order(), etc., so registering them without WC
+	 * would cause fatals at call time. This test only runs in the non-WC CI
+	 * jobs; it's skipped when WooCommerce is active.
+	 *
+	 * @dataProvider provideAbilities
+	 *
+	 * @param class-string<BaseAbility> $ability_class Ability class.
+	 *
+	 * @return void
+	 */
+	public function test_woocommerce_ability_not_registered_without_woocommerce( string $ability_class ): void {
+		if ( ! function_exists( 'wp_get_abilities' ) ) {
+			$this->markTestSkipped( 'wp_get_abilities not available.' );
+		}
+
+		if ( ! self::is_woocommerce_ability( $ability_class ) ) {
+			$this->markTestSkipped( 'Only applies to WooCommerce abilities.' );
+		}
+
+		if ( class_exists( 'WooCommerce' ) ) {
+			$this->markTestSkipped( 'WooCommerce is active — this test verifies the inactive case.' );
+		}
+
+		// Use wp_get_abilities() rather than wp_get_ability(), because the
+		// single-lookup triggers _doing_it_wrong() when the ability is
+		// missing — which the WP test framework surfaces as a failure.
+		$ability          = new $ability_class();
+		$registered_names = array_map(
+			static fn( $a ) => is_object( $a ) && method_exists( $a, 'get_name' ) ? $a->get_name() : null,
+			wp_get_abilities()
+		);
+
+		$this->assertNotContains(
+			$ability->get_id(),
+			$registered_names,
+			sprintf(
+				'%s (%s) must not be registered when WooCommerce is inactive — it depends on WC functions and would fatal at call time.',
+				$ability_class,
+				$ability->get_id()
+			)
 		);
 	}
 

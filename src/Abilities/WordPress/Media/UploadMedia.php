@@ -148,15 +148,6 @@ class UploadMedia extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		// Validate required URL.
-		if ( empty( $args['url'] ) ) {
-			return new WP_Error(
-				'missing_url',
-				__( 'URL is required.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		$url = esc_url_raw( $args['url'] );
 
 		// Validate URL format.

@@ -104,13 +104,8 @@ class ViewUser extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$user_id = absint( $args['id'] ?? 0 );
-
-		if ( ! $user_id ) {
-			return new WP_Error( 'missing_user_id', __( 'User ID is required.', 'albert-ai-butler' ) );
-		}
-
-		$user = get_user_by( 'id', $user_id );
+		$user_id = absint( $args['id'] );
+		$user    = get_user_by( 'id', $user_id );
 
 		if ( ! $user ) {
 			return new WP_Error(

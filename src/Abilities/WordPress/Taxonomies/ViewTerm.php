@@ -107,16 +107,8 @@ class ViewTerm extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$term_id  = absint( $args['id'] ?? 0 );
-		$taxonomy = sanitize_key( $args['taxonomy'] ?? '' );
-
-		if ( ! $term_id ) {
-			return new WP_Error( 'missing_term_id', __( 'Term ID is required.', 'albert-ai-butler' ) );
-		}
-
-		if ( ! $taxonomy ) {
-			return new WP_Error( 'missing_taxonomy', __( 'Taxonomy is required.', 'albert-ai-butler' ) );
-		}
+		$term_id  = absint( $args['id'] );
+		$taxonomy = sanitize_key( $args['taxonomy'] );
 
 		if ( ! taxonomy_exists( $taxonomy ) ) {
 			return new WP_Error( 'invalid_taxonomy', __( 'Invalid taxonomy.', 'albert-ai-butler' ) );

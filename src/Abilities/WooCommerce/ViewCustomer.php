@@ -104,11 +104,7 @@ class ViewCustomer extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$customer_id = absint( $args['id'] ?? 0 );
-
-		if ( ! $customer_id ) {
-			return new WP_Error( 'missing_customer_id', __( 'Customer ID is required.', 'albert-ai-butler' ) );
-		}
+		$customer_id = absint( $args['id'] );
 
 		try {
 			$customer = new WC_Customer( $customer_id );

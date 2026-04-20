@@ -103,13 +103,8 @@ class ViewPage extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$page_id = absint( $args['id'] ?? 0 );
-
-		if ( ! $page_id ) {
-			return new WP_Error( 'missing_page_id', __( 'Page ID is required.', 'albert-ai-butler' ) );
-		}
-
-		$page = get_post( $page_id );
+		$page_id = absint( $args['id'] );
+		$page    = get_post( $page_id );
 
 		if ( ! $page || $page->post_type !== 'page' ) {
 			return new WP_Error(

@@ -124,15 +124,6 @@ class DeleteTerm extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		// Validate required fields.
-		if ( empty( $args['id'] ) ) {
-			return new WP_Error(
-				'missing_id',
-				__( 'Term ID is required.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		$taxonomy = $args['taxonomy'] ?? 'category';
 		$term_id  = absint( $args['id'] );
 

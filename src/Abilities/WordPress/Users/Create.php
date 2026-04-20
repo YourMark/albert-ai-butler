@@ -105,7 +105,7 @@ class Create extends BaseAbility {
 					'default'     => '',
 				],
 			],
-			'required'   => [ 'username', 'email' ],
+			'required'   => [ 'username', 'email', 'password' ],
 		];
 	}
 
@@ -163,31 +163,6 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		// Validate required fields.
-		if ( empty( $args['username'] ) ) {
-			return new WP_Error(
-				'missing_username',
-				__( 'Username is required.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
-		if ( empty( $args['email'] ) ) {
-			return new WP_Error(
-				'missing_email',
-				__( 'Email is required.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
-		if ( empty( $args['password'] ) ) {
-			return new WP_Error(
-				'missing_password',
-				__( 'Password is required.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		// Prepare REST API request data.
 		$request_data = [
 			'username'    => sanitize_user( $args['username'] ),

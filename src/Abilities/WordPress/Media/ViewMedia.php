@@ -103,13 +103,8 @@ class ViewMedia extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$media_id = absint( $args['id'] ?? 0 );
-
-		if ( ! $media_id ) {
-			return new WP_Error( 'missing_media_id', __( 'Media ID is required.', 'albert-ai-butler' ) );
-		}
-
-		$media = get_post( $media_id );
+		$media_id = absint( $args['id'] );
+		$media    = get_post( $media_id );
 
 		if ( ! $media || $media->post_type !== 'attachment' ) {
 			return new WP_Error(
