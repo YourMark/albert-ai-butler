@@ -37,6 +37,14 @@ class PermissionFailureTest extends TestCase {
 	public function set_up(): void {
 		parent::set_up();
 
+		// WC_Install::install() runs in bootstrap, but the WP test framework
+		// rolls back options between tests — including wp_user_roles — so
+		// the WC caps added to the administrator role at bootstrap don't
+		// persist. Re-apply them per test to match a real WC-active site.
+		if ( class_exists( 'WC_Install' ) ) {
+			\WC_Install::create_roles();
+		}
+
 		// Subscriber: has only 'read' capability.
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
 
