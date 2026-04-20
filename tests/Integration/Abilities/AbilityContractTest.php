@@ -168,8 +168,8 @@ class AbilityContractTest extends TestCase {
 	 * @return void
 	 */
 	public function test_woocommerce_ability_not_registered_without_woocommerce( string $ability_class ): void {
-		if ( ! function_exists( 'wp_get_ability' ) ) {
-			$this->markTestSkipped( 'wp_get_ability not available.' );
+		if ( ! function_exists( 'wp_get_abilities' ) ) {
+			$this->markTestSkipped( 'wp_get_abilities not available.' );
 		}
 
 		if ( ! self::is_woocommerce_ability( $ability_class ) ) {
@@ -180,11 +180,18 @@ class AbilityContractTest extends TestCase {
 			$this->markTestSkipped( 'WooCommerce is active — this test verifies the inactive case.' );
 		}
 
-		$ability    = new $ability_class();
-		$registered = wp_get_ability( $ability->get_id() );
+		// Use wp_get_abilities() rather than wp_get_ability(), because the
+		// single-lookup triggers _doing_it_wrong() when the ability is
+		// missing — which the WP test framework surfaces as a failure.
+		$ability          = new $ability_class();
+		$registered_names = array_map(
+			static fn( $a ) => is_object( $a ) && method_exists( $a, 'get_name' ) ? $a->get_name() : null,
+			wp_get_abilities()
+		);
 
-		$this->assertNull(
-			$registered,
+		$this->assertNotContains(
+			$ability->get_id(),
+			$registered_names,
 			sprintf(
 				'%s (%s) must not be registered when WooCommerce is inactive — it depends on WC functions and would fatal at call time.',
 				$ability_class,
