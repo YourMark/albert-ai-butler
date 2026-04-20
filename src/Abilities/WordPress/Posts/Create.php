@@ -147,7 +147,7 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$content = ( new BlockConverter( $args['content'] ) )->convert();
+		$content = ( new BlockConverter( $args['content'] ?? '' ) )->convert();
 
 		// Prepare REST API request data.
 		$request_data = [

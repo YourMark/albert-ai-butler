@@ -50,9 +50,10 @@ class TaxonomiesAbilityTest extends TestCase {
 		$result = ( new FindTaxonomies() )->execute( [] );
 
 		$this->assertIsArray( $result );
-		$this->assertNotEmpty( $result );
+		$this->assertArrayHasKey( 'taxonomies', $result );
+		$this->assertNotEmpty( $result['taxonomies'] );
 
-		$slugs = array_column( $result, 'slug' );
+		$slugs = array_column( $result['taxonomies'], 'slug' );
 		$this->assertContains( 'category', $slugs );
 		$this->assertContains( 'post_tag', $slugs );
 	}
@@ -66,9 +67,10 @@ class TaxonomiesAbilityTest extends TestCase {
 		$result = ( new FindTaxonomies() )->execute( [ 'type' => 'post' ] );
 
 		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'taxonomies', $result );
 
 		// Category and post_tag are associated with posts.
-		$slugs = array_column( $result, 'slug' );
+		$slugs = array_column( $result['taxonomies'], 'slug' );
 		$this->assertContains( 'category', $slugs );
 		$this->assertContains( 'post_tag', $slugs );
 	}
@@ -82,7 +84,10 @@ class TaxonomiesAbilityTest extends TestCase {
 		$result = ( new FindTaxonomies() )->execute( [] );
 
 		$this->assertIsArray( $result );
-		$first = $result[0];
+		$this->assertArrayHasKey( 'taxonomies', $result );
+		$this->assertNotEmpty( $result['taxonomies'] );
+
+		$first = $result['taxonomies'][0];
 
 		$this->assertArrayHasKey( 'slug', $first );
 		$this->assertArrayHasKey( 'name', $first );
@@ -109,9 +114,10 @@ class TaxonomiesAbilityTest extends TestCase {
 		$result = ( new FindTerms() )->execute( [ 'taxonomy' => 'category' ] );
 
 		$this->assertIsArray( $result );
-		$this->assertNotEmpty( $result );
+		$this->assertArrayHasKey( 'terms', $result );
+		$this->assertNotEmpty( $result['terms'] );
 
-		$names = array_column( $result, 'name' );
+		$names = array_column( $result['terms'], 'name' );
 		$this->assertContains( 'FindMe Term', $names );
 	}
 
@@ -131,7 +137,8 @@ class TaxonomiesAbilityTest extends TestCase {
 		$result = ( new FindTerms() )->execute( [ 'taxonomy' => 'post_tag' ] );
 
 		$this->assertIsArray( $result );
-		$names = array_column( $result, 'name' );
+		$this->assertArrayHasKey( 'terms', $result );
+		$names = array_column( $result['terms'], 'name' );
 		$this->assertContains( 'TestTag', $names );
 	}
 
@@ -162,7 +169,8 @@ class TaxonomiesAbilityTest extends TestCase {
 		);
 
 		$this->assertIsArray( $result );
-		$names = array_column( $result, 'name' );
+		$this->assertArrayHasKey( 'terms', $result );
+		$names = array_column( $result['terms'], 'name' );
 		$this->assertContains( 'Unique Searchable Cat', $names );
 		$this->assertNotContains( 'Other Cat', $names );
 	}
@@ -201,7 +209,8 @@ class TaxonomiesAbilityTest extends TestCase {
 		);
 
 		$this->assertIsArray( $result );
-		$ids = array_column( $result, 'id' );
+		$this->assertArrayHasKey( 'terms', $result );
+		$ids = array_column( $result['terms'], 'id' );
 		$this->assertContains( $child, $ids );
 		$this->assertNotContains( $parent, $ids );
 	}
@@ -236,9 +245,11 @@ class TaxonomiesAbilityTest extends TestCase {
 			]
 		);
 
-		$this->assertCount( 2, $page1 );
-		$this->assertCount( 2, $page2 );
-		$this->assertNotSame( $page1[0]['id'], $page2[0]['id'] );
+		$this->assertArrayHasKey( 'terms', $page1 );
+		$this->assertArrayHasKey( 'terms', $page2 );
+		$this->assertCount( 2, $page1['terms'] );
+		$this->assertCount( 2, $page2['terms'] );
+		$this->assertNotSame( $page1['terms'][0]['id'], $page2['terms'][0]['id'] );
 	}
 
 	// ─── ViewTerm ───────────────────────────────────────────────────

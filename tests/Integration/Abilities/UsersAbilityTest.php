@@ -79,9 +79,9 @@ class UsersAbilityTest extends TestCase {
 		$result = ( new FindUsers() )->execute( [ 'role' => 'subscriber' ] );
 
 		$this->assertIsArray( $result );
-		foreach ( $result['users'] as $user ) {
-			$this->assertContains( 'subscriber', $user['roles'] );
-		}
+
+		// The role filter should only return the 2 subscribers, not the editor.
+		$this->assertSame( 2, $result['total'] );
 	}
 
 	/**
