@@ -1,5 +1,18 @@
 name: Plugin asset/readme update
 
+# Deploys WordPress.org listing assets (banner, icon, screenshots, readme.txt)
+# WITHOUT a plugin version bump. This is for things like fixing a readme typo,
+# updating screenshots, or swapping the banner between releases.
+#
+# It is intentionally NOT the release path. Full releases go through
+# `release.yml`, triggered by pushing a `v*` tag; that workflow deploys the
+# plugin zip plus the readme/assets as part of the new version.
+#
+# The `paths` filter is a first-pass gate — the job still runs an exact diff
+# and skips deployment when any non-asset file changed in the push, so a
+# release merge that happens to also touch readme.txt does not cause a racing
+# asset deploy.
+
 on:
   push:
     branches:
@@ -17,8 +30,53 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Need history so we can diff the push range.
+          fetch-depth: 0
+
+      - name: Determine whether only assets changed
+        id: check
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          before="${{ github.event.before }}"
+          after="${{ github.sha }}"
+
+          # First push to a branch sends all-zeros as `before`. Can't diff
+          # reliably, so bail out conservatively (do not deploy).
+          if [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            echo "First push to branch — skipping asset deploy (cannot compute diff)."
+            echo "only_assets=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed=$(git diff --name-only "$before" "$after")
+
+          echo "Files changed in this push:"
+          printf '  %s\n' $changed
+
+          only_assets=true
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              .wordpress-org/*|readme.txt)
+                ;;
+              *)
+                only_assets=false
+                echo "Non-asset file changed — skipping asset deploy: $file"
+                break
+                ;;
+            esac
+          done <<< "$changed"
+
+          echo "only_assets=$only_assets" >> "$GITHUB_OUTPUT"
 
       - name: Deploy assets to WordPress.org
+        # Manual dispatch always runs. Push events only deploy when the diff
+        # contains exclusively asset/readme files.
+        if: >-
+          github.event_name == 'workflow_dispatch' ||
+          steps.check.outputs.only_assets == 'true'
         uses: 10up/action-wordpress-plugin-asset-update@stable
         env:
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
