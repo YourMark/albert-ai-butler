@@ -23,6 +23,15 @@ use Albert\Tests\TestCase;
 class EnforceDisabledTest extends TestCase {
 
 	/**
+	 * Dedicated category every stub ability uses. Registered in set_up() so the
+	 * test never depends on whether core's 'site'/'user' categories happen to
+	 * be in the registry at the time the stubs register — a state that varies
+	 * across CI matrix permutations because the categories registry is a
+	 * singleton with a one-shot init action.
+	 */
+	private const TEST_CATEGORY = 'albert-test-enforce-disabled';
+
+	/**
 	 * Manager under test.
 	 *
 	 * @var AbilitiesManager
@@ -56,6 +65,8 @@ class EnforceDisabledTest extends TestCase {
 		unset( $_GET['page'] );
 		delete_option( AbilitiesPage::DISABLED_ABILITIES_OPTION );
 		update_option( 'albert_abilities_saved', true );
+
+		$this->ensure_test_category_registered();
 	}
 
 	/**
@@ -77,6 +88,42 @@ class EnforceDisabledTest extends TestCase {
 		unset( $_GET['page'] );
 
 		parent::tear_down();
+	}
+
+	/**
+	 * Register the dedicated test category if it isn't already registered.
+	 *
+	 * Mirrors WP core's own pattern in
+	 * tests/phpunit/tests/abilities-api/wpRegisterAbility.php: push the
+	 * wp_abilities_api_categories_init action onto $wp_current_filter so
+	 * doing_action() returns true for the duration of the call, register
+	 * the category, then pop the action back off.
+	 *
+	 * @return void
+	 */
+	private function ensure_test_category_registered(): void {
+		if ( ! function_exists( 'wp_register_ability_category' ) || ! function_exists( 'wp_has_ability_category' ) ) {
+			return;
+		}
+
+		if ( wp_has_ability_category( self::TEST_CATEGORY ) ) {
+			return;
+		}
+
+		global $wp_current_filter;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- WP core's own abilities-API tests use this exact pattern to satisfy doing_action() in isolation.
+		$wp_current_filter[] = 'wp_abilities_api_categories_init';
+		try {
+			wp_register_ability_category(
+				self::TEST_CATEGORY,
+				[
+					'label'       => 'Albert Test',
+					'description' => 'Test-only category for EnforceDisabledTest stubs.',
+				]
+			);
+		} finally {
+			array_pop( $wp_current_filter );
+		}
 	}
 
 	/**
@@ -128,14 +175,15 @@ class EnforceDisabledTest extends TestCase {
 	 * @return void
 	 */
 	private function register_third_party_ability( string $id ): void {
+		$category = self::TEST_CATEGORY;
 		$this->register_during_init(
-			static function () use ( $id ): void {
+			static function () use ( $id, $category ): void {
 				wp_register_ability(
 					$id,
 					[
 						'label'               => 'Third Party',
 						'description'         => 'Registered directly, not via Albert.',
-						'category'            => 'site',
+						'category'            => $category,
 						'execute_callback'    => static fn(): array => [ 'ok' => true ],
 						'permission_callback' => '__return_true',
 					]
@@ -342,7 +390,7 @@ final class EnforceDisabledStubAbility extends BaseAbility {
 		$this->id          = $id;
 		$this->label       = 'Enforce Disabled Stub';
 		$this->description = 'Test ability used by EnforceDisabledTest.';
-		$this->category    = 'site';
+		$this->category    = 'albert-test-enforce-disabled';
 		$this->meta        = [ 'mcp' => [ 'public' => true ] ];
 
 		parent::__construct();
