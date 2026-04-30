@@ -3,7 +3,7 @@
  * Unit tests for the BaseAbility contract.
  *
  * Covers the public contract that every built-in and add-on ability relies on:
- * enabled()/require_capability()/register_ability()/get_* accessors.
+ * is_enabled()/require_capability()/register_ability()/get_* accessors.
  * Hook firing is covered separately in HooksTest.php.
  *
  * @package Albert
@@ -40,20 +40,22 @@ class BaseAbilityTest extends TestCase {
 			'albert_disabled_abilities' => [],
 		];
 		$GLOBALS['albert_test_registered_abilities'] = [];
+		$GLOBALS['albert_test_deprecated_calls']     = [];
+		$GLOBALS['albert_test_filter_returns']       = [];
 		unset( $GLOBALS['albert_test_caps'], $GLOBALS['albert_test_abilities'] );
 	}
 
-	// ─── enabled() ───────────────────────────────────────────────────
+	// ─── is_enabled() ────────────────────────────────────────────────
 
 	/**
 	 * A fresh ability not in the disabled list reports enabled.
 	 *
 	 * @return void
 	 */
-	public function test_enabled_returns_true_when_not_in_disabled_list(): void {
+	public function test_is_enabled_returns_true_when_not_in_disabled_list(): void {
 		$ability = new StubAbility( 'albert/test-one' );
 
-		$this->assertTrue( $ability->enabled() );
+		$this->assertTrue( $ability->is_enabled() );
 	}
 
 	/**
@@ -61,12 +63,12 @@ class BaseAbilityTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_enabled_returns_false_when_in_disabled_list(): void {
+	public function test_is_enabled_returns_false_when_in_disabled_list(): void {
 		$GLOBALS['albert_test_options']['albert_disabled_abilities'] = [ 'albert/test-two' ];
 
 		$ability = new StubAbility( 'albert/test-two' );
 
-		$this->assertFalse( $ability->enabled() );
+		$this->assertFalse( $ability->is_enabled() );
 	}
 
 	/**
@@ -75,13 +77,13 @@ class BaseAbilityTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_enabled_falls_back_to_registry_defaults_on_fresh_install(): void {
+	public function test_is_enabled_falls_back_to_registry_defaults_on_fresh_install(): void {
 		$GLOBALS['albert_test_options']   = [];
 		$GLOBALS['albert_test_abilities'] = [];
 
 		$ability = new StubAbility( 'albert/fresh-one' );
 
-		$this->assertTrue( $ability->enabled() );
+		$this->assertTrue( $ability->is_enabled() );
 	}
 
 	/**
@@ -90,7 +92,7 @@ class BaseAbilityTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_enabled_returns_false_when_id_is_default_disabled(): void {
+	public function test_is_enabled_returns_false_when_id_is_default_disabled(): void {
 		$GLOBALS['albert_test_options']   = [];
 		$GLOBALS['albert_test_abilities'] = [
 			new AbilityDouble( 'albert/delete-post', [] ),
@@ -98,7 +100,121 @@ class BaseAbilityTest extends TestCase {
 
 		$ability = new StubAbility( 'albert/delete-post' );
 
-		$this->assertFalse( $ability->enabled() );
+		$this->assertFalse( $ability->is_enabled() );
+	}
+
+	// ─── enabled() (deprecated) ──────────────────────────────────────
+
+	/**
+	 * The deprecated enabled() forwards to is_enabled() and returns the same value.
+	 *
+	 * @return void
+	 */
+	public function test_deprecated_enabled_forwards_to_is_enabled(): void {
+		$enabled = new StubAbility( 'albert/legacy-on' );
+		$GLOBALS['albert_test_options']['albert_disabled_abilities'] = [ 'albert/legacy-off' ];
+		$disabled = new StubAbility( 'albert/legacy-off' );
+
+		$this->assertTrue( $enabled->enabled() );
+		$this->assertFalse( $disabled->enabled() );
+	}
+
+	/**
+	 * Calling the deprecated enabled() triggers _deprecated_function with the
+	 * 1.2.0 version and the is_enabled replacement name.
+	 *
+	 * @return void
+	 */
+	public function test_deprecated_enabled_triggers_deprecation_notice(): void {
+		$ability = new StubAbility( 'albert/legacy-notice' );
+		$ability->enabled();
+
+		$this->assertCount( 1, $GLOBALS['albert_test_deprecated_calls'] );
+		$call = $GLOBALS['albert_test_deprecated_calls'][0];
+		$this->assertSame( '1.2.0', $call['version'] );
+		$this->assertStringEndsWith( '::is_enabled', $call['replacement'] );
+		$this->assertStringEndsWith( '::enabled', $call['function_name'] );
+	}
+
+	// ─── is_executable() ─────────────────────────────────────────────
+
+	/**
+	 * An enabled ability with no filter override is executable.
+	 *
+	 * @return void
+	 */
+	public function test_is_executable_returns_true_when_enabled_and_no_filter_objects(): void {
+		$ability = new StubAbility( 'albert/exec-ok' );
+
+		$this->assertTrue( $ability->is_executable() );
+	}
+
+	/**
+	 * A disabled ability returns a WP_Error with the ability_disabled code.
+	 *
+	 * @return void
+	 */
+	public function test_is_executable_returns_disabled_error_when_blocked(): void {
+		$GLOBALS['albert_test_options']['albert_disabled_abilities'] = [ 'albert/exec-off' ];
+
+		$ability = new StubAbility( 'albert/exec-off' );
+		$result  = $ability->is_executable();
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_disabled', $result->get_error_code() );
+		$data = $result->get_error_data();
+		$this->assertIsArray( $data );
+		$this->assertSame( 403, $data['status'] ?? null );
+	}
+
+	/**
+	 * A WP_Error returned from albert/abilities/is_executable propagates verbatim
+	 * so add-ons can deny with a specific reason (e.g. licence expired).
+	 *
+	 * @return void
+	 */
+	public function test_is_executable_propagates_wp_error_from_filter(): void {
+		$denial = new WP_Error( 'license_expired', 'Plan expired.', [ 'status' => 402 ] );
+		$GLOBALS['albert_test_filter_returns']['albert/abilities/is_executable'] = $denial;
+
+		$ability = new StubAbility( 'albert/exec-license' );
+		$result  = $ability->is_executable();
+
+		$this->assertSame( $denial, $result );
+	}
+
+	/**
+	 * A truthy filter return keeps the ability executable.
+	 *
+	 * @return void
+	 */
+	public function test_is_executable_returns_true_when_filter_returns_true(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/abilities/is_executable'] = true;
+
+		$ability = new StubAbility( 'albert/exec-allowed' );
+
+		$this->assertTrue( $ability->is_executable() );
+	}
+
+	/**
+	 * The filter receives the ability instance as its second argument.
+	 *
+	 * @return void
+	 */
+	public function test_is_executable_filter_receives_ability_instance(): void {
+		$ability = new StubAbility( 'albert/exec-args' );
+		$ability->is_executable();
+
+		$filter_calls = array_values(
+			array_filter(
+				$GLOBALS['albert_test_hooks'],
+				static fn( array $h ): bool => $h['hook'] === 'albert/abilities/is_executable'
+			)
+		);
+
+		$this->assertCount( 1, $filter_calls );
+		$this->assertSame( true, $filter_calls[0]['args'][0] );
+		$this->assertSame( $ability, $filter_calls[0]['args'][1] );
 	}
 
 	// ─── require_capability() ────────────────────────────────────────
