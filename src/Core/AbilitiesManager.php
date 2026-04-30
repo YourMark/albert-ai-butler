@@ -12,6 +12,7 @@ namespace Albert\Core;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Abstracts\BaseAbility;
+use Albert\Admin\AbilitiesPage;
 use Albert\Contracts\Interfaces\Hookable;
 
 /**
@@ -49,6 +50,11 @@ class AbilitiesManager implements Hookable {
 		// Register abilities on WordPress abilities API init hooks.
 		add_action( 'abilities_api_init', [ $this, 'register_abilities' ] );
 		add_action( 'wp_abilities_api_init', [ $this, 'register_abilities' ] );
+
+		// Remove disabled abilities from the registry after every plugin has
+		// registered. PHP_INT_MAX guarantees we run last so we can also strip
+		// abilities registered directly by third-party plugins.
+		add_action( 'wp_abilities_api_init', [ $this, 'enforce_disabled' ], PHP_INT_MAX );
 
 		// Add abilities to settings page filters.
 		add_filter( 'albert/abilities/wordpress', [ $this, 'add_wordpress_abilities_to_settings' ] );
@@ -157,17 +163,110 @@ class AbilitiesManager implements Hookable {
 	/**
 	 * Register all abilities with WordPress.
 	 *
-	 * This is called on abilities_api_init hook.
-	 * Only enabled abilities are registered.
+	 * Registers every Albert-managed ability unconditionally. Disabled
+	 * abilities are removed from the global registry afterwards by
+	 * enforce_disabled() so the admin management page can still see them
+	 * via the same wp_get_abilities() API.
 	 *
 	 * @return void
 	 * @since 1.0.0
 	 */
 	public function register_abilities(): void {
 		foreach ( $this->abilities as $ability ) {
-			// BaseAbility::register_ability() checks enabled() internally.
 			$ability->register_ability();
 		}
+	}
+
+	/**
+	 * Remove disabled abilities from the global registry.
+	 *
+	 * Runs at PHP_INT_MAX on wp_abilities_api_init so every ability — Albert's
+	 * built-ins, abilities contributed by add-ons via `albert/abilities/register`,
+	 * and abilities registered directly by third-party plugins — is already
+	 * registered. We then walk the registry and strip out anything that should
+	 * not be executable in this request, so MCP, REST, the WP Abilities client,
+	 * and any other consumer all see only enabled abilities.
+	 *
+	 * The Albert → Abilities admin page intentionally keeps the full registry
+	 * (so the user can re-enable disabled abilities). is_abilities_management_context()
+	 * detects that page and short-circuits this method.
+	 *
+	 * Per ability we apply two checks in order:
+	 *  1. Effective disabled list (option + `albert/abilities/disabled_list`
+	 *     filter). Applies to every ability regardless of who registered it,
+	 *     so toggling a third-party ability off in Albert's UI removes it
+	 *     globally and add-ons can extend the list at runtime.
+	 *  2. is_executable() pipeline, only for Albert-managed abilities. Lets
+	 *     the `albert/abilities/is_executable` filter return a reasoned
+	 *     WP_Error (e.g. licence-blocked) and unregister on that.
+	 *
+	 * @return void
+	 * @since 1.2.0
+	 */
+	public function enforce_disabled(): void {
+		if ( ! function_exists( 'wp_get_abilities' ) || ! function_exists( 'wp_unregister_ability' ) ) {
+			return;
+		}
+
+		if ( $this->is_abilities_management_context() ) {
+			return;
+		}
+
+		$disabled_list = $this->get_effective_disabled_list();
+
+		foreach ( wp_get_abilities() as $ability ) {
+			$id = $ability->get_name();
+
+			if ( in_array( $id, $disabled_list, true ) ) {
+				wp_unregister_ability( $id );
+				continue;
+			}
+
+			$albert_instance = $this->abilities[ $id ] ?? null;
+			if ( $albert_instance instanceof BaseAbility ) {
+				$check = $albert_instance->is_executable();
+				if ( is_wp_error( $check ) ) {
+					wp_unregister_ability( $id );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Compute the effective disabled-ability list for this request.
+	 *
+	 * Reads the persisted blocklist option, falls back to the registry's
+	 * default-disabled list on a fresh install, and then runs the result
+	 * through the `albert/abilities/disabled_list` filter so add-ons can
+	 * contribute additional IDs at runtime without writing to the option.
+	 *
+	 * @return array<int, string> Ability IDs that should not be executable.
+	 * @since 1.2.0
+	 */
+	private function get_effective_disabled_list(): array {
+		$disabled = get_option( AbilitiesPage::DISABLED_ABILITIES_OPTION, [] );
+
+		if ( empty( $disabled ) && ! get_option( 'albert_abilities_saved' ) ) {
+			$disabled = AbilitiesRegistry::get_default_disabled_abilities();
+		}
+
+		$disabled = array_values( array_unique( array_map( 'strval', (array) $disabled ) ) );
+
+		/**
+		 * Filters the effective list of disabled ability IDs.
+		 *
+		 * Lets add-ons contribute extra IDs to be unregistered for the current
+		 * request without writing to the persisted option. Useful for state
+		 * that changes per-request (e.g. licence/plan checks computed by an
+		 * add-on, time-of-day windows, kill switches).
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param array<int, string> $disabled Ability IDs that should not be executable.
+		 */
+		$filtered = apply_filters( 'albert/abilities/disabled_list', $disabled );
+
+		return array_values( array_unique( array_map( 'strval', (array) $filtered ) ) );
 	}
 
 	/**
@@ -207,6 +306,43 @@ class AbilitiesManager implements Hookable {
 	 */
 	public function get_ability( string $id ): ?BaseAbility {
 		return $this->abilities[ $id ] ?? null;
+	}
+
+	/**
+	 * Determine whether the current request is the abilities management context.
+	 *
+	 * The Albert → Abilities admin page must always show every registered
+	 * ability, enabled or disabled, so the user can re-enable disabled ones.
+	 * On every other request, AbilitiesManager::enforce_disabled() removes
+	 * disabled abilities from the global registry. This helper tells the
+	 * enforcer to skip itself when the user is on the management page.
+	 *
+	 * Add-ons that ship admin pages listing abilities can opt themselves into
+	 * the same "show all" behaviour via the `albert/abilities/is_management_context`
+	 * filter — return true to suppress unregistration on that request.
+	 *
+	 * @return bool True when on a management context, false otherwise.
+	 * @since 1.2.0
+	 */
+	private function is_abilities_management_context(): bool {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		$page    = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		$is_page = is_admin() && AbilitiesPage::PAGE_SLUG === $page;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		/**
+		 * Filters whether the current request is an abilities management context.
+		 *
+		 * When true, AbilitiesManager::enforce_disabled() leaves the global
+		 * abilities registry untouched so admin UIs can list every ability.
+		 * Add-ons hook this to opt their own admin pages into the same
+		 * "show all" semantics without the core having to know about them.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param bool $is_management_context Whether this request is a management context.
+		 */
+		return (bool) apply_filters( 'albert/abilities/is_management_context', $is_page );
 	}
 
 	/**

@@ -131,28 +131,24 @@ abstract class BaseAbility implements Ability {
 	}
 
 	/**
-	 * Execute the ability with an enabled check.
+	 * Execute the ability with an executability check.
 	 *
-	 * Wraps the actual execute() call with a check against the blocklist.
-	 * This allows all abilities to be registered (visible in admin UI)
-	 * while preventing disabled abilities from being executed.
+	 * Wraps the actual execute() call with the is_executable() pipeline.
+	 * Disabled and otherwise-gated abilities should already be unregistered
+	 * by AbilitiesManager::enforce_disabled() before this point, but the
+	 * check is kept here as defence-in-depth — if anything routes to this
+	 * callback for a non-executable ability, the assistant gets the
+	 * pipeline's reasoned WP_Error instead of an opaque failure.
 	 *
 	 * @param array<string, mixed> $args Input parameters.
 	 *
-	 * @return array<string, mixed>|WP_Error The result or error if disabled.
+	 * @return array<string, mixed>|WP_Error The result or error if not executable.
 	 * @since 1.0.0
 	 */
 	public function guarded_execute( array $args ): array|WP_Error {
-		if ( ! $this->enabled() ) {
-			return new WP_Error(
-				'ability_disabled',
-				sprintf(
-					/* translators: %s: ability name */
-					__( 'The ability "%s" is currently disabled.', 'albert-ai-butler' ),
-					$this->label
-				),
-				[ 'status' => 403 ]
-			);
+		$check = $this->is_executable();
+		if ( is_wp_error( $check ) ) {
+			return $check;
 		}
 
 		$user_id = get_current_user_id();
@@ -356,9 +352,9 @@ abstract class BaseAbility implements Ability {
 	 * On fresh install (before first save), Albert write abilities are disabled by default.
 	 *
 	 * @return bool True if enabled, false otherwise.
-	 * @since 1.0.0
+	 * @since 1.2.0
 	 */
-	public function enabled(): bool {
+	public function is_enabled(): bool {
 		$disabled = get_option( 'albert_disabled_abilities', [] );
 
 		// On fresh install, use default disabled list (Albert write abilities).
@@ -367,6 +363,81 @@ abstract class BaseAbility implements Ability {
 		}
 
 		return ! in_array( $this->id, (array) $disabled, true );
+	}
+
+	/**
+	 * Check if this ability is enabled.
+	 *
+	 * @return bool True if enabled, false otherwise.
+	 * @since      1.0.0
+	 * @deprecated 1.2.0 Use {@see self::is_enabled()} instead.
+	 */
+	public function enabled(): bool {
+		_deprecated_function( __METHOD__, '1.2.0', static::class . '::is_enabled' );
+
+		return $this->is_enabled();
+	}
+
+	/**
+	 * Determine whether this ability is executable in the current request.
+	 *
+	 * Runs a chain of global executability checks. The ability is executable
+	 * only if every check passes; the first failing check's WP_Error is
+	 * returned so callers receive a meaningful reason.
+	 *
+	 * Used at two seams:
+	 *  - Registration phase: AbilitiesManager unregisters Albert-managed
+	 *    abilities whose is_executable() returns a WP_Error, so disabled or
+	 *    licence-blocked abilities never appear in wp_get_abilities().
+	 *  - Execution phase: guarded_execute() short-circuits with the same
+	 *    WP_Error as defence-in-depth when an ability somehow gets called
+	 *    despite not being registered.
+	 *
+	 * Per-user gating (capability checks) lives in check_permission() and is
+	 * intentionally NOT part of this pipeline — per-user state must never
+	 * decide whether an ability is registered globally.
+	 *
+	 * @return bool|WP_Error True when executable, WP_Error otherwise.
+	 * @since 1.2.0
+	 */
+	public function is_executable(): bool|WP_Error {
+		if ( ! $this->is_enabled() ) {
+			return new WP_Error(
+				'ability_disabled',
+				sprintf(
+					/* translators: %s: ability name */
+					__( 'The ability "%s" is currently disabled.', 'albert-ai-butler' ),
+					$this->label
+				),
+				[ 'status' => 403 ]
+			);
+		}
+
+		/**
+		 * Filters whether an ability is executable.
+		 *
+		 * Return true to allow execution. Return a WP_Error to block it; the
+		 * WP_Error is propagated to callers so the AI assistant can show a
+		 * meaningful reason instead of a generic failure.
+		 *
+		 * Add-ons hook this filter to gate abilities on global state such as
+		 * licence validity, plan tier, kill switches, or time-of-day windows.
+		 * For per-user gating, override check_permission() on the ability
+		 * itself instead.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param bool|WP_Error $result  True if no callback has objected yet,
+		 *                               or a WP_Error from a previous callback.
+		 * @param BaseAbility   $ability The ability being checked.
+		 */
+		$result = apply_filters( 'albert/abilities/is_executable', true, $this );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return true;
 	}
 
 	/**

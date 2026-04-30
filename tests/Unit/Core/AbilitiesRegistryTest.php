@@ -4,7 +4,7 @@
  *
  * The get_default_disabled_abilities() method interacts with the
  * wp_get_abilities() stub, so its fresh-install effect is asserted via
- * BaseAbility::enabled() in BaseAbilityTest. The end-to-end heuristic
+ * BaseAbility::is_enabled() in BaseAbilityTest. The end-to-end heuristic
  * derivation across all real abilities is covered by the integration suite.
  *
  * @package Albert

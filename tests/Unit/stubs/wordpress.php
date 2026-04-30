@@ -59,11 +59,15 @@ if ( ! function_exists( 'apply_filters' ) ) {
 	/**
 	 * Stub apply_filters that records calls and returns the value unmodified.
 	 *
+	 * Tests can simulate a filter callback by setting
+	 * $GLOBALS['albert_test_filter_returns'][$hook_name]; when that key is
+	 * present the stub returns its value instead of the passed-in $value.
+	 *
 	 * @param string $hook_name Hook name.
 	 * @param mixed  $value     Value to filter.
 	 * @param mixed  ...$args   Additional arguments.
 	 *
-	 * @return mixed The unmodified value.
+	 * @return mixed The (optionally overridden) value.
 	 */
 	function apply_filters( string $hook_name, mixed $value, ...$args ): mixed {
 		$GLOBALS['albert_test_hooks'][] = [
@@ -71,6 +75,11 @@ if ( ! function_exists( 'apply_filters' ) ) {
 			'hook' => $hook_name,
 			'args' => array_merge( [ $value ], $args ),
 		];
+
+		if ( isset( $GLOBALS['albert_test_filter_returns'][ $hook_name ] ) ) {
+			return $GLOBALS['albert_test_filter_returns'][ $hook_name ];
+		}
+
 		return $value;
 	}
 }
@@ -148,6 +157,27 @@ if ( ! function_exists( 'wp_register_ability' ) ) {
 		}
 
 		$GLOBALS['albert_test_registered_abilities'][ $name ] = $args;
+	}
+}
+
+if ( ! function_exists( '_deprecated_function' ) ) {
+	/**
+	 * Stub _deprecated_function that records calls to $GLOBALS['albert_test_deprecated_calls'].
+	 *
+	 * @param string $function_name Function/method name being deprecated.
+	 * @param string $version       Version the function was deprecated in.
+	 * @param string $replacement   Replacement function/method.
+	 */
+	function _deprecated_function( string $function_name, string $version, string $replacement = '' ): void {
+		if ( ! isset( $GLOBALS['albert_test_deprecated_calls'] ) ) {
+			$GLOBALS['albert_test_deprecated_calls'] = [];
+		}
+
+		$GLOBALS['albert_test_deprecated_calls'][] = [
+			'function_name' => $function_name,
+			'version'       => $version,
+			'replacement'   => $replacement,
+		];
 	}
 }
 

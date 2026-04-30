@@ -31,12 +31,13 @@ class HooksTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$GLOBALS['albert_test_hooks']   = [];
-		$GLOBALS['albert_test_user_id'] = 42;
-		$GLOBALS['albert_test_options'] = [
+		$GLOBALS['albert_test_hooks']          = [];
+		$GLOBALS['albert_test_user_id']        = 42;
+		$GLOBALS['albert_test_options']        = [
 			'albert_abilities_saved'    => true,
 			'albert_disabled_abilities' => [],
 		];
+		$GLOBALS['albert_test_filter_returns'] = [];
 	}
 
 	/**
@@ -383,6 +384,29 @@ class HooksTest extends TestCase {
 		$result  = $ability->guarded_execute( [] );
 
 		$this->assertSame( 'ability_disabled', $result->get_error_code() );
+	}
+
+	/**
+	 * Test that a WP_Error from the is_executable filter short-circuits
+	 * guarded_execute() and is returned verbatim.
+	 *
+	 * @return void
+	 */
+	public function test_filter_wp_error_short_circuits_guarded_execute(): void {
+		$denial = new WP_Error( 'license_expired', 'Plan expired.', [ 'status' => 402 ] );
+		$GLOBALS['albert_test_filter_returns']['albert/abilities/is_executable'] = $denial;
+
+		$ability = new StubAbility( 'test/license-blocked' );
+		$result  = $ability->guarded_execute( [] );
+
+		$this->assertSame( $denial, $result );
+
+		$execution_hooks = array_filter(
+			$GLOBALS['albert_test_hooks'],
+			static fn( array $h ): bool => str_contains( $h['hook'], 'execute' )
+				&& $h['hook'] !== 'albert/abilities/is_executable'
+		);
+		$this->assertEmpty( $execution_hooks );
 	}
 
 	// ─── Return value passthrough ───────────────────────────────────
