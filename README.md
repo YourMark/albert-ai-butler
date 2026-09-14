@@ -101,15 +101,13 @@ Fixes AI assistants failing to connect, including on managed hosts (such as Site
 
 **Fixes**
 
-- AI assistants that use the newest sign-in method could fail to connect, ending on a generic "couldn't register" message even when the site was set up correctly. Albert now hands those assistants the exact details they expect, so connecting works again.
-- AI assistants could not sign in on some managed hosts (such as SiteGround and Servebolt) that answer part of the sign-in discovery themselves before the request reaches WordPress. Albert now publishes what assistants need at an address those hosts pass through, so sign-in works with no manual setup.
+- AI assistants using the newest sign-in method could fail to connect. They connect again now.
+- AI assistants could not sign in on some managed hosts (such as SiteGround and Servebolt) that answer part of the sign-in discovery themselves. Albert now serves it where those hosts pass it through, so sign-in works with no manual setup.
 
 **Developer**
 
-- `WWW-Authenticate` now uses the `resource_metadata` parameter (RFC 9728), not `resource`, so a strict client can locate discovery from the 401 alone.
-- Protected Resource Metadata lists the authorization server as an issuer identifier (RFC 9728 / RFC 8414), built from one `ServerMetadata::protected_resource()` source so the two routes cannot drift.
-- The issuer is now a path (`…/wp-json/albert/v1/oauth`), and its metadata is also served at `…/oauth/.well-known/openid-configuration` (and `…/oauth-authorization-server`), the mid-path URL an RFC 8414 client falls through to, which hosts intercepting a root `/.well-known/` leave alone. Existing connections keep working; a client that re-runs discovery re-authorises once.
-- New Site Health test (`albert_oauth_discovery`) and admin notice report when that discovery address is unreachable.
+- Discovery is now RFC 9728 / RFC 8414 conformant: `resource_metadata` in `WWW-Authenticate`, one Protected Resource Metadata source listing the issuer, and the issuer served at a mid-path `.well-known` URL that hosts intercepting a root `/.well-known/` leave alone. Adds the `albert_oauth_discovery` Site Health test.
+- The issuer is now a path, so a connected client that re-runs discovery re-authorises once; live connections keep working.
 
 ### 1.4.0
 
