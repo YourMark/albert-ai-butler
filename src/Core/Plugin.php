@@ -80,6 +80,7 @@ use Albert\Admin\Rest\AbilitiesController;
 use Albert\Admin\Rest\ContextController;
 use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
+use Albert\OAuth\DiscoveryHealth;
 use Albert\Privacy\PrivacyMode;
 use WP\MCP\Core\McpAdapter;
 
@@ -264,6 +265,11 @@ class Plugin {
 
 		// Register OAuth discovery endpoint (.well-known/oauth-authorization-server).
 		( new OAuthDiscovery() )->register_hooks();
+
+		// Report, in the admin and in Site Health, when the OAuth discovery
+		// address is not reachable. Some hosts serve /.well-known/ themselves, so
+		// assistant sign-in fails with no sign of why from inside WordPress.
+		( new DiscoveryHealth() )->register_hooks();
 
 		// Register MCP server (uses OAuth for authentication).
 		( new McpServer() )->register_hooks();

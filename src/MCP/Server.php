@@ -248,9 +248,9 @@ class Server implements Hookable {
 	/**
 	 * Build the RFC 6750 §3 WWW-Authenticate challenge value.
 	 *
-	 * A token that was supplied but rejected carries `error="invalid_token"`;
-	 * one that was never supplied does not (that case isn't a rejection, just
-	 * missing credentials).
+	 * The metadata pointer uses `resource_metadata` (RFC 9728 §5.1), not `resource`;
+	 * a strict client reads that exact name to find discovery and dead-ends without it.
+	 * A rejected token adds `error="invalid_token"`; a never-sent one does not.
 	 *
 	 * @param string $resource_url The protected-resource metadata URL.
 	 * @param bool   $token_sent   Whether the request carried a Bearer token.
@@ -259,7 +259,7 @@ class Server implements Hookable {
 	 * @since 1.4.0
 	 */
 	private function build_challenge( string $resource_url, bool $token_sent ): string {
-		$challenge = 'Bearer realm="MCP", resource="' . $resource_url . '"';
+		$challenge = 'Bearer realm="MCP", resource_metadata="' . $resource_url . '"';
 
 		if ( $token_sent ) {
 			$challenge .= ', error="invalid_token"';

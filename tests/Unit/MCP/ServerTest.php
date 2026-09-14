@@ -129,7 +129,7 @@ class ServerTest extends TestCase {
 	 */
 	public function test_challenge_omits_error_code_when_no_token_was_sent(): void {
 		$this->assertSame(
-			'Bearer realm="MCP", resource="https://example.test/wp-json/albert/v1/oauth/resource"',
+			'Bearer realm="MCP", resource_metadata="https://example.test/wp-json/albert/v1/oauth/resource"',
 			$this->build_challenge( false )
 		);
 	}
