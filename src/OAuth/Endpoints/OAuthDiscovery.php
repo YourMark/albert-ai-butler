@@ -12,7 +12,6 @@ namespace Albert\OAuth\Endpoints;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
-use Albert\Core\Plugin;
 use Albert\OAuth\ServerMetadata;
 use WP;
 
@@ -227,11 +226,7 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function get_protected_resource_metadata(): array {
-		return [
-			'resource'              => ServerMetadata::rest_url( Plugin::rest_namespace() . '/mcp' ),
-			'authorization_servers' => [ ServerMetadata::base_url() ],
-			'scopes_supported'      => [ 'default' ],
-		];
+		return ServerMetadata::protected_resource();
 	}
 
 	/**

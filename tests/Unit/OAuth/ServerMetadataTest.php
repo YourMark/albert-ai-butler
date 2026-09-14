@@ -115,7 +115,65 @@ class ServerMetadataTest extends TestCase {
 
 		$this->assertStringStartsWith( $base . '/wp-json/', $metadata['token_endpoint'] );
 		$this->assertStringStartsWith( $base . '/wp-json/', $metadata['registration_endpoint'] );
-		$this->assertSame( $base, $metadata['issuer'] );
+		$this->assertSame( ServerMetadata::issuer_url(), $metadata['issuer'] );
 		$this->assertSame( $base . '/oauth/authorize', $metadata['authorization_endpoint'] );
+	}
+
+	/**
+	 * The issuer is a path, so a client's discovery falls through to a mid-path
+	 * `.well-known` URL that hosts intercepting a root `/.well-known/` leave alone.
+	 *
+	 * @return void
+	 */
+	public function test_issuer_is_a_path_not_the_bare_domain(): void {
+		$this->assertSame( ServerMetadata::base_url() . '/wp-json/albert/v1/oauth', ServerMetadata::issuer_url() );
+	}
+
+	// ─── Protected Resource Metadata (RFC 9728) ─────────────────────
+
+	/**
+	 * `authorization_servers` lists the issuer, not the metadata document URL.
+	 *
+	 * The regression this guards: the REST route once listed `…/oauth/metadata`
+	 * here, where RFC 9728 §7.6 requires an issuer identifier. A conforming client
+	 * applies the RFC 8414 transformation to the entry, so a document URL sent it
+	 * somewhere that does not resolve and whose `issuer` would not match. The value
+	 * must be exactly the metadata document's own `issuer`.
+	 *
+	 * @return void
+	 */
+	public function test_protected_resource_lists_the_issuer_as_authorization_server(): void {
+		$issuer = ServerMetadata::authorization_server()['issuer'];
+
+		$this->assertSame( [ $issuer ], ServerMetadata::protected_resource()['authorization_servers'] );
+	}
+
+	/**
+	 * The protected resource is the MCP endpoint itself.
+	 *
+	 * @return void
+	 */
+	public function test_protected_resource_points_at_the_mcp_endpoint(): void {
+		$metadata = ServerMetadata::protected_resource();
+
+		$this->assertSame( ServerMetadata::base_url() . '/wp-json/albert/v1/mcp', $metadata['resource'] );
+	}
+
+	/**
+	 * Both protected-resource routes serve one document.
+	 *
+	 * The same regression guard the authorization-server document has: the
+	 * `.well-known` path and the convenience REST route drifted on
+	 * `authorization_servers`, and a future edit to one cannot make them
+	 * disagree again without failing here.
+	 *
+	 * @return void
+	 */
+	public function test_both_protected_resource_routes_serve_the_same_document(): void {
+		$well_known = ( new OAuthDiscovery() )->get_protected_resource_metadata();
+		$rest       = ( new OAuthController() )->handle_protected_resource_metadata()->get_data();
+
+		$this->assertSame( $well_known, $rest );
+		$this->assertSame( ServerMetadata::protected_resource(), $well_known );
 	}
 }

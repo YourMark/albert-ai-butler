@@ -4,7 +4,7 @@ Tags: ai assistant, chatgpt, claude, ai, mcp
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -192,6 +192,19 @@ Documentation at [albertwp.com/docs](https://albertwp.com/docs/), or the [WordPr
 
 == Changelog ==
 
+= 1.4.1 =
+Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that handle the sign-in discovery address themselves.
+
+**Fixes**
+
+* AI assistants using the newest sign-in method could fail to connect. They connect again now.
+* AI assistants could not sign in on some managed hosts (such as SiteGround and Servebolt) that answer part of the sign-in discovery themselves. Albert now serves it where those hosts pass it through, so sign-in works with no manual setup.
+
+**Developer**
+
+* Discovery is now RFC 9728 / RFC 8414 conformant: `resource_metadata` in `WWW-Authenticate`, one Protected Resource Metadata source listing the issuer, and the issuer served at a mid-path `.well-known` URL that hosts intercepting a root `/.well-known/` leave alone. Adds the `albert_oauth_discovery` Site Health test.
+* The issuer is now a path, so a connected client that re-runs discovery re-authorises once; live connections keep working.
+
 = 1.4.0 =
 
 Release date: 2026-09-03
@@ -351,6 +364,9 @@ A bug-fix release.
 Releases before 1.1.1 are listed in `changelog.txt`, bundled with the plugin.
 
 == Upgrade Notice ==
+
+= 1.4.1 =
+Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that were blocking the sign-in step. Recommended if any assistant could not connect.
 
 = 1.4.0 =
 Assistants now know what your site is, can send you files directly, and every admin screen has been rebuilt. Fixes taxonomy reads that were failing outright. Multisite: reconnect your assistants once after updating.
