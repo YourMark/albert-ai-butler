@@ -52,8 +52,9 @@ class ServerMetadata {
 		$base_url = self::base_url();
 
 		return [
-			// Required fields.
-			'issuer'                                => $base_url,
+			// Required fields. The issuer is a path, not the bare domain
+			// (see issuer_url()); the endpoints are their own absolute URLs.
+			'issuer'                                => self::issuer_url(),
 			'authorization_endpoint'                => $base_url . '/oauth/authorize',
 			'token_endpoint'                        => self::rest_url( Plugin::rest_namespace() . '/oauth/token' ),
 			'registration_endpoint'                 => self::rest_url( Plugin::rest_namespace() . '/oauth/register' ),
@@ -77,6 +78,41 @@ class ServerMetadata {
 			// Optional but useful fields.
 			'scopes_supported'                      => [ 'default' ],
 		];
+	}
+
+	/**
+	 * The RFC 9728 Protected Resource Metadata document.
+	 *
+	 * One builder for both callers (the `.well-known` route and the REST route), so
+	 * they cannot drift. `authorization_servers` must be an issuer identifier
+	 * (RFC 9728 §7.6), matching the metadata's own `issuer`, or a client's RFC 8414
+	 * lookup goes to the wrong URL and fails validation.
+	 *
+	 * @return array<string, mixed> The metadata.
+	 * @since 1.4.1
+	 */
+	public static function protected_resource(): array {
+		return [
+			'resource'              => self::rest_url( Plugin::rest_namespace() . '/mcp' ),
+			'authorization_servers' => [ self::issuer_url() ],
+			'scopes_supported'      => [ 'default' ],
+		];
+	}
+
+	/**
+	 * The issuer identifier: a path, not the bare domain.
+	 *
+	 * A path issuer makes a client's RFC 8414 §3.1 discovery fall through to
+	 * `<issuer>/.well-known/openid-configuration`, where `.well-known` sits mid-path.
+	 * Hosts that intercept only a *root* `/.well-known/` (SiteGround, Servebolt) leave
+	 * that alone, so it reaches WordPress and needs no files. Endpoints are their own
+	 * URLs, not derived from this.
+	 *
+	 * @return string The issuer identifier.
+	 * @since 1.4.1
+	 */
+	public static function issuer_url(): string {
+		return self::rest_url( Plugin::rest_namespace() . '/oauth' );
 	}
 
 	/**

@@ -95,6 +95,20 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.4.1
+
+Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that handle the sign-in discovery address themselves.
+
+**Fixes**
+
+- AI assistants using the newest sign-in method could fail to connect. They connect again now.
+- AI assistants could not sign in on some managed hosts (such as SiteGround and Servebolt) that answer part of the sign-in discovery themselves. Albert now serves it where those hosts pass it through, so sign-in works with no manual setup.
+
+**Developer**
+
+- Discovery is now RFC 9728 / RFC 8414 conformant: `resource_metadata` in `WWW-Authenticate`, one Protected Resource Metadata source listing the issuer, and the issuer served at a mid-path `.well-known` URL that hosts intercepting a root `/.well-known/` leave alone. Adds the `albert_oauth_discovery` Site Health test.
+- The issuer is now a path, so a connected client that re-runs discovery re-authorises once; live connections keep working.
+
 ### 1.4.0
 
 Release date: 2026-09-03

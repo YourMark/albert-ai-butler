@@ -67,6 +67,21 @@ class OAuthController implements Hookable {
 			]
 		);
 
+		// The same metadata at the issuer's mid-path `.well-known`, which hosts that
+		// intercept a root `/.well-known/` leave alone (see ServerMetadata::issuer_url()).
+		// Both suffix names are served so a client reaches it whichever it appends.
+		foreach ( [ 'openid-configuration', 'oauth-authorization-server' ] as $suffix ) {
+			register_rest_route(
+				Plugin::rest_namespace(),
+				'/oauth/\.well-known/' . $suffix,
+				[
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => [ $this, 'handle_authorization_server_metadata' ],
+					'permission_callback' => '__return_true',
+				]
+			);
+		}
+
 		// OAuth Protected Resource Metadata (alternative to .well-known).
 		register_rest_route(
 			Plugin::rest_namespace(),
@@ -191,13 +206,7 @@ class OAuthController implements Hookable {
 	 * @since 1.0.0
 	 */
 	public function handle_protected_resource_metadata(): WP_REST_Response {
-		$metadata = [
-			'resource'              => ServerMetadata::rest_url( Plugin::rest_namespace() . '/mcp' ),
-			'authorization_servers' => [ ServerMetadata::rest_url( Plugin::rest_namespace() . '/oauth/metadata' ) ],
-			'scopes_supported'      => [ 'default' ],
-		];
-
-		$response = new WP_REST_Response( $metadata, 200 );
+		$response = new WP_REST_Response( ServerMetadata::protected_resource(), 200 );
 		$response->header( 'Cache-Control', 'public, max-age=3600' );
 
 		return $response;
