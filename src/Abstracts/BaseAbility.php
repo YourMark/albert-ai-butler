@@ -468,23 +468,27 @@ abstract class BaseAbility implements Ability {
 	 * @since 1.0.0
 	 */
 	protected function check_rest_permission( string $route, string $method, string $fallback_cap ): bool|WP_Error {
-		$server     = rest_get_server();
-		$routes     = $server->get_routes();
-		$is_pattern = str_contains( $route, '(?P<' );
+		$routes = rest_get_server()->get_routes();
 
-		if ( $is_pattern ) {
-			foreach ( $routes as $registered_route => $endpoints ) {
-				if ( ! preg_match( '#^' . $route . '$#', $registered_route ) ) {
-					continue;
-				}
-
-				return $this->check_rest_endpoints( $endpoints, $method, $registered_route, $fallback_cap );
-			}
-		} elseif ( isset( $routes[ $route ] ) ) {
+		// Only a plain (non-pattern) route is delegated to the REST endpoint's own
+		// permission callback here. A single-object route such as
+		// `/wp/v2/posts/(?P<id>[\d]+)` is keyed in the route table by that literal
+		// pattern string, but its permission callback needs the target object's id
+		// — which is not known at this "may this user use this ability at all"
+		// stage, and calling it without one makes core report a spurious
+		// "invalid id" rather than a permission verdict. So pattern routes fall
+		// back to the declared capability; the real per-object check still runs at
+		// execute() via rest_do_request().
+		//
+		// An earlier version instead ran the pattern through preg_match() against
+		// those same keys, which could never match (a regex like `[\d]+` cannot
+		// match the literal characters `(?P<id>[\d]+)`) — dead code that fell back
+		// here anyway. This makes the fallback explicit and drops the dead branch.
+		if ( ! str_contains( $route, '(?P<' ) && isset( $routes[ $route ] ) ) {
 			return $this->check_rest_endpoints( $routes[ $route ], $method, $route, $fallback_cap );
 		}
 
-		// Route not found, fall back to capability check.
+		// Pattern route, or route not found: fall back to the capability check.
 		return $this->require_capability( $fallback_cap );
 	}
 
