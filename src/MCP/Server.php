@@ -78,6 +78,11 @@ class Server implements Hookable {
 	 */
 	public function register_hooks(): void {
 		add_action( 'mcp_adapter_init', [ $this, 'create_server' ] );
+
+		// Neutralise the adapter's built-in default server, which would otherwise
+		// expose Albert's abilities outside Albert's authentication. See
+		// {@see self::neutralize_default_server_config()}.
+		add_filter( 'mcp_adapter_default_server_config', [ $this, 'neutralize_default_server_config' ] );
 		// Bound to *_after_ callbacks, not before: the header depends on whether
 		// authentication actually failed (and how), which is only known once the
 		// permission callback has run.
@@ -99,6 +104,74 @@ class Server implements Hookable {
 		// Add `site` and `skills` to the discovery response, so an assistant
 		// knows what this site is before it starts guessing.
 		( new DiscoveryContext() )->register_hooks();
+	}
+
+	/**
+	 * Neutralise the MCP adapter's built-in default server.
+	 *
+	 * The adapter ships a convenience server (`mcp-adapter-default-server`) that
+	 * exposes every publicly-registered ability through the discover/get-info/
+	 * execute meta-tools — but under the adapter's *default* transport permission,
+	 * which is only `current_user_can( 'read' )` (see {@see HttpTransport}). That
+	 * is a second way into Albert's own abilities that never passes through
+	 * Albert's OAuth flow, the allowed-users list, or the consent screen: it is
+	 * reachable with nothing more than a WordPress application password, and it
+	 * leaves no row in Connections.
+	 *
+	 * It cannot simply be switched off with the `mcp_adapter_create_default_server`
+	 * filter. That filter's early return also skips the adapter's
+	 * `register_default_abilities()`, which is the only thing that registers the
+	 * three `mcp-adapter/*` meta-tool abilities — and Albert's OWN server lists
+	 * exactly those (see {@see self::CORE_TOOL_ABILITIES}), so turning the default
+	 * server off there takes Albert's server down with it ("ability … does not
+	 * exist"). Replicating the registration would couple Albert to the adapter's
+	 * internal ability classes, against the feature-detection approach the rest of
+	 * this plugin follows.
+	 *
+	 * Instead the default server is left created — so those meta-tool abilities
+	 * still register and Albert's server keeps working — but stripped to nothing:
+	 * an empty tools/resources/prompts list leaves a route that can discover and
+	 * execute nothing. The bypass is closed without disturbing anything Albert
+	 * relies on.
+	 *
+	 * Applied whenever Albert's MCP integration is active, not only when Albert's
+	 * own copy of the shared adapter won resolution: abilities are global, so the
+	 * default server exposes them whichever plugin's copy is loaded — gating on
+	 * ownership would leave the bypass open on exactly the common
+	 * WooCommerce-active site where another, newer copy wins. A site that
+	 * genuinely wants the adapter's default server intact can opt out by returning
+	 * false from the `albert/mcp/disable_default_server` filter.
+	 *
+	 * @param mixed $config The adapter's default-server configuration array.
+	 *
+	 * @return array<string, mixed> The configuration, with its tools, resources
+	 *                              and prompts emptied unless opted out.
+	 * @since 1.5.0
+	 */
+	public function neutralize_default_server_config( $config ): array {
+		$config = is_array( $config ) ? $config : [];
+
+		/**
+		 * Filters whether Albert neutralises the MCP adapter's built-in default server.
+		 *
+		 * Default true — Albert strips the default server so it can execute
+		 * nothing, because it would otherwise expose Albert's abilities outside
+		 * Albert's authentication. Return false to leave the adapter's default
+		 * server configuration untouched.
+		 *
+		 * @since 1.5.0
+		 *
+		 * @param bool $disable Whether Albert should neutralise the default server.
+		 */
+		if ( ! apply_filters( 'albert/mcp/disable_default_server', true ) ) {
+			return $config;
+		}
+
+		$config['tools']     = [];
+		$config['resources'] = [];
+		$config['prompts']   = [];
+
+		return $config;
 	}
 
 	/**
