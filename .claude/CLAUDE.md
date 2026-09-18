@@ -4,13 +4,22 @@ WordPress plugin that exposes WordPress functionality to AI assistants via MCP (
 
 **Stack:** PHP 8.1+ | WordPress 6.9+ | OAuth 2.0 (league/oauth2-server) | PSR-4 autoloading
 
+## What goes where
+- **CLAUDE.md** — always loaded. Product identity, architecture map, hard "never" rules, API index. Keep it lean.
+- **rules/** — loaded on demand. Product-specific depth. General rules live in `shared/` (a git submodule).
+- **hooks** — mechanical enforcement of what must not rely on memory (branch naming, push/merge gates).
+
 ## Rules
 
-- [Code Style](rules/code-style.md) - PHP brace rules, naming conventions, DocBlocks, JS/CSS
-- [Testing](rules/testing.md) - Unit vs integration tests, TDD guidance
-- [Development Methodology](rules/development-methodology.md) - DDD bounded contexts, ubiquitous language, workflow
-- [Patterns](rules/patterns.md) - Albert-specific class patterns, bounded contexts, testing stubs
-- [Changelog](rules/changelog.md) - Strict changelog categories, per-version format, readme.txt/Upgrade Notice constraints
+Shared (submodule — `git@github.com:YourMark/albert-claude-rules`):
+- [Git Workflow](shared/git-workflow.md) - branches, commits, PRs, commit/push/merge gates
+- [Code Style](shared/code-style.md) - PHP / JS / CSS / security / accessibility
+- [Development Methodology](shared/development-methodology.md) - DDD, naming, TDD scope
+- [Testing](shared/testing.md) - test structure and conventions
+- [Changelog](shared/changelog.md) - changelog & readme.txt conventions
+
+Product-specific:
+- [Patterns](rules/patterns.md) - Albert class patterns, bounded contexts, testing stubs
 
 ## Commands
 

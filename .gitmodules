@@ -1,0 +1,3 @@
+[submodule ".claude/shared"]
+	path = .claude/shared
+	url = git@github.com:YourMark/albert-claude-rules.git
