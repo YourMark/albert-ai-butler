@@ -101,7 +101,7 @@ Addon  → Addon   (NEVER, use Core hooks as mediator)
 ### Legacy ability ID note
 
 Free WooCommerce read-only abilities predate the naming convention and use
-`albert/woo-find-products` style IDs. All new abilities use `{namespace}/{resource}/{action}`.
+`albert/woo-find-products` style IDs. All new abilities use `albert/{verb}-{noun}` (e.g. `albert/create-post`, `albert/find-users`).
 Never rename the legacy IDs: they are part of the public API.
 
 ## Critical Warnings
@@ -130,7 +130,7 @@ Never rename the legacy IDs: they are part of the public API.
     If the confirmation is refused, the refusal is the rule working. Never
     route around it with `gh api`, a git merge-and-push, or the web UI, and
     never edit this rule to avoid the prompt.
-- **Branch names are `feature/` or `fix/`. Nothing else.** Not `chore/`, not
+- **Branch names are `feature/`, `fix/`, or `release/<version>` (release branches only). Nothing else.** Not `chore/`, not
   `feat/`, not `refactor/`, not `docs/`. A tidy-up, a CI change, a docs change:
   if it corrects something that is wrong, it is `fix/`; if it adds something
   that was not there, it is `feature/`.
