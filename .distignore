@@ -13,6 +13,9 @@
 .github
 .distignore
 .editorconfig
+AGENTS.md
+agent-rules
+.gitmodules
 
 # Dependencies
 composer.lock
