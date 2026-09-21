@@ -274,6 +274,21 @@ class BlockSerializer {
 			$issues[] = $this->issue( self::SEVERITY_WARNING, $message );
 		}
 
+		// Inner blocks under a leaf template (no %children% slot): make_block()
+		// keeps them, but the block's save() won't nest them, so the editor may
+		// drop them on next save. Warn.
+		if ( $inner_blocks !== [] && ! str_contains( $inner_html, '%children%' ) ) {
+			$issues[] = $this->issue(
+				self::SEVERITY_WARNING,
+				sprintf(
+					"%s.name '%s' does not nest inner blocks; the %d supplied child block(s) were kept in the markup but the editor may drop them on the next save. Use a block that accepts inner blocks (e.g. core/group).",
+					$path,
+					$name,
+					count( $inner_blocks )
+				)
+			);
+		}
+
 		return $this->make_block( $name, $attrs, $inner_html, $inner_blocks );
 	}
 
@@ -310,21 +325,76 @@ class BlockSerializer {
 			return $this->unknown_block_fallback( $name, $spec, $path, $issues );
 		}
 
-		// Registered dynamic block: it renders from a render_callback, so it
-		// stores no innerHTML. A bare comment + attributes is valid markup.
-		if ( $this->schema->is_dynamic( $name ) ) {
+		// Self-close only a block that stores nothing recoverable. Content lives
+		// in inner blocks or raw html/plaintext (best_effort_inner_html), or a
+		// markup-sourced attribute (markup_attribute_html); everything else is in
+		// the comment JSON that serialize_blocks() always writes. Replaces the old
+		// is_dynamic() gate that dropped hybrid blocks' children (e.g. core/cover).
+		$inner_html   = $this->best_effort_inner_html( $spec, $inner_blocks );
+		$uncapturable = false;
+
+		if ( $inner_html === '' && $inner_blocks === [] ) {
+			[ $inner_html, $uncapturable ] = $this->markup_attribute_html( $name, $attributes );
+		}
+
+		// Nothing stored in markup: self-closing is lossless.
+		if ( $inner_blocks === [] && $inner_html === '' && ! $uncapturable ) {
 			return $this->make_block( $name, $attributes, '', $inner_blocks );
 		}
 
-		// Registered static block without a template here — best effort.
-		$inner_html = $this->best_effort_inner_html( $spec, $inner_blocks );
+		// Content we can't represent as innerHTML (structural source, non-scalar):
+		// refuse rather than self-close and drop it with a success response.
+		if ( $inner_blocks === [] && $inner_html === '' && $uncapturable ) {
+			$issues[] = $this->issue(
+				self::SEVERITY_ERROR,
+				"{$path}.name '{$name}' stores content in markup this server cannot reproduce (an element attribute or a structured 'query' value), so saving it would silently drop that content. Provide the content as innerBlocks or plaintext, or use a fully supported block (e.g. core/paragraph, core/heading, core/group)."
+			);
+			return null;
+		}
 
+		// Content preserved; only the block's own wrapper is best-effort.
 		$issues[] = $this->issue(
 			self::SEVERITY_WARNING,
-			"{$path}.name '{$name}' is a registered block without dedicated handling — serialized best-effort. Verify the result, or use a fully supported block (e.g. core/paragraph, core/heading, core/group)."
+			"{$path}.name '{$name}' is a registered block without dedicated handling — its content is preserved, but the block's own markup could not be reproduced exactly; verify the result in the editor, or use a fully supported block (e.g. core/paragraph, core/heading, core/group)."
 		);
 
 		return $this->make_block( $name, $attributes, $inner_html, $inner_blocks );
+	}
+
+	/**
+	 * Preserve a block's markup-sourced attribute content when it has no inner
+	 * blocks or raw html/plaintext.
+	 *
+	 * Returns the first populated text-sourced attribute's sanitised value as
+	 * innerHTML (core/verse `content`, …). When nothing text-sourced is
+	 * capturable, the bool is true if a populated but unreproducible value remains
+	 * (structural source or non-scalar) — the signal to refuse rather than
+	 * self-close and lose it.
+	 *
+	 * @param string               $name       Block name.
+	 * @param array<string, mixed> $attributes Caller-supplied attributes.
+	 * @return array{0: string, 1: bool} [ innerHTML, has-unreproducible-content ].
+	 * @since 1.5.0
+	 */
+	private function markup_attribute_html( string $name, array $attributes ): array {
+		foreach ( $this->schema->text_sourced_attributes( $name ) as $attribute_name ) {
+			$value = $attributes[ $attribute_name ] ?? null;
+
+			if ( is_scalar( $value ) && (string) $value !== '' ) {
+				return [ $this->rich_text( (string) $value ), false ];
+			}
+		}
+
+		// No text content: flag any other populated (unreproducible) markup value.
+		foreach ( $this->schema->markup_sourced_attributes( $name ) as $attribute_name ) {
+			$value = $attributes[ $attribute_name ] ?? null;
+
+			if ( ( is_scalar( $value ) && (string) $value !== '' ) || ( is_array( $value ) && $value !== [] ) ) {
+				return [ '', true ];
+			}
+		}
+
+		return [ '', false ];
 	}
 
 	/**
@@ -475,6 +545,13 @@ class BlockSerializer {
 		} else {
 			$flat_inner_html = str_replace( '%children%', '', $inner_html );
 			$inner_content   = $flat_inner_html === '' ? [] : [ $flat_inner_html ];
+
+			// serialize_blocks() emits a child only where innerContent holds a
+			// null. Without a %children% marker the children would vanish, so
+			// append one null per child.
+			foreach ( $inner_blocks as $unused ) {
+				$inner_content[] = null;
+			}
 		}
 
 		return [
@@ -562,14 +639,12 @@ class BlockSerializer {
 		}
 	}
 
-	// =====================================================================
 	// Per-block templates
 	//
 	// Each takes a single BlockContext and returns
 	// [ array $attrs, string $inner_html, array $issues ]. Wrapper blocks place
 	// a literal "%children%" marker where their inner blocks are spliced in.
 	// Template issues are recoverable, so the caller records them as warnings.
-	// =====================================================================
 
 	/**
 	 * Template: core/paragraph.
