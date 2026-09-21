@@ -95,6 +95,20 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.5.0
+
+**Fixes**
+
+- Asking your assistant to build a page with a layout block that holds other content (such as a Cover block wrapped around a heading and text) could silently save the block empty, losing everything inside it. These blocks now keep their contents.
+- In the rare case where a block's content genuinely can't be reproduced, the assistant is now told clearly, instead of the block being saved empty as if it had worked.
+
+**Developer**
+
+- `BlockSerializer` no longer treats the presence of a `render_callback` as proof a block stores no markup. Whether a block can be safely self-closed is now decided from what it actually stores — inner blocks, an attribute sourced from the saved markup, or raw content in the spec — read live from the block registry. Hybrid core blocks (`core/cover`, `core/media-text`) and third-party or custom blocks are all handled with no per-block or per-WordPress-version list.
+- Content stored in a text-sourced attribute (`core/verse`'s `content`, and the documented "put text in attributes" contract) is materialised into the block's markup rather than left inert in the comment JSON, where it would be lost on reload. Content stored in a structural source that can't be reproduced without the block's own `save()` (an element attribute, a `query`) is refused with an actionable error instead of silently dropped.
+- Adds `BlockSchema::markup_sourced_attributes()` and `BlockSchema::text_sourced_attributes()`, the registry readers behind those decisions.
+- `BlockSerializer::make_block()` now emits one inner-block placeholder per child even when a template supplies no `%children%` marker, so inner blocks can never be dropped from `innerContent`; nesting blocks under a block that doesn't accept them now warns rather than surprising the caller later.
+
 ### 1.4.1
 
 Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that handle the sign-in discovery address themselves.

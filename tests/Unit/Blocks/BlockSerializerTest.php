@@ -103,9 +103,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertSame( $expected, $names, "Round-trip names mismatch for markup:\n{$markup}" );
 	}
 
-	// =====================================================================
 	// Per-block round-trips
-	// =====================================================================
 
 	public function test_paragraph_round_trip(): void {
 		$markup = $this->serializer->serialize(
@@ -428,9 +426,7 @@ class BlockSerializerTest extends TestCase {
 		);
 	}
 
-	// =====================================================================
 	// Alias normalization
-	// =====================================================================
 
 	public function test_blockname_alias_is_accepted(): void {
 		$markup = $this->serializer->serialize(
@@ -446,9 +442,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertSame( '<!-- wp:paragraph --><p>Aliased</p><!-- /wp:paragraph -->', $markup );
 	}
 
-	// =====================================================================
 	// Unknown block fallback
-	// =====================================================================
 
 	public function test_unknown_block_is_flagged_as_error_with_html_fallback(): void {
 		$result = $this->serializer->serialize_with_issues(
@@ -540,9 +534,250 @@ class BlockSerializerTest extends TestCase {
 		$this->assertStringContainsString( '<!-- wp:verse', $result['markup'] );
 	}
 
-	// =====================================================================
+	// Content-loss regression: hybrid blocks (render_callback + inner blocks)
+	//
+	// core/cover (since WP 6.0) and core/media-text render from a callback yet
+	// still store their inner blocks. The old serializer used the presence of a
+	// render_callback as a proxy for "stores no innerHTML" and emitted these
+	// self-closing, silently dropping every child with a success response —
+	// the most severe bug in the block pipeline. The serializer now decides
+	// self-closing on whether the block actually carries markup content
+	// (inner blocks, a markup-sourced attribute, or raw spec content), read
+	// live from the registry, so the same logic protects third-party and
+	// custom blocks with no per-block knowledge.
+
+	public function test_hybrid_block_with_inner_blocks_keeps_its_children(): void {
+		// core/cover: a dynamic block (render_callback) that nonetheless stores
+		// inner blocks — the exact shape that used to be dropped.
+		albert_test_register_block_type( 'core/cover', true, [ 'url' => [] ] );
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'        => 'core/cover',
+					'attributes'  => [ 'url' => 'https://example.com/x.jpg' ],
+					'innerBlocks' => [
+						[
+							'name'       => 'core/paragraph',
+							'attributes' => [ 'content' => 'First line' ],
+						],
+						[
+							'name'       => 'core/paragraph',
+							'attributes' => [ 'content' => 'Second line' ],
+						],
+					],
+				],
+			]
+		);
+
+		// The block must NOT be self-closing: it has a real closing delimiter.
+		$this->assertStringContainsString( '<!-- wp:cover', $result['markup'] );
+		$this->assertStringContainsString( '<!-- /wp:cover -->', $result['markup'] );
+		$this->assertStringNotContainsString( 'wp:cover {"url":"https://example.com/x.jpg"} /', $result['markup'] );
+
+		// Both children survive, in order.
+		$this->assertStringContainsString( 'First line', $result['markup'] );
+		$this->assertStringContainsString( 'Second line', $result['markup'] );
+
+		// And they round-trip back as two nested paragraph blocks.
+		$tree = $this->reader->read( $result['markup'] );
+		$this->assertCount( 1, $tree );
+		$this->assertSame( 'core/cover', $tree[0]['name'] );
+		$this->assertCount( 2, $tree[0]['innerBlocks'], 'Both cover children must survive serialization.' );
+		$this->assertSame( 'First line', $tree[0]['innerBlocks'][0]['plaintext'] );
+		$this->assertSame( 'Second line', $tree[0]['innerBlocks'][1]['plaintext'] );
+
+		// Fidelity of cover's own wrapper is not guaranteed here — that is a
+		// warning, never a silent success and never an error.
+		$this->assertNotEmpty( $this->messages( $result['issues'], 'warning' ) );
+		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
+	}
+
+	public function test_media_text_hybrid_block_keeps_its_children(): void {
+		albert_test_register_block_type( 'core/media-text', true, [ 'mediaUrl' => [] ] );
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'        => 'core/media-text',
+					'attributes'  => [ 'mediaUrl' => 'https://example.com/a.jpg' ],
+					'innerBlocks' => [
+						[
+							'name'       => 'core/heading',
+							'attributes' => [
+								'level'   => 3,
+								'content' => 'Nested heading',
+							],
+						],
+					],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( '<!-- /wp:media-text -->', $result['markup'] );
+
+		$tree = $this->reader->read( $result['markup'] );
+		$this->assertCount( 1, $tree[0]['innerBlocks'] );
+		$this->assertSame( 'core/heading', $tree[0]['innerBlocks'][0]['name'] );
+		$this->assertSame( 'Nested heading', $tree[0]['innerBlocks'][0]['plaintext'] );
+	}
+
+	public function test_childless_hybrid_block_self_closes_losslessly(): void {
+		// A cover with no children and only JSON-stored attributes carries
+		// nothing in its markup, so self-closing loses nothing and must not warn.
+		albert_test_register_block_type( 'core/cover', true, [ 'url' => [] ] );
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/cover',
+					'attributes' => [
+						'url'      => 'https://example.com/x.jpg',
+						'dimRatio' => 50,
+					],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( '/-->', $result['markup'] );
+		$this->assertStringNotContainsString( '<!-- /wp:cover -->', $result['markup'] );
+		$this->assertSame( [], $result['issues'], 'A childless, all-JSON block self-closes losslessly with no issue.' );
+	}
+
+	public function test_third_party_block_with_markup_sourced_attribute_is_preserved(): void {
+		// A custom block Albert has no template or special knowledge of, whose
+		// content lives ONLY in a rich-text (text-sourced) attribute — no
+		// plaintext fallback. This is the documented "put text in attributes
+		// (content/text/value)" contract. The content must be materialised into
+		// innerHTML, not left inert in the comment JSON where the parser ignores
+		// it for a markup-sourced attribute and it would be lost on reload.
+		albert_test_register_block_type(
+			'acme/callout',
+			false,
+			[ 'text' => [ 'source' => 'rich-text' ] ]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'acme/callout',
+					'attributes' => [ 'text' => 'Heads up' ],
+				],
+			]
+		);
+
+		// Not self-closed, and the attribute value lives in the block's markup
+		// (not only in the comment JSON, where a markup-sourced attribute is
+		// ignored on reload).
+		$this->assertStringContainsString( 'Heads up', $result['markup'] );
+		$this->assertStringNotContainsString( '/-->', $result['markup'] );
+		$this->assertStringContainsString( '<!-- /wp:acme/callout -->', $result['markup'] );
+		$this->assertNotEmpty( $this->messages( $result['issues'], 'warning' ) );
+		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
+	}
+
+	public function test_scalar_text_sourced_attribute_is_not_silently_dropped(): void {
+		// core/verse stores `content` in its markup (source: html), no template
+		// here, no plaintext given. The value must be kept in the markup, not
+		// self-closed away with the value inert in the comment JSON.
+		albert_test_register_block_type(
+			'core/verse',
+			false,
+			[ 'content' => [ 'source' => 'html' ] ]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/verse',
+					'attributes' => [ 'content' => 'Roses are red' ],
+				],
+			]
+		);
+
+		$this->assertStringNotContainsString( 'wp:verse {"content":"Roses are red"} /', $result['markup'] );
+		$this->assertStringContainsString( 'Roses are red', $result['markup'] );
+
+		// It round-trips as a verse whose plaintext survives.
+		$tree = $this->reader->read( $result['markup'] );
+		$this->assertSame( 'core/verse', $tree[0]['name'] );
+		$this->assertSame( 'Roses are red', $tree[0]['plaintext'] );
+	}
+
+	public function test_empty_markup_sourced_attribute_self_closes_losslessly(): void {
+		// An empty content attribute stores nothing, so self-closing loses
+		// nothing and must not warn or error.
+		albert_test_register_block_type(
+			'core/verse',
+			false,
+			[ 'content' => [ 'source' => 'html' ] ]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/verse',
+					'attributes' => [ 'content' => '' ],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( '/-->', $result['markup'] );
+		$this->assertSame( [], $result['issues'] );
+	}
+
+	public function test_unreproducible_structural_content_is_refused_not_dropped(): void {
+		// A block whose content lives in a structural source (a `query` — nested
+		// rows/cells) that this server cannot reproduce as inner text. It must be
+		// REFUSED with an error, never self-closed with the content silently lost.
+		albert_test_register_block_type(
+			'core/table',
+			false,
+			[ 'body' => [ 'source' => 'query' ] ]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/table',
+					'attributes' => [ 'body' => [ [ 'cells' => [ [ 'content' => 'A1' ] ] ] ] ],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertNotEmpty( $errors, 'Unreproducible structural content must be refused, not dropped.' );
+		$this->assertStringContainsString( 'core/table', $errors[0] );
+	}
+
+	public function test_inner_blocks_are_never_dropped_under_a_leaf_template(): void {
+		// A leaf-templated block (heading) whose template emits no %children%
+		// marker, handed inner blocks anyway — e.g. an assistant nesting content
+		// under the wrong block. The make_block() safety net must still emit the
+		// child rather than silently discard it.
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'        => 'core/heading',
+					'attributes'  => [ 'content' => 'Title' ],
+					'innerBlocks' => [
+						[
+							'name'       => 'core/paragraph',
+							'attributes' => [ 'content' => 'Orphaned child' ],
+						],
+					],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( 'Orphaned child', $result['markup'] );
+
+		$tree = $this->reader->read( $result['markup'] );
+		$this->assertCount( 1, $tree[0]['innerBlocks'], 'The nested child must not be dropped by make_block().' );
+		$this->assertSame( 'Orphaned child', $tree[0]['innerBlocks'][0]['plaintext'] );
+	}
+
 	// Validation issues
-	// =====================================================================
 
 	public function test_invalid_heading_level_is_flagged_and_clamped(): void {
 		$result = $this->serializer->serialize_with_issues(
@@ -599,9 +834,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertSame( [], $result['issues'] );
 	}
 
-	// =====================================================================
 	// String input → BlockConverter fallback
-	// =====================================================================
 
 	public function test_string_input_routes_through_block_converter(): void {
 		$markup = $this->serializer->serialize( '<p>Hello world</p>' );
@@ -627,9 +860,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertSame( 'Already a block', $tree[0]['plaintext'] );
 	}
 
-	// =====================================================================
 	// Multiple top-level blocks separated correctly
-	// =====================================================================
 
 	public function test_multiple_blocks_round_trip_in_order(): void {
 		$this->assert_round_trip(
@@ -663,9 +894,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertStringContainsString( '&lt;', $markup );
 	}
 
-	// =====================================================================
 	// Rich-text attributes (FIX 1): inline formatting preserved, scripts stripped
-	// =====================================================================
 
 	public function test_rich_text_paragraph_attribute_preserves_inline_formatting(): void {
 		$markup = $this->serializer->serialize(
@@ -761,9 +990,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertStringNotContainsString( '<strong>b</strong>', $markup );
 	}
 
-	// =====================================================================
 	// Group tagName allowlist (FIX 3)
-	// =====================================================================
 
 	public function test_group_tagname_script_is_coerced_to_div(): void {
 		$markup = $this->serializer->serialize(
