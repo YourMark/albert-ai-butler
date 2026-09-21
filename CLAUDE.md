@@ -461,7 +461,7 @@ form and forms cannot nest.
 still records the `home_url()` host on the client when authorisation completes,
 so the history exists on the day the control ships. Nothing reads it to refuse a
 request: enforcement, the admin notice and the re-confirm flow are deferred
-(`docs/features/31-connections.md` §6). Half-shipping a control that can strand a
+(tracked in the Albert project's planning docs, not the repo). Half-shipping a control that can strand a
 live connection mid-migration is worse than not shipping it.
 
 **One picker, two entry points.** `Admin\Connections\UserPickerModal` renders
