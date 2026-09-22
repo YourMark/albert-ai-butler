@@ -46,6 +46,79 @@ class ServerTest extends TestCase {
 	}
 
 	/**
+	 * Reset filter overrides set by individual tests.
+	 *
+	 * @return void
+	 */
+	protected function tearDown(): void {
+		unset( $GLOBALS['albert_test_filter_returns']['albert/mcp/disable_default_server'] );
+
+		parent::tearDown();
+	}
+
+	// ─── neutralize_default_server_config() ─────────────────────────
+
+	/**
+	 * By default Albert strips the adapter's built-in default server to nothing —
+	 * empty tools, resources and prompts — so it can execute nothing, closing the
+	 * `current_user_can('read')` path around OAuth, the allowed-users list and the
+	 * consent screen. Other config keys are left untouched.
+	 *
+	 * @return void
+	 */
+	public function test_neutralize_default_server_empties_the_tool_list(): void {
+		$config = ( new Server() )->neutralize_default_server_config(
+			[
+				'server_id' => 'mcp-adapter-default-server',
+				'tools'     => [ 'mcp-adapter/execute-ability' ],
+				'resources' => [ 'some-resource' ],
+				'prompts'   => [ 'some-prompt' ],
+			]
+		);
+
+		$this->assertSame( [], $config['tools'] );
+		$this->assertSame( [], $config['resources'] );
+		$this->assertSame( [], $config['prompts'] );
+		$this->assertSame( 'mcp-adapter-default-server', $config['server_id'] );
+	}
+
+	/**
+	 * A site can leave the adapter's default server intact by returning false from
+	 * `albert/mcp/disable_default_server`; Albert then returns the configuration
+	 * exactly as it received it.
+	 *
+	 * @return void
+	 */
+	public function test_neutralize_default_server_escape_hatch_leaves_config_untouched(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/mcp/disable_default_server'] = false;
+
+		$input = [
+			'tools'     => [ 'mcp-adapter/execute-ability' ],
+			'resources' => [],
+			'prompts'   => [],
+		];
+
+		$this->assertSame( $input, ( new Server() )->neutralize_default_server_config( $input ) );
+	}
+
+	/**
+	 * A non-array config (unexpected, but the filter's input is not guaranteed) is
+	 * tolerated and still comes back neutralised rather than fataling.
+	 *
+	 * @return void
+	 */
+	public function test_neutralize_default_server_tolerates_non_array_config(): void {
+		$this->assertSame(
+			[
+				'tools'     => [],
+				'resources' => [],
+				'prompts'   => [],
+			],
+			( new Server() )->neutralize_default_server_config( null )
+		);
+	}
+
+	/**
 	 * Invoke the private response_status().
 	 *
 	 * @param mixed $response A response value.

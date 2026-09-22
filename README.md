@@ -95,6 +95,19 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.5.0
+
+Closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
+
+**Security**
+
+- Albert now closes an unused extra way in. An AI assistant that held a WordPress application password could previously reach your site's tools without going through Albert's sign-in, the list of people you allow to connect, or the approval screen — and it left no record under Connections. That entry point is switched off, so assistants must connect the approved way.
+
+**Developer**
+
+- Albert now neutralises the MCP adapter's built-in default server (`mcp-adapter-default-server`), which exposed every public ability through the adapter's default transport permission (`current_user_can( 'read' )`), bypassing Albert's OAuth flow, the allowed-users list and the consent screen, and left no Connections row. The server is left created — the `mcp_adapter_create_default_server` off switch would also unregister the `mcp-adapter/*` meta-tool abilities Albert's own server depends on — but its tools, resources and prompts are emptied through the `mcp_adapter_default_server_config` filter, so it can execute nothing. Applied whenever Albert's MCP integration is active, not gated on which shared copy of the adapter is loaded, since the abilities are global. New `albert/mcp/disable_default_server` filter (default true) opts out.
+- `BaseAbility::check_rest_permission()` no longer carries a dead regex branch for pattern routes — a `preg_match()` against the REST route table's keys that could never match. The behaviour it fell through to is now explicit: a single-object route such as `/wp/v2/posts/(?P<id>[\d]+)` is gated by the ability's declared capability at this pre-execution stage, because its endpoint permission callback needs a target id that is not known yet; the exact per-object check still runs at execution via `rest_do_request()`. Plain collection routes still delegate to their own permission callback. No behaviour change.
+
 ### 1.4.1
 
 Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that handle the sign-in discovery address themselves.
