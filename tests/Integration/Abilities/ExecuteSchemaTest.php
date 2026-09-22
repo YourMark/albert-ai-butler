@@ -857,9 +857,13 @@ class ExecuteSchemaTest extends TestCase {
 			'WordPress\\Posts\\EditBlock',
 			'WordPress\\Posts\\MoveBlock',
 			'WordPress\\Posts\\RemoveBlock',
-			// Read-only reflection over the block type registry.
+			// Read-only reflection over the block type and pattern registries.
+			// Their registry contents vary across the CI matrix (per WP version
+			// and theme), so they are covered by the unit tests instead.
 			'WordPress\\Blocks\\GetBlockType',
 			'WordPress\\Blocks\\ListBlockTypes',
+			'WordPress\\Blocks\\FindPatterns',
+			'WordPress\\Blocks\\ViewPattern',
 			// Returns a skill body by slug; covered by the skills registry tests.
 			'WordPress\\Skills\\GetSkill',
 		];
