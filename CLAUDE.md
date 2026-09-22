@@ -732,6 +732,13 @@ marker, covering permission/transport/unknown failures the adapter surfaces via 
 | `albert/woo-find-customers` | Search/list WooCommerce customers | customers |
 | `albert/woo-view-customer` | View a single customer | customers |
 | `albert/get-skill` | Read one task guide's full text by slug | skills |
+| `albert/list-block-types` | List block types the current user may use | blocks |
+| `albert/get-block-type` | View a single block type's attributes/supports | blocks |
+| `albert/find-patterns` | Find block patterns (registered + user) | patterns |
+| `albert/view-pattern` | View a single pattern's block markup | patterns |
+| `albert/create-pattern` | Save composed blocks as a user pattern | patterns |
+| `albert/update-pattern` | Edit a user pattern (registered are read-only) | patterns |
+| `albert/delete-pattern` | Delete a user pattern (registered are read-only) | patterns |
 
 ## Development Commands
 
