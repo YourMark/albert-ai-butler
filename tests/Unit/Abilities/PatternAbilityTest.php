@@ -15,7 +15,9 @@ require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 require_once dirname( __DIR__, 2 ) . '/wp-function-stubs.php';
 
 use Albert\Abilities\WordPress\Blocks\CreatePattern;
+use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Blocks\FindPatterns;
+use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Blocks\ViewPattern;
 use Albert\Blocks\PatternCatalog;
 use PHPUnit\Framework\TestCase;
@@ -132,5 +134,36 @@ class PatternAbilityTest extends TestCase {
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'pattern_title_required', $result->get_error_code() );
+	}
+
+	public function test_update_refuses_a_registered_pattern(): void {
+		$result = ( new UpdatePattern( $this->catalog() ) )->execute(
+			[
+				'name'  => 'acme/hero',
+				'title' => 'x',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'pattern_read_only', $result->get_error_code() );
+	}
+
+	public function test_delete_refuses_a_registered_pattern(): void {
+		$result = ( new DeletePattern( $this->catalog() ) )->execute( [ 'name' => 'acme/hero' ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'pattern_read_only', $result->get_error_code() );
+	}
+
+	public function test_update_unknown_name_returns_not_found(): void {
+		$result = ( new UpdatePattern( $this->catalog() ) )->execute(
+			[
+				'name'  => 'no/such',
+				'title' => 'x',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'pattern_not_found', $result->get_error_code() );
 	}
 }

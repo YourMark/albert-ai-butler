@@ -44,6 +44,8 @@ use Albert\Abilities\WordPress\Blocks\ListBlockTypes;
 use Albert\Abilities\WordPress\Blocks\FindPatterns;
 use Albert\Abilities\WordPress\Blocks\ViewPattern;
 use Albert\Abilities\WordPress\Blocks\CreatePattern;
+use Albert\Abilities\WordPress\Blocks\UpdatePattern;
+use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Skills\GetSkill;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
 use Albert\Abilities\WordPress\Taxonomies\FindTerms;
@@ -366,6 +368,8 @@ class Plugin {
 		$this->abilities_manager->add_ability( new FindPatterns() );
 		$this->abilities_manager->add_ability( new ViewPattern() );
 		$this->abilities_manager->add_ability( new CreatePattern() );
+		$this->abilities_manager->add_ability( new UpdatePattern() );
+		$this->abilities_manager->add_ability( new DeletePattern() );
 
 		// Returns the full text of one task guide, by slug.
 		$this->abilities_manager->add_ability( new GetSkill() );
