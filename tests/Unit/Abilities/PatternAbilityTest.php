@@ -41,6 +41,8 @@ class PatternAbilityTest extends TestCase {
 				'viewportWidth' => 1200,
 				'content'       => '<!-- wp:cover --><div class="wp-block-cover"></div><!-- /wp:cover -->',
 				'source'        => 'registered',
+				'id'            => null,
+				'syncStatus'    => 'unsynced',
 			],
 		];
 
@@ -54,6 +56,8 @@ class PatternAbilityTest extends TestCase {
 				'viewportWidth' => null,
 				'content'       => '<!-- wp:paragraph --><p>Note</p><!-- /wp:paragraph -->',
 				'source'        => 'user',
+				'id'            => 42,
+				'syncStatus'    => 'synced',
 			],
 		];
 
@@ -91,6 +95,21 @@ class PatternAbilityTest extends TestCase {
 		$this->assertSame( 'acme/hero', $result['name'] );
 		$this->assertSame( 'registered', $result['source'] );
 		$this->assertStringContainsString( 'wp:cover', $result['content'] );
+	}
+
+	public function test_view_exposes_sync_status_and_ref_id_for_user_patterns(): void {
+		$result = ( new ViewPattern( $this->catalog() ) )->execute( [ 'name' => 'my-callout' ] );
+
+		$this->assertSame( 'user', $result['source'] );
+		$this->assertSame( 'synced', $result['syncStatus'] );
+		$this->assertSame( 42, $result['id'] );
+	}
+
+	public function test_registered_pattern_is_an_unsynced_copy_with_no_ref(): void {
+		$result = ( new ViewPattern( $this->catalog() ) )->execute( [ 'name' => 'acme/hero' ] );
+
+		$this->assertSame( 'unsynced', $result['syncStatus'] );
+		$this->assertNull( $result['id'] );
 	}
 
 	public function test_view_unknown_name_returns_error(): void {

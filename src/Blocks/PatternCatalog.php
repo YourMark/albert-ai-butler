@@ -133,6 +133,8 @@ class PatternCatalog {
 			'description' => $pattern['description'],
 			'categories'  => $pattern['categories'],
 			'source'      => $pattern['source'],
+			'id'          => $pattern['id'],
+			'syncStatus'  => $pattern['syncStatus'],
 		];
 	}
 
@@ -174,6 +176,10 @@ class PatternCatalog {
 				'viewportWidth' => isset( $pattern['viewportWidth'] ) ? (int) $pattern['viewportWidth'] : null,
 				'content'       => (string) ( $pattern['content'] ?? '' ),
 				'source'        => 'registered',
+				// Registered patterns are always inserted as an independent copy;
+				// there is no reference to sync back to.
+				'id'            => null,
+				'syncStatus'    => 'unsynced',
 			];
 		}
 
@@ -204,6 +210,11 @@ class PatternCatalog {
 		foreach ( $posts as $post ) {
 			$categories = wp_get_object_terms( $post->ID, 'wp_pattern_category', [ 'fields' => 'slugs' ] );
 
+			// A user pattern is synced by default; the 'unsynced' meta marks the
+			// copy-on-insert ones. A synced pattern is inserted by reference
+			// (core/block, so edits propagate); an unsynced one as a copy.
+			$sync = get_post_meta( $post->ID, 'wp_pattern_sync_status', true ) === 'unsynced' ? 'unsynced' : 'synced';
+
 			$out[] = [
 				'name'          => $post->post_name,
 				'title'         => $post->post_title,
@@ -213,6 +224,8 @@ class PatternCatalog {
 				'viewportWidth' => null,
 				'content'       => $post->post_content,
 				'source'        => 'user',
+				'id'            => (int) $post->ID,
+				'syncStatus'    => $sync,
 			];
 		}
 

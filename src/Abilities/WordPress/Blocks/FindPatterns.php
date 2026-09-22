@@ -112,6 +112,8 @@ class FindPatterns extends BaseAbility {
 								'items' => [ 'type' => 'string' ],
 							],
 							'source'      => [ 'type' => 'string' ],
+							'id'          => [ 'type' => [ 'integer', 'null' ] ],
+							'syncStatus'  => [ 'type' => 'string' ],
 						],
 					],
 				],

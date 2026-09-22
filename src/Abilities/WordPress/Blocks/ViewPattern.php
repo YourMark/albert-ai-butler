@@ -56,8 +56,10 @@ class ViewPattern extends BaseAbility {
 		$this->meta = [
 			'mcp'         => [ 'public' => true ],
 			'annotations' => Annotations::read(
-				'The `content` is valid block markup you can pass straight to create/update as the `content` field, '
-				. 'or adapt. A `registered` pattern is read-only; a `user` pattern can also be edited on the site.'
+				'The `content` is valid block markup. To reuse it as an independent copy, pass it straight to '
+				. 'create/update as the `content` field, or adapt it. If `syncStatus` is `synced` (user patterns only), '
+				. 'you can instead insert it by reference so later edits to the pattern propagate everywhere: use '
+				. '`<!-- wp:block {"ref":ID} /-->` with the pattern\'s `id`. A `registered` pattern is always a copy.'
 			),
 		];
 
@@ -107,6 +109,8 @@ class ViewPattern extends BaseAbility {
 				'viewportWidth' => [ 'type' => [ 'integer', 'null' ] ],
 				'content'       => [ 'type' => 'string' ],
 				'source'        => [ 'type' => 'string' ],
+				'id'            => [ 'type' => [ 'integer', 'null' ] ],
+				'syncStatus'    => [ 'type' => 'string' ],
 			],
 			'required'   => [ 'name', 'content', 'source' ],
 		];
