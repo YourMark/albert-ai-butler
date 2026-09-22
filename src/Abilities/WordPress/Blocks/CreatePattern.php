@@ -40,7 +40,7 @@ class CreatePattern extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/create-pattern';
 		$this->label       = __( 'Create Pattern', 'albert-ai-butler' );
-		$this->description = __( 'Save a reusable block pattern from composed blocks, so a layout can be reused across the site. Send block specs in "blocks". By default the pattern is an unsynced copy-on-insert template; set "synced" true to make one source that updates everywhere it is used.', 'albert-ai-butler' );
+		$this->description = __( 'Save a reusable block pattern from composed blocks, so a layout can be reused across the site. This creates a user pattern; theme and plugin (registered) patterns are read-only and cannot be created or changed here. Send block specs in "blocks". By default the pattern is an unsynced copy-on-insert template; set "synced" true to make one source that updates everywhere it is used.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'patterns';
 
