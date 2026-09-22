@@ -115,7 +115,13 @@ class DeletePattern extends BaseAbility {
 	 * @since 1.5.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->check_rest_permission( '/wp/v2/blocks', 'DELETE', 'delete_posts' );
+		// The /wp/v2/blocks collection route exposes no DELETE endpoint (DELETE
+		// lives only on the single-object route, a pattern route that can't be
+		// checked without the target id here), so check_rest_permission would
+		// silently fall through to this same capability. Check it directly; the
+		// authoritative per-object delete_post check still runs at execute() via
+		// rest_do_request().
+		return $this->require_capability( 'delete_posts' );
 	}
 
 	/**
