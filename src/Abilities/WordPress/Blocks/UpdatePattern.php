@@ -169,7 +169,7 @@ class UpdatePattern extends BaseAbility {
 
 		$has_new_content = ( ! empty( $args['blocks'] ) && is_array( $args['blocks'] ) ) || isset( $args['content'] );
 		if ( $has_new_content ) {
-			$resolved = ( new WriteContentResolver() )->resolve( $args, 'post' );
+			$resolved = ( new WriteContentResolver() )->resolve_pattern( $args, $id );
 			if ( is_wp_error( $resolved ) ) {
 				return $resolved;
 			}
@@ -194,8 +194,17 @@ class UpdatePattern extends BaseAbility {
 
 		$sync = $this->apply_sync_status( $id, $args, $pattern['syncStatus'] );
 
-		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
-			wp_set_object_terms( $id, array_map( 'sanitize_text_field', $args['categories'] ), 'wp_pattern_category', false );
+		// Presence of the key means "replace", so an empty array clears every
+		// category; only an omitted key leaves them unchanged.
+		if ( isset( $args['categories'] ) && is_array( $args['categories'] ) ) {
+			$terms = wp_set_object_terms( $id, array_map( 'sanitize_text_field', $args['categories'] ), 'wp_pattern_category', false );
+			if ( is_wp_error( $terms ) ) {
+				$block_issues[] = sprintf(
+					/* translators: %s: error message. */
+					__( 'The pattern was updated, but its categories could not be set: %s', 'albert-ai-butler' ),
+					$terms->get_error_message()
+				);
+			}
 		}
 
 		return [

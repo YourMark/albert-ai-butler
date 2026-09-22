@@ -149,7 +149,7 @@ class CreatePattern extends BaseAbility {
 			);
 		}
 
-		$resolved = ( new WriteContentResolver() )->resolve( $args, 'post' );
+		$resolved = ( new WriteContentResolver() )->resolve_pattern( $args );
 		if ( is_wp_error( $resolved ) ) {
 			return $resolved;
 		}
@@ -174,7 +174,8 @@ class CreatePattern extends BaseAbility {
 			);
 		}
 
-		$id = (int) ( $data['id'] ?? 0 );
+		$id           = (int) ( $data['id'] ?? 0 );
+		$block_issues = $resolved['block_issues'];
 
 		// Unsynced is the copy-on-insert default; the meta marks it. A synced
 		// pattern carries no such meta.
@@ -184,7 +185,14 @@ class CreatePattern extends BaseAbility {
 		}
 
 		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
-			wp_set_object_terms( $id, array_map( 'sanitize_text_field', $args['categories'] ), 'wp_pattern_category', false );
+			$terms = wp_set_object_terms( $id, array_map( 'sanitize_text_field', $args['categories'] ), 'wp_pattern_category', false );
+			if ( is_wp_error( $terms ) ) {
+				$block_issues[] = sprintf(
+					/* translators: %s: error message. */
+					__( 'The pattern was saved, but its categories could not be set: %s', 'albert-ai-butler' ),
+					$terms->get_error_message()
+				);
+			}
 		}
 
 		$edit_url = get_edit_post_link( $id, 'raw' );
@@ -195,7 +203,7 @@ class CreatePattern extends BaseAbility {
 			'title'        => $title,
 			'syncStatus'   => $synced ? 'synced' : 'unsynced',
 			'edit_url'     => is_string( $edit_url ) ? $edit_url : '',
-			'block_issues' => $resolved['block_issues'],
+			'block_issues' => $block_issues,
 		];
 	}
 }
