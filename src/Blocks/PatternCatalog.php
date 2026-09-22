@@ -14,6 +14,7 @@
 namespace Albert\Blocks;
 
 use WP_Block_Patterns_Registry;
+use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -95,13 +96,17 @@ class PatternCatalog {
 	 * @since 1.5.0
 	 */
 	public function get( string $name ): ?array {
-		foreach ( $this->patterns() as $pattern ) {
+		// A registered pattern is already in memory from the registry, so match
+		// those first. Only when the name is not a registered one do we look up a
+		// single user pattern by slug, rather than reading the whole wp_block CPT
+		// just to find one.
+		foreach ( $this->registered() as $pattern ) {
 			if ( $pattern['name'] === $name ) {
 				return $pattern;
 			}
 		}
 
-		return null;
+		return $this->user_pattern( $name );
 	}
 
 	/**
@@ -112,10 +117,60 @@ class PatternCatalog {
 	 * @since 1.5.0
 	 */
 	private function patterns(): array {
-		$this->registered ??= $this->read_registered();
-		$this->user       ??= $this->read_user();
+		return array_merge( $this->registered(), $this->users() );
+	}
 
-		return array_merge( $this->registered, $this->user );
+	/**
+	 * Registered patterns, read once and cached.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 *
+	 * @since 1.5.0
+	 */
+	private function registered(): array {
+		return $this->registered ??= $this->read_registered();
+	}
+
+	/**
+	 * User patterns, read once and cached.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 *
+	 * @since 1.5.0
+	 */
+	private function users(): array {
+		return $this->user ??= $this->read_user();
+	}
+
+	/**
+	 * Resolve one user pattern by slug without reading the whole CPT.
+	 *
+	 * An injected user set (tests) is searched in memory; otherwise a single
+	 * post is loaded by its slug.
+	 *
+	 * @param string $name User pattern slug.
+	 * @return array<string, mixed>|null
+	 *
+	 * @since 1.5.0
+	 */
+	private function user_pattern( string $name ): ?array {
+		if ( $this->user !== null ) {
+			foreach ( $this->user as $pattern ) {
+				if ( $pattern['name'] === $name ) {
+					return $pattern;
+				}
+			}
+
+			return null;
+		}
+
+		$post = get_page_by_path( $name, OBJECT, 'wp_block' );
+
+		if ( ! $post instanceof WP_Post || $post->post_status !== 'publish' ) {
+			return null;
+		}
+
+		return $this->map_user_post( $post );
 	}
 
 	/**
@@ -199,36 +254,44 @@ class PatternCatalog {
 	private function read_user(): array {
 		$posts = get_posts(
 			[
-				'post_type'   => 'wp_block',
-				'post_status' => 'publish',
-				'numberposts' => -1,
+				'post_type'     => 'wp_block',
+				'post_status'   => 'publish',
+				'numberposts'   => -1,
+				// This read never paginates, so skip the extra COUNT(*) query.
+				'no_found_rows' => true,
 			]
 		);
 
-		$out = [];
+		return array_map( [ $this, 'map_user_post' ], $posts );
+	}
 
-		foreach ( $posts as $post ) {
-			$categories = wp_get_object_terms( $post->ID, 'wp_pattern_category', [ 'fields' => 'slugs' ] );
+	/**
+	 * Map a wp_block post to a full pattern record.
+	 *
+	 * @param WP_Post $post The wp_block post.
+	 * @return array<string, mixed>
+	 *
+	 * @since 1.5.0
+	 */
+	private function map_user_post( WP_Post $post ): array {
+		$categories = wp_get_object_terms( $post->ID, 'wp_pattern_category', [ 'fields' => 'slugs' ] );
 
-			// A user pattern is synced by default; the 'unsynced' meta marks the
-			// copy-on-insert ones. A synced pattern is inserted by reference
-			// (core/block, so edits propagate); an unsynced one as a copy.
-			$sync = get_post_meta( $post->ID, 'wp_pattern_sync_status', true ) === 'unsynced' ? 'unsynced' : 'synced';
+		// A user pattern is synced by default; the 'unsynced' meta marks the
+		// copy-on-insert ones. A synced pattern is inserted by reference
+		// (core/block, so edits propagate); an unsynced one as a copy.
+		$sync = get_post_meta( $post->ID, 'wp_pattern_sync_status', true ) === 'unsynced' ? 'unsynced' : 'synced';
 
-			$out[] = [
-				'name'          => $post->post_name,
-				'title'         => $post->post_title,
-				'description'   => '',
-				'categories'    => is_wp_error( $categories ) ? [] : array_map( 'strval', $categories ),
-				'keywords'      => [],
-				'viewportWidth' => null,
-				'content'       => $post->post_content,
-				'source'        => 'user',
-				'id'            => (int) $post->ID,
-				'syncStatus'    => $sync,
-			];
-		}
-
-		return $out;
+		return [
+			'name'          => $post->post_name,
+			'title'         => $post->post_title,
+			'description'   => '',
+			'categories'    => is_wp_error( $categories ) ? [] : array_map( 'strval', $categories ),
+			'keywords'      => [],
+			'viewportWidth' => null,
+			'content'       => $post->post_content,
+			'source'        => 'user',
+			'id'            => (int) $post->ID,
+			'syncStatus'    => $sync,
+		];
 	}
 }
