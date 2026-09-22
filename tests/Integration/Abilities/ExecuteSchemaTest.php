@@ -16,6 +16,9 @@
 
 namespace Albert\Tests\Integration\Abilities;
 
+use Albert\Abilities\WordPress\Blocks\CreatePattern;
+use Albert\Abilities\WordPress\Blocks\DeletePattern;
+use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
@@ -837,6 +840,94 @@ class ExecuteSchemaTest extends TestCase {
 	 *
 	 * @return void
 	 */
+	/**
+	 * CreatePattern saves a wp_block pattern and matches the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_create_pattern_output_matches_schema(): void {
+		$result = $this->assert_execute_matches_schema(
+			new CreatePattern(),
+			[
+				'title'  => 'Schema Test Pattern',
+				'blocks' => [
+					[
+						'name'       => 'core/paragraph',
+						'attributes' => [ 'content' => 'Reusable body' ],
+					],
+				],
+			],
+			'CreatePattern'
+		);
+
+		$this->assertSame( 'unsynced', $result['syncStatus'] );
+		$this->assertGreaterThan( 0, $result['id'] );
+		$this->assertSame( 'user', ( new \Albert\Blocks\PatternCatalog() )->get( $result['name'] )['source'] );
+	}
+
+	/**
+	 * UpdatePattern edits a user pattern and matches the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_update_pattern_output_matches_schema(): void {
+		$created = ( new CreatePattern() )->execute(
+			[
+				'title'  => 'Pattern To Edit',
+				'blocks' => [
+					[
+						'name'       => 'core/paragraph',
+						'attributes' => [ 'content' => 'v1' ],
+					],
+				],
+			]
+		);
+
+		$result = $this->assert_execute_matches_schema(
+			new UpdatePattern(),
+			[
+				'name'   => $created['name'],
+				'title'  => 'Pattern Edited',
+				'synced' => true,
+			],
+			'UpdatePattern'
+		);
+
+		$this->assertTrue( $result['updated'] );
+		$this->assertSame( 'synced', $result['syncStatus'] );
+	}
+
+	/**
+	 * DeletePattern removes a user pattern and matches the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_delete_pattern_output_matches_schema(): void {
+		$created = ( new CreatePattern() )->execute(
+			[
+				'title'  => 'Pattern To Delete',
+				'blocks' => [
+					[
+						'name'       => 'core/paragraph',
+						'attributes' => [ 'content' => 'gone' ],
+					],
+				],
+			]
+		);
+
+		$result = $this->assert_execute_matches_schema(
+			new DeletePattern(),
+			[
+				'name'  => $created['name'],
+				'force' => true,
+			],
+			'DeletePattern'
+		);
+
+		$this->assertTrue( $result['deleted'] );
+		$this->assertNull( get_post( (int) $created['id'] ) );
+	}
+
 	public function test_every_ability_with_an_output_schema_is_exercised(): void {
 		if ( self::$executed === [] ) {
 			$this->markTestSkipped(
@@ -857,9 +948,13 @@ class ExecuteSchemaTest extends TestCase {
 			'WordPress\\Posts\\EditBlock',
 			'WordPress\\Posts\\MoveBlock',
 			'WordPress\\Posts\\RemoveBlock',
-			// Read-only reflection over the block type registry.
+			// Read-only reflection over the block type and pattern registries.
+			// Their registry contents vary across the CI matrix (per WP version
+			// and theme), so they are covered by the unit tests instead.
 			'WordPress\\Blocks\\GetBlockType',
 			'WordPress\\Blocks\\ListBlockTypes',
+			'WordPress\\Blocks\\FindPatterns',
+			'WordPress\\Blocks\\ViewPattern',
 			// Returns a skill body by slug; covered by the skills registry tests.
 			'WordPress\\Skills\\GetSkill',
 		];
