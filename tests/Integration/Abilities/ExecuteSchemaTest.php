@@ -16,6 +16,7 @@
 
 namespace Albert\Tests\Integration\Abilities;
 
+use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
@@ -837,6 +838,31 @@ class ExecuteSchemaTest extends TestCase {
 	 *
 	 * @return void
 	 */
+	/**
+	 * CreatePattern saves a wp_block pattern and matches the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_create_pattern_output_matches_schema(): void {
+		$result = $this->assert_execute_matches_schema(
+			new CreatePattern(),
+			[
+				'title'  => 'Schema Test Pattern',
+				'blocks' => [
+					[
+						'name'       => 'core/paragraph',
+						'attributes' => [ 'content' => 'Reusable body' ],
+					],
+				],
+			],
+			'CreatePattern'
+		);
+
+		$this->assertSame( 'unsynced', $result['syncStatus'] );
+		$this->assertGreaterThan( 0, $result['id'] );
+		$this->assertSame( 'user', ( new \Albert\Blocks\PatternCatalog() )->get( $result['name'] )['source'] );
+	}
+
 	public function test_every_ability_with_an_output_schema_is_exercised(): void {
 		if ( self::$executed === [] ) {
 			$this->markTestSkipped(

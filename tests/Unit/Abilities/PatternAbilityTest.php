@@ -14,6 +14,7 @@ namespace Albert\Tests\Unit\Abilities;
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 require_once dirname( __DIR__, 2 ) . '/wp-function-stubs.php';
 
+use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Blocks\FindPatterns;
 use Albert\Abilities\WordPress\Blocks\ViewPattern;
 use Albert\Blocks\PatternCatalog;
@@ -124,5 +125,12 @@ class PatternAbilityTest extends TestCase {
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'pattern_name_required', $result->get_error_code() );
+	}
+
+	public function test_create_requires_a_title(): void {
+		$result = ( new CreatePattern() )->execute( [ 'title' => '   ' ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'pattern_title_required', $result->get_error_code() );
 	}
 }

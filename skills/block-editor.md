@@ -188,6 +188,12 @@ pattern's markup is known-valid.
 layout the site already ships, or any Cover / Media & Text layout where a pattern
 keeps the markup valid.
 
+**Saving a pattern:** when a layout is worth reusing across pages, save it with
+`albert/create-pattern` (send the `blocks` the same way you build a post body).
+It saves a user pattern. By default it is an unsynced copy-on-insert template; set
+`synced: true` for one source that updates everywhere it is used. Registered
+theme/plugin patterns cannot be created this way.
+
 ## Granular block edits — change ONE block at a time
 
 `create-*` and `update-*` replace the **whole** post body. For a long post, or when
