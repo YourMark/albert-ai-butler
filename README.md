@@ -95,6 +95,19 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.4.2
+
+Fixes some AI assistants refusing to connect because the sign-in information was missing one detail they now require.
+
+**Fixes**
+
+- Some AI assistants (including Claude Code) would not connect, reporting a problem with the sign-in information. Albert now includes the missing detail, so they connect again.
+
+**Developer**
+
+- The authorization server metadata now advertises `jwks_uri`, served from a new `/wp-json/albert/v1/oauth/jwks` endpoint that publishes the token signing key's public half as an RFC 7517 JSON Web Key Set. Clients that validate the metadata before authenticating (Claude Code's MCP SDK requires `jwks_uri` to be a string, though RFC 8414 marks it optional) previously failed discovery outright.
+- Discovery now answers the RFC 8414 §3.1 and RFC 9728 §3.1 canonical path-insertion URLs (`/.well-known/oauth-authorization-server/<issuer path>` and `/.well-known/oauth-protected-resource/<resource path>`), not only the OIDC append form. A strict client that constructs the canonical form no longer gets a 404. These are root `.well-known` URLs, so on hosts that intercept a root `/.well-known/` the mid-path append form remains the one that works.
+
 ### 1.4.1
 
 Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that handle the sign-in discovery address themselves.

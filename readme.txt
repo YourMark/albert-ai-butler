@@ -4,7 +4,7 @@ Tags: ai assistant, chatgpt, claude, ai, mcp
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.4.1
+Stable tag: 1.4.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -192,6 +192,18 @@ Documentation at [albertwp.com/docs](https://albertwp.com/docs/), or the [WordPr
 
 == Changelog ==
 
+= 1.4.2 =
+Fixes some AI assistants refusing to connect because the sign-in information was missing one detail they now require.
+
+**Fixes**
+
+* Some AI assistants (including Claude Code) would not connect, reporting a problem with the sign-in information. Albert now includes the missing detail, so they connect again.
+
+**Developer**
+
+* The authorization server metadata now advertises `jwks_uri`, served from a new `/wp-json/albert/v1/oauth/jwks` endpoint that publishes the token signing key's public half as an RFC 7517 JSON Web Key Set. Clients that validate the metadata before authenticating (Claude Code's MCP SDK requires `jwks_uri` to be a string, though RFC 8414 marks it optional) previously failed discovery outright.
+* Discovery now answers the RFC 8414 §3.1 and RFC 9728 §3.1 canonical path-insertion URLs (`/.well-known/oauth-authorization-server/<issuer path>` and `/.well-known/oauth-protected-resource/<resource path>`), not only the OIDC append form. A strict client that constructs the canonical form no longer gets a 404. These are root `.well-known` URLs, so on hosts that intercept a root `/.well-known/` the mid-path append form remains the one that works.
+
 = 1.4.1 =
 Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that handle the sign-in discovery address themselves.
 
@@ -364,6 +376,9 @@ A bug-fix release.
 Releases before 1.1.1 are listed in `changelog.txt`, bundled with the plugin.
 
 == Upgrade Notice ==
+
+= 1.4.2 =
+Fixes some AI assistants (including Claude Code) refusing to connect over a missing piece of sign-in information. Recommended if an assistant will not connect.
 
 = 1.4.1 =
 Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that were blocking the sign-in step. Recommended if any assistant could not connect.
