@@ -30,18 +30,27 @@ class Create extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/create-user';
 		$this->label       = __( 'Create User', 'albert-ai-butler' );
-		$this->description = __( 'Create a new WordPress user with specified username, email, and role.', 'albert-ai-butler' );
+		$this->description = __( 'Create a new WordPress user. The password is generated on the site; a one-time link to set their own is returned.', 'albert-ai-butler' );
 		$this->category    = 'user';
 		$this->group       = 'users';
 
 		$this->input_schema  = $this->get_input_schema();
 		$this->output_schema = $this->get_output_schema();
 
+		// The link is a credential: whoever holds it can set this account's
+		// password once. The caller needs it to pass on; no observer does.
+		$this->sensitive_output_keys = [ 'password_reset_url' ];
+
 		$this->meta = [
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::create(),
+			'annotations' => Annotations::create(
+				'Do not supply a password; this ability does not accept one. The site generates it and returns '
+				. '`password_reset_url`, a one-time link. Give that link to the new user so they set their own '
+				. 'password. It is a credential, so hand it over directly rather than repeating it anywhere it '
+				. 'would be stored.'
+			),
 		];
 
 		parent::__construct();
@@ -69,10 +78,6 @@ class Create extends BaseAbility {
 					'type'        => 'string',
 					'format'      => 'email',
 					'description' => 'The email address for the user (required)',
-				],
-				'password'    => [
-					'type'        => 'string',
-					'description' => 'The password for the user (required)',
 				],
 				'first_name'  => [
 					'type'        => 'string',
@@ -105,7 +110,7 @@ class Create extends BaseAbility {
 					'default'     => '',
 				],
 			],
-			'required'   => [ 'username', 'email', 'password' ],
+			'required'   => [ 'username', 'email' ],
 		];
 	}
 
@@ -119,14 +124,18 @@ class Create extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'       => [ 'type' => 'integer' ],
-				'username' => [ 'type' => 'string' ],
-				'email'    => [ 'type' => 'string' ],
-				'roles'    => [
+				'id'                 => [ 'type' => 'integer' ],
+				'username'           => [ 'type' => 'string' ],
+				'email'              => [ 'type' => 'string' ],
+				'roles'              => [
 					'type'  => 'array',
 					'items' => [ 'type' => 'string' ],
 				],
-				'edit_url' => [ 'type' => 'string' ],
+				'edit_url'           => [ 'type' => 'string' ],
+				'password_reset_url' => [
+					'type'        => 'string',
+					'description' => 'One-time link for the new user to set their own password. Absent if the key could not be issued.',
+				],
 			],
 			'required'   => [ 'id', 'username', 'email' ],
 		];
@@ -152,7 +161,6 @@ class Create extends BaseAbility {
 	 *
 	 *     @type string $username    Username (required).
 	 *     @type string $email       Email address (required).
-	 *     @type string $password    Password (required).
 	 *     @type string $first_name  First name.
 	 *     @type string $last_name   Last name.
 	 *     @type array  $roles       User roles.
@@ -163,11 +171,17 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
+		// The caller never chooses this. `/wp/v2/users` requires a password, so
+		// one is generated here and immediately superseded by the reset link
+		// below. `wp_generate_password()` cannot emit a backslash, which core's
+		// own `check_user_password()` rejects.
+		$generated_password = wp_generate_password( 32, true, true );
+
 		// Prepare REST API request data.
 		$request_data = [
 			'username'    => sanitize_user( $args['username'] ),
 			'email'       => sanitize_email( $args['email'] ),
-			'password'    => $args['password'],
+			'password'    => $generated_password,
 			'first_name'  => sanitize_text_field( $args['first_name'] ?? '' ),
 			'last_name'   => sanitize_text_field( $args['last_name'] ?? '' ),
 			'roles'       => array_map( 'sanitize_key', $args['roles'] ?? [ 'subscriber' ] ),
@@ -200,12 +214,55 @@ class Create extends BaseAbility {
 		}
 
 		// Return formatted user data.
-		return [
+		$result = [
 			'id'       => $data['id'],
 			'username' => $data['slug'] ?? '',
 			'email'    => $data['email'] ?? '',
 			'roles'    => $data['roles'] ?? [],
 			'edit_url' => admin_url( 'user-edit.php?user_id=' . $data['id'] ),
 		];
+
+		$reset_url = $this->password_reset_url( (int) $data['id'] );
+
+		if ( $reset_url !== null ) {
+			$result['password_reset_url'] = $reset_url;
+		}
+
+		return $result;
+	}
+
+	/**
+	 * A one-time link letting the new user set their own password.
+	 *
+	 * This is how the account becomes usable, and it is deliberately the only
+	 * route: the generated password is never disclosed, so nothing the caller
+	 * holds is a lasting credential. No notification email is sent, because
+	 * `wp_new_user_notification()` mints a reset key of its own and the second
+	 * key to be issued invalidates the first — the caller would be handed a
+	 * dead link, or the email would contain one. The caller passes this on,
+	 * exactly as it passed on a password before.
+	 *
+	 * @param int $user_id The newly created user.
+	 *
+	 * @return string|null The link, or null when a key could not be issued.
+	 * @since 1.5.0
+	 */
+	private function password_reset_url( int $user_id ): ?string {
+		$user = get_userdata( $user_id );
+
+		if ( ! $user instanceof \WP_User ) {
+			return null;
+		}
+
+		$key = get_password_reset_key( $user );
+
+		if ( is_wp_error( $key ) ) {
+			return null;
+		}
+
+		return network_site_url(
+			'wp-login.php?action=rp&key=' . rawurlencode( $key ) . '&login=' . rawurlencode( $user->user_login ),
+			'login'
+		);
 	}
 }
