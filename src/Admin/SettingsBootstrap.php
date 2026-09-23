@@ -18,6 +18,7 @@ use Albert\Media\UploadLinks\UploadLinkService;
 use Albert\OAuth\AllowedUsers;
 use Albert\OAuth\ConnectionRetention;
 use Albert\Privacy\PrivacyMode;
+use Albert\SafeMode\Gate;
 
 /**
  * SettingsBootstrap class.
@@ -39,6 +40,34 @@ class SettingsBootstrap {
 	 */
 	public static function get_builtin_sections(): array {
 		return [
+			[
+				'id'          => 'albert/safe-mode',
+				'title'       => __( 'Safe mode', 'albert-ai-butler' ),
+				'priority'    => 55,
+				'icon'        => 'shield',
+				'description' => __( 'Whether destructive actions an assistant requests wait for your approval.', 'albert-ai-butler' ),
+				'fields'      => [
+					[
+						'id'                => 'enabled',
+						'type'              => 'radio-cards',
+						'label'             => __( 'Safe mode', 'albert-ai-butler' ),
+						'option_name'       => Gate::OPTION,
+						'default'           => Gate::DEFAULT_VALUE,
+						'options'           => [
+							'on'  => [
+								'label'       => __( 'On', 'albert-ai-butler' ),
+								'description' => __( 'Deletions and other destructive changes are held on the Approvals screen until you approve them.', 'albert-ai-butler' ),
+								'recommended' => true,
+							],
+							'off' => [
+								'label'       => __( 'Off', 'albert-ai-butler' ),
+								'description' => __( 'Assistants can make destructive changes immediately, without approval.', 'albert-ai-butler' ),
+							],
+						],
+						'sanitize_callback' => [ Gate::class, 'sanitize' ],
+					],
+				],
+			],
 			[
 				'id'          => 'albert/privacy',
 				'title'       => __( 'Privacy', 'albert-ai-butler' ),

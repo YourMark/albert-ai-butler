@@ -78,6 +78,22 @@ class Gate {
 	}
 
 	/**
+	 * Coerce a stored value to `on` or `off`.
+	 *
+	 * The setting's `sanitize_callback`, so an unrecognised value is stored as the
+	 * secure default rather than as itself. A malformed value would otherwise read
+	 * as "not on" and silently disable the gate.
+	 *
+	 * @param mixed $value The submitted value.
+	 *
+	 * @return string `on` or `off`.
+	 * @since 1.5.0
+	 */
+	public static function sanitize( $value ): string {
+		return $value === 'off' ? 'off' : self::DEFAULT_VALUE;
+	}
+
+	/**
 	 * Whether this ability call must be staged for approval instead of run.
 	 *
 	 * Held when safe mode is on and the call is either high-risk by its input
