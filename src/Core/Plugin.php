@@ -87,6 +87,13 @@ use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
 use Albert\OAuth\DiscoveryHealth;
 use Albert\Privacy\PrivacyMode;
+use Albert\Execution\InterceptorDecision;
+use Albert\SafeMode\Gate as SafeModeGate;
+use Albert\SafeMode\Repository as SafeModeRepository;
+use Albert\SafeMode\Approver as SafeModeApprover;
+use Albert\SafeMode\Interceptor as SafeModeInterceptor;
+use Albert\SafeMode\ConnectionGuard as SafeModeConnectionGuard;
+use Albert\Admin\Approvals;
 use WP\MCP\Core\McpAdapter;
 
 /**
@@ -189,6 +196,22 @@ class Plugin {
 		// consumers in Free; this is the seam Premium's activity log binds to.
 		( new InvocationRelay() )->register_hooks();
 
+		// Safe mode: hold assistant-initiated destructive (or unannotated) ability
+		// calls for a person to approve. Bound to WP 7.1's wp_pre_execute_ability;
+		// inert below 7.1, where that filter never fires. Not admin-only — the
+		// gate runs on MCP requests.
+		$safe_mode_repository = new SafeModeRepository();
+		( new SafeModeInterceptor(
+			new InterceptorDecision(),
+			new SafeModeGate(),
+			$safe_mode_repository
+		) )->register_hooks();
+
+		// Refuse writes to Albert's own gate-controlling options while a request
+		// is driven by an assistant, so the gate cannot be turned off by what it
+		// gates. Resource-scoped, so it holds against any ability. Not admin-only.
+		( new SafeModeConnectionGuard() )->register_hooks();
+
 		// Daily sweep of never-authorised allowed-user invitations. schedule()
 		// is idempotent (guarded by wp_next_scheduled()), so calling it here
 		// too — not just from activate() — self-heals sites that already had
@@ -234,6 +257,9 @@ class Plugin {
 
 			// Connections page (allowed users + active sessions).
 			( new Connections() )->register_hooks();
+
+			// Safe-mode approvals queue (approve or reject held destructive calls).
+			( new Approvals( $safe_mode_repository, new SafeModeApprover( $safe_mode_repository ) ) )->register_hooks();
 
 			// Settings page (MCP endpoint, developer options, licenses).
 			( new Settings() )->register_hooks();
