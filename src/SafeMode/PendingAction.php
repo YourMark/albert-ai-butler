@@ -80,6 +80,7 @@ class PendingAction {
 	 * @param string|null               $decided_at   MySQL datetime a person decided, or null.
 	 * @param int|null                  $decided_by   The user who approved or rejected, or null.
 	 * @param array<string, mixed>|null $result The execution outcome once approved, or null.
+	 * @param array<string, mixed>|null $target Snapshot of the affected object at stage time, or null.
 	 */
 	public function __construct(
 		public readonly int $id,
@@ -94,7 +95,8 @@ class PendingAction {
 		public readonly string $expires_at,
 		public readonly ?string $decided_at,
 		public readonly ?int $decided_by,
-		public readonly ?array $result
+		public readonly ?array $result,
+		public readonly ?array $target = null
 	) {
 	}
 
@@ -130,7 +132,8 @@ class PendingAction {
 			(string) ( $row['expires_at'] ?? '' ),
 			isset( $row['decided_at'] ) ? (string) $row['decided_at'] : null,
 			isset( $row['decided_by'] ) ? (int) $row['decided_by'] : null,
-			self::decode( $row['result'] ?? null )
+			self::decode( $row['result'] ?? null ),
+			self::decode( $row['target'] ?? null )
 		);
 	}
 

@@ -51,15 +51,18 @@ class Interceptor implements Hookable {
 	/**
 	 * Wire the interceptor to its collaborators.
 	 *
-	 * @param InterceptorDecision $decision   Resolves the MCP double-fire.
-	 * @param Gate                $gate       The safe-mode gate rule.
-	 * @param Repository          $repository The pending-actions store.
+	 * @param InterceptorDecision $decision        Resolves the MCP double-fire.
+	 * @param Gate                $gate            The safe-mode gate rule.
+	 * @param Repository          $repository      The pending-actions store.
+	 * @param TargetResolver|null $target_resolver Describes the affected object; defaults to a fresh one.
 	 */
 	public function __construct(
 		private InterceptorDecision $decision,
 		private Gate $gate,
-		private Repository $repository
+		private Repository $repository,
+		private ?TargetResolver $target_resolver = null
 	) {
+		$this->target_resolver = $target_resolver ?? new TargetResolver();
 	}
 
 	/**
@@ -117,13 +120,30 @@ class Interceptor implements Hookable {
 			return $pre;
 		}
 
+		// Don't stage a call this connection was never allowed to make: it would
+		// only fail at approval time and, until then, sit in the queue as noise
+		// and a social-engineering surface. Deny it outright.
+		//
+		// The denial is a short-circuit, never a return of $pre: proceeding would
+		// let core run its own pipeline and execute the call *ungated* whenever
+		// this pre-check is a false negative (it runs on pre-normalisation input).
+		// A denial is fail-safe in both directions — a wrongly-denied legitimate
+		// call is refused, never executed unattended.
+		if ( $ability->check_permissions( $resolved ) !== true ) {
+			return new WP_Error(
+				'albert_permission_denied',
+				__( 'You do not have permission to perform this action.', 'albert-ai-butler' )
+			);
+		}
+
 		$pending = $this->repository->stage(
 			$ability_name,
 			$resolved,
 			get_current_user_id(),
 			ConnectionContext::client_id(),
 			ConnectionContext::client_name(),
-			self::TTL_SECONDS
+			self::TTL_SECONDS,
+			$this->target_resolver->describe( $ability_name, $resolved )
 		);
 
 		return $this->awaiting_approval( $pending );

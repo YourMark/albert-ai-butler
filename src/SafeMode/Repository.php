@@ -32,17 +32,18 @@ class Repository {
 	 * pending and unexpired returns the existing row rather than a second one,
 	 * which keeps the queue a list of decisions to make, not a log of attempts.
 	 *
-	 * @param string               $ability_name The intercepted ability.
-	 * @param array<string, mixed> $input Its resolved input.
-	 * @param int                  $user_id      The user the call runs as once approved.
-	 * @param string|null          $client_id    OAuth client id of the connection, if any.
-	 * @param string|null          $client_name  Snapshotted client name, if any.
-	 * @param int                  $ttl_seconds  How long the row may be approved for.
+	 * @param string                    $ability_name The intercepted ability.
+	 * @param array<string, mixed>      $input Its resolved input.
+	 * @param int                       $user_id      The user the call runs as once approved.
+	 * @param string|null               $client_id    OAuth client id of the connection, if any.
+	 * @param string|null               $client_name  Snapshotted client name, if any.
+	 * @param int                       $ttl_seconds  How long the row may be approved for.
+	 * @param array<string, mixed>|null $target  Snapshot of the affected object, or null.
 	 *
 	 * @return PendingAction The staged (or already-staged) action.
 	 * @since 1.5.0
 	 */
-	public function stage( string $ability_name, array $input, int $user_id, ?string $client_id, ?string $client_name, int $ttl_seconds ): PendingAction {
+	public function stage( string $ability_name, array $input, int $user_id, ?string $client_id, ?string $client_name, int $ttl_seconds, ?array $target = null ): PendingAction {
 		$fingerprint = $this->fingerprint( $ability_name, $input, $user_id );
 
 		$existing = $this->find_open_duplicate( $ability_name, $fingerprint );
@@ -62,6 +63,7 @@ class Repository {
 				'action_id'         => $action_id,
 				'ability_name'      => $ability_name,
 				'input'             => (string) wp_json_encode( $input ),
+				'target'            => $target === null ? null : (string) wp_json_encode( $target ),
 				'status'            => PendingAction::STATUS_PENDING,
 				'user_id'           => $user_id,
 				'client_id'         => $client_id,
@@ -70,7 +72,7 @@ class Repository {
 				'created_at'        => gmdate( 'Y-m-d H:i:s', $now ),
 				'expires_at'        => gmdate( 'Y-m-d H:i:s', $now + max( 1, $ttl_seconds ) ),
 			],
-			[ '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' ]
+			[ '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' ]
 		);
 
 		$staged = $this->find( $action_id );
@@ -90,7 +92,8 @@ class Repository {
 			gmdate( 'Y-m-d H:i:s', $now + max( 1, $ttl_seconds ) ),
 			null,
 			null,
-			null
+			null,
+			$target
 		);
 	}
 

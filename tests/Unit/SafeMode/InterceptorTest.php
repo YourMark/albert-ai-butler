@@ -47,11 +47,12 @@ class RecordingRepository extends Repository {
 	 * @param string|null $client_id    Client id.
 	 * @param string|null $client_name  Client name.
 	 * @param int         $ttl_seconds  Time to live.
+	 * @param array|null  $target       Target snapshot.
 	 *
 	 * @return PendingAction
 	 */
-	public function stage( string $ability_name, array $input, int $user_id, ?string $client_id, ?string $client_name, int $ttl_seconds ): PendingAction {
-		$this->staged[] = compact( 'ability_name', 'input', 'user_id', 'client_id', 'client_name', 'ttl_seconds' );
+	public function stage( string $ability_name, array $input, int $user_id, ?string $client_id, ?string $client_name, int $ttl_seconds, ?array $target = null ): PendingAction {
+		$this->staged[] = compact( 'ability_name', 'input', 'user_id', 'client_id', 'client_name', 'ttl_seconds', 'target' );
 
 		return new PendingAction(
 			1,
@@ -114,11 +115,35 @@ class InterceptorTest extends TestCase {
 
 		// ConnectionContext::client_name() snapshots from the OAuth table; a tiny
 		// double keeps that lazy lookup from needing a real database.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test double for the isolated unit under test.
 		$GLOBALS['wpdb'] = new class() {
+
+			/**
+			 * Table prefix.
+			 *
+			 * @var string
+			 */
 			public string $prefix = 'wp_';
+
+			/**
+			 * Return the query unchanged.
+			 *
+			 * @param string $query   Query.
+			 * @param mixed  ...$args Ignored.
+			 *
+			 * @return string
+			 */
 			public function prepare( $query, ...$args ) {
 				return $query;
 			}
+
+			/**
+			 * Return null for any lookup.
+			 *
+			 * @param string $query Query.
+			 *
+			 * @return null
+			 */
 			public function get_var( $query ) {
 				return null;
 			}
@@ -220,6 +245,24 @@ class InterceptorTest extends TestCase {
 		$this->assertSame( [ 'id' => 42 ], $this->repository->staged[0]['input'] );
 		$this->assertSame( 7, $this->repository->staged[0]['user_id'] );
 		$this->assertSame( 'client-1', $this->repository->staged[0]['client_id'] );
+	}
+
+	/**
+	 * A gated call the connection isn't permitted to make is denied, not staged.
+	 *
+	 * @return void
+	 */
+	public function test_denies_an_unpermitted_call_instead_of_staging(): void {
+		ConnectionContext::set( 'client-1' );
+
+		$ability             = $this->destructive();
+		$ability->permission = false;
+
+		$result = $this->interceptor->intercept( $this->sentinel, 'test/delete', [ 'id' => 42 ], $ability );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_permission_denied', $result->get_error_code() );
+		$this->assertSame( [], $this->repository->staged );
 	}
 
 	/**

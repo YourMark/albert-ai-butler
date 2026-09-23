@@ -493,8 +493,10 @@ class Installer {
 	 * server-side so approval never replays model-supplied input. `action_id` is
 	 * a random public reference carried in the wp-admin approval link; it is not
 	 * a bearer token, approving still requires an authenticated, capable admin
-	 * and a nonce. `result` holds the execution outcome once approved, so the
-	 * queue shows what happened, not only that it was allowed.
+	 * and a nonce. `target` is a snapshot of the object the call will change,
+	 * taken at stage time, so the queue can show what is affected and warn when
+	 * it has been edited since. `result` holds the execution outcome once
+	 * approved, so the queue shows what happened, not only that it was allowed.
 	 *
 	 * @param string $charset_collate Charset/collation clause.
 	 *
@@ -509,6 +511,7 @@ class Installer {
 			action_id varchar(64) NOT NULL,
 			ability_name varchar(191) NOT NULL,
 			input longtext DEFAULT NULL,
+			target longtext DEFAULT NULL,
 			status varchar(20) NOT NULL DEFAULT 'pending',
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			client_id varchar(80) DEFAULT NULL,

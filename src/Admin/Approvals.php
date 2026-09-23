@@ -16,6 +16,7 @@ use Albert\SafeMode\ApprovalUrl;
 use Albert\SafeMode\Approver;
 use Albert\SafeMode\PendingAction;
 use Albert\SafeMode\Repository;
+use Albert\SafeMode\TargetResolver;
 
 /**
  * The wp-admin queue where a person approves or rejects the destructive actions
@@ -59,13 +60,16 @@ class Approvals implements Hookable {
 	/**
 	 * Wire the screen to its store and executor.
 	 *
-	 * @param Repository $repository The pending-actions store.
-	 * @param Approver   $approver   Runs an approved action or records a rejection.
+	 * @param Repository          $repository The pending-actions store.
+	 * @param Approver            $approver   Runs an approved action or records a rejection.
+	 * @param TargetResolver|null $targets    Describes the affected object; defaults to a fresh one.
 	 */
 	public function __construct(
 		private Repository $repository,
-		private Approver $approver
+		private Approver $approver,
+		private ?TargetResolver $targets = null
 	) {
+		$this->targets = $targets ?? new TargetResolver();
 	}
 
 	/**
@@ -200,6 +204,7 @@ class Approvals implements Hookable {
 
 		echo '<td>';
 		echo '<strong>' . esc_html( $action->ability_name ) . '</strong>';
+		$this->render_target( $action );
 		echo '<details><summary>' . esc_html__( 'View the exact request', 'albert-ai-butler' ) . '</summary>';
 		echo '<pre style="white-space:pre-wrap;word-break:break-word;">' . esc_html( (string) wp_json_encode( $action->input, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ) . '</pre>';
 		echo '</details>';
@@ -215,6 +220,55 @@ class Approvals implements Hookable {
 		echo '</td>';
 
 		echo '</tr>';
+	}
+
+	/**
+	 * Show what the call actually affects, resolved fresh, with a drift warning.
+	 *
+	 * `delete-post {id:47}` is opaque; this resolves the object now so a reviewer
+	 * approves against what exists, not the request text. When the object has been
+	 * edited since the call was staged, it warns that approving will overwrite
+	 * those edits — the one thing that turns an approval-on-trust back into a
+	 * decision.
+	 *
+	 * @param PendingAction $action The staged action.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function render_target( PendingAction $action ): void {
+		$current = $this->targets->describe( $action->ability_name, $action->input );
+		$staged  = $action->target;
+
+		if ( $current === null && $staged === null ) {
+			return;
+		}
+
+		if ( $current === null ) {
+			echo '<p class="description">' . esc_html(
+				sprintf(
+					/* translators: %s: label of the object as captured when the call was staged. */
+					__( 'Affects: %s (no longer exists)', 'albert-ai-butler' ),
+					(string) ( $staged['label'] ?? '' )
+				)
+			) . '</p>';
+
+			return;
+		}
+
+		$affected = sprintf( '%s: %s', ucfirst( (string) $current['type'] ), (string) $current['label'] );
+
+		if ( (string) $current['status'] !== '' ) {
+			$affected .= sprintf( ' (%s)', (string) $current['status'] );
+		}
+
+		echo '<p class="description">' . esc_html__( 'Affects', 'albert-ai-butler' ) . ': ' . esc_html( $affected ) . '</p>';
+
+		if ( $this->targets->has_drifted( $staged, $current ) ) {
+			echo '<p class="albert-approvals__drift" style="color:#b32d2e;"><strong>'
+				. esc_html__( 'This has changed since it was requested. Approving will overwrite edits made in the meantime.', 'albert-ai-butler' )
+				. '</strong></p>';
+		}
 	}
 
 	/**

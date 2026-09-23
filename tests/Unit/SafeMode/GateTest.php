@@ -52,7 +52,7 @@ class GateTest extends TestCase {
 	 * @return WP_Ability
 	 */
 	private function ability( ?array $annotations ): WP_Ability {
-		$meta = null === $annotations ? [] : [ 'annotations' => $annotations ];
+		$meta = $annotations === null ? [] : [ 'annotations' => $annotations ];
 
 		return new WP_Ability( 'test/ability', $meta );
 	}
