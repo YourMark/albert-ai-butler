@@ -65,12 +65,30 @@ class Tables {
 	}
 
 	/**
+	 * The safe-mode pending-actions queue, backing {@see \Albert\SafeMode\Repository}.
+	 *
+	 * Holds destructive ability calls intercepted before execution, staged with
+	 * their resolved input so a person can approve or reject them out of band.
+	 *
+	 * @return string Prefixed table name.
+	 * @since 1.5.0
+	 */
+	public static function pending_actions(): string {
+		global $wpdb;
+
+		return $wpdb->prefix . 'albert_pending_actions';
+	}
+
+	/**
 	 * Every Albert table name, flat.
 	 *
 	 * @return array<int, string> All prefixed table names.
 	 * @since 1.2.0
 	 */
 	public static function all(): array {
-		return array_merge( [ self::ability_log(), self::single_use_tokens() ], array_values( self::oauth() ) );
+		return array_merge(
+			[ self::ability_log(), self::single_use_tokens(), self::pending_actions() ],
+			array_values( self::oauth() )
+		);
 	}
 }

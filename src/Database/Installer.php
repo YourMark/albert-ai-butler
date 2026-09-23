@@ -69,6 +69,8 @@ class Installer {
 		'albert_upload_link_max_mb',
 		// Written by install_defaults() on every new install.
 		'albert_privacy_mode',
+		// Safe mode: server-side approval gating for destructive ability calls.
+		'albert_safe_mode',
 		// The Context screen's instructions and section toggles.
 		'albert_context',
 		// Legacy options retired in earlier releases, cleared here for completeness.
@@ -400,6 +402,7 @@ class Installer {
 
 		$sql = self::ability_log_sql( $charset_collate )
 			. self::single_use_tokens_sql( $charset_collate )
+			. self::pending_actions_sql( $charset_collate )
 			. self::oauth_clients_sql( $charset_collate )
 			. self::oauth_access_tokens_sql( $charset_collate )
 			. self::oauth_refresh_tokens_sql( $charset_collate )
@@ -479,6 +482,48 @@ class Installer {
 			UNIQUE KEY token_hash (token_hash),
 			KEY purpose_expires (purpose, expires_at),
 			KEY user_id (user_id)
+		) $charset_collate;\n\n";
+	}
+
+	/**
+	 * Safe-mode pending-actions queue DDL.
+	 *
+	 * One row per destructive ability call intercepted before execution. `input`
+	 * is the *resolved* input the ability was about to run with, captured
+	 * server-side so approval never replays model-supplied input. `action_id` is
+	 * a random public reference carried in the wp-admin approval link; it is not
+	 * a bearer token, approving still requires an authenticated, capable admin
+	 * and a nonce. `result` holds the execution outcome once approved, so the
+	 * queue shows what happened, not only that it was allowed.
+	 *
+	 * @param string $charset_collate Charset/collation clause.
+	 *
+	 * @return string CREATE TABLE statement.
+	 * @since 1.5.0
+	 */
+	private static function pending_actions_sql( string $charset_collate ): string {
+		$table = Tables::pending_actions();
+
+		return "CREATE TABLE {$table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			action_id varchar(64) NOT NULL,
+			ability_name varchar(191) NOT NULL,
+			input longtext DEFAULT NULL,
+			status varchar(20) NOT NULL DEFAULT 'pending',
+			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			client_id varchar(80) DEFAULT NULL,
+			client_name varchar(255) DEFAULT NULL,
+			input_fingerprint char(64) DEFAULT NULL,
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			expires_at datetime NOT NULL,
+			decided_at datetime DEFAULT NULL,
+			decided_by bigint(20) unsigned DEFAULT NULL,
+			result longtext DEFAULT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY action_id (action_id),
+			KEY status_created (status, created_at),
+			KEY expires_at (expires_at),
+			KEY dedupe (ability_name, status, input_fingerprint)
 		) $charset_collate;\n\n";
 	}
 
