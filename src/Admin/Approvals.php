@@ -118,10 +118,15 @@ class Approvals implements Hookable {
 	public function handle_approve(): void {
 		$action = $this->authorize_decision( self::ACTION_APPROVE );
 
-		$result  = $this->approver->approve( $action, get_current_user_id() );
-		$outcome = is_wp_error( $result ) ? 'failed' : 'approved';
+		$result = $this->approver->approve( $action, get_current_user_id() );
 
-		$this->redirect_with_notice( $outcome );
+		// A lost race (another tab/retry got there first) is not a failure and did
+		// not run anything: show the "no longer waiting" notice, not an error.
+		if ( is_wp_error( $result ) && $result->get_error_code() === 'albert_already_handled' ) {
+			$this->redirect_with_notice( 'gone' );
+		}
+
+		$this->redirect_with_notice( is_wp_error( $result ) ? 'failed' : 'approved' );
 	}
 
 	/**
@@ -133,9 +138,9 @@ class Approvals implements Hookable {
 	public function handle_reject(): void {
 		$action = $this->authorize_decision( self::ACTION_REJECT );
 
-		$this->approver->reject( $action, get_current_user_id() );
+		$rejected = $this->approver->reject( $action, get_current_user_id() );
 
-		$this->redirect_with_notice( 'rejected' );
+		$this->redirect_with_notice( $rejected ? 'rejected' : 'gone' );
 	}
 
 	/**
@@ -477,6 +482,8 @@ class Approvals implements Hookable {
 	 */
 	private function outcome_label( string $status ): string {
 		switch ( $status ) {
+			case PendingAction::STATUS_EXECUTING:
+				return __( 'Approved, running', 'albert-ai-butler' );
 			case PendingAction::STATUS_EXECUTED:
 				return __( 'Approved and run', 'albert-ai-butler' );
 			case PendingAction::STATUS_FAILED:

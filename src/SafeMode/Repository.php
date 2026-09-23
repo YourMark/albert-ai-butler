@@ -75,6 +75,21 @@ class Repository {
 			[ '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' ]
 		);
 
+		/**
+		 * Fires when a new destructive call is held for approval.
+		 *
+		 * One per genuinely new hold (a de-duped retry does not re-fire, having
+		 * returned early above). The single number worth watching before the
+		 * anti-fatigue work is scheduled: holds per ability tells whether the queue
+		 * is converging or growing. The pending-actions table already records the
+		 * same, but this survives any future retention pruning.
+		 *
+		 * @since 1.5.0
+		 *
+		 * @param string $ability_name The ability whose call was held.
+		 */
+		do_action( 'albert/safe_mode/held', $ability_name );
+
 		$staged = $this->find( $action_id );
 
 		// A failed insert (or a race that deleted the row) still owes the caller a
@@ -217,6 +232,42 @@ class Repository {
 	}
 
 	/**
+	 * Atomically claim a pending action for execution.
+	 *
+	 * The whole race defence: a single conditional update flips the row from
+	 * pending to executing, and only the caller that changed exactly one row won.
+	 * A concurrent second approval (two tabs, a double-click, a proxy retry) then
+	 * changes zero rows and is refused, so the action never runs twice. The
+	 * expiry is folded into the same clause so a row that lapsed between the
+	 * screen's read and this write cannot be claimed either.
+	 *
+	 * @param int $id         Row id.
+	 * @param int $decided_by The user approving it.
+	 *
+	 * @return bool True when this caller won the claim.
+	 * @since 1.5.0
+	 */
+	public function claim( int $id, int $decided_by ): bool {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic claim on a custom table.
+		$claimed = $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET status = %s, decided_at = %s, decided_by = %d WHERE id = %d AND status = %s AND expires_at > %s',
+				Tables::pending_actions(),
+				PendingAction::STATUS_EXECUTING,
+				gmdate( 'Y-m-d H:i:s' ),
+				$decided_by,
+				$id,
+				PendingAction::STATUS_PENDING,
+				gmdate( 'Y-m-d H:i:s' )
+			)
+		);
+
+		return (int) $claimed === 1;
+	}
+
+	/**
 	 * Record the outcome of an approved action.
 	 *
 	 * @param int                  $id         Row id.
@@ -241,24 +292,35 @@ class Repository {
 	}
 
 	/**
-	 * Mark an action rejected by a person.
+	 * Mark an action rejected by a person, only if it is still pending.
+	 *
+	 * Conditional for the same reason {@see self::claim()} is: a reject that
+	 * lands after an approval has already claimed the row must not overwrite the
+	 * outcome. Only a still-pending row is rejected.
 	 *
 	 * @param int $id         Row id.
 	 * @param int $decided_by The user who rejected it.
 	 *
-	 * @return void
+	 * @return bool True when this caller rejected a still-pending row.
 	 * @since 1.5.0
 	 */
-	public function reject( int $id, int $decided_by ): void {
-		$this->update(
-			$id,
-			[
-				'status'     => PendingAction::STATUS_REJECTED,
-				'decided_at' => gmdate( 'Y-m-d H:i:s' ),
-				'decided_by' => $decided_by,
-			],
-			[ '%s', '%s', '%d' ]
+	public function reject( int $id, int $decided_by ): bool {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Conditional update on a custom table.
+		$rejected = $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET status = %s, decided_at = %s, decided_by = %d WHERE id = %d AND status = %s',
+				Tables::pending_actions(),
+				PendingAction::STATUS_REJECTED,
+				gmdate( 'Y-m-d H:i:s' ),
+				$decided_by,
+				$id,
+				PendingAction::STATUS_PENDING
+			)
 		);
+
+		return (int) $rejected === 1;
 	}
 
 	/**

@@ -46,6 +46,16 @@ class Approver {
 	 * @since 1.5.0
 	 */
 	public function approve( PendingAction $action, int $decided_by ) {
+		// Win the row before doing anything else. A concurrent second approval
+		// (two tabs, a double-click, a proxy retry) loses the claim and returns
+		// here without ever running the ability a second time.
+		if ( ! $this->repository->claim( $action->id, $decided_by ) ) {
+			return new WP_Error(
+				'albert_already_handled',
+				__( 'This request has already been handled.', 'albert-ai-butler' )
+			);
+		}
+
 		$ability = wp_get_ability( $action->ability_name );
 
 		if ( $ability === null ) {
@@ -91,11 +101,12 @@ class Approver {
 	 * @param PendingAction $action     The action to reject.
 	 * @param int           $decided_by The user rejecting it.
 	 *
-	 * @return void
+	 * @return bool True when a still-pending row was rejected; false if it had
+	 *              already been handled.
 	 * @since 1.5.0
 	 */
-	public function reject( PendingAction $action, int $decided_by ): void {
-		$this->repository->reject( $action->id, $decided_by );
+	public function reject( PendingAction $action, int $decided_by ): bool {
+		return $this->repository->reject( $action->id, $decided_by );
 	}
 
 	/**

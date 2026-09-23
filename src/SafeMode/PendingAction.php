@@ -33,6 +33,19 @@ class PendingAction {
 	public const STATUS_PENDING = 'pending';
 
 	/**
+	 * Claimed by an approval that is running now.
+	 *
+	 * A transient status a row moves to the instant an approval wins the atomic
+	 * claim, before the ability runs. It exists so a second concurrent approval
+	 * (two tabs, a double-click, a proxy retry) finds the row no longer pending
+	 * and does not run the action a second time.
+	 *
+	 * @since 1.5.0
+	 * @var string
+	 */
+	public const STATUS_EXECUTING = 'executing';
+
+	/**
 	 * Approved and run; {@see self::$result} holds what the ability returned.
 	 *
 	 * @since 1.5.0
