@@ -156,11 +156,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Compatibility policy: WC 10.5 floor + the two latest major versions.
-        # 'latest' tracks the current release. When WooCommerce ships a new
-        # major, slide the explicit middle entry one up — e.g. when WC 10.8
-        # is current the matrix becomes ['latest', '10.7', '10.5'].
-        woocommerce: ['latest', '10.6', '10.5']
+        # Compatibility policy: last 2 stable X.Y versions of WooCommerce.
+        # 'latest' tracks the current release (11.1); '11.0' is the previous X.Y.
+        # The install script resolves MAJOR.MINOR shorthand to the highest stable patch.
+        woocommerce: ['latest', '11.0']
 
     services:
       mysql:

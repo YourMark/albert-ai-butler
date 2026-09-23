@@ -16,7 +16,7 @@ Albert is a WordPress plugin that exposes WordPress functionality to AI assistan
 - **WordPress**: 6.9+
 - **Database**: MySQL 8.0+ or MariaDB 10.5+
 - **HTTPS**: Required for OAuth
-- **WooCommerce**: 10.4+ (optional, for WooCommerce abilities)
+- **WooCommerce**: 11.0+ (optional, for WooCommerce abilities). Support is the last two stable majors, which is what CI tests.
 
 ## Directory Structure
 
