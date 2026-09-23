@@ -15,6 +15,7 @@ use Albert\Media\UploadLinks\UploadLinkService;
 use Albert\OAuth\AllowedUsers;
 use Albert\OAuth\ConnectionRetention;
 use Albert\Privacy\PrivacyMode;
+use Albert\SafeMode\Gate;
 
 /**
  * The rule that decides whether an override of a given setting is usable.
@@ -88,6 +89,11 @@ class Validators {
 			// this only points at it.
 			'albert_privacy_mode'                  => static function ( $value ): bool {
 				return is_scalar( $value ) && PrivacyMode::try_parse( (string) $value ) !== null;
+			},
+			// Safe mode is a plain on/off switch; anything else falls through to
+			// the default rather than pinning the site to a nonsense value.
+			Gate::OPTION                           => static function ( $value ): bool {
+				return $value === 'on' || $value === 'off';
 			},
 			AllowedUsers::EXPIRY_OPTION            => $days,
 			ConnectionRetention::NEVER_USED_OPTION => $days,

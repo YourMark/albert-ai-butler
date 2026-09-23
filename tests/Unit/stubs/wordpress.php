@@ -763,3 +763,94 @@ if ( ! function_exists( 'rest_validate_value_from_schema' ) ) {
 		return true;
 	}
 }
+
+if ( ! function_exists( 'admin_url' ) ) {
+	/**
+	 * Stub admin_url returning a predictable absolute URL.
+	 *
+	 * @param string $path Path relative to wp-admin.
+	 *
+	 * @return string
+	 */
+	function admin_url( string $path = '' ): string {
+		return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
+	}
+}
+
+if ( ! function_exists( 'add_query_arg' ) ) {
+	/**
+	 * Minimal add_query_arg supporting the ( $key, $value, $url ) signature.
+	 *
+	 * @param string $key   Query var name.
+	 * @param string $value Query var value.
+	 * @param string $url   Base URL.
+	 *
+	 * @return string
+	 */
+	function add_query_arg( string $key, string $value, string $url ): string {
+		$separator = ( strpos( $url, '?' ) === false ) ? '?' : '&';
+
+		return $url . $separator . $key . '=' . $value;
+	}
+}
+
+if ( ! function_exists( 'wp_json_encode' ) ) {
+	/**
+	 * Stub wp_json_encode delegating to json_encode.
+	 *
+	 * @param mixed $data  Data to encode.
+	 * @param int   $flags json_encode flags.
+	 *
+	 * @return string|false
+	 */
+	function wp_json_encode( $data, int $flags = 0 ) {
+		return json_encode( $data, $flags );
+	}
+}
+
+if ( ! function_exists( 'get_role' ) ) {
+	/**
+	 * Stub get_role reading $GLOBALS['albert_test_roles'][$slug] => [cap => bool].
+	 *
+	 * @param string $role Role slug.
+	 *
+	 * @return object|null Role-like object with has_cap(), or null when unknown.
+	 */
+	function get_role( string $role ) {
+		$roles = $GLOBALS['albert_test_roles'] ?? [];
+
+		if ( ! isset( $roles[ $role ] ) ) {
+			return null;
+		}
+
+		return new class( $roles[ $role ] ) {
+
+			/**
+			 * Capability map for this role.
+			 *
+			 * @var array<string, bool>
+			 */
+			private array $caps;
+
+			/**
+			 * Seed the role with its capability map.
+			 *
+			 * @param array<string, bool> $caps Capability => granted.
+			 */
+			public function __construct( array $caps ) {
+				$this->caps = $caps;
+			}
+
+			/**
+			 * Whether the role has a capability.
+			 *
+			 * @param string $cap Capability name.
+			 *
+			 * @return bool
+			 */
+			public function has_cap( string $cap ): bool {
+				return ! empty( $this->caps[ $cap ] );
+			}
+		};
+	}
+}

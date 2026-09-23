@@ -77,6 +77,18 @@ if ( ! class_exists( 'WP_Ability' ) ) {
 		public function get_input_schema(): array {
 			return $this->input_schema;
 		}
+
+		/**
+		 * Get a single meta item by key.
+		 *
+		 * @param string $key           Meta key.
+		 * @param mixed  $default_value Value when the key is absent.
+		 *
+		 * @return mixed
+		 */
+		public function get_meta_item( string $key, $default_value = null ) {
+			return array_key_exists( $key, $this->meta ) ? $this->meta[ $key ] : $default_value;
+		}
 	}
 }
 
