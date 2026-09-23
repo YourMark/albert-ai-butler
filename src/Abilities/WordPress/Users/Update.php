@@ -41,7 +41,11 @@ class Update extends BaseAbility {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::update(),
+			'annotations' => Annotations::update(
+				'This ability cannot change a password and will refuse the request if you supply one. '
+				. 'Changing an existing account\'s password is account takeover, and the account holder can '
+				. 'reset their own from the login screen. Tell the user to do that instead.'
+			),
 		];
 
 		parent::__construct();
@@ -69,10 +73,6 @@ class Update extends BaseAbility {
 					'type'        => 'string',
 					'format'      => 'email',
 					'description' => 'The email address for the user',
-				],
-				'password'    => [
-					'type'        => 'string',
-					'description' => 'New password for the user',
 				],
 				'first_name'  => [
 					'type'        => 'string',
@@ -147,7 +147,6 @@ class Update extends BaseAbility {
 	 *
 	 *     @type int    $id          User ID (required).
 	 *     @type string $email       Email address.
-	 *     @type string $password    New password.
 	 *     @type string $first_name  First name.
 	 *     @type string $last_name   Last name.
 	 *     @type array  $roles       User roles.
@@ -158,6 +157,20 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
+		// Belt and braces. `password` is gone from the input schema, so a
+		// schema-validating client is already refused, but the Abilities API
+		// does not forbid unrecognised keys, and a refusal that only exists in
+		// a schema is not a control. Refused here with its own error code so
+		// the attempt lands in the activity log rather than being swallowed as
+		// a validation rejection, which is the one thing worth seeing.
+		if ( isset( $args['password'] ) ) {
+			return new WP_Error(
+				'password_change_refused',
+				__( 'This ability cannot change a password. The account holder can reset their own from the login screen.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
+		}
+
 		$user_id = absint( $args['id'] );
 
 		// Check if user exists.
@@ -174,10 +187,6 @@ class Update extends BaseAbility {
 
 		if ( isset( $args['email'] ) ) {
 			$request_data['email'] = sanitize_email( $args['email'] );
-		}
-
-		if ( isset( $args['password'] ) ) {
-			$request_data['password'] = $args['password'];
 		}
 
 		if ( isset( $args['first_name'] ) ) {

@@ -205,7 +205,6 @@ class UsersAbilityTest extends TestCase {
 			[
 				'username'    => 'fulluser',
 				'email'       => 'fulluser@albert.test',
-				'password'    => 'strong-password-xyz-12345',
 				'first_name'  => 'Full',
 				'last_name'   => 'User',
 				'roles'       => [ 'editor' ],
@@ -236,7 +235,6 @@ class UsersAbilityTest extends TestCase {
 			[
 				'username' => 'defaultrole',
 				'email'    => 'defaultrole@albert.test',
-				'password' => 'strong-password-xyz-12345',
 			]
 		);
 
@@ -255,12 +253,145 @@ class UsersAbilityTest extends TestCase {
 			[
 				'username' => 'editurl_user',
 				'email'    => 'editurl@albert.test',
-				'password' => 'strong-password-xyz-12345',
 			]
 		);
 
 		$this->assertIsArray( $result );
 		$this->assertStringContainsString( 'user-edit.php', $result['edit_url'] );
+	}
+
+	/**
+	 * CreateUser does not accept a password from the caller.
+	 *
+	 * The schema is the contract an assistant reads, so the absence has to be
+	 * asserted there, not only in behaviour.
+	 *
+	 * @return void
+	 */
+	public function test_create_user_does_not_accept_a_password(): void {
+		if ( ! function_exists( 'wp_get_ability' ) ) {
+			$this->markTestSkipped( 'wp_get_ability() not available.' );
+		}
+
+		$ability = wp_get_ability( 'albert/create-user' );
+
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/create-user is not registered.' );
+		}
+
+		$schema = $ability->get_input_schema();
+
+		$this->assertArrayNotHasKey( 'password', $schema['properties'] );
+		$this->assertNotContains( 'password', $schema['required'] ?? [] );
+	}
+
+	/**
+	 * CreateUser returns a reset link that actually validates for the new user.
+	 *
+	 * Asserting the key round-trips through core is the point: a link that only
+	 * looks right is the failure worth catching, because it is how an account
+	 * gets created that nobody can ever sign in to.
+	 *
+	 * @return void
+	 */
+	public function test_create_user_returns_a_usable_password_reset_link(): void {
+		$result = ( new CreateUser() )->execute(
+			[
+				'username' => 'resetlink_user',
+				'email'    => 'resetlink@albert.test',
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'password_reset_url', $result );
+
+		$query = [];
+		parse_str( (string) wp_parse_url( $result['password_reset_url'], PHP_URL_QUERY ), $query );
+
+		$this->assertSame( 'rp', $query['action'] ?? '' );
+		$this->assertSame( 'resetlink_user', $query['login'] ?? '' );
+		$this->assertInstanceOf(
+			\WP_User::class,
+			check_password_reset_key( $query['key'] ?? '', 'resetlink_user' )
+		);
+	}
+
+	/**
+	 * A site with password resets switched off says so instead of going quiet.
+	 *
+	 * The account is still created, because deleting it again would be worse,
+	 * but nobody can sign in to it. Silence here would have the caller telling
+	 * somebody their account is ready when it is not.
+	 *
+	 * @return void
+	 */
+	public function test_create_user_explains_itself_when_no_reset_link_can_be_issued(): void {
+		add_filter( 'allow_password_reset', '__return_false' );
+
+		try {
+			$result = ( new CreateUser() )->execute(
+				[
+					'username' => 'noreset_user',
+					'email'    => 'noreset@albert.test',
+				]
+			);
+		} finally {
+			remove_filter( 'allow_password_reset', '__return_false' );
+		}
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'id', $result );
+		$this->assertArrayNotHasKey( 'password_reset_url', $result );
+		$this->assertNotEmpty( $result['password_reset_note'] ?? '' );
+	}
+
+	/**
+	 * The generated password is never disclosed to the caller.
+	 *
+	 * @return void
+	 */
+	public function test_create_user_never_returns_a_password(): void {
+		$result = ( new CreateUser() )->execute(
+			[
+				'username' => 'nopass_user',
+				'email'    => 'nopass@albert.test',
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayNotHasKey( 'password', $result );
+		$this->assertArrayNotHasKey( 'user_pass', $result );
+	}
+
+	/**
+	 * The reset link is masked for observers but intact for the caller.
+	 *
+	 * @return void
+	 */
+	public function test_create_user_masks_the_reset_link_for_observers(): void {
+		$captured = null;
+
+		add_action(
+			'albert/abilities/after_execute',
+			static function ( $ability_name, $args, $result ) use ( &$captured ) {
+				if ( $ability_name === 'albert/create-user' ) {
+					$captured = $result;
+				}
+			},
+			10,
+			4
+		);
+
+		$result = ( new CreateUser() )->guarded_execute(
+			[
+				'username' => 'masked_user',
+				'email'    => 'masked@albert.test',
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertStringContainsString( 'action=rp', $result['password_reset_url'] );
+		$this->assertSame( '[redacted]', $captured['password_reset_url'] ?? null );
 	}
 
 	// ─── UpdateUser ─────────────────────────────────────────────────
@@ -342,6 +473,78 @@ class UsersAbilityTest extends TestCase {
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'user_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * UpdateUser does not accept a password.
+	 *
+	 * @return void
+	 */
+	public function test_update_user_does_not_accept_a_password(): void {
+		if ( ! function_exists( 'wp_get_ability' ) ) {
+			$this->markTestSkipped( 'wp_get_ability() not available.' );
+		}
+
+		$ability = wp_get_ability( 'albert/update-user' );
+
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-user is not registered.' );
+		}
+
+		$this->assertArrayNotHasKey( 'password', $ability->get_input_schema()['properties'] );
+	}
+
+	/**
+	 * A password supplied anyway is refused, and the stored hash is untouched.
+	 *
+	 * The schema no longer declares the key, but the Abilities API does not
+	 * forbid unrecognised ones, so the refusal has to hold at execution. The
+	 * hash assertion is the one that matters: a refusal that still wrote the
+	 * password would be worse than no refusal at all.
+	 *
+	 * @return void
+	 */
+	public function test_update_user_refuses_a_supplied_password(): void {
+		$user_id = self::factory()->user->create( [ 'user_email' => 'keeper@albert.test' ] );
+		$before  = get_userdata( $user_id )->user_pass;
+
+		$result = ( new UpdateUser() )->execute(
+			[
+				'id'       => $user_id,
+				'password' => 'attacker-chosen-password-12345',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'password_change_refused', $result->get_error_code() );
+
+		clean_user_cache( $user_id );
+		$this->assertSame( $before, get_userdata( $user_id )->user_pass );
+	}
+
+	/**
+	 * The refusal wins even when the request carries legitimate changes too.
+	 *
+	 * Nothing is applied: a partial write would leave the caller unsure which
+	 * half landed.
+	 *
+	 * @return void
+	 */
+	public function test_update_user_refuses_the_whole_request_when_a_password_rides_along(): void {
+		$user_id = self::factory()->user->create( [ 'user_email' => 'partial@albert.test' ] );
+
+		$result = ( new UpdateUser() )->execute(
+			[
+				'id'         => $user_id,
+				'first_name' => 'Changed',
+				'password'   => 'attacker-chosen-password-12345',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+
+		clean_user_cache( $user_id );
+		$this->assertNotSame( 'Changed', get_userdata( $user_id )->first_name );
 	}
 
 	// ─── DeleteUser ─────────────────────────────────────────────────
