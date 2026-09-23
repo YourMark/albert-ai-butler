@@ -56,6 +56,7 @@ class Menu implements Hookable {
 	public const POSITION_SKILLS      = 11;
 	public const POSITION_CONTEXT     = 12;
 	public const POSITION_CONNECTIONS = 13;
+	public const POSITION_APPROVALS   = 14;
 	public const POSITION_ADDONS      = 15;
 	public const POSITION_SETTINGS    = 20;
 
