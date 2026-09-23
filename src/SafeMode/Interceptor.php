@@ -132,7 +132,7 @@ class Interceptor implements Hookable {
 		if ( $ability->check_permissions( $resolved ) !== true ) {
 			return new WP_Error(
 				'albert_permission_denied',
-				__( 'You do not have permission to perform this action.', 'albert-ai-butler' )
+				__( 'You do not have permission to perform this action, so it was not queued for approval. This is a permanent denial, not a pending request.', 'albert-ai-butler' )
 			);
 		}
 
