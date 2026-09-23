@@ -13,6 +13,7 @@ use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
 use WP_REST_Request;
+use WP_User;
 
 /**
  * Create User Ability class
@@ -49,7 +50,8 @@ class Create extends BaseAbility {
 				'Do not supply a password; this ability does not accept one. The site generates it and returns '
 				. '`password_reset_url`, a one-time link. Give that link to the new user so they set their own '
 				. 'password. It is a credential, so hand it over directly rather than repeating it anywhere it '
-				. 'would be stored.'
+				. 'would be stored. If the link is missing, `password_reset_note` says why: the account exists '
+				. 'but nobody can sign in to it yet, so report that rather than saying the user is ready.'
 			),
 		];
 
@@ -124,17 +126,21 @@ class Create extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'                 => [ 'type' => 'integer' ],
-				'username'           => [ 'type' => 'string' ],
-				'email'              => [ 'type' => 'string' ],
-				'roles'              => [
+				'id'                  => [ 'type' => 'integer' ],
+				'username'            => [ 'type' => 'string' ],
+				'email'               => [ 'type' => 'string' ],
+				'roles'               => [
 					'type'  => 'array',
 					'items' => [ 'type' => 'string' ],
 				],
-				'edit_url'           => [ 'type' => 'string' ],
-				'password_reset_url' => [
+				'edit_url'            => [ 'type' => 'string' ],
+				'password_reset_url'  => [
 					'type'        => 'string',
-					'description' => 'One-time link for the new user to set their own password. Absent if the key could not be issued.',
+					'description' => 'One-time link for the new user to set their own password. Absent when no key could be issued.',
+				],
+				'password_reset_note' => [
+					'type'        => 'string',
+					'description' => 'Why no link was issued, and what to do instead. Present only when password_reset_url is absent.',
 				],
 			],
 			'required'   => [ 'id', 'username', 'email' ],
@@ -172,9 +178,10 @@ class Create extends BaseAbility {
 	 */
 	public function execute( array $args ): array|WP_Error {
 		// The caller never chooses this. `/wp/v2/users` requires a password, so
-		// one is generated here and immediately superseded by the reset link
-		// below. `wp_generate_password()` cannot emit a backslash, which core's
-		// own `check_user_password()` rejects.
+		// one is generated and then never disclosed to anybody, which is what
+		// makes it unusable rather than secret. The reset link below is the only
+		// route in. `wp_generate_password()` cannot emit a backslash, which
+		// core's own `check_user_password()` rejects.
 		$generated_password = wp_generate_password( 32, true, true );
 
 		// Prepare REST API request data.
@@ -226,6 +233,11 @@ class Create extends BaseAbility {
 
 		if ( $reset_url !== null ) {
 			$result['password_reset_url'] = $reset_url;
+		} else {
+			// The account exists and nobody can get into it. Deleting it again
+			// would be worse than saying so, but staying silent would leave the
+			// caller telling somebody their account is ready when it is not.
+			$result['password_reset_note'] = __( 'No sign-in link could be issued, most likely because password resets are disabled on this site. Set this user a password in wp-admin.', 'albert-ai-butler' );
 		}
 
 		return $result;
@@ -236,11 +248,16 @@ class Create extends BaseAbility {
 	 *
 	 * This is how the account becomes usable, and it is deliberately the only
 	 * route: the generated password is never disclosed, so nothing the caller
-	 * holds is a lasting credential. No notification email is sent, because
-	 * `wp_new_user_notification()` mints a reset key of its own and the second
-	 * key to be issued invalidates the first — the caller would be handed a
-	 * dead link, or the email would contain one. The caller passes this on,
-	 * exactly as it passed on a password before.
+	 * holds is a lasting credential. The caller passes this on, exactly as it
+	 * passed on a password before.
+	 *
+	 * No notification email is sent. `wp_new_user_notification()` mints a reset
+	 * key of its own, and a user holds one `user_activation_key` at a time, so
+	 * whichever key is issued second invalidates the first: emailing as well as
+	 * returning would either kill the returned link or send a dead one.
+	 *
+	 * Returns null when no key could be issued, which in practice means the site
+	 * filters `allow_password_reset` off.
 	 *
 	 * @param int $user_id The newly created user.
 	 *
@@ -250,7 +267,7 @@ class Create extends BaseAbility {
 	private function password_reset_url( int $user_id ): ?string {
 		$user = get_userdata( $user_id );
 
-		if ( ! $user instanceof \WP_User ) {
+		if ( ! $user instanceof WP_User ) {
 			return null;
 		}
 

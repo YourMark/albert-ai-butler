@@ -158,7 +158,7 @@ class Update extends BaseAbility {
 	 */
 	public function execute( array $args ): array|WP_Error {
 		// Belt and braces. `password` is gone from the input schema, so a
-		// schema-validating client is already refused — but the Abilities API
+		// schema-validating client is already refused, but the Abilities API
 		// does not forbid unrecognised keys, and a refusal that only exists in
 		// a schema is not a control. Refused here with its own error code so
 		// the attempt lands in the activity log rather than being swallowed as

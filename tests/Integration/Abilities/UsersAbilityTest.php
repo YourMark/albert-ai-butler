@@ -317,6 +317,35 @@ class UsersAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A site with password resets switched off says so instead of going quiet.
+	 *
+	 * The account is still created, because deleting it again would be worse,
+	 * but nobody can sign in to it. Silence here would have the caller telling
+	 * somebody their account is ready when it is not.
+	 *
+	 * @return void
+	 */
+	public function test_create_user_explains_itself_when_no_reset_link_can_be_issued(): void {
+		add_filter( 'allow_password_reset', '__return_false' );
+
+		try {
+			$result = ( new CreateUser() )->execute(
+				[
+					'username' => 'noreset_user',
+					'email'    => 'noreset@albert.test',
+				]
+			);
+		} finally {
+			remove_filter( 'allow_password_reset', '__return_false' );
+		}
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'id', $result );
+		$this->assertArrayNotHasKey( 'password_reset_url', $result );
+		$this->assertNotEmpty( $result['password_reset_note'] ?? '' );
+	}
+
+	/**
 	 * The generated password is never disclosed to the caller.
 	 *
 	 * @return void
