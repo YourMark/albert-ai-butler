@@ -39,7 +39,8 @@ class ConnectionGuardTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		parent::setUp();
-		$GLOBALS['albert_test_options'] = [];
+		$GLOBALS['albert_test_options']      = [];
+		$GLOBALS['albert_test_site_options'] = [];
 		ConnectionContext::reset();
 		$this->guard = new ConnectionGuard();
 	}
@@ -97,5 +98,17 @@ class ConnectionGuardTest extends TestCase {
 		ConnectionContext::set( 'client-1' );
 
 		$this->assertSame( 'generated-key', $this->guard->refuse_over_connection( 'generated-key', 'albert_oauth_private_key' ) );
+	}
+
+	/**
+	 * The multisite network-option path is guarded the same way.
+	 *
+	 * @return void
+	 */
+	public function test_refuses_a_network_option_change_over_a_connection(): void {
+		$GLOBALS['albert_test_site_options'][ Gate::OPTION ] = 'on';
+		ConnectionContext::set( 'client-1' );
+
+		$this->assertSame( 'on', $this->guard->refuse_site_over_connection( 'off', Gate::OPTION ) );
 	}
 }

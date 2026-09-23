@@ -84,36 +84,99 @@ class ConnectionGuard implements Hookable {
 		foreach ( $this->protected_options() as $option ) {
 			// Late priority so the guard has the final say over the stored value.
 			add_filter( "sanitize_option_{$option}", [ $this, 'refuse_over_connection' ], 99, 2 );
+			// The multisite network-option path runs through its own filter.
+			add_filter( "sanitize_site_option_{$option}", [ $this, 'refuse_site_over_connection' ], 99, 2 );
 		}
+	}
+
+	/**
+	 * Refuse a single-site option change made over a connection.
+	 *
+	 * @param mixed  $value  The value about to be written.
+	 * @param string $option The option name.
+	 *
+	 * @return mixed
+	 * @since 1.5.0
+	 */
+	public function refuse_over_connection( $value, string $option ) {
+		return $this->refuse( $value, $option, 'get_option' );
+	}
+
+	/**
+	 * Refuse a multisite network-option change made over a connection.
+	 *
+	 * @param mixed  $value  The value about to be written.
+	 * @param string $option The option name.
+	 *
+	 * @return mixed
+	 * @since 1.5.0
+	 */
+	public function refuse_site_over_connection( $value, string $option ) {
+		return $this->refuse( $value, $option, 'get_site_option' );
 	}
 
 	/**
 	 * Keep the stored value when an assistant tries to change a protected option.
 	 *
-	 * @param mixed  $value  The value about to be written.
-	 * @param string $option The option name.
+	 * A sanitize filter can only coerce the value, not raise an error, so the
+	 * write "succeeds" from the caller's point of view while storing nothing new.
+	 * That silent coercion is exactly the kind of attempt worth seeing, so every
+	 * block fires an action an observer (Premium's log) can record.
 	 *
-	 * @return mixed The stored value over a connection (blocking the change), or
-	 *               the incoming value otherwise / on first creation.
+	 * @param mixed    $value  The value about to be written.
+	 * @param string   $option The option name.
+	 * @param callable $reader The reader for the current stored value (site vs blog).
+	 *
+	 * @return mixed The stored value over a connection (blocking the change), the
+	 *               secure default for a control switch, or the incoming value
+	 *               otherwise / on legitimate first creation.
 	 * @since 1.5.0
 	 */
-	public function refuse_over_connection( $value, string $option ) {
+	private function refuse( $value, string $option, callable $reader ) {
 		if ( ConnectionContext::client_id() === null ) {
 			return $value;
 		}
 
 		$sentinel = new \stdClass();
-		$stored   = get_option( $option, $sentinel );
+		$stored   = $reader( $option, $sentinel );
 
 		// A change to an existing option is refused by keeping its stored value.
 		if ( $stored !== $sentinel ) {
+			$this->note_blocked( $option );
+
 			return $stored;
 		}
 
-		// The option has no stored row. A control switch falls back to its secure
-		// default so it cannot be created in a weakened state; anything else (OAuth
-		// key material) is left to its legitimate first-time creation.
-		return self::SECURE_DEFAULT[ $option ] ?? $value;
+		// A control switch with no stored row falls back to its secure default so
+		// it cannot be created in a weakened state.
+		if ( array_key_exists( $option, self::SECURE_DEFAULT ) ) {
+			$this->note_blocked( $option );
+
+			return self::SECURE_DEFAULT[ $option ];
+		}
+
+		// Anything else unset (OAuth key material) is left to its legitimate
+		// first-time creation.
+		return $value;
+	}
+
+	/**
+	 * Announce a blocked write so it can be logged.
+	 *
+	 * @param string $option The option whose write was refused.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function note_blocked( string $option ): void {
+		/**
+		 * Fires when safe mode refuses an assistant's write to a protected option.
+		 *
+		 * @since 1.5.0
+		 *
+		 * @param string $option The option name whose write was refused.
+		 */
+		do_action( 'albert/safe_mode/option_write_blocked', $option );
 	}
 
 	/**

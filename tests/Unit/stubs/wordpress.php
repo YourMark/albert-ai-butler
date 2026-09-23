@@ -854,3 +854,19 @@ if ( ! function_exists( 'get_role' ) ) {
 		};
 	}
 }
+
+if ( ! function_exists( 'get_site_option' ) ) {
+	/**
+	 * Stub get_site_option reading $GLOBALS['albert_test_site_options'].
+	 *
+	 * @param string $option   Option name.
+	 * @param mixed  $fallback Value when unset.
+	 *
+	 * @return mixed
+	 */
+	function get_site_option( string $option, $fallback = false ) {
+		$options = $GLOBALS['albert_test_site_options'] ?? [];
+
+		return array_key_exists( $option, $options ) ? $options[ $option ] : $fallback;
+	}
+}
