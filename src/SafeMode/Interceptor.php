@@ -15,6 +15,7 @@ use Albert\Contracts\Interfaces\Hookable;
 use Albert\Execution\InterceptorDecision;
 use Albert\Logging\Outcome;
 use Albert\OAuth\Server\ConnectionContext;
+use Albert\Settings\Value;
 use WP_Ability;
 use WP_Error;
 
@@ -39,15 +40,47 @@ use WP_Error;
 class Interceptor implements Hookable {
 
 	/**
-	 * How long a staged action may be approved for, in seconds.
+	 * The option holding how long a staged action may be approved for, in minutes.
 	 *
-	 * A day is long enough for a person to get to it and short enough that a
-	 * stale, forgotten intent does not sit approvable indefinitely.
+	 * @since 1.5.0
+	 * @var string
+	 */
+	public const TTL_OPTION = 'albert_safe_mode_ttl_minutes';
+
+	/**
+	 * How long a staged action may be approved for, in minutes.
+	 *
+	 * An hour, not a day. The window's real cost is drift: approving an
+	 * hours-old `update-post` overwrites whatever was edited in between, which
+	 * is why the screen has to warn about it at all. An hour covers "the
+	 * assistant told me, I will deal with it now" without covering "I approved
+	 * yesterday's intent against today's content". Ten minutes was considered
+	 * and is too tight: step away from the keyboard and the request dies.
 	 *
 	 * @since 1.5.0
 	 * @var int
 	 */
-	private const TTL_SECONDS = DAY_IN_SECONDS;
+	public const DEFAULT_TTL_MINUTES = 60;
+
+	/**
+	 * Smallest and largest window an owner may set, in minutes.
+	 *
+	 * A floor because a window shorter than the round trip to wp-admin makes
+	 * the queue unusable, a ceiling because an approvable action is a stored
+	 * intent and captured input, and neither should live for weeks.
+	 *
+	 * @since 1.5.0
+	 * @var int
+	 */
+	public const MIN_TTL_MINUTES = 5;
+
+	/**
+	 * Largest approval window, in minutes (one week).
+	 *
+	 * @since 1.5.0
+	 * @var int
+	 */
+	public const MAX_TTL_MINUTES = 10080;
 
 	/**
 	 * Wire the interceptor to its collaborators.
@@ -143,11 +176,45 @@ class Interceptor implements Hookable {
 			get_current_user_id(),
 			ConnectionContext::client_id(),
 			ConnectionContext::client_name(),
-			self::TTL_SECONDS,
+			self::ttl_seconds(),
 			$this->target_resolver->describe( $ability_name, $resolved )
 		);
 
 		return $this->awaiting_approval( $pending );
+	}
+
+	/**
+	 * How long a newly staged action may be approved for, in seconds.
+	 *
+	 * Read through {@see Value} like every other setting, so a `wp-config.php`
+	 * constant or the `albert/settings/value/albert_safe_mode_ttl_minutes`
+	 * filter can pin it, and clamped so neither a stored value nor an override
+	 * can produce a window that is unusable or effectively unbounded.
+	 *
+	 * @return int Seconds.
+	 * @since 1.5.0
+	 */
+	public static function ttl_seconds(): int {
+		$minutes = (int) Value::get( self::TTL_OPTION, self::DEFAULT_TTL_MINUTES );
+
+		return self::clamp_minutes( $minutes ) * MINUTE_IN_SECONDS;
+	}
+
+	/**
+	 * Hold a minutes value inside the allowed range.
+	 *
+	 * Also the setting's `sanitize_callback`, so the stored value and an
+	 * override are bounded by the same rule rather than by two that can drift.
+	 *
+	 * @param mixed $value The submitted value.
+	 *
+	 * @return int Minutes.
+	 * @since 1.5.0
+	 */
+	public static function clamp_minutes( $value ): int {
+		$minutes = is_numeric( $value ) ? (int) $value : self::DEFAULT_TTL_MINUTES;
+
+		return max( self::MIN_TTL_MINUTES, min( self::MAX_TTL_MINUTES, $minutes ) );
 	}
 
 	/**

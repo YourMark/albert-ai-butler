@@ -19,6 +19,7 @@ use Albert\OAuth\AllowedUsers;
 use Albert\OAuth\ConnectionRetention;
 use Albert\Privacy\PrivacyMode;
 use Albert\SafeMode\Gate;
+use Albert\SafeMode\Interceptor;
 use Albert\Support\WpCompat;
 
 /**
@@ -71,6 +72,22 @@ class SettingsBootstrap {
 						'sanitize_callback' => [ Gate::class, 'sanitize' ],
 						'disabled'          => [ self::class, 'safe_mode_unavailable' ],
 						'hint'              => [ self::class, 'safe_mode_hint' ],
+					],
+					[
+						'id'                => 'ttl',
+						'type'              => 'number',
+						'label'             => __( 'Approval window', 'albert-ai-butler' ),
+						'description'       => __( 'How long a held action stays approvable before it expires, in minutes. Shorter is safer: approving a stale request can overwrite edits made in the meantime.', 'albert-ai-butler' ),
+						'suffix'            => __( 'minutes', 'albert-ai-butler' ),
+						'option_name'       => Interceptor::TTL_OPTION,
+						'default'           => Interceptor::DEFAULT_TTL_MINUTES,
+						'attributes'        => [
+							'min'  => Interceptor::MIN_TTL_MINUTES,
+							'max'  => Interceptor::MAX_TTL_MINUTES,
+							'step' => 1,
+						],
+						'sanitize_callback' => [ Interceptor::class, 'clamp_minutes' ],
+						'disabled'          => [ self::class, 'safe_mode_unavailable' ],
 					],
 				],
 			],

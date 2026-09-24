@@ -16,6 +16,7 @@ use Albert\OAuth\AllowedUsers;
 use Albert\OAuth\ConnectionRetention;
 use Albert\Privacy\PrivacyMode;
 use Albert\SafeMode\Gate;
+use Albert\SafeMode\Interceptor;
 
 /**
  * The rule that decides whether an override of a given setting is usable.
@@ -94,6 +95,13 @@ class Validators {
 			// the default rather than pinning the site to a nonsense value.
 			Gate::OPTION                           => static function ( $value ): bool {
 				return $value === 'on' || $value === 'off';
+			},
+			// A window outside the allowed range is not usable, so an override
+			// naming one falls through rather than pinning the site to it.
+			Interceptor::TTL_OPTION                => static function ( $value ): bool {
+				return is_numeric( $value )
+					&& (int) $value >= Interceptor::MIN_TTL_MINUTES
+					&& (int) $value <= Interceptor::MAX_TTL_MINUTES;
 			},
 			AllowedUsers::EXPIRY_OPTION            => $days,
 			ConnectionRetention::NEVER_USED_OPTION => $days,

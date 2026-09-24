@@ -71,6 +71,7 @@ class Installer {
 		'albert_privacy_mode',
 		// Safe mode: server-side approval gating for destructive ability calls.
 		'albert_safe_mode',
+		'albert_safe_mode_ttl_minutes',
 		// The Context screen's instructions and section toggles.
 		'albert_context',
 		// Legacy options retired in earlier releases, cleared here for completeness.
