@@ -65,7 +65,7 @@ class Repository {
 		$action_id = wp_generate_uuid4();
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct insert on a custom table.
-		$wpdb->insert(
+		$inserted = $wpdb->insert(
 			Tables::pending_actions(),
 			[
 				'action_id'         => $action_id,
@@ -98,12 +98,32 @@ class Repository {
 		 */
 		do_action( 'albert/safe_mode/held', $ability_name );
 
-		$this->forget_count();
+		$this->forget_count( $user_id );
+
+		// A failed insert is not a hold. The caller would otherwise tell the
+		// assistant its request is queued and hand it a link to a queue that will
+		// never contain the row, while the screen says nothing is waiting: the
+		// same false reassurance the WP 7.1 notice exists to prevent, reached
+		// another way. Say so instead, loudly enough to be found.
+		if ( $inserted === false ) {
+			/**
+			 * Fires when a hold could not be recorded.
+			 *
+			 * The queue table is missing or unwritable, so safe mode cannot do
+			 * its job. Nothing ran, but nothing is queued either.
+			 *
+			 * @since 1.5.0
+			 *
+			 * @param string $ability_name The ability whose hold could not be stored.
+			 * @param string $error        The database error, if any.
+			 */
+			do_action( 'albert/safe_mode/hold_failed', $ability_name, (string) $wpdb->last_error );
+		}
 
 		$staged = $this->find( $action_id );
 
-		// A failed insert (or a race that deleted the row) still owes the caller a
-		// value it can render; the unsaved instance carries everything just staged.
+		// An unsaved instance still carries everything just staged, so the caller
+		// has something to render either way; its zero id marks it as unstored.
 		return $staged ?? new PendingAction(
 			0,
 			$action_id,
@@ -160,11 +180,8 @@ class Repository {
 	public function find_open( string $action_id ): ?PendingAction {
 		global $wpdb;
 
-		// Compared in SQL, like every other expiry check in this class. It used
-		// to be a PHP `strtotime()` against a stored UTC string, which is correct
-		// only because wp-settings.php sets the process timezone to UTC: a plugin
-		// calling date_default_timezone_set() would have broken this one method
-		// and left the other four right.
+		// Expiry is compared in SQL, like every other check in this class: a PHP
+		// comparison here would depend on the process timezone.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct read on a custom table.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
@@ -212,11 +229,9 @@ class Repository {
 	/**
 	 * Open actions belonging to one user, newest first.
 	 *
-	 * A separate method rather than a nullable argument on {@see self::list_open()}.
-	 * A `?int $user_id = null` meaning "everybody" is one forgotten argument away
-	 * from showing every user's requests to whoever is looking, and a scoping
-	 * parameter that leaks when omitted is the wrong shape for this question.
-	 * Two named methods cannot be called wrong by accident.
+	 * Named separately from {@see self::list_open()} rather than taking a
+	 * nullable user: a scoping argument that means "everybody" when omitted
+	 * cannot be forgotten safely.
 	 *
 	 * @param int $user_id The owner.
 	 * @param int $limit   Maximum rows.
@@ -252,9 +267,11 @@ class Repository {
 	/**
 	 * How many open actions belong to one user.
 	 *
-	 * The menu bubble a non-administrator sees. Uncached, unlike the site-wide
-	 * count: it is per-user, so caching it would need a key per user for a
-	 * number only that user's own admin pages ever read.
+	 * The menu bubble a non-administrator sees, so it is read on every wp-admin
+	 * page they load, not only Albert's. Cached per user for the same reason the
+	 * site-wide count is: an earlier version left this one uncached on the
+	 * grounds that a per-user key was not worth it, which handed the cheap path
+	 * to administrators and a query-per-page to everybody else.
 	 *
 	 * @param int $user_id The owner.
 	 *
@@ -262,9 +279,32 @@ class Repository {
 	 * @since 1.5.0
 	 */
 	public function count_open_for_user( int $user_id ): int {
+		$key    = self::COUNT_CACHE_KEY . '_' . $user_id;
+		$cached = get_transient( $key );
+
+		if ( is_numeric( $cached ) ) {
+			return (int) $cached;
+		}
+
+		$count = $this->query_count_open_for_user( $user_id );
+
+		set_transient( $key, $count, MINUTE_IN_SECONDS * 5 );
+
+		return $count;
+	}
+
+	/**
+	 * Count one user's open actions for real.
+	 *
+	 * @param int $user_id The owner.
+	 *
+	 * @return int
+	 * @since 1.5.0
+	 */
+	private function query_count_open_for_user( int $user_id ): int {
 		global $wpdb;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Per-user count on a custom table.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Counted here and cached by the caller.
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i WHERE status = %s AND expires_at > %s AND user_id = %d',
@@ -348,18 +388,41 @@ class Repository {
 	/**
 	 * Drop the cached open count.
 	 *
-	 * Called by every write. The count is read on `admin_menu`, which fires on
-	 * every single wp-admin page load to draw the menu bubble, so an uncached
-	 * count meant a COUNT(*) on every admin request for a number most pages
-	 * never show. Invalidating on write rather than expiring on a timer is what
-	 * keeps the bubble exact: a stale badge on a safety queue is its own small
-	 * lie.
+	 * Called by every write. The badge is read on `admin_menu`, so it is cached;
+	 * invalidating on write rather than on a timer keeps it exact.
+	 *
+	 * @param int|null $user_id Also drop this user's own badge, when the write
+	 *                          belongs to somebody in particular.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	private function forget_count(): void {
+	private function forget_count( ?int $user_id = null ): void {
 		delete_transient( self::COUNT_CACHE_KEY );
+
+		if ( $user_id !== null ) {
+			delete_transient( self::COUNT_CACHE_KEY . '_' . $user_id );
+		}
+	}
+
+	/**
+	 * Drop every cached count, site-wide and per user.
+	 *
+	 * Used by the bulk sweeps, which change rows belonging to many people at
+	 * once and would otherwise leave each of them a stale badge until the
+	 * five-minute backstop expired.
+	 *
+	 * @param list<PendingAction> $affected Rows the sweep is about to change.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function forget_counts_for( array $affected ): void {
+		$this->forget_count();
+
+		foreach ( $affected as $action ) {
+			delete_transient( self::COUNT_CACHE_KEY . '_' . $action->user_id );
+		}
 	}
 
 	/**
@@ -467,12 +530,15 @@ class Repository {
 	public function expire_lapsed(): int {
 		global $wpdb;
 
+		$this->forget_counts_for( $this->list_lapsed() );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update on a custom table.
 		$expired = (int) $wpdb->query(
 			$wpdb->prepare(
-				'UPDATE %i SET status = %s WHERE status = %s AND expires_at <= %s',
+				'UPDATE %i SET status = %s, decided_at = %s WHERE status = %s AND expires_at <= %s',
 				Tables::pending_actions(),
 				PendingAction::STATUS_EXPIRED,
+				gmdate( 'Y-m-d H:i:s' ),
 				PendingAction::STATUS_PENDING,
 				gmdate( 'Y-m-d H:i:s' )
 			)
@@ -495,7 +561,7 @@ class Repository {
 	 * @return list<PendingAction>
 	 * @since 1.5.0
 	 */
-	public function list_lapsed( int $limit = 200 ): array {
+	public function list_lapsed( int $limit = 1000 ): array {
 		return $this->list_where(
 			'status = %s AND expires_at <= %s',
 			[ PendingAction::STATUS_PENDING, gmdate( 'Y-m-d H:i:s' ) ],
@@ -512,7 +578,7 @@ class Repository {
 	 * @return list<PendingAction>
 	 * @since 1.5.0
 	 */
-	public function list_stale_claims( int $stale_after_seconds, int $limit = 200 ): array {
+	public function list_stale_claims( int $stale_after_seconds, int $limit = 1000 ): array {
 		return $this->list_where(
 			'status = %s AND decided_at IS NOT NULL AND decided_at <= %s',
 			[
@@ -543,6 +609,8 @@ class Repository {
 	public function fail_stale_claims( int $stale_after_seconds ): int {
 		global $wpdb;
 
+		$this->forget_counts_for( $this->list_stale_claims( $stale_after_seconds ) );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update on a custom table.
 		$failed = (int) $wpdb->query(
 			$wpdb->prepare(
@@ -572,6 +640,10 @@ class Repository {
 	 * one place Albert keeps request payloads at rest. Deleting is the only thing
 	 * that gets them out of next year's backups; masking them on screen does not.
 	 *
+	 * Measured from the decision, not from creation, which is what the window
+	 * means everywhere it is described. An expired row has no `decided_at`, so
+	 * it is swept on the next pass once `expire_lapsed()` stamps one.
+	 *
 	 * Pending rows are never touched, however old: an undecided request is not
 	 * rubbish, and `expire_lapsed()` moves it on first.
 	 *
@@ -590,7 +662,7 @@ class Repository {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct delete on a custom table.
 		return (int) $wpdb->query(
 			$wpdb->prepare(
-				'DELETE FROM %i WHERE status <> %s AND status <> %s AND created_at <= %s',
+				'DELETE FROM %i WHERE status <> %s AND status <> %s AND decided_at IS NOT NULL AND decided_at <= %s',
 				Tables::pending_actions(),
 				PendingAction::STATUS_PENDING,
 				PendingAction::STATUS_EXECUTING,

@@ -25,13 +25,20 @@ use Albert\OAuth\Server\ConnectionContext;
  * it holds against any third-party ability that will ever be registered, not
  * only Albert's own surface.
  *
- * It hooks `sanitize_option_{$option}`, which fires on `add_option` *and*
- * `update_option`, including a direct `update_option()` call from an ability, so
- * a virtual option being created for the first time (`albert_safe_mode` has no
- * stored row until written) is covered too. A change to an existing option is
- * refused by returning its stored value; a first-time creation of an unset
- * option is left alone, so legitimate lazy creation (OAuth key material minted
- * while validating a token) still works.
+ * Blog options go through `sanitize_option_{$option}`, which fires for both
+ * `add_option()` and `update_option()`. Network options have their own store and
+ * their own hooks, so they get their own; the shared sanitize filter cannot tell
+ * the two apart, and an earlier version read the blog value while a network write
+ * was in flight.
+ *
+ * Creation is refused as well as change. Most of these have no stored row until
+ * something writes one, so allowing a first write would have been a bypass
+ * wearing the word "creation". Only the OAuth key material may be created, since
+ * it is minted lazily during token validation.
+ *
+ * Deletes can only be detected. `delete_option()` fires actions and no filter,
+ * so there is nothing to return and the hook that records them is named for what
+ * it can actually claim.
  *
  * High-risk *site* options (`siteurl`, roles) are a different case: those are
  * held for approval by {@see RiskPolicy}, because a person may legitimately want
@@ -50,6 +57,7 @@ class ConnectionGuard implements Hookable {
 	 */
 	private const PROTECTED = [
 		Gate::OPTION,
+		Interceptor::TTL_OPTION,
 		'albert_disabled_abilities',
 		'albert_allowed_users',
 		'albert_privacy_mode',
@@ -59,19 +67,27 @@ class ConnectionGuard implements Hookable {
 	];
 
 	/**
-	 * The value a refused *creation* falls back to, per option.
+	 * The value a refused *creation* falls back to, per control option.
 	 *
-	 * A control switch that has no stored row yet (`albert_safe_mode` is virtual
-	 * until written) must not be creatable in a weakened state over a connection:
-	 * an attempt to create it returns the secure default instead. Options absent
-	 * here keep the "leave first creation alone" behaviour, so OAuth key material
-	 * can still be minted lazily while a token is validated.
+	 * Blocking a change is not enough on its own: most of these have no stored
+	 * row until something writes one, and `albert_privacy_mode` in particular is
+	 * absent on any site that predates 1.4.0 and never opened Settings. Letting
+	 * a first write through would have set anonymisation to `off` and called it
+	 * creation.
+	 *
+	 * Only the OAuth key material is absent here, because it is genuinely minted
+	 * lazily while a token is validated and a secure default for a keypair is a
+	 * contradiction. It is still refused once it exists.
 	 *
 	 * @since 1.5.0
 	 * @var array<string, mixed>
 	 */
 	private const SECURE_DEFAULT = [
-		Gate::OPTION => Gate::DEFAULT_VALUE,
+		Gate::OPTION                => Gate::DEFAULT_VALUE,
+		Interceptor::TTL_OPTION     => Interceptor::DEFAULT_TTL_MINUTES,
+		'albert_disabled_abilities' => [],
+		'albert_allowed_users'      => [],
+		'albert_privacy_mode'       => 'strict',
 	];
 
 	/**
@@ -83,18 +99,48 @@ class ConnectionGuard implements Hookable {
 	public function register_hooks(): void {
 		foreach ( $this->protected_options() as $option ) {
 			// Late priority so the guard has the final say over the stored value.
+			// This one filter covers the network path too: add_network_option()
+			// and update_network_option() both call sanitize_option(), so there
+			// is no separate multisite write filter to bind. There is no
+			// `sanitize_site_option_*` in core; an earlier version hooked it and
+			// the callback simply never ran.
 			add_filter( "sanitize_option_{$option}", [ $this, 'refuse_over_connection' ], 99, 2 );
-			// The multisite network-option path runs through its own filter.
-			add_filter( "sanitize_site_option_{$option}", [ $this, 'refuse_site_over_connection' ], 99, 2 );
+
+			// Multisite writes their own store and need their own hooks. These
+			// are real filters with the network value to hand, so a network write
+			// is refused properly rather than coerced through the shared
+			// sanitize filter, which cannot tell the two stores apart.
+			add_filter( "pre_update_site_option_{$option}", [ $this, 'refuse_network_update' ], 99, 3 );
+			add_filter( "pre_add_site_option_{$option}", [ $this, 'refuse_network_add' ], 99, 2 );
+			add_action( "pre_delete_site_option_{$option}", [ $this, 'note_network_delete_attempt' ] );
 		}
 
-		// Deletes cannot be prevented, only seen. WordPress has no
-		// `pre_delete_option` filter: `delete_option()` fires actions only, so
-		// there is nothing to return. Detection still earns its place, because
-		// an assistant deleting `albert_disabled_abilities` would switch every
-		// ability back on and currently leave no trace whatsoever.
+		// Deletes cannot be prevented, only seen: `delete_option()` fires actions
+		// only, so there is nothing to return. Detection still earns its place,
+		// because an assistant deleting `albert_disabled_abilities` switches every
+		// ability back on and would otherwise leave no trace.
 		add_action( 'delete_option', [ $this, 'note_delete_attempt' ] );
-		add_action( 'pre_delete_site_option', [ $this, 'note_delete_attempt' ] );
+	}
+
+	/**
+	 * Record an attempt to delete a protected network option.
+	 *
+	 * `pre_delete_site_option_{$option}` passes the option name as its first
+	 * argument, so the signature matches {@see self::note_delete_attempt()}; it
+	 * exists separately only because the hook is registered per option and so
+	 * needs no list scan.
+	 *
+	 * @param string $option The option being deleted.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function note_network_delete_attempt( string $option ): void {
+		if ( ConnectionContext::client_id() === null ) {
+			return;
+		}
+
+		$this->announce_delete( $option );
 	}
 
 	/**
@@ -132,6 +178,28 @@ class ConnectionGuard implements Hookable {
 		 *
 		 * @param string $option The option being deleted.
 		 */
+		$this->announce_delete( $option );
+	}
+
+	/**
+	 * Announce a detected delete of a protected option.
+	 *
+	 * @param string $option The option being deleted.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function announce_delete( string $option ): void {
+		/**
+		 * Fires when an assistant deletes one of Albert's protected options.
+		 *
+		 * Deliberately a different hook from `option_write_blocked`: that one
+		 * says the write was refused, and this one cannot make that claim.
+		 *
+		 * @since 1.5.0
+		 *
+		 * @param string $option The option being deleted.
+		 */
 		do_action( 'albert/safe_mode/option_delete_detected', $option );
 
 		AuditTrail::option_blocked( $option, 'delete' );
@@ -147,20 +215,50 @@ class ConnectionGuard implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function refuse_over_connection( $value, string $option ) {
-		return $this->refuse( $value, $option, 'get_option' );
+		return $this->refuse( $value, $option );
 	}
 
 	/**
-	 * Refuse a multisite network-option change made over a connection.
+	 * Refuse a change to an existing network option.
+	 *
+	 * @param mixed  $value     The value about to be written.
+	 * @param mixed  $old_value The stored value.
+	 * @param string $option    The option name.
+	 *
+	 * @return mixed The stored value over a connection, the incoming value otherwise.
+	 * @since 1.5.0
+	 */
+	public function refuse_network_update( $value, $old_value, string $option ) {
+		if ( ConnectionContext::client_id() === null ) {
+			return $value;
+		}
+
+		$this->note_blocked( $option );
+
+		return $old_value;
+	}
+
+	/**
+	 * Refuse the creation of a network option.
 	 *
 	 * @param mixed  $value  The value about to be written.
 	 * @param string $option The option name.
 	 *
-	 * @return mixed
+	 * @return mixed The secure default over a connection, the incoming value otherwise.
 	 * @since 1.5.0
 	 */
-	public function refuse_site_over_connection( $value, string $option ) {
-		return $this->refuse( $value, $option, 'get_site_option' );
+	public function refuse_network_add( $value, string $option ) {
+		if ( ConnectionContext::client_id() === null ) {
+			return $value;
+		}
+
+		if ( ! array_key_exists( $option, self::SECURE_DEFAULT ) ) {
+			return $value;
+		}
+
+		$this->note_blocked( $option );
+
+		return self::SECURE_DEFAULT[ $option ];
 	}
 
 	/**
@@ -171,22 +269,21 @@ class ConnectionGuard implements Hookable {
 	 * That silent coercion is exactly the kind of attempt worth seeing, so every
 	 * block fires an action an observer (Premium's log) can record.
 	 *
-	 * @param mixed    $value  The value about to be written.
-	 * @param string   $option The option name.
-	 * @param callable $reader The reader for the current stored value (site vs blog).
+	 * @param mixed  $value  The value about to be written.
+	 * @param string $option The option name.
 	 *
 	 * @return mixed The stored value over a connection (blocking the change), the
 	 *               secure default for a control switch, or the incoming value
 	 *               otherwise / on legitimate first creation.
 	 * @since 1.5.0
 	 */
-	private function refuse( $value, string $option, callable $reader ) {
+	private function refuse( $value, string $option ) {
 		if ( ConnectionContext::client_id() === null ) {
 			return $value;
 		}
 
 		$sentinel = new \stdClass();
-		$stored   = $reader( $option, $sentinel );
+		$stored   = get_option( $option, $sentinel );
 
 		// A change to an existing option is refused by keeping its stored value.
 		if ( $stored !== $sentinel ) {

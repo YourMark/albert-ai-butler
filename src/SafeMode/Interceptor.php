@@ -50,12 +50,9 @@ class Interceptor implements Hookable {
 	/**
 	 * How long a staged action may be approved for, in minutes.
 	 *
-	 * An hour, not a day. The window's real cost is drift: approving an
-	 * hours-old `update-post` overwrites whatever was edited in between, which
-	 * is why the screen has to warn about it at all. An hour covers "the
-	 * assistant told me, I will deal with it now" without covering "I approved
-	 * yesterday's intent against today's content". Ten minutes was considered
-	 * and is too tight: step away from the keyboard and the request dies.
+	 * The window's cost is drift: approving an hours-old `update-post`
+	 * overwrites whatever was edited since. An hour covers "deal with it now"
+	 * without covering "yesterday's intent against today's content".
 	 *
 	 * @since 1.5.0
 	 * @var int
@@ -63,11 +60,10 @@ class Interceptor implements Hookable {
 	public const DEFAULT_TTL_MINUTES = 60;
 
 	/**
-	 * Smallest and largest window an owner may set, in minutes.
+	 * Shortest window an owner may set, in minutes.
 	 *
-	 * A floor because a window shorter than the round trip to wp-admin makes
-	 * the queue unusable, a ceiling because an approvable action is a stored
-	 * intent and captured input, and neither should live for weeks.
+	 * A floor so the queue stays usable: below the round trip to wp-admin, every
+	 * request lapses before anybody sees it.
 	 *
 	 * @since 1.5.0
 	 * @var int
@@ -125,8 +121,7 @@ class Interceptor implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function intercept( $pre, string $ability_name, $input, $ability ) {
-		// The MCP transport wrapper re-fires for the real ability with resolved
-		// input; act on that firing, not this plumbing one.
+		// The wrapper fires first and the real ability fires next; act on that one.
 		if ( ! $this->decision->should_intercept( $ability_name ) ) {
 			return $pre;
 		}

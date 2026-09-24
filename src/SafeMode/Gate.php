@@ -100,16 +100,9 @@ class Gate {
 	/**
 	 * Whether a value asks for safe mode to be off.
 	 *
-	 * Accepts booleans, because `define( 'ALBERT_SAFE_MODE', false )` is what a
-	 * PHP developer writes and this is Albert's first boolean-shaped setting:
-	 * every other one is a string enum or an integer, so there was no existing
-	 * convention to follow and the string-only rule silently rejected the
-	 * obvious spelling. Rejected meant the constant was skipped entirely and
-	 * safe mode stayed on, with the Settings field still editable and nothing
-	 * saying the constant had been ignored.
-	 *
-	 * Only an explicit off wins. Anything unrecognised means on, so a typo
-	 * fails towards the gate rather than away from it.
+	 * Booleans count, because `define( 'ALBERT_SAFE_MODE', false )` is the
+	 * obvious spelling. Only an explicit off wins: anything unrecognised means
+	 * on, so a typo fails towards the gate.
 	 *
 	 * @param mixed $value The submitted or configured value.
 	 *
@@ -178,22 +171,12 @@ class Gate {
 	/**
 	 * Whether an owner has excused this ability from the gate in code.
 	 *
-	 * **Why an escape hatch exists at all.** Without one, an owner with a
-	 * destructive ability they genuinely trust, firing twenty times a day, has
-	 * exactly one way out: switch safe mode off entirely. A control with no
-	 * proportionate relief does not get respected, it gets disabled, and then
-	 * nothing is held. Excusing one ability is strictly better than that.
+	 * The relief valve: without one, an owner with a noisy ability they trust
+	 * switches safe mode off entirely.
 	 *
-	 * **Why it is a filter and not a checkbox.** Writing a line of PHP is a
-	 * deliberate act by somebody who went looking. A checkbox on a screen is
-	 * one click away from whoever is annoyed at this exact moment, next to the
-	 * thing protecting them. If this ever grows a UI it should be harder to
-	 * reach than the rest of the screen, not easier.
-	 *
-	 * It excuses an ability from *staging*, and nothing else. The permission
-	 * check still runs, and {@see ConnectionGuard} still refuses writes to
-	 * Albert's own control options whatever is listed here, so this cannot be
-	 * used to switch the gate off from inside it.
+	 * Excuses *staging* and nothing else. Permission checks still run, and
+	 * {@see ConnectionGuard} still refuses writes to Albert's own control
+	 * options whatever is listed, so this cannot open the gate from inside.
 	 *
 	 * @param string $ability_name The ability id.
 	 *
@@ -204,13 +187,9 @@ class Gate {
 		/**
 		 * Filters the abilities safe mode never holds.
 		 *
-		 * The counterpart to `albert/safe_mode/high_risk_abilities`, and it
-		 * wins: an id in both lists is exempt, because a site naming an ability
-		 * here has said something specific about its own surface, where the
-		 * risk list is a general default.
-		 *
-		 * Excuses staging only. Permissions still apply, and Albert's own
-		 * control options remain unwritable over a connection regardless.
+		 * Wins over `albert/safe_mode/high_risk_abilities`: naming an ability
+		 * here is a statement about this site, where the risk list is a general
+		 * default.
 		 *
 		 * @since 1.5.0
 		 *
@@ -234,6 +213,12 @@ class Gate {
 	 * **Do not weaken this to `=== true`.** That inverts the safety property
 	 * from fail-safe to fail-open: every unannotated ability would then run
 	 * without approval, which is the one outcome this gate exists to prevent.
+	 *
+	 * `readonly: true` is **not** an escape either, and that is deliberate. It is
+	 * tempting, since a read cannot be destructive and some plugins annotate only
+	 * that key, but it makes a single self-reported flag sufficient to skip the
+	 * gate. `destructive: false` is the one claim this trusts, and an ability
+	 * that means "read" can make it.
 	 *
 	 * The MCP transport wrapper (`mcp-adapter/execute-ability`) is itself
 	 * annotated `destructive: true`, so it would gate here — but it never

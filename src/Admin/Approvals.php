@@ -207,7 +207,10 @@ class Approvals implements Hookable {
 	 */
 	public function render_page(): void {
 		if ( ! $this->policy->can_view() ) {
-			return;
+			// Not a bare return: that renders a blank admin page, which reads as
+			// a broken screen rather than a refusal. Unreachable while the menu
+			// uses the same check, and worth keeping honest for the day they drift.
+			wp_die( esc_html__( 'You are not allowed to view approvals.', 'albert-ai-butler' ), '', [ 'response' => 403 ] );
 		}
 
 		$user_id = get_current_user_id();

@@ -21,7 +21,7 @@ use WP_Error;
  * run as, not the approving admin. That preserves the ability's own permission
  * check: approval says "let this proceed as it would have," it does not lend the
  * caller the approver's capabilities. The run happens under
- * {@see ExecutionBypass} so the interceptor lets it through instead of staging
+ * {@see ApprovalTicket} so the interceptor lets it through instead of staging
  * it again.
  *
  * @since 1.5.0
@@ -66,6 +66,7 @@ class Approver {
 			);
 
 			$this->repository->record_outcome( $action->id, $decided_by, false, $this->error_shape( $error ) );
+			AuditTrail::approved( $action, $decided_by, false );
 
 			return $error;
 		}
@@ -86,21 +87,17 @@ class Approver {
 
 		if ( is_wp_error( $result ) ) {
 			$this->repository->record_outcome( $action->id, $decided_by, false, $this->error_shape( $result ) );
-			AuditTrail::approved( $action, $decided_by );
+			AuditTrail::approved( $action, $decided_by, false );
 
 			return $result;
 		}
 
-		// Deliberately nothing. The success payload used to be stored whole,
-		// which put `albert/create-user`'s one-time `password_reset_url` into
-		// this table in the clear: `guarded_execute()` hands the caller the
-		// unredacted result, so `sensitive_output_keys` never applied here. The
-		// screen only needs to know it ran, the activity log already records
-		// that it did, and a redaction list would be a guess for any ability
-		// Albert has not seen. The error shape above is kept because it is
-		// bounded to a code and a message and is what the screen shows.
+		// No payload: `guarded_execute()` returns the unredacted result, so
+		// `sensitive_output_keys` does not apply on this path and a success
+		// result could carry a credential. The error shape above is kept because
+		// it is bounded to a code and a message.
 		$this->repository->record_outcome( $action->id, $decided_by, true, [] );
-		AuditTrail::approved( $action, $decided_by );
+		AuditTrail::approved( $action, $decided_by, true );
 
 		return is_array( $result ) ? $result : [];
 	}

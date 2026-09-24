@@ -36,15 +36,20 @@ class InputPresenter {
 	/**
 	 * Key names masked before display.
 	 *
-	 * Matched case-insensitively as substrings, so `user_pass`, `apiKey` and
-	 * `refresh_token` are all caught. Short and obvious on purpose: a longer
-	 * list would mask ordinary fields (`keywords`, `password_protected`) and
-	 * make the screen less readable without making it meaningfully safer.
+	 * Matched case-insensitively as substrings, so `user_pass`, `password`,
+	 * `apiKey` and `refresh_token` are all caught by a shorter list than it
+	 * looks: `pass` covers the password family, and listing `password` beside it
+	 * would be dead weight.
+	 *
+	 * Short on purpose. `pass` also matches `bypass` and `compass`, which is the
+	 * cost of substring matching and an acceptable one here: over-masking makes a
+	 * screen less useful, never less safe, and this is a display convenience
+	 * rather than a control.
 	 *
 	 * @since 1.5.0
 	 * @var list<string>
 	 */
-	private const SECRET_HINTS = [ 'password', 'passwd', 'pass', 'secret', 'token', 'api_key', 'apikey', 'credential', 'private_key' ];
+	private const SECRET_HINTS = [ 'pass', 'secret', 'token', 'api_key', 'apikey', 'credential', 'private_key' ];
 
 	/**
 	 * What is shown in place of a masked value.

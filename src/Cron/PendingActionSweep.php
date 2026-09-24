@@ -18,21 +18,14 @@ use Albert\SafeMode\Repository;
 /**
  * Daily WP-Cron job that keeps the safe-mode queue honest and bounded.
  *
- * Three jobs, in order:
+ * Expires lapsed rows, fails claims that never finished, and deletes decided
+ * rows once they are old.
  *
- * 1. **Lapsed rows become `expired`.** Without this a row nobody decided keeps
- *    `status = 'pending'` forever, which both lists exclude: the open list
- *    filters on `expires_at`, the decided list filters on `status <> pending`.
- *    The request then disappears from the screen with no record it was ever
- *    asked, which is an audit hole in a feature whose whole claim is auditable
- *    approval.
- * 2. **Claims that never finished become `failed`.** An approval flips a row to
- *    `executing` and then runs the ability; a fatal or a timeout in between
- *    leaves it there permanently, invisible to the open list and shown as
- *    "Approved, running" in perpetuity.
- * 3. **Decided rows are deleted once they are old.** The queue stores the input
- *    a call was about to run with, so it is the one Albert table holding request
- *    payloads at rest. Retention is what keeps them out of next year's backups.
+ * Each exists because nothing else moves a row on. A lapsed row keeps
+ * `status = 'pending'`, which both lists exclude, so it vanishes with no record
+ * it was ever asked. A claim whose run died stays `executing` and reads as
+ * "Approved, running" forever. And the queue holds each call's captured input,
+ * so without deletion those payloads sit in every backup indefinitely.
  *
  * @since 1.5.0
  */
@@ -95,10 +88,8 @@ class PendingActionSweep implements Hookable {
 	 */
 	public function run(): void {
 		try {
-			// Read before writing, so each row can be named in the audit trail.
-			// A bulk UPDATE knows how many it touched and nothing about which,
-			// and "three requests lapsed" is not the sentence somebody looking
-			// for trouble needs.
+			// Read before writing: a bulk UPDATE knows a count and not which rows,
+			// and the audit trail needs to name them.
 			$lapsed = $this->repository->list_lapsed();
 			$stale  = $this->repository->list_stale_claims( self::STALE_CLAIM_SECONDS );
 

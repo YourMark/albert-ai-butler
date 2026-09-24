@@ -26,13 +26,9 @@ defined( 'ABSPATH' ) || exit;
  * is still a person deciding out of band, which is the whole mechanism. What it
  * is *not* is four-eyes review, and nothing here should be described as that.
  *
- * **One question, not two.** Approving and rejecting share a single check: if
- * you cannot act on a row you cannot act on it, full stop. Splitting them so a
- * blocked owner could still reject was considered and dropped. It bought a
- * tidier queue at the cost of a second permission concept on a destructive
- * surface, and the row it was meant to rescue clears itself: it expires on its
- * own, and an administrator can decide it in the meantime. A safety control is
- * easier to trust when there is one rule to hold in your head.
+ * **One question, not two.** Approve and reject share a check: if you cannot
+ * act on a row you cannot act on it. A row nobody can decide expires on its own,
+ * and an administrator can clear it meanwhile.
  *
  * **Evaluated now, not at staging time.** Ownership moves, posts get published,
  * roles change. The answer that matters is whether this person may do this

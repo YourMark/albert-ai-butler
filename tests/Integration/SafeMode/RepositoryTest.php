@@ -308,11 +308,14 @@ class RepositoryTest extends TestCase {
 		$this->repository->claim( $running->id, 3 );
 
 		global $wpdb;
+		// Retention measures from the decision, not from creation, which is what
+		// the window means everywhere it is described.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Backdating rows in a test.
 		$wpdb->query(
 			$wpdb->prepare(
-				'UPDATE %i SET created_at = %s',
+				'UPDATE %i SET created_at = %s, decided_at = IF( decided_at IS NULL, NULL, %s )',
 				Tables::pending_actions(),
+				gmdate( 'Y-m-d H:i:s', time() - ( 90 * DAY_IN_SECONDS ) ),
 				gmdate( 'Y-m-d H:i:s', time() - ( 90 * DAY_IN_SECONDS ) )
 			)
 		);

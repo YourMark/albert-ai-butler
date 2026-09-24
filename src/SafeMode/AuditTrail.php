@@ -43,9 +43,7 @@ class AuditTrail {
 	 * A person approved a held call.
 	 *
 	 * Logged even though the approved run logs itself: that row says the ability
-	 * ran, this one says who let it. The queue row carries the same fact until
-	 * retention deletes it, at which point this is the only remaining record
-	 * that a destructive action was signed off rather than simply performed.
+	 * ran, this one says who let it.
 	 *
 	 * @since 1.5.0
 	 * @var string
@@ -79,8 +77,7 @@ class AuditTrail {
 	/**
 	 * An assistant tried to write one of Albert's own control options.
 	 *
-	 * The single clearest "somebody is testing the fence" signal the feature
-	 * has, and until now it went nowhere at all.
+	 * The clearest "somebody is testing the fence" signal the feature has.
 	 *
 	 * @since 1.5.0
 	 * @var string
@@ -91,9 +88,7 @@ class AuditTrail {
 	 * An assistant deleted one of Albert's control options.
 	 *
 	 * An `error`, where a refused write is only a `warning`: this one got
-	 * through. WordPress offers no filter that can short-circuit
-	 * `delete_option()`, so the control is genuinely absent here and the log is
-	 * the only thing standing where prevention would be.
+	 * through. No core filter can short-circuit `delete_option()`.
 	 *
 	 * @since 1.5.0
 	 * @var string
@@ -105,11 +100,12 @@ class AuditTrail {
 	 *
 	 * @param PendingAction $action     The action that was approved.
 	 * @param int           $decided_by The approving user.
+	 * @param bool          $ran        Whether the ability then ran without error.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	public static function approved( PendingAction $action, int $decided_by ): void {
+	public static function approved( PendingAction $action, int $decided_by, bool $ran = true ): void {
 		/**
 		 * Fires when a person approves a held action.
 		 *
@@ -120,7 +116,17 @@ class AuditTrail {
 		 */
 		do_action( 'albert/safe_mode/approved', $action, $decided_by );
 
-		self::record( $action->ability_name, $decided_by, Outcome::SUCCESS, self::CODE_APPROVED, 'Approved by a person and run.' );
+		// The outcome travels with the decision. Recording every approval as a
+		// success meant the audit row said the action ran while the queue row said
+		// it failed, and two stores disagreeing about one event is worse than
+		// either of them being terse.
+		self::record(
+			$action->ability_name,
+			$decided_by,
+			$ran ? Outcome::SUCCESS : Outcome::ERROR,
+			self::CODE_APPROVED,
+			$ran ? 'Approved by a person and run.' : 'Approved by a person, but the action failed.'
+		);
 	}
 
 	/**

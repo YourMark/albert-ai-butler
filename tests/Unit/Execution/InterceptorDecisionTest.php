@@ -45,7 +45,7 @@ class InterceptorDecisionTest extends TestCase {
 	 * @return void
 	 */
 	public function test_execute_wrapper_is_the_transport_wrapper(): void {
-		$this->assertTrue( $this->decision->is_transport_wrapper( 'mcp-adapter/execute-ability' ) );
+		$this->assertFalse( $this->decision->should_intercept( 'mcp-adapter/execute-ability' ) );
 	}
 
 	/**
@@ -54,7 +54,7 @@ class InterceptorDecisionTest extends TestCase {
 	 * @return void
 	 */
 	public function test_real_ability_is_not_the_transport_wrapper(): void {
-		$this->assertFalse( $this->decision->is_transport_wrapper( 'albert/delete-post' ) );
+		$this->assertTrue( $this->decision->should_intercept( 'albert/delete-post' ) );
 	}
 
 	/**
@@ -64,8 +64,8 @@ class InterceptorDecisionTest extends TestCase {
 	 * @return void
 	 */
 	public function test_other_meta_tools_are_not_the_transport_wrapper(): void {
-		$this->assertFalse( $this->decision->is_transport_wrapper( 'mcp-adapter/discover-abilities' ) );
-		$this->assertFalse( $this->decision->is_transport_wrapper( 'mcp-adapter/get-ability-info' ) );
+		$this->assertTrue( $this->decision->should_intercept( 'mcp-adapter/discover-abilities' ) );
+		$this->assertTrue( $this->decision->should_intercept( 'mcp-adapter/get-ability-info' ) );
 	}
 
 	/**
