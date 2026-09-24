@@ -92,6 +92,7 @@ use Albert\Execution\InterceptorDecision;
 use Albert\SafeMode\Gate as SafeModeGate;
 use Albert\SafeMode\Repository as SafeModeRepository;
 use Albert\SafeMode\Approver as SafeModeApprover;
+use Albert\SafeMode\ApprovalPolicy as SafeModeApprovalPolicy;
 use Albert\SafeMode\Interceptor as SafeModeInterceptor;
 use Albert\SafeMode\ConnectionGuard as SafeModeConnectionGuard;
 use Albert\Admin\Approvals;
@@ -266,7 +267,7 @@ class Plugin {
 			( new Connections() )->register_hooks();
 
 			// Safe-mode approvals queue (approve or reject held destructive calls).
-			( new Approvals( $safe_mode_repository, new SafeModeApprover( $safe_mode_repository ) ) )->register_hooks();
+			( new Approvals( $safe_mode_repository, new SafeModeApprover( $safe_mode_repository ), null, new SafeModeApprovalPolicy() ) )->register_hooks();
 
 			// Settings page (MCP endpoint, developer options, licenses).
 			( new Settings() )->register_hooks();

@@ -12,6 +12,7 @@ namespace Albert\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\SafeMode\ApprovalPolicy;
 use Albert\SafeMode\ApprovalUrl;
 use Albert\SafeMode\Approver;
 use Albert\SafeMode\InputPresenter;
@@ -40,14 +41,6 @@ use Albert\Support\WpCompat;
 class Approvals implements Hookable {
 
 	/**
-	 * Capability required to view and decide approvals.
-	 *
-	 * @since 1.5.0
-	 * @var string
-	 */
-	public const CAPABILITY = 'manage_options';
-
-	/**
 	 * The admin-post action name for approving.
 	 *
 	 * @since 1.5.0
@@ -69,13 +62,16 @@ class Approvals implements Hookable {
 	 * @param Repository          $repository The pending-actions store.
 	 * @param Approver            $approver   Runs an approved action or records a rejection.
 	 * @param TargetResolver|null $targets    Describes the affected object; defaults to a fresh one.
+	 * @param ApprovalPolicy|null $policy     Decides who may approve or reject; defaults to a fresh one.
 	 */
 	public function __construct(
 		private Repository $repository,
 		private Approver $approver,
-		private ?TargetResolver $targets = null
+		private ?TargetResolver $targets = null,
+		private ?ApprovalPolicy $policy = null
 	) {
 		$this->targets = $targets ?? new TargetResolver();
+		$this->policy  = $policy ?? new ApprovalPolicy();
 	}
 
 	/**
@@ -98,8 +94,11 @@ class Approvals implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function add_menu_page(): void {
-		$open  = $this->repository->count_open();
-		$title = __( 'Approvals', 'albert-ai-butler' );
+		$user_id = get_current_user_id();
+		$open    = $this->policy->decides_everything( $user_id )
+			? $this->repository->count_open()
+			: $this->repository->count_open_for_user( $user_id );
+		$title   = __( 'Approvals', 'albert-ai-butler' );
 
 		if ( $open > 0 ) {
 			$title .= ' <span class="awaiting-mod count-' . $open . '"><span class="pending-count">'
@@ -110,10 +109,27 @@ class Approvals implements Hookable {
 			Menu::PARENT_SLUG,
 			__( 'Approvals', 'albert-ai-butler' ),
 			$title,
-			self::CAPABILITY,
+			$this->menu_capability(),
 			ApprovalUrl::PAGE_SLUG,
 			[ $this, 'render_page' ]
 		);
+	}
+
+	/**
+	 * The capability that gates the submenu and page load.
+	 *
+	 * The coarse "can open the screen" gate, matching `ApprovalPolicy::can_view()`.
+	 * Per-row authority is decided separately, so this only controls who reaches
+	 * the queue, never what they can do to a row once there.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	private function menu_capability(): string {
+		/** This documents the same filter `ApprovalPolicy::can_view()` consults. */
+		$capability = apply_filters( 'albert/approvals/view_capability', ApprovalPolicy::DEFAULT_VIEW_CAPABILITY );
+
+		return is_string( $capability ) && $capability !== '' ? $capability : ApprovalPolicy::DEFAULT_VIEW_CAPABILITY;
 	}
 
 	/**
@@ -190,12 +206,14 @@ class Approvals implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function render_page(): void {
-		if ( ! current_user_can( self::CAPABILITY ) ) {
+		if ( ! $this->policy->can_view() ) {
 			return;
 		}
 
-		$open    = $this->repository->list_open();
-		$decided = $this->repository->list_decided();
+		$user_id = get_current_user_id();
+		$all     = $this->policy->decides_everything( $user_id );
+		$open    = $all ? $this->repository->list_open() : $this->repository->list_open_for_user( $user_id );
+		$decided = $all ? $this->repository->list_decided() : $this->repository->list_decided_for_user( $user_id );
 		$focus   = isset( $_GET['pending'] ) ? sanitize_text_field( wp_unslash( $_GET['pending'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only focus hint, no state change.
 
 		echo '<div class="wrap albert-approvals">';
@@ -334,6 +352,12 @@ class Approvals implements Hookable {
 		$title_id       = $dialog_id . '-title';
 		$consequence_id = $dialog_id . '-consequence';
 
+		// Evaluated for the viewer, now. One rule decides the whole row: a viewer
+		// who cannot decide it (not theirs, capability changed since staging, or
+		// the ability is gone) gets no action at all, only the reason. Such a row
+		// clears when it expires, or when an administrator decides it.
+		$blocked_reason = $this->policy->decide_blocked_reason( $action );
+
 		echo '<dialog id="' . esc_attr( $dialog_id ) . '" class="albert-dialog albert-approvals__dialog" aria-labelledby="' . esc_attr( $title_id ) . '" aria-describedby="' . esc_attr( $consequence_id ) . '">';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="albert-approvals__decide">';
 		wp_nonce_field( 'albert_decide_' . $action->action_id );
@@ -365,6 +389,10 @@ class Approvals implements Hookable {
 			);
 		}
 
+		if ( $blocked_reason !== null ) {
+			$this->render_hint( 'warning', 'dashicons-lock', $blocked_reason );
+		}
+
 		echo '<p class="albert-approvals__provenance">';
 		echo esc_html(
 			sprintf(
@@ -384,8 +412,16 @@ class Approvals implements Hookable {
 		echo '</div>'; // .albert-dialog__body
 
 		echo '<div class="albert-dialog__footer">';
-		echo '<button type="submit" name="action" value="' . esc_attr( self::ACTION_REJECT ) . '" class="button">' . esc_html__( 'Reject', 'albert-ai-butler' ) . '</button>';
-		echo '<button type="submit" name="action" value="' . esc_attr( self::ACTION_APPROVE ) . '" class="button button-primary">' . esc_html__( 'Approve and run', 'albert-ai-butler' ) . '</button>';
+
+		if ( $blocked_reason === null ) {
+			echo '<button type="submit" name="action" value="' . esc_attr( self::ACTION_REJECT ) . '" class="button">' . esc_html__( 'Reject', 'albert-ai-butler' ) . '</button>';
+			echo '<button type="submit" name="action" value="' . esc_attr( self::ACTION_APPROVE ) . '" class="button button-primary">' . esc_html__( 'Approve and run', 'albert-ai-butler' ) . '</button>';
+		} else {
+			// No action for a viewer who cannot decide the row: the reason above
+			// stands in for the buttons, and Close is the only move.
+			echo '<button type="button" class="button" data-albert-dialog-close>' . esc_html__( 'Close', 'albert-ai-butler' ) . '</button>';
+		}
+
 		echo '</div>';
 
 		echo '</form>';
@@ -623,14 +659,17 @@ class Approvals implements Hookable {
 	/**
 	 * Verify a decision request and return its still-open action, or stop.
 	 *
-	 * Both decisions post one form carrying a single per-action nonce, so the
-	 * check does not depend on which button was pressed.
+	 * Both buttons post one form carrying a single per-action nonce, and one rule
+	 * gates both: a viewer who cannot decide the row can neither approve nor
+	 * reject it. The check runs against the person clicking, evaluated now, so a
+	 * row whose decider lost the right since the page loaded is caught here rather
+	 * than run.
 	 *
 	 * @return PendingAction
 	 * @since 1.5.0
 	 */
 	private function authorize_decision(): PendingAction {
-		if ( ! current_user_can( self::CAPABILITY ) ) {
+		if ( ! $this->policy->can_view() ) {
 			wp_die( esc_html__( 'You are not allowed to decide approvals.', 'albert-ai-butler' ), '', [ 'response' => 403 ] );
 		}
 
@@ -642,6 +681,10 @@ class Approvals implements Hookable {
 
 		if ( ! $pending instanceof PendingAction ) {
 			$this->redirect_with_notice( 'gone' );
+		}
+
+		if ( ! $this->policy->can_decide( $pending ) ) {
+			$this->redirect_with_notice( 'blocked' );
 		}
 
 		return $pending;
@@ -675,6 +718,7 @@ class Approvals implements Hookable {
 			'failed'   => [ 'error', __( 'Approved, but the request could not be completed. See Recently decided for details.', 'albert-ai-butler' ) ],
 			'rejected' => [ 'success', __( 'Rejected. The request was discarded and never ran.', 'albert-ai-butler' ) ],
 			'gone'     => [ 'info', __( 'That request was no longer waiting for a decision.', 'albert-ai-butler' ) ],
+			'blocked'  => [ 'error', __( 'You are no longer able to decide that request. Your permission may have changed since it was requested.', 'albert-ai-butler' ) ],
 		];
 
 		if ( ! isset( $messages[ $notice ] ) ) {
