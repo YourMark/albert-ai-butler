@@ -12,6 +12,7 @@ namespace Albert\Cron;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\SafeMode\AuditTrail;
 use Albert\SafeMode\Repository;
 
 /**
@@ -94,8 +95,24 @@ class PendingActionSweep implements Hookable {
 	 */
 	public function run(): void {
 		try {
+			// Read before writing, so each row can be named in the audit trail.
+			// A bulk UPDATE knows how many it touched and nothing about which,
+			// and "three requests lapsed" is not the sentence somebody looking
+			// for trouble needs.
+			$lapsed = $this->repository->list_lapsed();
+			$stale  = $this->repository->list_stale_claims( self::STALE_CLAIM_SECONDS );
+
 			$this->repository->expire_lapsed();
 			$this->repository->fail_stale_claims( self::STALE_CLAIM_SECONDS );
+
+			foreach ( $lapsed as $action ) {
+				AuditTrail::expired( $action );
+			}
+
+			foreach ( $stale as $action ) {
+				AuditTrail::abandoned( $action );
+			}
+
 			$this->repository->purge_decided( self::retention_days() );
 		} catch ( \Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
 			// Never let a cron failure surface to the site.

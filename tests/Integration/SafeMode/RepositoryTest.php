@@ -324,6 +324,52 @@ class RepositoryTest extends TestCase {
 	}
 
 	/**
+	 * The sweep can name which rows lapsed, not just how many.
+	 *
+	 * A bulk UPDATE knows a count and nothing else, so the audit trail reads
+	 * these first.
+	 *
+	 * @return void
+	 */
+	public function test_lapsed_rows_can_be_listed_before_they_are_expired(): void {
+		$this->stage( [ 'id' => 1 ] );
+		$lapsed = $this->stage_lapsed( [ 'id' => 2 ] );
+
+		$listed = $this->repository->list_lapsed();
+
+		$this->assertCount( 1, $listed );
+		$this->assertSame( $lapsed->action_id, $listed[0]->action_id );
+	}
+
+	/**
+	 * Stale claims can be listed before they are failed.
+	 *
+	 * @return void
+	 */
+	public function test_stale_claims_can_be_listed(): void {
+		$stale = $this->stage( [ 'id' => 1 ] );
+		$fresh = $this->stage( [ 'id' => 2 ] );
+
+		$this->repository->claim( $stale->id, 3 );
+		$this->repository->claim( $fresh->id, 3 );
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Backdating a claim in a test.
+		$wpdb->update(
+			Tables::pending_actions(),
+			[ 'decided_at' => gmdate( 'Y-m-d H:i:s', time() - ( 2 * HOUR_IN_SECONDS ) ) ],
+			[ 'id' => $stale->id ],
+			[ '%s' ],
+			[ '%d' ]
+		);
+
+		$listed = $this->repository->list_stale_claims( HOUR_IN_SECONDS );
+
+		$this->assertCount( 1, $listed );
+		$this->assertSame( $stale->action_id, $listed[0]->action_id );
+	}
+
+	/**
 	 * Retention of zero keeps everything.
 	 *
 	 * @return void

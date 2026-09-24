@@ -87,6 +87,54 @@ class ConnectionGuard implements Hookable {
 			// The multisite network-option path runs through its own filter.
 			add_filter( "sanitize_site_option_{$option}", [ $this, 'refuse_site_over_connection' ], 99, 2 );
 		}
+
+		// Deletes cannot be prevented, only seen. WordPress has no
+		// `pre_delete_option` filter: `delete_option()` fires actions only, so
+		// there is nothing to return. Detection still earns its place, because
+		// an assistant deleting `albert_disabled_abilities` would switch every
+		// ability back on and currently leave no trace whatsoever.
+		add_action( 'delete_option', [ $this, 'note_delete_attempt' ] );
+		add_action( 'pre_delete_site_option', [ $this, 'note_delete_attempt' ] );
+	}
+
+	/**
+	 * Record an attempt to delete a protected option over a connection.
+	 *
+	 * Detection, not prevention, and the name says so. Fires before the row is
+	 * removed but cannot stop it.
+	 *
+	 * `delete_option` is a global action that `delete_transient()` also routes
+	 * through, so this is a hot path: the connection check comes first because
+	 * it is a static null comparison, and the list scan only happens for the
+	 * few requests an assistant is actually driving.
+	 *
+	 * @param string $option The option being deleted.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function note_delete_attempt( string $option ): void {
+		if ( ConnectionContext::client_id() === null ) {
+			return;
+		}
+
+		if ( ! in_array( $option, $this->protected_options(), true ) ) {
+			return;
+		}
+
+		/**
+		 * Fires when an assistant deletes one of Albert's protected options.
+		 *
+		 * Deliberately a different hook from `option_write_blocked`: that one
+		 * says the write was refused, and this one cannot make that claim.
+		 *
+		 * @since 1.5.0
+		 *
+		 * @param string $option The option being deleted.
+		 */
+		do_action( 'albert/safe_mode/option_delete_detected', $option );
+
+		AuditTrail::option_blocked( $option, 'delete' );
 	}
 
 	/**
@@ -177,6 +225,8 @@ class ConnectionGuard implements Hookable {
 		 * @param string $option The option name whose write was refused.
 		 */
 		do_action( 'albert/safe_mode/option_write_blocked', $option );
+
+		AuditTrail::option_blocked( $option );
 	}
 
 	/**

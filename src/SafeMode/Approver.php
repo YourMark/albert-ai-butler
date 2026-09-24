@@ -86,11 +86,21 @@ class Approver {
 
 		if ( is_wp_error( $result ) ) {
 			$this->repository->record_outcome( $action->id, $decided_by, false, $this->error_shape( $result ) );
+			AuditTrail::approved( $action, $decided_by );
 
 			return $result;
 		}
 
-		$this->repository->record_outcome( $action->id, $decided_by, true, is_array( $result ) ? $result : [] );
+		// Deliberately nothing. The success payload used to be stored whole,
+		// which put `albert/create-user`'s one-time `password_reset_url` into
+		// this table in the clear: `guarded_execute()` hands the caller the
+		// unredacted result, so `sensitive_output_keys` never applied here. The
+		// screen only needs to know it ran, the activity log already records
+		// that it did, and a redaction list would be a guess for any ability
+		// Albert has not seen. The error shape above is kept because it is
+		// bounded to a code and a message and is what the screen shows.
+		$this->repository->record_outcome( $action->id, $decided_by, true, [] );
+		AuditTrail::approved( $action, $decided_by );
 
 		return is_array( $result ) ? $result : [];
 	}
@@ -106,7 +116,15 @@ class Approver {
 	 * @since 1.5.0
 	 */
 	public function reject( PendingAction $action, int $decided_by ): bool {
-		return $this->repository->reject( $action->id, $decided_by );
+		$rejected = $this->repository->reject( $action->id, $decided_by );
+
+		// Only a genuine rejection is recorded. A lost race already has an
+		// outcome and did not just acquire a second one.
+		if ( $rejected ) {
+			AuditTrail::rejected( $action, $decided_by );
+		}
+
+		return $rejected;
 	}
 
 	/**

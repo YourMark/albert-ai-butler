@@ -281,6 +281,60 @@ class ApproverTest extends TestCase {
 	}
 
 	/**
+	 * A successful run stores no payload.
+	 *
+	 * It used to store the whole result, which put albert/create-user's
+	 * one-time password_reset_url in this table in the clear: guarded_execute()
+	 * hands the caller the unredacted value, so sensitive_output_keys never
+	 * applied on this path.
+	 *
+	 * @return void
+	 */
+	public function test_a_successful_run_stores_no_payload(): void {
+		$this->register_recording_ability( 'albert-test/payload' );
+
+		$caller   = self::factory()->user->create( [ 'role' => 'editor' ] );
+		$approver = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		wp_set_current_user( $approver );
+
+		$action = $this->repository->stage( 'albert-test/payload', [ 'id' => 1 ], $caller, null, null, DAY_IN_SECONDS );
+
+		$result = ( new Approver( $this->repository ) )->approve( $action, $approver );
+
+		$this->assertSame( [ 'ok' => true ], $result, 'The caller still gets the real result.' );
+
+		$stored = $this->repository->find( $action->action_id );
+		$this->assertInstanceOf( PendingAction::class, $stored );
+		$this->assertSame( PendingAction::STATUS_EXECUTED, $stored->status );
+		$this->assertSame( [], $stored->result ?? [], 'Nothing from the success payload may be persisted.' );
+	}
+
+	/**
+	 * A rejection is recorded in the audit trail; a lost race is not.
+	 *
+	 * @return void
+	 */
+	public function test_a_rejection_is_audited_once(): void {
+		$approver = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		wp_set_current_user( $approver );
+
+		$seen = 0;
+		add_action(
+			'albert/safe_mode/rejected',
+			static function () use ( &$seen ) {
+				++$seen;
+			}
+		);
+
+		$action  = $this->repository->stage( 'albert-test/reject', [ 'id' => 1 ], $approver, null, null, DAY_IN_SECONDS );
+		$service = new Approver( $this->repository );
+
+		$this->assertTrue( $service->reject( $action, $approver ) );
+		$this->assertFalse( $service->reject( $action, $approver ), 'A second rejection changes nothing.' );
+		$this->assertSame( 1, $seen, 'Only a genuine rejection is recorded.' );
+	}
+
+	/**
 	 * A second approval of the same row runs nothing.
 	 *
 	 * @return void

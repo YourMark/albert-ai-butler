@@ -358,6 +358,46 @@ class Repository {
 	}
 
 	/**
+	 * The pending rows that have lapsed, before they are expired.
+	 *
+	 * Read separately from {@see self::expire_lapsed()} so the sweep can say
+	 * which actions lapsed rather than only how many. A bulk UPDATE cannot tell
+	 * anybody what it touched.
+	 *
+	 * @param int $limit Maximum rows.
+	 *
+	 * @return list<PendingAction>
+	 * @since 1.5.0
+	 */
+	public function list_lapsed( int $limit = 200 ): array {
+		return $this->list_where(
+			'status = %s AND expires_at <= %s',
+			[ PendingAction::STATUS_PENDING, gmdate( 'Y-m-d H:i:s' ) ],
+			$limit
+		);
+	}
+
+	/**
+	 * The claims that were never finished, before they are failed.
+	 *
+	 * @param int $stale_after_seconds How long a claim may sit unfinished.
+	 * @param int $limit               Maximum rows.
+	 *
+	 * @return list<PendingAction>
+	 * @since 1.5.0
+	 */
+	public function list_stale_claims( int $stale_after_seconds, int $limit = 200 ): array {
+		return $this->list_where(
+			'status = %s AND decided_at IS NOT NULL AND decided_at <= %s',
+			[
+				PendingAction::STATUS_EXECUTING,
+				gmdate( 'Y-m-d H:i:s', time() - max( 1, $stale_after_seconds ) ),
+			],
+			$limit
+		);
+	}
+
+	/**
 	 * Fail every claim that was never finished.
 	 *
 	 * `claim()` flips a row to `executing` and then the ability runs. A fatal or
@@ -455,6 +495,32 @@ class Repository {
 		);
 
 		return is_array( $row ) ? PendingAction::from_row( $row ) : null;
+	}
+
+	/**
+	 * Rows matching a WHERE fragment, newest first.
+	 *
+	 * @param string       $where    SQL WHERE fragment with `%s`/`%d` placeholders.
+	 * @param list<scalar> $bindings Values for those placeholders.
+	 * @param int          $limit    Maximum rows.
+	 *
+	 * @return list<PendingAction>
+	 * @since 1.5.0
+	 */
+	private function list_where( string $where, array $bindings, int $limit ): array {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $where is a literal fragment from this class; every value is bound.
+		$sql = 'SELECT * FROM %i WHERE ' . $where . ' ORDER BY id DESC LIMIT %d';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Direct read on a custom table; bound below.
+		$rows = $wpdb->get_results(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholders are bound here.
+			$wpdb->prepare( $sql, array_merge( [ Tables::pending_actions() ], $bindings, [ max( 1, $limit ) ] ) ),
+			ARRAY_A
+		);
+
+		return array_values( array_map( [ PendingAction::class, 'from_row' ], is_array( $rows ) ? $rows : [] ) );
 	}
 
 	/**
