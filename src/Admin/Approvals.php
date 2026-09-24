@@ -30,6 +30,10 @@ use Albert\Support\WpCompat;
  * protected, so the deep link merely navigates here and grants nothing on its
  * own.
  *
+ * A pending action is a decision, not a row to skim: each opens in its own
+ * confirmation dialog that states in plain language what will happen, resolved
+ * against what exists now, before either button is reachable.
+ *
  * @since 1.5.0
  */
 class Approvals implements Hookable {
@@ -81,6 +85,7 @@ class Approvals implements Hookable {
 	 */
 	public function register_hooks(): void {
 		add_action( 'admin_menu', [ $this, 'add_menu_page' ], Menu::POSITION_APPROVALS );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 		add_action( 'admin_post_' . self::ACTION_APPROVE, [ $this, 'handle_approve' ] );
 		add_action( 'admin_post_' . self::ACTION_REJECT, [ $this, 'handle_reject' ] );
 	}
@@ -111,13 +116,46 @@ class Approvals implements Hookable {
 	}
 
 	/**
+	 * Load the screen's own stylesheet and dialog script, on this screen only.
+	 *
+	 * Mirrors the other server-rendered Albert screens: the primitives handle is
+	 * declared as a dependency so the shared token and component layer loads
+	 * first, and this file's authored rules load after it.
+	 *
+	 * @param string $hook The current admin page's hook suffix.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function enqueue_assets( string $hook ): void {
+		if ( Menu::PARENT_SLUG . '_page_' . ApprovalUrl::PAGE_SLUG !== $hook ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'albert-approvals',
+			ALBERT_PLUGIN_URL . 'assets/css/admin-approvals.css',
+			[ Assets::PRIMITIVES_HANDLE ],
+			Assets::version( 'assets/css/admin-approvals.css' )
+		);
+
+		wp_enqueue_script(
+			'albert-approvals',
+			ALBERT_PLUGIN_URL . 'assets/js/admin-approvals.js',
+			[],
+			Assets::version( 'assets/js/admin-approvals.js' ),
+			true
+		);
+	}
+
+	/**
 	 * Approve a staged action and run it.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
 	public function handle_approve(): void {
-		$action = $this->authorize_decision( self::ACTION_APPROVE );
+		$action = $this->authorize_decision();
 
 		$result = $this->approver->approve( $action, get_current_user_id() );
 
@@ -137,7 +175,7 @@ class Approvals implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function handle_reject(): void {
-		$action = $this->authorize_decision( self::ACTION_REJECT );
+		$action = $this->authorize_decision();
 
 		$rejected = $this->approver->reject( $action, get_current_user_id() );
 
@@ -159,9 +197,13 @@ class Approvals implements Hookable {
 		$decided = $this->repository->list_decided();
 		$focus   = isset( $_GET['pending'] ) ? sanitize_text_field( wp_unslash( $_GET['pending'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only focus hint, no state change.
 
-		echo '<div class="wrap">';
-		echo '<h1>' . esc_html__( 'Approvals', 'albert-ai-butler' ) . '</h1>';
-		echo '<p class="description">' . esc_html__( 'Destructive actions your assistant requested are held here until you approve them. Approving runs the request exactly as it was made; rejecting discards it.', 'albert-ai-butler' ) . '</p>';
+		echo '<div class="wrap albert-approvals">';
+		echo '<div class="albert-page albert-approvals__page">';
+
+		echo '<div class="albert-page__header"><div class="albert-page__text">';
+		echo '<h1 class="albert-page__title">' . esc_html__( 'Approvals', 'albert-ai-butler' ) . '</h1>';
+		echo '<p class="albert-page__description">' . esc_html__( 'Destructive actions your assistant requested are held here until you approve them. Approving runs the request exactly as it was made; rejecting discards it.', 'albert-ai-butler' ) . '</p>';
+		echo '</div></div>';
 
 		$this->render_notice();
 		$this->render_unenforceable_notice();
@@ -172,114 +214,308 @@ class Approvals implements Hookable {
 				. '</p></div>';
 		}
 
-		if ( empty( $open ) ) {
-			echo '<p>' . esc_html__( 'Nothing is waiting for approval.', 'albert-ai-butler' ) . '</p>';
-		} else {
-			echo '<table class="widefat striped">';
-			echo '<thead><tr>';
-			echo '<th>' . esc_html__( 'Requested action', 'albert-ai-butler' ) . '</th>';
-			echo '<th>' . esc_html__( 'Requested by', 'albert-ai-butler' ) . '</th>';
-			echo '<th>' . esc_html__( 'When', 'albert-ai-butler' ) . '</th>';
-			echo '<th>' . esc_html__( 'Decision', 'albert-ai-butler' ) . '</th>';
-			echo '</tr></thead><tbody>';
+		echo '<div class="albert-page__body">';
 
-			foreach ( $open as $action ) {
-				$this->render_open_row( $action, $action->action_id === $focus );
-			}
-
-			echo '</tbody></table>';
-		}
-
+		$this->render_open( $open, $focus );
 		$this->render_decided( $decided );
 
-		echo '</div>';
+		echo '</div>'; // .albert-page__body
+
+		echo '</div>'; // .albert-page
+		echo '</div>'; // .wrap
 	}
 
 	/**
-	 * Render one open action row with its approve/reject controls.
+	 * Render the "waiting for approval" card: a list of held actions, or the
+	 * empty state.
 	 *
-	 * @param PendingAction $action    The staged action.
-	 * @param bool          $is_focus  Whether this row is the deep-link target.
+	 * @param list<PendingAction> $open  Open actions.
+	 * @param string              $focus The deep-linked action id, if any.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function render_open( array $open, string $focus ): void {
+		echo '<div class="albert-card albert-approvals__queue">';
+		echo '<div class="albert-card__header"><div class="albert-card__text">';
+		echo '<h2 class="albert-card__title">' . esc_html__( 'Waiting for approval', 'albert-ai-butler' ) . '</h2>';
+		echo '</div>';
+
+		if ( ! empty( $open ) ) {
+			echo '<span class="albert-badge">' . esc_html( (string) number_format_i18n( count( $open ) ) ) . '</span>';
+		}
+
+		echo '</div>'; // .albert-card__header
+
+		if ( empty( $open ) ) {
+			echo '<div class="albert-empty-state">';
+			echo '<span class="dashicons dashicons-yes-alt" aria-hidden="true"></span>';
+			echo '<p>' . esc_html__( 'Nothing is waiting for approval.', 'albert-ai-butler' ) . '</p>';
+			echo '</div>';
+			echo '</div>'; // .albert-card
+
+			return;
+		}
+
+		echo '<div class="albert-card__body albert-card__body--flush">';
+		echo '<ul class="albert-approvals__list">';
+
+		foreach ( $open as $action ) {
+			$this->render_open_row( $action, $action->action_id === $focus );
+		}
+
+		echo '</ul>';
+		echo '</div>'; // .albert-card__body
+		echo '</div>'; // .albert-card
+	}
+
+	/**
+	 * Render one open action as a list row plus its confirmation dialog.
+	 *
+	 * @param PendingAction $action   The staged action.
+	 * @param bool          $is_focus Whether this row is the deep-link target.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
 	private function render_open_row( PendingAction $action, bool $is_focus ): void {
-		$style = $is_focus ? ' style="outline:2px solid #2271b1;"' : '';
+		$state     = $this->target_state( $action );
+		$dialog_id = 'albert-approve-dialog-' . $action->action_id;
+		$classes   = 'albert-approvals__item' . ( $is_focus ? ' albert-approvals__item--focus' : '' );
 
-		echo '<tr id="albert-pending-' . esc_attr( $action->action_id ) . '"' . $style . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $style is a fixed literal.
+		echo '<li class="' . esc_attr( $classes ) . '" id="albert-pending-' . esc_attr( $action->action_id ) . '">';
 
-		echo '<td>';
-		echo '<strong>' . esc_html( $action->ability_name ) . '</strong>';
-		$this->render_target( $action );
-		echo '<details><summary>' . esc_html__( 'View the exact request', 'albert-ai-butler' ) . '</summary>';
-		echo '<pre style="white-space:pre-wrap;word-break:break-word;">' . esc_html( (string) wp_json_encode( $action->input, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ) . '</pre>';
-		echo '</details>';
-		echo '</td>';
+		echo '<div class="albert-approvals__item-text">';
+		echo '<p class="albert-approvals__item-title">' . esc_html( $this->consequence_line( $action, $state ) );
+		$this->render_state_badge( $state, $is_focus );
+		echo '</p>';
+		echo '<p class="albert-approvals__item-meta">';
+		echo '<code class="albert-approvals__id">' . esc_html( $action->ability_name ) . '</code> ';
+		echo esc_html(
+			sprintf(
+				/* translators: 1: who requested the action, 2: how long ago. */
+				__( '%1$s, %2$s', 'albert-ai-butler' ),
+				$this->requester_label( $action ),
+				$this->when_label( $action->created_at )
+			)
+		);
+		echo '</p>';
+		echo '</div>'; // .albert-approvals__item-text
 
-		echo '<td>' . esc_html( $this->requester_label( $action ) ) . '</td>';
-		echo '<td>' . esc_html( $this->when_label( $action->created_at ) ) . '</td>';
+		echo '<div class="albert-approvals__item-action">';
+		echo '<button type="button" class="button button-primary" data-albert-review data-albert-dialog="' . esc_attr( $dialog_id ) . '" aria-haspopup="dialog">'
+			. esc_html__( 'Review…', 'albert-ai-butler' )
+			. '</button>';
+		echo '</div>';
 
-		echo '<td>';
-		$this->render_decision_form( self::ACTION_APPROVE, $action->action_id, __( 'Approve', 'albert-ai-butler' ), 'button button-primary' );
-		echo ' ';
-		$this->render_decision_form( self::ACTION_REJECT, $action->action_id, __( 'Reject', 'albert-ai-butler' ), 'button' );
-		echo '</td>';
+		$this->render_decision_dialog( $action, $state, $dialog_id );
 
-		echo '</tr>';
+		echo '</li>';
 	}
 
 	/**
-	 * Show what the call actually affects, resolved fresh, with a drift warning.
+	 * Render the confirmation dialog for one action.
 	 *
-	 * `delete-post {id:47}` is opaque; this resolves the object now so a reviewer
-	 * approves against what exists, not the request text. When the object has been
-	 * edited since the call was staged, it warns that approving will overwrite
-	 * those edits — the one thing that turns an approval-on-trust back into a
-	 * decision.
+	 * A single POST form carries both choices: the submitted button's own name
+	 * routes admin-post.php to approve or reject, so one nonce covers the pair.
+	 * The form has no text inputs, so the browser's default focus lands on the
+	 * close button rather than on a decision — pressing Enter dismisses, it never
+	 * decides.
 	 *
-	 * @param PendingAction $action The staged action.
+	 * @param PendingAction        $action    The staged action.
+	 * @param array<string, mixed> $state     Resolved target state from target_state().
+	 * @param string               $dialog_id The dialog element id.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	private function render_target( PendingAction $action ): void {
+	private function render_decision_dialog( PendingAction $action, array $state, string $dialog_id ): void {
+		$title_id       = $dialog_id . '-title';
+		$consequence_id = $dialog_id . '-consequence';
+
+		echo '<dialog id="' . esc_attr( $dialog_id ) . '" class="albert-dialog albert-approvals__dialog" aria-labelledby="' . esc_attr( $title_id ) . '" aria-describedby="' . esc_attr( $consequence_id ) . '">';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="albert-approvals__decide">';
+		wp_nonce_field( 'albert_decide_' . $action->action_id );
+		echo '<input type="hidden" name="action_id" value="' . esc_attr( $action->action_id ) . '">';
+
+		echo '<div class="albert-dialog__header"><div class="albert-dialog__heading">';
+		echo '<h2 class="albert-dialog__title" id="' . esc_attr( $title_id ) . '">' . esc_html__( 'Approve this action?', 'albert-ai-butler' ) . '</h2>';
+		echo '</div>';
+		echo '<button type="button" class="albert-dialog__close" data-albert-dialog-close aria-label="' . esc_attr__( 'Close', 'albert-ai-butler' ) . '">';
+		echo '<span class="dashicons dashicons-no-alt" aria-hidden="true"></span>';
+		echo '</button>';
+		echo '</div>'; // .albert-dialog__header
+
+		echo '<div class="albert-dialog__body">';
+
+		echo '<p class="albert-approvals__consequence" id="' . esc_attr( $consequence_id ) . '"><strong>' . esc_html( $this->consequence_line( $action, $state ) ) . '</strong></p>';
+
+		if ( $state['gone'] ) {
+			$this->render_hint(
+				'warning',
+				'dashicons-warning',
+				__( 'The thing this would affect no longer exists. Approving may do nothing, or fail.', 'albert-ai-butler' )
+			);
+		} elseif ( $state['drifted'] ) {
+			$this->render_hint(
+				'warning',
+				'dashicons-warning',
+				__( 'This has changed since it was requested. Approving will overwrite edits made in the meantime.', 'albert-ai-butler' )
+			);
+		}
+
+		echo '<p class="albert-approvals__provenance">';
+		echo esc_html(
+			sprintf(
+				/* translators: 1: who requested the action, 2: how long ago. */
+				__( 'Requested by %1$s, %2$s.', 'albert-ai-butler' ),
+				$this->requester_label( $action ),
+				$this->when_label( $action->created_at )
+			)
+		);
+		echo '</p>';
+
+		echo '<details class="albert-preview albert-approvals__request">';
+		echo '<summary>' . esc_html__( 'View the exact request', 'albert-ai-butler' ) . '</summary>';
+		echo '<div class="albert-preview__body" tabindex="0">' . esc_html( (string) wp_json_encode( $action->input, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ) . '</div>';
+		echo '</details>';
+
+		echo '</div>'; // .albert-dialog__body
+
+		echo '<div class="albert-dialog__footer">';
+		echo '<button type="submit" name="action" value="' . esc_attr( self::ACTION_REJECT ) . '" class="button">' . esc_html__( 'Reject', 'albert-ai-butler' ) . '</button>';
+		echo '<button type="submit" name="action" value="' . esc_attr( self::ACTION_APPROVE ) . '" class="button button-primary">' . esc_html__( 'Approve and run', 'albert-ai-butler' ) . '</button>';
+		echo '</div>';
+
+		echo '</form>';
+		echo '</dialog>';
+	}
+
+	/**
+	 * Resolve, fresh, what a staged call affects and whether it is safe to trust
+	 * the request text.
+	 *
+	 * `delete-post {id:47}` is opaque; this resolves the object now so a reviewer
+	 * decides against what exists, not against the request. `drifted` means the
+	 * object was edited since staging (approving overwrites those edits); `gone`
+	 * means it no longer exists.
+	 *
+	 * @param PendingAction $action The staged action.
+	 *
+	 * @return array{object: ?string, gone: bool, drifted: bool}
+	 * @since 1.5.0
+	 */
+	private function target_state( PendingAction $action ): array {
 		$current = $this->targets->describe( $action->ability_name, $action->input );
 		$staged  = $action->target;
 
 		if ( $current === null && $staged === null ) {
-			return;
+			return [
+				'object'  => null,
+				'gone'    => false,
+				'drifted' => false,
+			];
 		}
 
 		if ( $current === null ) {
-			echo '<p class="description">' . esc_html(
-				sprintf(
-					/* translators: %s: label of the object as captured when the call was staged. */
-					__( 'Affects: %s (no longer exists)', 'albert-ai-butler' ),
-					(string) ( $staged['label'] ?? '' )
-				)
-			) . '</p>';
-
-			return;
+			return [
+				'object'  => (string) ( $staged['label'] ?? '' ),
+				'gone'    => true,
+				'drifted' => false,
+			];
 		}
 
-		$affected = sprintf( '%s: %s', ucfirst( (string) $current['type'] ), (string) $current['label'] );
+		$object = (string) $current['label'];
 
 		if ( (string) $current['status'] !== '' ) {
-			$affected .= sprintf( ' (%s)', (string) $current['status'] );
+			$object .= sprintf( ' (%s)', (string) $current['status'] );
 		}
 
-		echo '<p class="description">' . esc_html__( 'Affects', 'albert-ai-butler' ) . ': ' . esc_html( $affected ) . '</p>';
+		return [
+			'object'  => $object,
+			'gone'    => false,
+			'drifted' => $this->targets->has_drifted( $staged, $current ),
+		];
+	}
 
-		if ( $this->targets->has_drifted( $staged, $current ) ) {
-			echo '<p class="albert-approvals__drift" style="color:#b32d2e;"><strong>'
-				. esc_html__( 'This has changed since it was requested. Approving will overwrite edits made in the meantime.', 'albert-ai-butler' )
-				. '</strong></p>';
+	/**
+	 * A plain-language line for what a call does, leading with the effect and the
+	 * object rather than the ability id.
+	 *
+	 * @param PendingAction        $action The staged action.
+	 * @param array<string, mixed> $state  Resolved target state from target_state().
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	private function consequence_line( PendingAction $action, array $state ): string {
+		$label = $this->ability_label( $action->ability_name );
+
+		if ( $state['object'] !== null && $state['object'] !== '' ) {
+			return sprintf(
+				/* translators: 1: the action, e.g. "Delete a page"; 2: the affected object, e.g. "About us (published)". */
+				__( '%1$s: %2$s', 'albert-ai-butler' ),
+				$label,
+				(string) $state['object']
+			);
+		}
+
+		return $label;
+	}
+
+	/**
+	 * The registered, human label for an ability, falling back to its id.
+	 *
+	 * @param string $ability_name The ability id.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	private function ability_label( string $ability_name ): string {
+		if ( function_exists( 'wp_get_ability' ) ) {
+			$ability = wp_get_ability( $ability_name );
+
+			if ( $ability !== null ) {
+				$label = (string) $ability->get_label();
+
+				if ( $label !== '' ) {
+					return $label;
+				}
+			}
+		}
+
+		return $ability_name;
+	}
+
+	/**
+	 * Render the status badge shown on a queue row: drift, a missing target, or
+	 * the deep-link marker. Each carries its own text, so none is signalled by
+	 * colour alone.
+	 *
+	 * @param array<string, mixed> $state    Resolved target state from target_state().
+	 * @param bool                 $is_focus Whether this row is the deep-link target.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function render_state_badge( array $state, bool $is_focus ): void {
+		if ( $is_focus ) {
+			echo ' <span class="albert-badge albert-badge--info">' . esc_html__( 'From your assistant’s link', 'albert-ai-butler' ) . '</span>';
+		}
+
+		if ( $state['gone'] ) {
+			echo ' <span class="albert-badge albert-badge--danger">' . esc_html__( 'No longer exists', 'albert-ai-butler' ) . '</span>';
+		} elseif ( $state['drifted'] ) {
+			echo ' <span class="albert-badge albert-badge--warning">' . esc_html__( 'Changed since requested', 'albert-ai-butler' ) . '</span>';
 		}
 	}
 
 	/**
 	 * Render the recently-decided list, if any.
+	 *
+	 * A stacked list, not a table: this screen is reached from a deep link an
+	 * assistant hands over, so it is opened on a phone as often as a desktop, and
+	 * a four-column table has nowhere to go at 360px.
 	 *
 	 * @param list<PendingAction> $decided Recently decided actions.
 	 *
@@ -291,63 +527,115 @@ class Approvals implements Hookable {
 			return;
 		}
 
-		echo '<h2>' . esc_html__( 'Recently decided', 'albert-ai-butler' ) . '</h2>';
-		echo '<table class="widefat striped">';
-		echo '<thead><tr>';
-		echo '<th>' . esc_html__( 'Requested action', 'albert-ai-butler' ) . '</th>';
-		echo '<th>' . esc_html__( 'Outcome', 'albert-ai-butler' ) . '</th>';
-		echo '<th>' . esc_html__( 'Decided by', 'albert-ai-butler' ) . '</th>';
-		echo '<th>' . esc_html__( 'When', 'albert-ai-butler' ) . '</th>';
-		echo '</tr></thead><tbody>';
+		echo '<div class="albert-card albert-approvals__decided">';
+		echo '<div class="albert-card__header"><div class="albert-card__text">';
+		echo '<h2 class="albert-card__title">' . esc_html__( 'Recently decided', 'albert-ai-butler' ) . '</h2>';
+		echo '</div></div>';
+
+		echo '<div class="albert-card__body albert-card__body--flush">';
+		echo '<ul class="albert-approvals__list albert-approvals__list--decided">';
 
 		foreach ( $decided as $action ) {
-			echo '<tr>';
-			echo '<td>' . esc_html( $action->ability_name ) . '</td>';
-			echo '<td>' . esc_html( $this->outcome_label( $action->status ) ) . '</td>';
-			echo '<td>' . esc_html( $action->decided_by !== null ? $this->user_label( $action->decided_by ) : '—' ) . '</td>';
-			echo '<td>' . esc_html( $action->decided_at !== null ? $this->when_label( $action->decided_at ) : '—' ) . '</td>';
-			echo '</tr>';
+			$this->render_decided_row( $action );
 		}
 
-		echo '</tbody></table>';
+		echo '</ul>';
+		echo '</div>'; // .albert-card__body
+		echo '</div>'; // .albert-card
 	}
 
 	/**
-	 * Render a single-button decision form posting to admin-post.php.
+	 * Render one recently-decided item, with the reason a run failed.
 	 *
-	 * @param string $action    The admin-post action name.
-	 * @param string $action_id The staged action's public reference.
-	 * @param string $label     The button label.
-	 * @param string $classes   Button CSS classes.
+	 * The reason is read only for a failed item, and only its code and message
+	 * (`Approver` stores an error shape, never a payload). A successful run's
+	 * result is never rendered — it can hold a credential the caller was handed.
+	 *
+	 * @param PendingAction $action The decided action.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	private function render_decision_form( string $action, string $action_id, string $label, string $classes ): void {
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline;">';
-		echo '<input type="hidden" name="action" value="' . esc_attr( $action ) . '">';
-		echo '<input type="hidden" name="action_id" value="' . esc_attr( $action_id ) . '">';
-		wp_nonce_field( $action . '_' . $action_id );
-		echo '<button type="submit" class="' . esc_attr( $classes ) . '">' . esc_html( $label ) . '</button>';
-		echo '</form>';
+	private function render_decided_row( PendingAction $action ): void {
+		[ $tone, $label ] = $this->status_badge( $action->status );
+		$who              = $action->decided_by !== null ? $this->user_label( $action->decided_by ) : '';
+
+		echo '<li class="albert-approvals__decided-item">';
+
+		echo '<p class="albert-approvals__item-title">';
+		echo esc_html( $this->ability_label( $action->ability_name ) );
+		echo ' <span class="albert-badge' . ( $tone !== '' ? ' albert-badge--' . esc_attr( $tone ) : '' ) . '">' . esc_html( $label ) . '</span>';
+		echo '</p>';
+
+		$this->render_failure_reason( $action );
+
+		echo '<p class="albert-approvals__item-meta">';
+		echo '<code class="albert-approvals__id">' . esc_html( $action->ability_name ) . '</code> ';
+
+		if ( $who !== '' ) {
+			echo esc_html(
+				sprintf(
+					/* translators: %s: the user who decided the action. */
+					__( 'Decided by %s,', 'albert-ai-butler' ),
+					$who
+				)
+			) . ' ';
+		}
+
+		echo $this->time_tag( $action->decided_at ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- time_tag escapes its own output.
+		echo '</p>';
+
+		echo '</li>';
+	}
+
+	/**
+	 * Render why a run failed, from the stored error shape, for a failed row only.
+	 *
+	 * @param PendingAction $action The decided action.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function render_failure_reason( PendingAction $action ): void {
+		if ( $action->status !== PendingAction::STATUS_FAILED ) {
+			return;
+		}
+
+		$result  = is_array( $action->result ) ? $action->result : [];
+		$message = isset( $result['message'] ) ? (string) $result['message'] : '';
+		$code    = isset( $result['code'] ) ? (string) $result['code'] : '';
+
+		if ( $message === '' && $code === '' ) {
+			return;
+		}
+
+		echo '<p class="albert-approvals__reason">';
+		echo esc_html( $message !== '' ? $message : $code );
+
+		if ( $message !== '' && $code !== '' ) {
+			echo ' <code class="albert-approvals__id">' . esc_html( $code ) . '</code>';
+		}
+
+		echo '</p>';
 	}
 
 	/**
 	 * Verify a decision request and return its still-open action, or stop.
 	 *
-	 * @param string $action The admin-post action name being handled.
+	 * Both decisions post one form carrying a single per-action nonce, so the
+	 * check does not depend on which button was pressed.
 	 *
 	 * @return PendingAction
 	 * @since 1.5.0
 	 */
-	private function authorize_decision( string $action ): PendingAction {
+	private function authorize_decision(): PendingAction {
 		if ( ! current_user_can( self::CAPABILITY ) ) {
 			wp_die( esc_html__( 'You are not allowed to decide approvals.', 'albert-ai-butler' ), '', [ 'response' => 403 ] );
 		}
 
 		$action_id = isset( $_POST['action_id'] ) ? sanitize_text_field( wp_unslash( $_POST['action_id'] ) ) : '';
 
-		check_admin_referer( $action . '_' . $action_id );
+		check_admin_referer( 'albert_decide_' . $action_id );
 
 		$pending = $action_id !== '' ? $this->repository->find_open( $action_id ) : null;
 
@@ -448,6 +736,23 @@ class Approvals implements Hookable {
 	}
 
 	/**
+	 * Render a scoped, tinted hint with a leading icon.
+	 *
+	 * @param string $tone One of the .albert-hint tones: info|warning.
+	 * @param string $icon A dashicons-* class for the leading glyph.
+	 * @param string $text The hint text.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function render_hint( string $tone, string $icon, string $text ): void {
+		echo '<div class="albert-hint albert-hint--' . esc_attr( $tone ) . '">';
+		echo '<span class="dashicons ' . esc_attr( $icon ) . '" aria-hidden="true"></span>';
+		echo '<p>' . esc_html( $text ) . '</p>';
+		echo '</div>';
+	}
+
+	/**
 	 * A human label for who requested an action: the acting user and, when known,
 	 * the connecting client.
 	 *
@@ -506,27 +811,50 @@ class Approvals implements Hookable {
 	}
 
 	/**
-	 * A human label for a decided action's status.
+	 * A `<time>` element for a stored UTC datetime, machine-readable and relative,
+	 * or a plain dash when there is none. Escapes its own output.
 	 *
-	 * @param string $status One of the PendingAction STATUS_* values.
+	 * @param string|null $mysql_datetime UTC MySQL datetime, or null.
 	 *
 	 * @return string
 	 * @since 1.5.0
 	 */
-	private function outcome_label( string $status ): string {
+	private function time_tag( ?string $mysql_datetime ): string {
+		if ( $mysql_datetime === null ) {
+			return '—';
+		}
+
+		$timestamp = strtotime( $mysql_datetime . ' UTC' );
+
+		if ( $timestamp === false ) {
+			return esc_html( $mysql_datetime );
+		}
+
+		return '<time datetime="' . esc_attr( gmdate( 'c', $timestamp ) ) . '">' . esc_html( $this->when_label( $mysql_datetime ) ) . '</time>';
+	}
+
+	/**
+	 * The badge tone and label for a decided action's status.
+	 *
+	 * @param string $status One of the PendingAction STATUS_* values.
+	 *
+	 * @return array{0: string, 1: string} Tone ('' for neutral) and label.
+	 * @since 1.5.0
+	 */
+	private function status_badge( string $status ): array {
 		switch ( $status ) {
 			case PendingAction::STATUS_EXECUTING:
-				return __( 'Approved, running', 'albert-ai-butler' );
+				return [ 'info', __( 'Approved, running', 'albert-ai-butler' ) ];
 			case PendingAction::STATUS_EXECUTED:
-				return __( 'Approved and run', 'albert-ai-butler' );
+				return [ 'success', __( 'Approved and run', 'albert-ai-butler' ) ];
 			case PendingAction::STATUS_FAILED:
-				return __( 'Approved, but failed', 'albert-ai-butler' );
+				return [ 'danger', __( 'Approved, but failed', 'albert-ai-butler' ) ];
 			case PendingAction::STATUS_REJECTED:
-				return __( 'Rejected', 'albert-ai-butler' );
+				return [ '', __( 'Rejected', 'albert-ai-butler' ) ];
 			case PendingAction::STATUS_EXPIRED:
-				return __( 'Expired', 'albert-ai-butler' );
+				return [ 'outline', __( 'Expired', 'albert-ai-butler' ) ];
 			default:
-				return $status;
+				return [ '', $status ];
 		}
 	}
 }

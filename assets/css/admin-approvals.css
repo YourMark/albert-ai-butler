@@ -1,0 +1,229 @@
+/**
+ * Albert → Approvals.
+ *
+ * Everything shared lives in albert-primitives.css: the page shell, the cards,
+ * the badges, the hints, the empty state, the payload preview and the dialog
+ * shell. This file holds only what is particular to this screen: the queue and
+ * decided lists, the deep-link highlight, and the decision dialog's contents.
+ *
+ * Mobile-first. This screen is reached from a deep link an assistant hands over,
+ * so it is opened on a phone at least as often as on a desktop: the base rules
+ * are the narrow layout, and a single min-width query widens the rows and the
+ * dialog footer once there is room. Nothing here is a table.
+ *
+ * Consumes tokens only. No raw colour, no raw size.
+ *
+ * @package Albert
+ * @since 1.5.0
+ */
+
+/* ==========================================================================
+   Lists — one row treatment for the queue and the decided log
+   ========================================================================== */
+
+.albert-approvals__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/**
+ * Both lists sit in a flush card body and manage their own dividers, so a row
+ * lines up with the card header's inline edge above it.
+ */
+.albert-approvals__list > li {
+	padding: var(--albert-card-padding);
+	border-block-end: 1px solid var(--albert-color-border-subtle);
+}
+
+.albert-approvals__list > li:last-child {
+	border-block-end: 0;
+}
+
+/* ==========================================================================
+   Queue row
+   ========================================================================== */
+
+/**
+ * Mobile-first: the text stacks above a full-width Review button, so the whole
+ * row is one comfortable tap target column. The row becomes text-beside-button
+ * once there is width for it (see the min-width query at the foot of the file).
+ */
+.albert-approvals__item {
+	display: flex;
+	flex-direction: column;
+	gap: var(--albert-space-300);
+}
+
+.albert-approvals__item-text {
+	min-inline-size: 0;
+}
+
+.albert-approvals__item-title {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-200);
+	margin: 0;
+	font-size: var(--albert-font-size-body);
+	font-weight: var(--albert-font-weight-medium);
+	line-height: var(--albert-line-height-snug);
+	color: var(--albert-color-text);
+	overflow-wrap: anywhere;
+}
+
+.albert-approvals__item-meta {
+	margin: var(--albert-space-100) 0 0;
+	font-size: var(--albert-font-size-sm);
+	line-height: var(--albert-line-height-snug);
+	color: var(--albert-color-text-muted);
+	overflow-wrap: anywhere;
+}
+
+.albert-approvals__id {
+	font-family: var(--albert-font-family-mono);
+	font-size: var(--albert-font-size-mono-sm);
+	color: var(--albert-color-text-faint);
+}
+
+/* A full-width, easily-tapped button on a phone; sized to content on a desktop. */
+.albert-approvals__item-action .button {
+	inline-size: 100%;
+	min-block-size: 40px;
+	justify-content: center;
+}
+
+/**
+ * The deep-linked action, arrived at from the assistant's own link.
+ *
+ * The tint draws the eye; the "From your assistant's link" badge on the row is
+ * what actually names it, so the meaning never rests on colour alone. No thick
+ * coloured edge: that is the house rule for tinted surfaces, and it reads as
+ * "an assistant wrote this" — backwards for a note the site is making to itself.
+ */
+.albert-approvals__item--focus {
+	background: var(--albert-color-accent-surface);
+}
+
+/* ==========================================================================
+   Decided item
+   ========================================================================== */
+
+.albert-approvals__decided-item .albert-approvals__item-title {
+	font-weight: var(--albert-font-weight-normal);
+}
+
+.albert-approvals__reason {
+	margin: var(--albert-space-100) 0 0;
+	font-size: var(--albert-font-size-sm);
+	line-height: var(--albert-line-height-snug);
+	color: var(--albert-color-text-muted);
+	overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+   Decision dialog
+   ========================================================================== */
+
+.albert-approvals__consequence {
+	margin: 0 0 var(--albert-space-300);
+	font-size: var(--albert-font-size-card-title);
+	line-height: var(--albert-line-height-snug);
+	color: var(--albert-color-text);
+	overflow-wrap: anywhere;
+}
+
+.albert-approvals__provenance {
+	margin: var(--albert-space-300) 0 0;
+	font-size: var(--albert-font-size-sm);
+	line-height: var(--albert-line-height-snug);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-approvals__request {
+	margin-block-start: var(--albert-space-300);
+}
+
+/**
+ * A scoped hint (drift, or a missing target) still reads as part of the body,
+ * so give it room above the provenance line that follows.
+ */
+.albert-approvals__dialog .albert-hint {
+	margin-block-start: var(--albert-space-300);
+}
+
+/**
+ * Mobile-first footer: the two decisions stack full-width so each is a proper
+ * tap target, with the primary one (Approve, last in the DOM) at the bottom,
+ * nearest the thumb. The min-width query below returns them to a single
+ * right-aligned row.
+ */
+.albert-approvals__dialog .albert-dialog__footer {
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.albert-approvals__dialog .albert-dialog__footer .button {
+	inline-size: 100%;
+	min-block-size: 44px;
+	justify-content: center;
+}
+
+/* ==========================================================================
+   Wider viewports
+   ========================================================================== */
+
+@media (min-width: 600px) {
+	.albert-approvals__item {
+		flex-direction: row;
+		align-items: flex-start;
+		justify-content: space-between;
+	}
+
+	.albert-approvals__item-text {
+		flex: 1 1 auto;
+	}
+
+	.albert-approvals__item-action {
+		flex-shrink: 0;
+	}
+
+	.albert-approvals__item-action .button {
+		inline-size: auto;
+	}
+
+	.albert-approvals__dialog .albert-dialog__footer {
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-end;
+	}
+
+	.albert-approvals__dialog .albert-dialog__footer .button {
+		inline-size: auto;
+	}
+}
+
+/* ==========================================================================
+   Motion
+   ========================================================================== */
+
+/**
+ * A one-time settle on the deep-linked row, so a person who followed a link
+ * sees where it landed them. The steady state is the tint above; this only
+ * fades in over it, and is skipped entirely under reduced-motion.
+ */
+@media (prefers-reduced-motion: no-preference) {
+	.albert-approvals__item--focus {
+		animation: albert-approvals-settle var(--albert-duration-panel) var(--albert-easing-panel);
+	}
+
+	@keyframes albert-approvals-settle {
+		from {
+			background: var(--albert-color-accent-tint-20);
+		}
+
+		to {
+			background: var(--albert-color-accent-surface);
+		}
+	}
+}
