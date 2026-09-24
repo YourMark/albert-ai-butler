@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Execution\InterceptorDecision;
+use Albert\Logging\Outcome;
 use Albert\OAuth\Server\ConnectionContext;
 use WP_Ability;
 use WP_Error;
@@ -84,7 +85,7 @@ class Interceptor implements Hookable {
 	 *
 	 * @param mixed  $pre          The short-circuit sentinel; returned unchanged to proceed.
 	 * @param string $ability_name The ability being executed.
-	 * @param mixed  $input        The resolved input for the ability.
+	 * @param mixed  $input        The raw input for the ability, before core normalises it.
 	 * @param mixed  $ability      The ability instance (a WP_Ability on 7.1+).
 	 *
 	 * @return mixed The sentinel to proceed, or a WP_Error to short-circuit.
@@ -174,7 +175,7 @@ class Interceptor implements Hookable {
 		);
 
 		return new WP_Error(
-			'albert_awaiting_approval',
+			Outcome::HELD_CODE,
 			$message,
 			[
 				'status'       => 'pending_approval',
