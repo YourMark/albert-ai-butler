@@ -210,6 +210,73 @@ class Repository {
 	}
 
 	/**
+	 * Open actions belonging to one user, newest first.
+	 *
+	 * A separate method rather than a nullable argument on {@see self::list_open()}.
+	 * A `?int $user_id = null` meaning "everybody" is one forgotten argument away
+	 * from showing every user's requests to whoever is looking, and a scoping
+	 * parameter that leaks when omitted is the wrong shape for this question.
+	 * Two named methods cannot be called wrong by accident.
+	 *
+	 * @param int $user_id The owner.
+	 * @param int $limit   Maximum rows.
+	 *
+	 * @return list<PendingAction>
+	 * @since 1.5.0
+	 */
+	public function list_open_for_user( int $user_id, int $limit = 100 ): array {
+		return $this->list_where(
+			'status = %s AND expires_at > %s AND user_id = %d',
+			[ PendingAction::STATUS_PENDING, gmdate( 'Y-m-d H:i:s' ), $user_id ],
+			$limit
+		);
+	}
+
+	/**
+	 * Recently decided actions belonging to one user.
+	 *
+	 * @param int $user_id The owner.
+	 * @param int $limit   Maximum rows.
+	 *
+	 * @return list<PendingAction>
+	 * @since 1.5.0
+	 */
+	public function list_decided_for_user( int $user_id, int $limit = 20 ): array {
+		return $this->list_where(
+			'status <> %s AND user_id = %d',
+			[ PendingAction::STATUS_PENDING, $user_id ],
+			$limit
+		);
+	}
+
+	/**
+	 * How many open actions belong to one user.
+	 *
+	 * The menu bubble a non-administrator sees. Uncached, unlike the site-wide
+	 * count: it is per-user, so caching it would need a key per user for a
+	 * number only that user's own admin pages ever read.
+	 *
+	 * @param int $user_id The owner.
+	 *
+	 * @return int
+	 * @since 1.5.0
+	 */
+	public function count_open_for_user( int $user_id ): int {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Per-user count on a custom table.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE status = %s AND expires_at > %s AND user_id = %d',
+				Tables::pending_actions(),
+				PendingAction::STATUS_PENDING,
+				gmdate( 'Y-m-d H:i:s' ),
+				$user_id
+			)
+		);
+	}
+
+	/**
 	 * The most recently decided actions, newest decision first.
 	 *
 	 * @param int $limit Maximum rows.
