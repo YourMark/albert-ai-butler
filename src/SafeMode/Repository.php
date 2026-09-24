@@ -24,6 +24,14 @@ use Albert\Database\Tables;
 class Repository {
 
 	/**
+	 * Transient holding the open-action count.
+	 *
+	 * @since 1.5.0
+	 * @var string
+	 */
+	private const COUNT_CACHE_KEY = 'albert_pending_actions_open_count';
+
+	/**
 	 * Stage a gated call, or return the one already staged for it.
 	 *
 	 * Retrying an unapproved destructive call is expected: an assistant that
@@ -89,6 +97,8 @@ class Repository {
 		 * @param string $ability_name The ability whose call was held.
 		 */
 		do_action( 'albert/safe_mode/held', $ability_name );
+
+		$this->forget_count();
 
 		$staged = $this->find( $action_id );
 
@@ -231,9 +241,33 @@ class Repository {
 	 * @since 1.5.0
 	 */
 	public function count_open(): int {
+		$cached = get_transient( self::COUNT_CACHE_KEY );
+
+		if ( is_numeric( $cached ) ) {
+			return (int) $cached;
+		}
+
+		$count = $this->query_count_open();
+
+		// Short TTL as a backstop, not as the mechanism. Every write clears this
+		// key, so the number is normally exact the instant it changes; the
+		// expiry only covers the one case no write can catch, a row lapsing on
+		// its own while nothing else happens.
+		set_transient( self::COUNT_CACHE_KEY, $count, MINUTE_IN_SECONDS * 5 );
+
+		return $count;
+	}
+
+	/**
+	 * Count the open actions for real.
+	 *
+	 * @return int
+	 * @since 1.5.0
+	 */
+	private function query_count_open(): int {
 		global $wpdb;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct count on a custom table.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Counted here and cached by the caller.
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i WHERE status = %s AND expires_at > %s',
@@ -242,6 +276,23 @@ class Repository {
 				gmdate( 'Y-m-d H:i:s' )
 			)
 		);
+	}
+
+	/**
+	 * Drop the cached open count.
+	 *
+	 * Called by every write. The count is read on `admin_menu`, which fires on
+	 * every single wp-admin page load to draw the menu bubble, so an uncached
+	 * count meant a COUNT(*) on every admin request for a number most pages
+	 * never show. Invalidating on write rather than expiring on a timer is what
+	 * keeps the bubble exact: a stale badge on a safety queue is its own small
+	 * lie.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function forget_count(): void {
+		delete_transient( self::COUNT_CACHE_KEY );
 	}
 
 	/**
@@ -276,6 +327,8 @@ class Repository {
 				gmdate( 'Y-m-d H:i:s' )
 			)
 		);
+
+		$this->forget_count();
 
 		return (int) $claimed === 1;
 	}
@@ -333,6 +386,8 @@ class Repository {
 			)
 		);
 
+		$this->forget_count();
+
 		return (int) $rejected === 1;
 	}
 
@@ -346,7 +401,7 @@ class Repository {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update on a custom table.
-		return (int) $wpdb->query(
+		$expired = (int) $wpdb->query(
 			$wpdb->prepare(
 				'UPDATE %i SET status = %s WHERE status = %s AND expires_at <= %s',
 				Tables::pending_actions(),
@@ -355,6 +410,10 @@ class Repository {
 				gmdate( 'Y-m-d H:i:s' )
 			)
 		);
+
+		$this->forget_count();
+
+		return $expired;
 	}
 
 	/**
@@ -418,7 +477,7 @@ class Repository {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update on a custom table.
-		return (int) $wpdb->query(
+		$failed = (int) $wpdb->query(
 			$wpdb->prepare(
 				'UPDATE %i SET status = %s, result = %s WHERE status = %s AND decided_at IS NOT NULL AND decided_at <= %s',
 				Tables::pending_actions(),
@@ -433,6 +492,10 @@ class Repository {
 				gmdate( 'Y-m-d H:i:s', time() - max( 1, $stale_after_seconds ) )
 			)
 		);
+
+		$this->forget_count();
+
+		return $failed;
 	}
 
 	/**
@@ -538,6 +601,8 @@ class Repository {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update on a custom table.
 		$wpdb->update( Tables::pending_actions(), $data, [ 'id' => $id ], $formats, [ '%d' ] );
+
+		$this->forget_count();
 	}
 
 	/**
