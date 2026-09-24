@@ -112,7 +112,57 @@ class Gate {
 			return false;
 		}
 
+		if ( $this->is_exempt( $ability->get_name() ) ) {
+			return false;
+		}
+
 		return $this->risk->must_hold( $ability, $input ) || $this->is_gated_ability( $ability );
+	}
+
+	/**
+	 * Whether an owner has excused this ability from the gate in code.
+	 *
+	 * **Why an escape hatch exists at all.** Without one, an owner with a
+	 * destructive ability they genuinely trust, firing twenty times a day, has
+	 * exactly one way out: switch safe mode off entirely. A control with no
+	 * proportionate relief does not get respected, it gets disabled, and then
+	 * nothing is held. Excusing one ability is strictly better than that.
+	 *
+	 * **Why it is a filter and not a checkbox.** Writing a line of PHP is a
+	 * deliberate act by somebody who went looking. A checkbox on a screen is
+	 * one click away from whoever is annoyed at this exact moment, next to the
+	 * thing protecting them. If this ever grows a UI it should be harder to
+	 * reach than the rest of the screen, not easier.
+	 *
+	 * It excuses an ability from *staging*, and nothing else. The permission
+	 * check still runs, and {@see ConnectionGuard} still refuses writes to
+	 * Albert's own control options whatever is listed here, so this cannot be
+	 * used to switch the gate off from inside it.
+	 *
+	 * @param string $ability_name The ability id.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public function is_exempt( string $ability_name ): bool {
+		/**
+		 * Filters the abilities safe mode never holds.
+		 *
+		 * The counterpart to `albert/safe_mode/high_risk_abilities`, and it
+		 * wins: an id in both lists is exempt, because a site naming an ability
+		 * here has said something specific about its own surface, where the
+		 * risk list is a general default.
+		 *
+		 * Excuses staging only. Permissions still apply, and Albert's own
+		 * control options remain unwritable over a connection regardless.
+		 *
+		 * @since 1.5.0
+		 *
+		 * @param list<string> $abilities Ability ids to let through ungated.
+		 */
+		$exempt = apply_filters( 'albert/safe_mode/exempt_abilities', [] );
+
+		return is_array( $exempt ) && in_array( $ability_name, $exempt, true );
 	}
 
 	/**

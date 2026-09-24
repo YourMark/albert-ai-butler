@@ -39,9 +39,10 @@ class GateTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		parent::setUp();
-		$GLOBALS['albert_test_options'] = [];
-		$GLOBALS['albert_test_hooks']   = [];
-		$this->gate                     = new Gate();
+		$GLOBALS['albert_test_options']        = [];
+		$GLOBALS['albert_test_hooks']          = [];
+		$GLOBALS['albert_test_filter_returns'] = [];
+		$this->gate                            = new Gate();
 	}
 
 	/**
@@ -63,6 +64,43 @@ class GateTest extends TestCase {
 	 * @return void
 	 */
 	public function test_default_on_gates_a_destructive_ability(): void {
+		$this->assertTrue( $this->gate->must_gate( $this->ability( [ 'destructive' => true ] ) ) );
+	}
+
+	/**
+	 * An exempted ability is let through, even when it is destructive.
+	 *
+	 * The escape hatch exists so an owner with one noisy ability they trust
+	 * excuses that ability instead of switching safe mode off entirely.
+	 *
+	 * @return void
+	 */
+	public function test_an_exempt_ability_is_not_gated(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/exempt_abilities'] = [ 'test/ability' ];
+
+		$this->assertFalse( $this->gate->must_gate( $this->ability( [ 'destructive' => true ] ) ) );
+	}
+
+	/**
+	 * Exemption beats the high-risk list, which is the general default.
+	 *
+	 * @return void
+	 */
+	public function test_exemption_wins_over_the_high_risk_list(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/high_risk_abilities'] = [ 'test/ability' ];
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/exempt_abilities']    = [ 'test/ability' ];
+
+		$this->assertFalse( $this->gate->must_gate( $this->ability( [ 'destructive' => false ] ) ) );
+	}
+
+	/**
+	 * An exemption naming a different ability changes nothing.
+	 *
+	 * @return void
+	 */
+	public function test_an_unrelated_exemption_does_not_open_the_gate(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/exempt_abilities'] = [ 'other/ability' ];
+
 		$this->assertTrue( $this->gate->must_gate( $this->ability( [ 'destructive' => true ] ) ) );
 	}
 
