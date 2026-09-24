@@ -123,6 +123,23 @@ class ApprovalTicket {
 	}
 
 	/**
+	 * Whether a ticket is currently armed.
+	 *
+	 * Exists so a test can assert the ticket is live *during* the approved run
+	 * and gone afterwards, including when the ability throws. {@see self::consume()}
+	 * destroys on a match, so it cannot answer that question without changing it.
+	 *
+	 * Deliberately says only whether, never what: the fingerprint stays private,
+	 * so this cannot help anybody reconstruct one.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function is_armed(): bool {
+		return self::$fingerprint !== null;
+	}
+
+	/**
 	 * Discard any armed ticket. Called in a `finally` around the approved run so
 	 * a ticket never outlives the execution it was minted for.
 	 *

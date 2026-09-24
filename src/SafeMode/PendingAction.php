@@ -83,7 +83,7 @@ class PendingAction {
 	 * @param int                       $id           Auto-increment row id, 0 for an unsaved instance.
 	 * @param string                    $action_id    Random public reference used in the approval link.
 	 * @param string                    $ability_name The ability that was intercepted.
-	 * @param array<string, mixed>      $input The resolved input it was about to run with.
+	 * @param array<string, mixed>      $input The input it was about to run with, captured server-side.
 	 * @param string                    $status       One of the STATUS_* constants.
 	 * @param int                       $user_id      The WordPress user the call runs as once approved.
 	 * @param string|null               $client_id    OAuth client id of the calling connection, if any.

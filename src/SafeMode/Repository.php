@@ -28,12 +28,12 @@ class Repository {
 	 *
 	 * Retrying an unapproved destructive call is expected: an assistant that
 	 * gets back "awaiting approval" may well try again. So an identical call
-	 * (same ability, same resolved input, same acting user) that is still
+	 * (same ability, same captured input, same acting user) that is still
 	 * pending and unexpired returns the existing row rather than a second one,
 	 * which keeps the queue a list of decisions to make, not a log of attempts.
 	 *
 	 * @param string                    $ability_name The intercepted ability.
-	 * @param array<string, mixed>      $input Its resolved input.
+	 * @param array<string, mixed>      $input Its captured input.
 	 * @param int                       $user_id      The user the call runs as once approved.
 	 * @param string|null               $client_id    OAuth client id of the connection, if any.
 	 * @param string|null               $client_name  Snapshotted client name, if any.
@@ -148,13 +148,26 @@ class Repository {
 	 * @since 1.5.0
 	 */
 	public function find_open( string $action_id ): ?PendingAction {
-		$action = $this->find( $action_id );
+		global $wpdb;
 
-		if ( ! $action instanceof PendingAction || ! $action->is_pending() ) {
-			return null;
-		}
+		// Compared in SQL, like every other expiry check in this class. It used
+		// to be a PHP `strtotime()` against a stored UTC string, which is correct
+		// only because wp-settings.php sets the process timezone to UTC: a plugin
+		// calling date_default_timezone_set() would have broken this one method
+		// and left the other four right.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct read on a custom table.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE action_id = %s AND status = %s AND expires_at > %s',
+				Tables::pending_actions(),
+				$action_id,
+				PendingAction::STATUS_PENDING,
+				gmdate( 'Y-m-d H:i:s' )
+			),
+			ARRAY_A
+		);
 
-		return strtotime( $action->expires_at ) < time() ? null : $action;
+		return is_array( $row ) ? PendingAction::from_row( $row ) : null;
 	}
 
 	/**
@@ -345,6 +358,78 @@ class Repository {
 	}
 
 	/**
+	 * Fail every claim that was never finished.
+	 *
+	 * `claim()` flips a row to `executing` and then the ability runs. A fatal or
+	 * a timeout in between leaves the row there for good: excluded from the open
+	 * list because it is no longer pending, and shown in the decided list as
+	 * "Approved, running" forever. Nothing else ever moves it, so this does.
+	 *
+	 * The ability may well have completed its work before dying, so this records
+	 * `failed` rather than claiming nothing happened. What it actually asserts is
+	 * narrower and true: the run stopped reporting.
+	 *
+	 * @param int $stale_after_seconds How long a claim may sit unfinished.
+	 *
+	 * @return int How many rows were failed.
+	 * @since 1.5.0
+	 */
+	public function fail_stale_claims( int $stale_after_seconds ): int {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update on a custom table.
+		return (int) $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET status = %s, result = %s WHERE status = %s AND decided_at IS NOT NULL AND decided_at <= %s',
+				Tables::pending_actions(),
+				PendingAction::STATUS_FAILED,
+				(string) wp_json_encode(
+					[
+						'code'    => 'albert_run_abandoned',
+						'message' => __( 'Approved, but the run never reported back. It may or may not have completed.', 'albert-ai-butler' ),
+					]
+				),
+				PendingAction::STATUS_EXECUTING,
+				gmdate( 'Y-m-d H:i:s', time() - max( 1, $stale_after_seconds ) )
+			)
+		);
+	}
+
+	/**
+	 * Delete decided actions older than a retention window.
+	 *
+	 * This table stores the input each call was about to run with, so it is the
+	 * one place Albert keeps request payloads at rest. Deleting is the only thing
+	 * that gets them out of next year's backups; masking them on screen does not.
+	 *
+	 * Pending rows are never touched, however old: an undecided request is not
+	 * rubbish, and `expire_lapsed()` moves it on first.
+	 *
+	 * @param int $days Keep decided rows for this many days. 0 or less keeps everything.
+	 *
+	 * @return int How many rows were deleted.
+	 * @since 1.5.0
+	 */
+	public function purge_decided( int $days ): int {
+		if ( $days <= 0 ) {
+			return 0;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct delete on a custom table.
+		return (int) $wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i WHERE status <> %s AND status <> %s AND created_at <= %s',
+				Tables::pending_actions(),
+				PendingAction::STATUS_PENDING,
+				PendingAction::STATUS_EXECUTING,
+				gmdate( 'Y-m-d H:i:s', time() - ( $days * DAY_IN_SECONDS ) )
+			)
+		);
+	}
+
+	/**
 	 * An open, identical, still-decidable action for this fingerprint, if any.
 	 *
 	 * @param string $ability_name The ability.
@@ -393,13 +478,45 @@ class Repository {
 	 * A stable fingerprint of a call, for retry de-duplication.
 	 *
 	 * @param string               $ability_name The ability.
-	 * @param array<string, mixed> $input Its resolved input.
+	 * @param array<string, mixed> $input Its captured input.
 	 * @param int                  $user_id      The acting user.
 	 *
 	 * @return string 64-char sha256 hex.
 	 * @since 1.5.0
 	 */
 	private function fingerprint( string $ability_name, array $input, int $user_id ): string {
-		return hash( 'sha256', $ability_name . '|' . $user_id . '|' . (string) wp_json_encode( $input ) );
+		return hash( 'sha256', $ability_name . '|' . $user_id . '|' . (string) wp_json_encode( self::canonicalize( $input ) ) );
+	}
+
+	/**
+	 * Sort an input array by key, at every depth, so equal calls hash equally.
+	 *
+	 * `wp_json_encode()` preserves insertion order, and a model reorders JSON
+	 * keys between turns as a matter of course. Without this, the same retried
+	 * call spelled `{id, force}` one turn and `{force, id}` the next fingerprints
+	 * differently and stages a second row, which is exactly the duplicate the
+	 * de-duplication exists to prevent.
+	 *
+	 * List order is left alone: `[1,2]` and `[2,1]` are genuinely different
+	 * inputs to most abilities, so normalising those would merge calls that are
+	 * not the same.
+	 *
+	 * @param array<mixed> $input The input to canonicalise.
+	 *
+	 * @return array<mixed>
+	 * @since 1.5.0
+	 */
+	private static function canonicalize( array $input ): array {
+		if ( ! array_is_list( $input ) ) {
+			ksort( $input );
+		}
+
+		foreach ( $input as $key => $value ) {
+			if ( is_array( $value ) ) {
+				$input[ $key ] = self::canonicalize( $value );
+			}
+		}
+
+		return $input;
 	}
 }

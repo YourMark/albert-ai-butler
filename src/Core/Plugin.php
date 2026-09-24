@@ -71,6 +71,7 @@ use Albert\Settings\Storage as SettingsStorage;
 use Albert\Admin\SkillsPage;
 use Albert\Cron\AllowedUserExpiry;
 use Albert\Cron\ConnectionRetentionSweep;
+use Albert\Cron\PendingActionSweep;
 use Albert\Cron\TokenCleanup;
 use Albert\Database\Installer as DatabaseInstaller;
 use Albert\Logging\Logger;
@@ -222,6 +223,12 @@ class Plugin {
 		// Daily cleanup of expired OAuth token rows. Same self-healing reason.
 		( new TokenCleanup() )->register_hooks();
 		TokenCleanup::schedule();
+
+		// Safe mode's queue: expire what lapsed, fail claims that never came
+		// back, delete decided rows once they are old. Scheduled here as well as
+		// in activate() so a site that upgraded into safe mode gets it too.
+		( new PendingActionSweep() )->register_hooks();
+		PendingActionSweep::schedule();
 
 		// Daily sweep of never-used and idle connections. Same self-healing reason.
 		( new ConnectionRetentionSweep() )->register_hooks();
@@ -605,6 +612,9 @@ class Plugin {
 		// Schedule the daily expired-token cleanup.
 		TokenCleanup::schedule();
 
+		// Schedule the daily safe-mode pending-actions sweep.
+		PendingActionSweep::schedule();
+
 		// Schedule the daily never-used/idle connection sweep.
 		ConnectionRetentionSweep::schedule();
 
@@ -633,6 +643,7 @@ class Plugin {
 
 		// Unschedule the daily expired-token cleanup.
 		TokenCleanup::unschedule();
+		PendingActionSweep::unschedule();
 
 		// Unschedule the daily never-used/idle connection sweep.
 		ConnectionRetentionSweep::unschedule();
