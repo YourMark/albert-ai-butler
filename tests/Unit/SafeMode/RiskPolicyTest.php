@@ -130,4 +130,58 @@ class RiskPolicyTest extends TestCase {
 	public function test_does_not_hold_a_benign_option(): void {
 		$this->assertFalse( $this->risk->must_hold( $this->ability( 'thirdparty/update-option' ), [ 'option' => 'blogdescription' ] ) );
 	}
+
+	/**
+	 * A term named after a high-risk option is not an option write.
+	 *
+	 * `name` and `key` were in the lookup list, so creating a category called
+	 * "home" matched and got held. A gate that stops ordinary content work
+	 * teaches people to stop reading the queue.
+	 *
+	 * @return void
+	 */
+	public function test_a_term_named_home_is_not_held(): void {
+		$this->assertFalse(
+			$this->risk->must_hold( $this->ability( 'albert/create-term' ), [ 'name' => 'home' ] )
+		);
+	}
+
+	/**
+	 * A real option write is still caught by the keys that do name options.
+	 *
+	 * @return void
+	 */
+	public function test_an_option_write_is_still_held(): void {
+		$this->assertTrue(
+			$this->risk->must_hold( $this->ability( 'acme/update-option' ), [ 'option' => 'siteurl' ] )
+		);
+	}
+
+	/**
+	 * The options added after review are held too.
+	 *
+	 * @dataProvider addedHighRiskOptions
+	 *
+	 * @param string $option The option name.
+	 *
+	 * @return void
+	 */
+	public function test_newly_listed_options_are_held( string $option ): void {
+		$this->assertTrue(
+			$this->risk->must_hold( $this->ability( 'acme/update-option' ), [ 'option_name' => $option ] )
+		);
+	}
+
+	/**
+	 * Options added after the first review pass.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function addedHighRiskOptions(): array {
+		return [
+			'active_plugins'      => [ 'active_plugins' ],
+			'blog_public'         => [ 'blog_public' ],
+			'permalink_structure' => [ 'permalink_structure' ],
+		];
+	}
 }

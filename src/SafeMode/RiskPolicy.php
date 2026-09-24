@@ -66,15 +66,31 @@ class RiskPolicy {
 		'users_can_register',
 		'template',
 		'stylesheet',
+		// Switches plugins on or off wholesale, so it can disable Albert, a
+		// security plugin, or everything at once.
+		'active_plugins',
+		// Silently deindexes the site. Nothing on any screen shouts about it and
+		// the damage surfaces weeks later as lost traffic.
+		'blog_public',
+		// Changes every URL on the site at once, breaking inbound links.
+		'permalink_structure',
 	];
 
 	/**
 	 * Input keys an option-writing ability tends to name its target option with.
 	 *
+	 * Deliberately excludes bare `name` and `key`. They are ordinary English
+	 * words, so `albert/create-term { name: "home" }` (a category called home)
+	 * matched a high-risk option name and got held for approval. Creating a
+	 * category is not an option write, and a gate that stops it teaches people
+	 * to stop reading the queue. The cost is a third-party ability that names
+	 * its parameter `name`, which is a fair trade against holding ordinary
+	 * content work.
+	 *
 	 * @since 1.5.0
 	 * @var list<string>
 	 */
-	private const OPTION_KEYS = [ 'option', 'option_name', 'name', 'key', 'setting' ];
+	private const OPTION_KEYS = [ 'option', 'option_name', 'setting' ];
 
 	/**
 	 * Whether this call must be held regardless of its annotation.
