@@ -74,7 +74,11 @@ class Gate {
 	 * @since 1.5.0
 	 */
 	public function is_enabled(): bool {
-		return self::DEFAULT_VALUE === Value::get( self::OPTION, self::DEFAULT_VALUE );
+		// Asks "did somebody turn this off", never "is it exactly the string
+		// on". A boolean true from a constant is not the string `on`, and a
+		// straight equality check read it as off, which is the wrong direction
+		// to be wrong in for a safety switch.
+		return ! self::means_off( Value::get( self::OPTION, self::DEFAULT_VALUE ) );
 	}
 
 	/**
@@ -90,7 +94,59 @@ class Gate {
 	 * @since 1.5.0
 	 */
 	public static function sanitize( $value ): string {
-		return $value === 'off' ? 'off' : self::DEFAULT_VALUE;
+		return self::means_off( $value ) ? 'off' : self::DEFAULT_VALUE;
+	}
+
+	/**
+	 * Whether a value asks for safe mode to be off.
+	 *
+	 * Accepts booleans, because `define( 'ALBERT_SAFE_MODE', false )` is what a
+	 * PHP developer writes and this is Albert's first boolean-shaped setting:
+	 * every other one is a string enum or an integer, so there was no existing
+	 * convention to follow and the string-only rule silently rejected the
+	 * obvious spelling. Rejected meant the constant was skipped entirely and
+	 * safe mode stayed on, with the Settings field still editable and nothing
+	 * saying the constant had been ignored.
+	 *
+	 * Only an explicit off wins. Anything unrecognised means on, so a typo
+	 * fails towards the gate rather than away from it.
+	 *
+	 * @param mixed $value The submitted or configured value.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function means_off( $value ): bool {
+		if ( is_bool( $value ) ) {
+			return $value === false;
+		}
+
+		if ( is_int( $value ) ) {
+			return $value === 0;
+		}
+
+		return is_string( $value ) && in_array( strtolower( trim( $value ) ), [ 'off', 'false', 'no', '0' ], true );
+	}
+
+	/**
+	 * Whether a value is a recognised setting for this option.
+	 *
+	 * The override validator, so a constant or filter Albert cannot read is
+	 * skipped rather than pinning the site to something it did not mean. Shares
+	 * {@see self::means_off()} with the sanitiser so the two cannot drift.
+	 *
+	 * @param mixed $value The configured value.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function is_valid( $value ): bool {
+		if ( is_bool( $value ) || is_int( $value ) ) {
+			return true;
+		}
+
+		return is_string( $value )
+			&& in_array( strtolower( trim( $value ) ), [ 'on', 'off', 'true', 'false', 'yes', 'no', '1', '0' ], true );
 	}
 
 	/**

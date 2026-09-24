@@ -93,8 +93,11 @@ class Validators {
 			},
 			// Safe mode is a plain on/off switch; anything else falls through to
 			// the default rather than pinning the site to a nonsense value.
+			// Booleans included: `define( 'ALBERT_SAFE_MODE', false )` is what a
+			// PHP developer writes, and rejecting it silently left safe mode on
+			// with the field still editable and no sign the constant was ignored.
 			Gate::OPTION                           => static function ( $value ): bool {
-				return $value === 'on' || $value === 'off';
+				return Gate::is_valid( $value );
 			},
 			// A window outside the allowed range is not usable, so an override
 			// naming one falls through rather than pinning the site to it.
