@@ -17,6 +17,7 @@ use Albert\SafeMode\Approver;
 use Albert\SafeMode\PendingAction;
 use Albert\SafeMode\Repository;
 use Albert\SafeMode\TargetResolver;
+use Albert\Support\WpCompat;
 
 /**
  * The wp-admin queue where a person approves or rejects the destructive actions
@@ -163,6 +164,7 @@ class Approvals implements Hookable {
 		echo '<p class="description">' . esc_html__( 'Destructive actions your assistant requested are held here until you approve them. Approving runs the request exactly as it was made; rejecting discards it.', 'albert-ai-butler' ) . '</p>';
 
 		$this->render_notice();
+		$this->render_unenforceable_notice();
 
 		if ( $focus !== '' && ! $this->has_open_action( $open, $focus ) ) {
 			echo '<div class="notice notice-info"><p>'
@@ -393,6 +395,37 @@ class Approvals implements Hookable {
 		[ $level, $text ] = $messages[ $notice ];
 
 		echo '<div class="notice notice-' . esc_attr( $level ) . ' is-dismissible"><p>' . esc_html( $text ) . '</p></div>';
+	}
+
+	/**
+	 * Say plainly when nothing can be held, whatever the setting says.
+	 *
+	 * Without this, a site below WordPress 7.1 shows "Nothing is waiting for
+	 * approval" while every destructive call runs unattended. An empty queue is
+	 * the most convincing false reassurance this screen can give, because it
+	 * reads as proof the gate is working.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function render_unenforceable_notice(): void {
+		if ( WpCompat::supports_execution_lifecycle() ) {
+			return;
+		}
+
+		echo '<div class="notice notice-error"><p><strong>'
+			. esc_html__( 'Nothing can be held on this site yet.', 'albert-ai-butler' )
+			. '</strong> '
+			. esc_html(
+				sprintf(
+					/* translators: %s: the WordPress version this site is running. */
+					__( 'Safe mode needs WordPress 7.1, which added the check it relies on. This site runs %s, so destructive actions an assistant requests are carried out immediately and this queue stays empty.', 'albert-ai-butler' ),
+					get_bloginfo( 'version' )
+				)
+			)
+			. ' <a href="' . esc_url( admin_url( 'update-core.php' ) ) . '">'
+			. esc_html__( 'Update WordPress', 'albert-ai-butler' )
+			. '</a></p></div>';
 	}
 
 	/**
