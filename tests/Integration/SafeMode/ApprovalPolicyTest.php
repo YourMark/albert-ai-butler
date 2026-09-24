@@ -187,8 +187,8 @@ class ApprovalPolicyTest extends TestCase {
 		$editor = self::factory()->user->create( [ 'role' => 'editor' ] );
 		wp_set_current_user( $admin );
 
-		$this->assertTrue( $this->policy->can_approve( $this->action( $editor ) ) );
-		$this->assertTrue( $this->policy->can_reject( $this->action( $editor ) ) );
+		$this->assertTrue( $this->policy->can_decide( $this->action( $editor ) ) );
+		$this->assertNull( $this->policy->decide_blocked_reason( $this->action( $editor ) ) );
 	}
 
 	/**
@@ -202,8 +202,8 @@ class ApprovalPolicyTest extends TestCase {
 		$editor = self::factory()->user->create( [ 'role' => 'editor' ] );
 		wp_set_current_user( $editor );
 
-		$this->assertTrue( $this->policy->can_approve( $this->action( $editor ) ) );
-		$this->assertNull( $this->policy->approval_blocked_reason( $this->action( $editor ) ) );
+		$this->assertTrue( $this->policy->can_decide( $this->action( $editor ) ) );
+		$this->assertNull( $this->policy->decide_blocked_reason( $this->action( $editor ) ) );
 	}
 
 	/**
@@ -218,36 +218,53 @@ class ApprovalPolicyTest extends TestCase {
 		$other  = self::factory()->user->create( [ 'role' => 'editor' ] );
 		wp_set_current_user( $editor );
 
-		$this->assertFalse( $this->policy->can_approve( $this->action( $other ) ) );
-		$this->assertFalse( $this->policy->can_reject( $this->action( $other ) ) );
+		$this->assertFalse( $this->policy->can_decide( $this->action( $other ) ) );
+		$this->assertNotNull( $this->policy->decide_blocked_reason( $this->action( $other ) ) );
 	}
 
 	/**
-	 * Losing the capability blocks approval but never rejection.
+	 * Losing the capability blocks the row entirely, both ways.
 	 *
-	 * The row must stay clearable by its owner, or it sits there until an
-	 * administrator notices.
+	 * One rule, not two: the row then expires on its own, or an administrator
+	 * decides it.
 	 *
 	 * @return void
 	 */
-	public function test_losing_permission_blocks_approval_but_not_rejection(): void {
+	public function test_losing_permission_blocks_the_row_entirely(): void {
 		$this->register_ability( 'albert-test/policy' );
 		$this->permitted = false;
 
 		$editor = self::factory()->user->create( [ 'role' => 'editor' ] );
 		wp_set_current_user( $editor );
 
-		$this->assertFalse( $this->policy->can_approve( $this->action( $editor ) ) );
-		$this->assertTrue( $this->policy->can_reject( $this->action( $editor ) ) );
-		$this->assertNotNull( $this->policy->approval_blocked_reason( $this->action( $editor ) ) );
+		$this->assertFalse( $this->policy->can_decide( $this->action( $editor ) ) );
+		$this->assertNotNull( $this->policy->decide_blocked_reason( $this->action( $editor ) ) );
 	}
 
 	/**
-	 * An unregistered ability is approvable by nobody but still rejectable.
+	 * An administrator can still decide a row its owner no longer can.
+	 *
+	 * This is what stops a blocked row being stuck: somebody can always clear it.
 	 *
 	 * @return void
 	 */
-	public function test_a_missing_ability_is_rejectable_not_approvable(): void {
+	public function test_an_administrator_can_clear_a_blocked_row(): void {
+		$this->register_ability( 'albert-test/policy' );
+		$this->permitted = false;
+
+		$editor = self::factory()->user->create( [ 'role' => 'editor' ] );
+		$admin  = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		wp_set_current_user( $admin );
+
+		$this->assertTrue( $this->policy->can_decide( $this->action( $editor ) ) );
+	}
+
+	/**
+	 * An unregistered ability is decidable by nobody but an administrator.
+	 *
+	 * @return void
+	 */
+	public function test_a_missing_ability_is_not_decidable_by_its_owner(): void {
 		$editor = self::factory()->user->create( [ 'role' => 'editor' ] );
 		wp_set_current_user( $editor );
 
@@ -255,8 +272,8 @@ class ApprovalPolicyTest extends TestCase {
 
 		$this->setExpectedIncorrectUsage( 'WP_Abilities_Registry::get_registered' );
 
-		$this->assertFalse( $this->policy->can_approve( $action ) );
-		$this->assertTrue( $this->policy->can_reject( $action ) );
+		$this->assertFalse( $this->policy->can_decide( $action ) );
+		$this->assertNotNull( $this->policy->decide_blocked_reason( $action ) );
 	}
 
 	/**
@@ -283,6 +300,6 @@ class ApprovalPolicyTest extends TestCase {
 		add_filter( 'albert/approvals/view_capability', static fn(): string => 'read' );
 
 		$this->assertTrue( $this->policy->can_view( $subscriber ) );
-		$this->assertFalse( $this->policy->can_approve( $this->action( 999 ), $subscriber ) );
+		$this->assertFalse( $this->policy->can_decide( $this->action( 999 ), $subscriber ) );
 	}
 }

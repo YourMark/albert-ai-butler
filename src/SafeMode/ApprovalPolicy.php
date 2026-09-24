@@ -14,11 +14,11 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Decides who may approve or reject a staged action.
  *
- * **The rule: you may approve what you could have done yourself.** An
+ * **The rule: you may decide what you could have done yourself.** An
  * administrator decides anything. Anybody else decides only their own request,
- * and may only *approve* it if the ability would have let them perform it
- * unaided. Without that, every routine deletion an editor asked for would need
- * an administrator, which is not a workflow anybody runs twice.
+ * and only while the ability would still let them perform it unaided. Without
+ * that, every routine deletion an editor asked for would need an
+ * administrator, which is not a workflow anybody runs twice.
  *
  * Self-approval is not a hole, because the requester is a person and the
  * assistant is not. The assistant holds an OAuth token and cannot reach
@@ -26,12 +26,13 @@ defined( 'ABSPATH' ) || exit;
  * is still a person deciding out of band, which is the whole mechanism. What it
  * is *not* is four-eyes review, and nothing here should be described as that.
  *
- * **Approving and rejecting are not the same permission.** Rejecting discards a
- * request and runs nothing, so it needs no capability beyond owning the row.
- * Approving runs code, so it needs the ability's own permission check to pass.
- * Collapsing the two would mean an editor whose capability changed after
- * staging could not even dismiss their own stale request, leaving rows nobody
- * is able to clear.
+ * **One question, not two.** Approving and rejecting share a single check: if
+ * you cannot act on a row you cannot act on it, full stop. Splitting them so a
+ * blocked owner could still reject was considered and dropped. It bought a
+ * tidier queue at the cost of a second permission concept on a destructive
+ * surface, and the row it was meant to rescue clears itself: it expires on its
+ * own, and an administrator can decide it in the meantime. A safety control is
+ * easier to trust when there is one rule to hold in your head.
  *
  * **Evaluated now, not at staging time.** Ownership moves, posts get published,
  * roles change. The answer that matters is whether this person may do this
@@ -101,34 +102,15 @@ class ApprovalPolicy {
 	}
 
 	/**
-	 * Whether this user may reject this action.
+	 * Whether this user may decide this action, either way.
 	 *
-	 * Owning the row is enough. Rejecting runs nothing, and somebody whose
-	 * capability has changed since staging must still be able to clear their own
-	 * stale request rather than leave it for an administrator.
+	 * One check for approve and reject alike. An administrator decides any row.
+	 * Anybody else decides only their own, and only while the ability's own
+	 * permission check still passes for them, so a decision can never reach past
+	 * what they could already do unaided.
 	 *
-	 * @param PendingAction $action  The staged action.
-	 * @param int|null      $user_id User to test; defaults to the current user.
-	 *
-	 * @return bool
-	 * @since 1.5.0
-	 */
-	public function can_reject( PendingAction $action, ?int $user_id = null ): bool {
-		$user_id = $user_id ?? get_current_user_id();
-
-		return $this->decides_everything( $user_id ) || $this->owns( $action, $user_id );
-	}
-
-	/**
-	 * Whether this user may approve this action.
-	 *
-	 * An administrator may. Anybody else may only if the row is theirs and the
-	 * ability's own permission check passes for them, so approval can never let
-	 * somebody reach past what they could already do unaided.
-	 *
-	 * An ability that has since been unregistered is approvable by nobody: there
-	 * is nothing left to ask. It stays rejectable, which is how such a row gets
-	 * cleared.
+	 * An ability that has since been unregistered is decidable by nobody but an
+	 * administrator: there is nothing left to ask.
 	 *
 	 * @param PendingAction $action  The staged action.
 	 * @param int|null      $user_id User to test; defaults to the current user.
@@ -136,7 +118,7 @@ class ApprovalPolicy {
 	 * @return bool
 	 * @since 1.5.0
 	 */
-	public function can_approve( PendingAction $action, ?int $user_id = null ): bool {
+	public function can_decide( PendingAction $action, ?int $user_id = null ): bool {
 		$user_id = $user_id ?? get_current_user_id();
 
 		// An administrator is not held to the requester's capabilities. The call
@@ -155,35 +137,34 @@ class ApprovalPolicy {
 	}
 
 	/**
-	 * Why this user cannot approve their own row, for the screen to show.
+	 * Why this user cannot decide this row, for the screen to say so.
 	 *
-	 * A row somebody owns but may no longer approve is shown disabled with this
-	 * reason rather than hidden. Hiding it would make the queue read as empty
-	 * while something is still waiting, which is the one thing this screen must
-	 * never do.
+	 * Whether such a row is hidden or shown inert is the screen's call; this
+	 * only supplies the sentence for the second case. Offered because "nothing
+	 * happens when I click" is the worst of the options available.
 	 *
 	 * @param PendingAction $action  The staged action.
 	 * @param int|null      $user_id User to test; defaults to the current user.
 	 *
-	 * @return string|null A reason, or null when the user may approve.
+	 * @return string|null A reason, or null when the user may decide.
 	 * @since 1.5.0
 	 */
-	public function approval_blocked_reason( PendingAction $action, ?int $user_id = null ): ?string {
+	public function decide_blocked_reason( PendingAction $action, ?int $user_id = null ): ?string {
 		$user_id = $user_id ?? get_current_user_id();
 
-		if ( $this->can_approve( $action, $user_id ) ) {
+		if ( $this->can_decide( $action, $user_id ) ) {
 			return null;
 		}
 
 		if ( ! $this->owns( $action, $user_id ) ) {
-			return __( 'Only an administrator, or the person who requested this, can approve it.', 'albert-ai-butler' );
+			return __( 'Only an administrator, or the person who requested this, can decide it.', 'albert-ai-butler' );
 		}
 
 		if ( wp_get_ability( $action->ability_name ) === null ) {
-			return __( 'The action this request needs is no longer available, so it cannot run. Reject it to clear it.', 'albert-ai-butler' );
+			return __( 'The action this request needs is no longer available. An administrator can clear it, or it will expire on its own.', 'albert-ai-butler' );
 		}
 
-		return __( 'You no longer have permission to perform this action yourself, so you cannot approve it. An administrator can.', 'albert-ai-butler' );
+		return __( 'You no longer have permission to perform this action yourself, so you cannot decide it. An administrator can, or it will expire on its own.', 'albert-ai-butler' );
 	}
 
 	/**
