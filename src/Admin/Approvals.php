@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\SafeMode\ApprovalUrl;
 use Albert\SafeMode\Approver;
+use Albert\SafeMode\InputPresenter;
 use Albert\SafeMode\PendingAction;
 use Albert\SafeMode\Repository;
 use Albert\SafeMode\TargetResolver;
@@ -377,7 +378,7 @@ class Approvals implements Hookable {
 
 		echo '<details class="albert-preview albert-approvals__request">';
 		echo '<summary>' . esc_html__( 'View the exact request', 'albert-ai-butler' ) . '</summary>';
-		echo '<div class="albert-preview__body" tabindex="0">' . esc_html( (string) wp_json_encode( $action->input, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ) . '</div>';
+		echo '<div class="albert-preview__body" tabindex="0">' . esc_html( (string) wp_json_encode( InputPresenter::for_display( $action->input, $action->ability_name ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ) . '</div>';
 		echo '</details>';
 
 		echo '</div>'; // .albert-dialog__body
