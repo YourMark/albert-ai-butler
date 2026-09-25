@@ -763,3 +763,44 @@ if ( ! function_exists( 'rest_validate_value_from_schema' ) ) {
 		return true;
 	}
 }
+
+if ( ! function_exists( 'rest_get_url_prefix' ) ) {
+	/**
+	 * Stub rest_get_url_prefix returning core's default.
+	 *
+	 * @return string
+	 */
+	function rest_get_url_prefix(): string {
+		return 'wp-json';
+	}
+}
+
+if ( ! class_exists( 'WP_Rewrite' ) ) {
+	/**
+	 * Minimal WP_Rewrite: just enough to answer using_index_permalinks().
+	 */
+	class WP_Rewrite {
+		/**
+		 * Front controller.
+		 *
+		 * @var string
+		 */
+		public $index = 'index.php';
+
+		/**
+		 * Permalink structure.
+		 *
+		 * @var string
+		 */
+		public $permalink_structure = '';
+
+		/**
+		 * Mirrors core.
+		 *
+		 * @return bool
+		 */
+		public function using_index_permalinks() {
+			return (bool) preg_match( '#^/*' . $this->index . '#', $this->permalink_structure );
+		}
+	}
+}
