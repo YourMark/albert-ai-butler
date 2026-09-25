@@ -198,6 +198,7 @@ Documentation at [albertwp.com/docs](https://albertwp.com/docs/), or the [WordPr
 
 * Asking your assistant to build a page with a layout block that holds other content (such as a Cover block wrapped around a heading and text) could silently save the block empty, losing everything inside it. These blocks now keep their contents.
 * In the rare case where a block's content genuinely can't be reproduced, the assistant is now told clearly, instead of the block being saved empty as if it had worked.
+* Pages your assistant built with blocks no longer trigger WordPress debug notices ("The type schema keyword for content...") each time they are displayed. Text is now saved only in the block itself, the way the block editor saves it.
 
 **Developer**
 
@@ -205,6 +206,7 @@ Documentation at [albertwp.com/docs](https://albertwp.com/docs/), or the [WordPr
 * Content stored in a text-sourced attribute (`core/verse`'s `content`, and the documented "put text in attributes" contract) is materialised into the block's markup rather than left inert in the comment JSON, where it would be lost on reload. Content stored in a structural source that can't be reproduced without the block's own `save()` (an element attribute, a `query`) is refused with an actionable error instead of silently dropped.
 * Adds `BlockSchema::markup_sourced_attributes()` and `BlockSchema::text_sourced_attributes()`, the registry readers behind those decisions.
 * `BlockSerializer::make_block()` now emits one inner-block placeholder per child even when a template supplies no `%children%` marker, so inner blocks can never be dropped from `innerContent`; nesting blocks under a block that doesn't accept them now warns rather than surprising the caller later.
+* Sourced block attributes (`content`, `text`, `url`, ...) are no longer written into the block comment JSON. Adds `BlockSchema::sourced_attributes()`.
 
 = 1.4.1 =
 Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that handle the sign-in discovery address themselves.
