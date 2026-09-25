@@ -4,7 +4,7 @@ Tags: ai assistant, chatgpt, claude, ai, mcp
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.4.1
+Stable tag: 1.4.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -176,7 +176,7 @@ Albert is built for single-site installations. Multisite support is on the roadm
 
 = What are the requirements? =
 
-WordPress 6.9 or higher, PHP 8.1 or higher (8.3+ recommended), MySQL 8.0+ or MariaDB 10.5+, and HTTPS, which OAuth 2.0 requires.
+WordPress 6.9 or higher, PHP 8.1 or higher (8.3+ recommended), MySQL 8.0+ or MariaDB 10.5+, HTTPS (OAuth 2.0 requires it), and any permalink setting other than Plain.
 
 = Where do I get support? =
 
@@ -191,6 +191,30 @@ Documentation at [albertwp.com/docs](https://albertwp.com/docs/), or the [WordPr
 5. The Skills screen: the task guides Albert ships, so you can read the exact guidance a connected assistant follows
 
 == Changelog ==
+
+= 1.4.2 =
+Fixes AI assistants that could not connect to some sites.
+
+**Improvements**
+
+* AI assistants can't connect when your permalinks (Settings &rarr; Permalinks) are set to "Plain". Albert's Dashboard now tells you when that's the case, with a link to change it. Any other permalink setting works.
+
+**Fixes**
+
+* Claude Code and some other AI assistants stopped at the sign-in step with an error about your site's sign-in details. They now find everything they need and connect.
+* AI assistants such as ChatGPT could not connect to sites whose page addresses include /index.php/ (for example example.com/index.php/about/). Albert now uses addresses that work with your permalink setting.
+
+**Developer**
+
+* The authorization server metadata now advertises `jwks_uri`, served from a new `albert/v1/oauth/jwks` REST route that publishes the token signing key's public half as an RFC 7517 JSON Web Key Set. Clients that validate the metadata before authenticating (Claude Code's MCP SDK requires `jwks_uri` to be a string, though RFC 8414 marks it optional) previously failed discovery outright.
+* Discovery now answers the RFC 8414 §3.1 and RFC 9728 §3.1 canonical path-insertion URLs (`/.well-known/oauth-authorization-server/<issuer path>` and `/.well-known/oauth-protected-resource/<resource path>`), not only the OIDC append form. These are root `.well-known` URLs, so on hosts that intercept a root `/.well-known/` the mid-path append form remains the one that works.
+* Every URL Albert advertises (issuer, endpoints, `resource_metadata`, the MCP endpoint under `albert/mcp/external_url`, `ClientRegistration::get_endpoint_url()`) now routes through `index.php` when the permalink structure does, and uses `rest_get_url_prefix()` instead of a hard-coded `wp-json`. New `ServerMetadata::url()`. Pretty-permalink sites get the same URLs as before, so existing connections are unaffected.
+* `ServerMetadata::base_url()` now delegates to `Server::get_base_url()`, so `albert/mcp/external_url` is read once per request and validated in one place.
+
+**Credits**
+
+* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting the Claude Code sign-in problem.
+* [Sébastien](https://wordpress.org/support/users/seb94100/) for reporting the /index.php/ connection problem, with the logs that pinpointed it.
 
 = 1.4.1 =
 Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that handle the sign-in discovery address themselves.
@@ -364,6 +388,9 @@ A bug-fix release.
 Releases before 1.1.1 are listed in `changelog.txt`, bundled with the plugin.
 
 == Upgrade Notice ==
+
+= 1.4.2 =
+Fixes Claude Code and other AI assistants that could not connect, including on sites whose page addresses include /index.php/. Recommended if an assistant could not connect.
 
 = 1.4.1 =
 Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that were blocking the sign-in step. Recommended if any assistant could not connect.

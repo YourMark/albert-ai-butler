@@ -54,6 +54,26 @@ class AttentionTest extends TestCase {
 	}
 
 	/**
+	 * Plain permalinks are flagged, and cannot be dismissed; any structure clears it.
+	 *
+	 * @return void
+	 */
+	public function test_plain_permalinks_are_flagged(): void {
+		$original = get_option( 'permalink_structure' );
+
+		update_option( 'permalink_structure', '' );
+		$items = array_column( ( new Attention() )->items( 1 ), null, 'id' );
+
+		$this->assertArrayHasKey( 'permalinks-plain', $items );
+		$this->assertFalse( Attention::is_dismissible( $items['permalinks-plain'] ) );
+
+		update_option( 'permalink_structure', '/index.php/%postname%/' );
+		$this->assertNotContains( 'permalinks-plain', $this->item_ids() );
+
+		update_option( 'permalink_structure', $original );
+	}
+
+	/**
 	 * Add-ons can contribute, and the filter runs before dismissal is applied
 	 * so their items can be dismissed too.
 	 *

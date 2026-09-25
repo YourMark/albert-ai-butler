@@ -17,6 +17,7 @@ use Albert\Core\Plugin;
 use Albert\Logging\ObservabilityHandler;
 use Albert\MCP\Skills\SkillLoader;
 use Albert\OAuth\Server\TokenValidator;
+use Albert\OAuth\ServerMetadata;
 use WP\MCP\Core\McpAdapter;
 use WP\MCP\Core\McpServer;
 use WP\MCP\Domain\Prompts\McpPrompt;
@@ -237,7 +238,7 @@ class Server implements Hookable {
 			return $response;
 		}
 
-		$resource_url = self::get_base_url() . '/wp-json/' . Plugin::rest_namespace() . '/oauth/resource';
+		$resource_url = ServerMetadata::rest_url( Plugin::rest_namespace() . '/oauth/resource' );
 		$token_sent   = ! empty( TokenValidator::get_bearer_token( $request ) );
 
 		header( 'WWW-Authenticate: ' . $this->build_challenge( $resource_url, $token_sent ) );
@@ -463,7 +464,7 @@ class Server implements Hookable {
 		$state = self::get_external_url_state();
 
 		if ( $state['state'] === 'active' ) {
-			return $state['value'] . '/wp-json/' . Plugin::rest_namespace() . '/' . self::ROUTE;
+			return ServerMetadata::rest_url( Plugin::rest_namespace() . '/' . self::ROUTE );
 		}
 
 		return rest_url( Plugin::rest_namespace() . '/' . self::ROUTE );
