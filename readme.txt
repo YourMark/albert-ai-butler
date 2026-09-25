@@ -176,7 +176,7 @@ Albert is built for single-site installations. Multisite support is on the roadm
 
 = What are the requirements? =
 
-WordPress 6.9 or higher, PHP 8.1 or higher (8.3+ recommended), MySQL 8.0+ or MariaDB 10.5+, and HTTPS, which OAuth 2.0 requires.
+WordPress 6.9 or higher, PHP 8.1 or higher (8.3+ recommended), MySQL 8.0+ or MariaDB 10.5+, HTTPS (OAuth 2.0 requires it), and any permalink setting other than Plain.
 
 = Where do I get support? =
 
