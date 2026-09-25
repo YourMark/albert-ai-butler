@@ -83,28 +83,8 @@ class Repository {
 			[ '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' ]
 		);
 
-		/**
-		 * Fires when a new destructive call is held for approval.
-		 *
-		 * One per genuinely new hold (a de-duped retry does not re-fire, having
-		 * returned early above). The single number worth watching before the
-		 * anti-fatigue work is scheduled: holds per ability tells whether the queue
-		 * is converging or growing. The pending-actions table already records the
-		 * same, but this survives any future retention pruning.
-		 *
-		 * @since 1.5.0
-		 *
-		 * @param string $ability_name The ability whose call was held.
-		 */
-		do_action( 'albert/safe_mode/held', $ability_name );
-
-		$this->forget_count( $user_id );
-
-		// A failed insert is not a hold. The caller would otherwise tell the
-		// assistant its request is queued and hand it a link to a queue that will
-		// never contain the row, while the screen says nothing is waiting: the
-		// same false reassurance the WP 7.1 notice exists to prevent, reached
-		// another way. Say so instead, loudly enough to be found.
+		// A failed insert is not a hold: the interceptor reports it as a failure
+		// rather than handing the assistant a link to a row that does not exist.
 		if ( $inserted === false ) {
 			/**
 			 * Fires when a hold could not be recorded.
@@ -118,6 +98,23 @@ class Repository {
 			 * @param string $error        The database error, if any.
 			 */
 			do_action( 'albert/safe_mode/hold_failed', $ability_name, (string) $wpdb->last_error );
+		} else {
+			/**
+			 * Fires when a new destructive call is held for approval.
+			 *
+			 * One per genuinely new hold (a de-duped retry does not re-fire, having
+			 * returned early above). The single number worth watching before the
+			 * anti-fatigue work is scheduled: holds per ability tells whether the queue
+			 * is converging or growing. The pending-actions table already records the
+			 * same, but this survives any future retention pruning.
+			 *
+			 * @since 1.5.0
+			 *
+			 * @param string $ability_name The ability whose call was held.
+			 */
+			do_action( 'albert/safe_mode/held', $ability_name );
+
+			$this->forget_count( $user_id );
 		}
 
 		$staged = $this->find( $action_id );
@@ -406,6 +403,29 @@ class Repository {
 	}
 
 	/**
+	 * The user a row belongs to, so a decision can clear that person's badge.
+	 *
+	 * @param int $id Row id.
+	 *
+	 * @return int|null Null when the row does not exist.
+	 * @since 1.5.0
+	 */
+	private function owner_of( int $id ): ?int {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct read on a custom table.
+		$user_id = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT user_id FROM %i WHERE id = %d',
+				Tables::pending_actions(),
+				$id
+			)
+		);
+
+		return $user_id === null ? null : (int) $user_id;
+	}
+
+	/**
 	 * Drop every cached count, site-wide and per user.
 	 *
 	 * Used by the bulk sweeps, which change rows belonging to many people at
@@ -458,7 +478,7 @@ class Repository {
 			)
 		);
 
-		$this->forget_count();
+		$this->forget_count( $this->owner_of( $id ) );
 
 		return (int) $claimed === 1;
 	}
@@ -516,7 +536,7 @@ class Repository {
 			)
 		);
 
-		$this->forget_count();
+		$this->forget_count( $this->owner_of( $id ) );
 
 		return (int) $rejected === 1;
 	}

@@ -175,6 +175,14 @@ class Interceptor implements Hookable {
 			$this->target_resolver->describe( $ability_name, $resolved )
 		);
 
+		if ( ! $pending->is_stored() ) {
+			return new WP_Error(
+				'albert_hold_failed',
+				__( 'This action was not performed. This site holds destructive changes for a person to approve first, but the request could not be recorded, so nothing is waiting for approval. Ask the site owner to check that Albert is installed correctly; retrying will not help until then.', 'albert-ai-butler' ),
+				[ 'status' => 500 ]
+			);
+		}
+
 		return $this->awaiting_approval( $pending );
 	}
 

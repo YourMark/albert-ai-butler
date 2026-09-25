@@ -124,6 +124,19 @@ class PendingAction {
 	}
 
 	/**
+	 * Whether this action was actually written to the queue.
+	 *
+	 * A failed insert still hands back an instance, id 0, so the caller has the
+	 * staged details to report; it must not be presented as queued.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public function is_stored(): bool {
+		return $this->id > 0;
+	}
+
+	/**
 	 * Build one from a database row.
 	 *
 	 * @param array<string, mixed> $row Row as returned by `$wpdb`, all values string|null.

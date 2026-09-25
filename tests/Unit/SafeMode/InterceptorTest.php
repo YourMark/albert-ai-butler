@@ -39,6 +39,13 @@ class RecordingRepository extends Repository {
 	public array $staged = [];
 
 	/**
+	 * Id handed back; 0 simulates an insert that failed.
+	 *
+	 * @var int
+	 */
+	public int $stored_id = 1;
+
+	/**
 	 * Record and return a staged action without persisting it.
 	 *
 	 * @param string      $ability_name The ability.
@@ -55,7 +62,7 @@ class RecordingRepository extends Repository {
 		$this->staged[] = compact( 'ability_name', 'input', 'user_id', 'client_id', 'client_name', 'ttl_seconds', 'target' );
 
 		return new PendingAction(
-			1,
+			$this->stored_id,
 			'action-ref-1',
 			$ability_name,
 			$input,
@@ -245,6 +252,27 @@ class InterceptorTest extends TestCase {
 		$this->assertSame( [ 'id' => 42 ], $this->repository->staged[0]['input'] );
 		$this->assertSame( 7, $this->repository->staged[0]['user_id'] );
 		$this->assertSame( 'client-1', $this->repository->staged[0]['client_id'] );
+	}
+
+	/**
+	 * A hold that could not be recorded is reported as a failure, not as queued.
+	 *
+	 * @return void
+	 */
+	public function test_reports_a_hold_that_could_not_be_recorded(): void {
+		ConnectionContext::set( 'client-1' );
+		$this->repository->stored_id = 0;
+
+		$result = $this->interceptor->intercept(
+			$this->sentinel,
+			'test/delete',
+			[ 'id' => 42 ],
+			$this->destructive()
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_hold_failed', $result->get_error_code() );
+		$this->assertStringNotContainsString( 'queued for approval', $result->get_error_message() );
 	}
 
 	/**

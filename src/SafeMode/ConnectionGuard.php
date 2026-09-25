@@ -91,6 +91,14 @@ class ConnectionGuard implements Hookable {
 	];
 
 	/**
+	 * The last attempt reported, as `operation:option`.
+	 *
+	 * @since 1.5.0
+	 * @var string|null
+	 */
+	private ?string $last_reported = null;
+
+	/**
 	 * Bind the guard to each protected option's sanitize filter.
 	 *
 	 * @return void
@@ -99,11 +107,6 @@ class ConnectionGuard implements Hookable {
 	public function register_hooks(): void {
 		foreach ( $this->protected_options() as $option ) {
 			// Late priority so the guard has the final say over the stored value.
-			// This one filter covers the network path too: add_network_option()
-			// and update_network_option() both call sanitize_option(), so there
-			// is no separate multisite write filter to bind. There is no
-			// `sanitize_site_option_*` in core; an earlier version hooked it and
-			// the callback simply never ran.
 			add_filter( "sanitize_option_{$option}", [ $this, 'refuse_over_connection' ], 99, 2 );
 
 			// Multisite writes their own store and need their own hooks. These
@@ -168,16 +171,6 @@ class ConnectionGuard implements Hookable {
 			return;
 		}
 
-		/**
-		 * Fires when an assistant deletes one of Albert's protected options.
-		 *
-		 * Deliberately a different hook from `option_write_blocked`: that one
-		 * says the write was refused, and this one cannot make that claim.
-		 *
-		 * @since 1.5.0
-		 *
-		 * @param string $option The option being deleted.
-		 */
 		$this->announce_delete( $option );
 	}
 
@@ -190,6 +183,10 @@ class ConnectionGuard implements Hookable {
 	 * @since 1.5.0
 	 */
 	private function announce_delete( string $option ): void {
+		if ( ! $this->first_report( 'delete', $option ) ) {
+			return;
+		}
+
 		/**
 		 * Fires when an assistant deletes one of Albert's protected options.
 		 *
@@ -314,6 +311,10 @@ class ConnectionGuard implements Hookable {
 	 * @since 1.5.0
 	 */
 	private function note_blocked( string $option ): void {
+		if ( ! $this->first_report( 'write', $option ) ) {
+			return;
+		}
+
 		/**
 		 * Fires when safe mode refuses an assistant's write to a protected option.
 		 *
@@ -324,6 +325,32 @@ class ConnectionGuard implements Hookable {
 		do_action( 'albert/safe_mode/option_write_blocked', $option );
 
 		AuditTrail::option_blocked( $option );
+	}
+
+	/**
+	 * Whether this attempt has not just been reported through another hook.
+	 *
+	 * One call can pass two of the guard's hooks: `add_site_option()` falls
+	 * through to `add_option()` on a single site, and runs `sanitize_option()`
+	 * after its own filter on a multisite. Only the report is de-duplicated;
+	 * every hook still refuses the write.
+	 *
+	 * @param string $operation `write` or `delete`.
+	 * @param string $option    The option name.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	private function first_report( string $operation, string $option ): bool {
+		$key = $operation . ':' . $option;
+
+		if ( $this->last_reported === $key ) {
+			return false;
+		}
+
+		$this->last_reported = $key;
+
+		return true;
 	}
 
 	/**

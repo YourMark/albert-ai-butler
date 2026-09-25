@@ -384,4 +384,48 @@ class RepositoryTest extends TestCase {
 		$this->assertSame( 0, $this->repository->purge_decided( 0 ) );
 		$this->assertSame( PendingAction::STATUS_REJECTED, $this->status_of( $action->id ) );
 	}
+
+	/**
+	 * A failed insert fires hold_failed, not held, and comes back unstored.
+	 *
+	 * @return void
+	 */
+	public function test_a_failed_insert_is_not_reported_as_a_hold(): void {
+		global $wpdb;
+
+		$break      = static fn ( string $query ): string => str_starts_with( $query, 'INSERT INTO `' . Tables::pending_actions() . '`' )
+			? 'INSERT INTO albert_no_such_table VALUES (1)'
+			: $query;
+		add_filter( 'query', $break );
+		$suppressed = $wpdb->suppress_errors( true );
+
+		$held_before   = did_action( 'albert/safe_mode/held' );
+		$failed_before = did_action( 'albert/safe_mode/hold_failed' );
+
+		$action = $this->stage();
+
+		$wpdb->suppress_errors( $suppressed );
+		remove_filter( 'query', $break );
+
+		$this->assertFalse( $action->is_stored() );
+		$this->assertSame( $held_before, did_action( 'albert/safe_mode/held' ) );
+		$this->assertSame( $failed_before + 1, did_action( 'albert/safe_mode/hold_failed' ) );
+	}
+
+	/**
+	 * Deciding a row clears its owner's cached count, not only the site-wide one.
+	 *
+	 * @return void
+	 */
+	public function test_a_decision_refreshes_the_owners_cached_count(): void {
+		$approved = $this->stage( [ 'id' => 1 ] );
+		$rejected = $this->stage( [ 'id' => 2 ] );
+		$this->assertSame( 2, $this->repository->count_open_for_user( 7 ) );
+
+		$this->repository->claim( $approved->id, 3 );
+		$this->assertSame( 1, $this->repository->count_open_for_user( 7 ) );
+
+		$this->repository->reject( $rejected->id, 3 );
+		$this->assertSame( 0, $this->repository->count_open_for_user( 7 ) );
+	}
 }
