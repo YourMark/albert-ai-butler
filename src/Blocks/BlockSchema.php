@@ -180,6 +180,27 @@ class BlockSchema {
 	}
 
 	/**
+	 * Attribute names of a block that declare any `source`, and so never belong
+	 * in the block's comment JSON. Mirrors the editor's serializer, which skips
+	 * every sourced attribute whatever the source.
+	 *
+	 * @param string $name Block name.
+	 * @return array<int, string>
+	 * @since 1.5.0
+	 */
+	public function sourced_attributes( string $name ): array {
+		$schema     = $this->block_schema( $name );
+		$attributes = is_array( $schema['attributes'] ?? null ) ? $schema['attributes'] : [];
+
+		$sourced = array_filter(
+			$attributes,
+			static fn ( $definition ): bool => is_array( $definition ) && isset( $definition['source'] )
+		);
+
+		return array_map( 'strval', array_keys( $sourced ) );
+	}
+
+	/**
 	 * Attribute names of a block whose `source` is in the given set.
 	 *
 	 * @param string             $name    Block name.

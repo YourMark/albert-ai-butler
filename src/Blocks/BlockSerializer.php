@@ -554,6 +554,11 @@ class BlockSerializer {
 			}
 		}
 
+		// Sourced attributes live in the markup. In the comment JSON they are
+		// ignored by the editor, and core's render-time validation raises a
+		// notice for each one typed 'rich-text'.
+		$attrs = array_diff_key( $attrs, array_flip( $this->schema->sourced_attributes( $name ) ) );
+
 		return [
 			'blockName'    => $name,
 			'attrs'        => $attrs,
