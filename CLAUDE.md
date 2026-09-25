@@ -479,7 +479,7 @@ resupply, but the word matters and the docblocks say *captured*.
 
 | Tier | Options | Behaviour |
 |---|---|---|
-| Albert's own controls | `albert_safe_mode`, `albert_disabled_abilities`, `albert_allowed_users`, `albert_privacy_mode`, OAuth key material | Refused outright by `ConnectionGuard`, never approvable |
+| Albert's own controls | `albert_safe_mode`, `albert_safe_mode_ttl_minutes`, `albert_disabled_abilities`, `albert_allowed_users`, `albert_privacy_mode`, OAuth key material | Refused outright by `ConnectionGuard`, never approvable |
 | High-risk WordPress options | `siteurl`, `home`, `admin_email`, `default_role`, `users_can_register`, `template`, `stylesheet`, `active_plugins`, `blog_public`, `permalink_structure` | Held for approval |
 | Everything else | all other options | Passes through |
 
