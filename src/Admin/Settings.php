@@ -97,6 +97,7 @@ class Settings implements Hookable {
 						</p>
 					</div>
 				</div>
+				<hr class="wp-header-end">
 
 				<?php Notices::render( 'albert_settings' ); ?>
 

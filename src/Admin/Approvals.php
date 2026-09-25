@@ -231,6 +231,7 @@ class Approvals implements Hookable {
 		echo '<h1 class="albert-page__title">' . esc_html__( 'Approvals', 'albert-ai-butler' ) . '</h1>';
 		echo '<p class="albert-page__description">' . esc_html__( 'Destructive actions your assistant requested are held here until you approve them. Approving runs the request exactly as it was made; rejecting discards it.', 'albert-ai-butler' ) . '</p>';
 		echo '</div></div>';
+		echo '<hr class="wp-header-end">';
 
 		$this->render_notice( $just );
 		$this->render_unenforceable_notice();
