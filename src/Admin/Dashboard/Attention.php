@@ -96,6 +96,7 @@ class Attention {
 		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
 
 		$items = array_merge(
+			$this->plain_permalinks(),
 			$this->unreachable_skills(),
 			$this->broken_endpoint_override()
 		);
@@ -205,6 +206,39 @@ class Attention {
 					),
 				],
 				'dismissible' => true,
+			],
+		];
+	}
+
+	/**
+	 * Plain permalinks, which no assistant can connect through.
+	 *
+	 * An exception to "a deliberate setting is not an item": the owner chose
+	 * Plain, but not the consequence. With no rewrite rules only query strings
+	 * reach WordPress, and the OAuth issuer must be a path (RFC 8414 forbids a
+	 * query), so every connection fails. Not dismissible for the same reason.
+	 *
+	 * @since 1.4.2
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function plain_permalinks(): array {
+		if ( (string) get_option( 'permalink_structure' ) !== '' ) {
+			return [];
+		}
+
+		return [
+			[
+				'id'          => 'permalinks-plain',
+				'tone'        => 'danger',
+				'tone_label'  => __( 'Can\'t connect', 'albert-ai-butler' ),
+				'title'       => __( 'Assistants can\'t connect while permalinks are set to Plain', 'albert-ai-butler' ),
+				'detail'      => __( 'Albert\'s sign-in addresses need a permalink structure. Choose any other setting, such as Post name.', 'albert-ai-butler' ),
+				'action'      => [
+					'label' => __( 'Change permalinks', 'albert-ai-butler' ),
+					'url'   => admin_url( 'options-permalink.php' ),
+				],
+				'dismissible' => false,
 			],
 		];
 	}

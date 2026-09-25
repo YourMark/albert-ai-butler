@@ -24,6 +24,8 @@ Think of abilities as superpowers that you can grant to AI assistants - from man
 - **PHP**: 8.1 or higher (8.3+ recommended)
 - **WooCommerce**: 10.4 or higher (if WooCommerce integration is used)
 - **MySQL**: 8.0+ or MariaDB 10.5+
+- **HTTPS**: required for OAuth
+- **Permalinks**: any setting other than Plain
 
 ## Installation
 

@@ -12,6 +12,7 @@ namespace Albert\OAuth;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Core\Plugin;
+use Albert\MCP\Server as McpServer;
 
 /**
  * ServerMetadata class
@@ -49,13 +50,11 @@ class ServerMetadata {
 	 * @since 1.4.0
 	 */
 	public static function authorization_server(): array {
-		$base_url = self::base_url();
-
 		return [
 			// Required fields. The issuer is a path, not the bare domain
 			// (see issuer_url()); the endpoints are their own absolute URLs.
 			'issuer'                                => self::issuer_url(),
-			'authorization_endpoint'                => $base_url . '/oauth/authorize',
+			'authorization_endpoint'                => self::url( 'oauth/authorize' ),
 			'token_endpoint'                        => self::rest_url( Plugin::rest_namespace() . '/oauth/token' ),
 			'registration_endpoint'                 => self::rest_url( Plugin::rest_namespace() . '/oauth/register' ),
 
@@ -118,25 +117,14 @@ class ServerMetadata {
 	/**
 	 * The base URL for OAuth endpoints.
 	 *
-	 * Uses the external URL setting when one is configured and valid, otherwise
-	 * `home_url()`.
+	 * The external URL override when one is set and valid, otherwise `home_url()`.
+	 * Delegates so the override filter is read, cached and diagnosed in one place.
 	 *
 	 * @return string The base URL.
 	 * @since 1.4.0
 	 */
 	public static function base_url(): string {
-		$external_url = (string) apply_filters( 'albert/mcp/external_url', '' );
-		$external_url = rtrim( $external_url, '/' );
-
-		if ( $external_url !== '' ) {
-			$validated = wp_http_validate_url( $external_url );
-
-			if ( $validated !== false ) {
-				return $validated;
-			}
-		}
-
-		return home_url();
+		return McpServer::get_base_url();
 	}
 
 	/**
@@ -151,6 +139,30 @@ class ServerMetadata {
 	 * @since 1.4.0
 	 */
 	public static function rest_url( string $path ): string {
-		return self::base_url() . '/wp-json/' . ltrim( $path, '/' );
+		return self::url( rest_get_url_prefix() . '/' . ltrim( $path, '/' ) );
+	}
+
+	/**
+	 * A URL on the current base URL, routed the way this site's permalinks route it.
+	 *
+	 * Permalinks containing `/index.php/` usually mean the server has no rewrite
+	 * rules, so only paths behind `index.php` reach WordPress and a bare
+	 * `/wp-json/` is the web server's 404. Plain permalinks are unsupported: they
+	 * route no path at all, and the issuer cannot be a query string. The
+	 * Dashboard flags them.
+	 *
+	 * @param string $path Path relative to the site root.
+	 *
+	 * @return string The full URL.
+	 * @since 1.4.2
+	 */
+	public static function url( string $path ): string {
+		global $wp_rewrite;
+
+		$index = $wp_rewrite instanceof \WP_Rewrite && $wp_rewrite->using_index_permalinks()
+			? '/' . $wp_rewrite->index
+			: '';
+
+		return self::base_url() . $index . '/' . ltrim( $path, '/' );
 	}
 }
