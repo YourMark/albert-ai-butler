@@ -182,7 +182,7 @@ class Approvals implements Hookable {
 			$this->redirect_with_notice( 'gone' );
 		}
 
-		$this->redirect_with_notice( is_wp_error( $result ) ? 'failed' : 'approved' );
+		$this->redirect_with_notice( is_wp_error( $result ) ? 'failed' : 'approved', $action->action_id );
 	}
 
 	/**
@@ -196,7 +196,11 @@ class Approvals implements Hookable {
 
 		$rejected = $this->approver->reject( $action, get_current_user_id() );
 
-		$this->redirect_with_notice( $rejected ? 'rejected' : 'gone' );
+		if ( ! $rejected ) {
+			$this->redirect_with_notice( 'gone' );
+		}
+
+		$this->redirect_with_notice( 'rejected', $action->action_id );
 	}
 
 	/**
@@ -218,6 +222,7 @@ class Approvals implements Hookable {
 		$open    = $all ? $this->repository->list_open() : $this->repository->list_open_for_user( $user_id );
 		$decided = $all ? $this->repository->list_decided() : $this->repository->list_decided_for_user( $user_id );
 		$focus   = isset( $_GET['pending'] ) ? sanitize_text_field( wp_unslash( $_GET['pending'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only focus hint, no state change.
+		$just    = $this->just_decided( $decided );
 
 		echo '<div class="wrap albert-approvals">';
 		echo '<div class="albert-page albert-approvals__page">';
@@ -227,7 +232,7 @@ class Approvals implements Hookable {
 		echo '<p class="albert-page__description">' . esc_html__( 'Destructive actions your assistant requested are held here until you approve them. Approving runs the request exactly as it was made; rejecting discards it.', 'albert-ai-butler' ) . '</p>';
 		echo '</div></div>';
 
-		$this->render_notice();
+		$this->render_notice( $just );
 		$this->render_unenforceable_notice();
 
 		if ( $focus !== '' && ! $this->has_open_action( $open, $focus ) ) {
@@ -239,7 +244,7 @@ class Approvals implements Hookable {
 		echo '<div class="albert-page__body">';
 
 		$this->render_open( $open, $focus );
-		$this->render_decided( $decided );
+		$this->render_decided( $decided, $just );
 
 		echo '</div>'; // .albert-page__body
 
@@ -558,11 +563,12 @@ class Approvals implements Hookable {
 	 * a four-column table has nowhere to go at 360px.
 	 *
 	 * @param list<PendingAction> $decided Recently decided actions.
+	 * @param PendingAction|null  $just    The action decided just now, highlighted.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	private function render_decided( array $decided ): void {
+	private function render_decided( array $decided, ?PendingAction $just = null ): void {
 		if ( empty( $decided ) ) {
 			return;
 		}
@@ -576,7 +582,7 @@ class Approvals implements Hookable {
 		echo '<ul class="albert-approvals__list albert-approvals__list--decided">';
 
 		foreach ( $decided as $action ) {
-			$this->render_decided_row( $action );
+			$this->render_decided_row( $action, $just !== null && $just->action_id === $action->action_id );
 		}
 
 		echo '</ul>';
@@ -591,19 +597,21 @@ class Approvals implements Hookable {
 	 * (`Approver` stores an error shape, never a payload). A successful run's
 	 * result is never rendered — it can hold a credential the caller was handed.
 	 *
-	 * @param PendingAction $action The decided action.
+	 * @param PendingAction $action  The decided action.
+	 * @param bool          $is_just Whether it was decided just now.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	private function render_decided_row( PendingAction $action ): void {
+	private function render_decided_row( PendingAction $action, bool $is_just = false ): void {
 		[ $tone, $label ] = $this->status_badge( $action->status );
 		$who              = $action->decided_by !== null ? $this->user_label( $action->decided_by ) : '';
+		$classes          = 'albert-approvals__decided-item' . ( $is_just ? ' albert-approvals__decided-item--just' : '' );
 
-		echo '<li class="albert-approvals__decided-item">';
+		echo '<li class="' . esc_attr( $classes ) . '">';
 
 		echo '<p class="albert-approvals__item-title">';
-		echo esc_html( $this->ability_label( $action->ability_name ) );
+		echo esc_html( $this->decided_line( $action ) );
 		echo ' <span class="albert-badge' . ( $tone !== '' ? ' albert-badge--' . esc_attr( $tone ) : '' ) . '">' . esc_html( $label ) . '</span>';
 		echo '</p>';
 
@@ -696,32 +704,87 @@ class Approvals implements Hookable {
 	/**
 	 * Redirect back to the queue with a result notice, then stop.
 	 *
-	 * @param string $outcome One of approved|failed|rejected|gone.
+	 * @param string $outcome   One of approved|failed|rejected|gone|blocked.
+	 * @param string $action_id The action just decided, so the notice can name it.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	private function redirect_with_notice( string $outcome ): void {
-		wp_safe_redirect( add_query_arg( 'albert_notice', $outcome, ApprovalUrl::queue() ) );
+	private function redirect_with_notice( string $outcome, string $action_id = '' ): void {
+		$args = [ 'albert_notice' => $outcome ];
+
+		if ( $action_id !== '' ) {
+			$args['decided'] = $action_id;
+		}
+
+		wp_safe_redirect( add_query_arg( $args, ApprovalUrl::queue() ) );
 		exit;
+	}
+
+	/**
+	 * The action the redirect says was just decided, if this viewer can see it.
+	 *
+	 * Looked up in the viewer's own decided list, never by id alone, so a crafted
+	 * `decided` value cannot surface another person's action.
+	 *
+	 * @param list<PendingAction> $decided The viewer's recently decided actions.
+	 *
+	 * @return PendingAction|null
+	 * @since 1.5.0
+	 */
+	private function just_decided( array $decided ): ?PendingAction {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only highlight hint, no state change.
+		$action_id = isset( $_GET['decided'] ) ? sanitize_text_field( wp_unslash( $_GET['decided'] ) ) : '';
+
+		if ( $action_id === '' ) {
+			return null;
+		}
+
+		foreach ( $decided as $action ) {
+			if ( $action->action_id === $action_id ) {
+				return $action;
+			}
+		}
+
+		return null;
 	}
 
 	/**
 	 * Render the result notice from the redirect, if present.
 	 *
+	 * Names the action when it is known, so the notice says which request it is
+	 * about; the Recently decided list below shows it highlighted.
+	 *
+	 * @param PendingAction|null $subject The action decided just now, if known.
+	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	private function render_notice(): void {
+	private function render_notice( ?PendingAction $subject = null ): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, cosmetic notice keyed to a fixed vocabulary.
 		$notice = isset( $_GET['albert_notice'] ) ? sanitize_key( wp_unslash( $_GET['albert_notice'] ) ) : '';
+		$name   = $subject !== null ? $this->decided_line( $subject ) : '';
 
-		$messages = [
-			'approved' => [ 'success', __( 'Approved. The request was run.', 'albert-ai-butler' ) ],
-			'failed'   => [ 'error', __( 'Approved, but the request could not be completed. See Recently decided for details.', 'albert-ai-butler' ) ],
-			'rejected' => [ 'success', __( 'Rejected. The request was discarded and never ran.', 'albert-ai-butler' ) ],
-			'gone'     => [ 'info', __( 'That request was no longer waiting for a decision.', 'albert-ai-butler' ) ],
-			'blocked'  => [ 'error', __( 'You are no longer able to decide that request. Your permission may have changed since it was requested.', 'albert-ai-butler' ) ],
+		if ( $name !== '' ) {
+			$messages = [
+				/* translators: %s: the decided request, e.g. "Delete a page: About us". */
+				'approved' => [ 'success', sprintf( __( 'Approved and run: %s.', 'albert-ai-butler' ), $name ) ],
+				/* translators: %s: the decided request, e.g. "Delete a page: About us". */
+				'failed'   => [ 'error', sprintf( __( 'Approved, but it could not be completed: %s. See Recently decided for details.', 'albert-ai-butler' ), $name ) ],
+				/* translators: %s: the decided request, e.g. "Delete a page: About us". */
+				'rejected' => [ 'success', sprintf( __( 'Rejected: %s. It never ran.', 'albert-ai-butler' ), $name ) ],
+			];
+		} else {
+			$messages = [
+				'approved' => [ 'success', __( 'Approved. The request was run.', 'albert-ai-butler' ) ],
+				'failed'   => [ 'error', __( 'Approved, but the request could not be completed. See Recently decided for details.', 'albert-ai-butler' ) ],
+				'rejected' => [ 'success', __( 'Rejected. The request was discarded and never ran.', 'albert-ai-butler' ) ],
+			];
+		}
+
+		$messages += [
+			'gone'    => [ 'info', __( 'That request was no longer waiting for a decision.', 'albert-ai-butler' ) ],
+			'blocked' => [ 'error', __( 'You are no longer able to decide that request. Your permission may have changed since it was requested.', 'albert-ai-butler' ) ],
 		];
 
 		if ( ! isset( $messages[ $notice ] ) ) {
@@ -731,6 +794,30 @@ class Approvals implements Hookable {
 		[ $level, $text ] = $messages[ $notice ];
 
 		echo '<div class="notice notice-' . esc_attr( $level ) . ' is-dismissible"><p>' . esc_html( $text ) . '</p></div>';
+	}
+
+	/**
+	 * A decided action's name: its ability plus the object as it was when staged.
+	 *
+	 * The staged label, not the current one: after an approved delete the object
+	 * is gone, and naming it by its current state would read "(trash)".
+	 *
+	 * @param PendingAction $action The decided action.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	private function decided_line( PendingAction $action ): string {
+		$object = (string) ( $action->target['label'] ?? '' );
+
+		return $this->consequence_line(
+			$action,
+			[
+				'object'  => $object !== '' ? $object : null,
+				'gone'    => false,
+				'drifted' => false,
+			]
+		);
 	}
 
 	/**

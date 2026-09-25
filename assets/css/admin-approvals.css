@@ -109,6 +109,10 @@
    Decided item
    ========================================================================== */
 
+.albert-approvals__decided-item--just {
+	background: var(--albert-color-accent-surface);
+}
+
 .albert-approvals__decided-item .albert-approvals__item-title {
 	font-weight: var(--albert-font-weight-normal);
 }
@@ -208,12 +212,13 @@
    ========================================================================== */
 
 /**
- * A one-time settle on the deep-linked row, so a person who followed a link
- * sees where it landed them. The steady state is the tint above; this only
+ * A one-time settle on the deep-linked row and the row just decided, so a
+ * person sees where they landed. The steady state is the tint above; this only
  * fades in over it, and is skipped entirely under reduced-motion.
  */
 @media (prefers-reduced-motion: no-preference) {
-	.albert-approvals__item--focus {
+	.albert-approvals__item--focus,
+	.albert-approvals__decided-item--just {
 		animation: albert-approvals-settle var(--albert-duration-panel) var(--albert-easing-panel);
 	}
 
