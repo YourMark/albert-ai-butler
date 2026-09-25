@@ -77,6 +77,36 @@ if ( ! class_exists( 'WP_Ability' ) ) {
 		public function get_input_schema(): array {
 			return $this->input_schema;
 		}
+
+		/**
+		 * Get a single meta item by key.
+		 *
+		 * @param string $key           Meta key.
+		 * @param mixed  $default_value Value when the key is absent.
+		 *
+		 * @return mixed
+		 */
+		public function get_meta_item( string $key, $default_value = null ) {
+			return array_key_exists( $key, $this->meta ) ? $this->meta[ $key ] : $default_value;
+		}
+
+		/**
+		 * Permission result the stub returns; set to a WP_Error or false to deny.
+		 *
+		 * @var mixed
+		 */
+		public $permission = true;
+
+		/**
+		 * Stub permission check returning the configured result.
+		 *
+		 * @param mixed $input Ability input (ignored by the stub).
+		 *
+		 * @return mixed
+		 */
+		public function check_permissions( $input = null ) {
+			return $this->permission;
+		}
 	}
 }
 
