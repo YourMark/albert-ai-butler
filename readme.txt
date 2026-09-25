@@ -193,26 +193,28 @@ Documentation at [albertwp.com/docs](https://albertwp.com/docs/), or the [WordPr
 == Changelog ==
 
 = 1.4.2 =
-Fixes AI assistants failing to connect on some sites.
+Fixes AI assistants that could not connect to some sites.
 
 **Improvements**
 
-* The Dashboard now warns when permalinks are set to Plain, because assistants can't connect with that setting. Any other setting works.
+* AI assistants can't connect when your permalinks (Settings &rarr; Permalinks) are set to "Plain". Albert's Dashboard now tells you when that's the case, with a link to change it. Any other permalink setting works.
 
 **Fixes**
 
-* Some AI assistants (including Claude Code) would not connect, reporting a problem with the sign-in information. Albert now includes the missing detail, so they connect again.
-* AI assistants could not sign in on sites whose permalinks contain `/index.php/`. Albert now gives assistants addresses that follow your permalink setting.
+* Claude Code and some other AI assistants stopped at the sign-in step with an error about your site's sign-in details. They now find everything they need and connect.
+* AI assistants such as ChatGPT could not connect to sites whose page addresses include /index.php/ (for example example.com/index.php/about/). Albert now uses addresses that work with your permalink setting.
 
 **Developer**
 
 * The authorization server metadata now advertises `jwks_uri`, served from a new `albert/v1/oauth/jwks` REST route that publishes the token signing key's public half as an RFC 7517 JSON Web Key Set. Clients that validate the metadata before authenticating (Claude Code's MCP SDK requires `jwks_uri` to be a string, though RFC 8414 marks it optional) previously failed discovery outright.
 * Discovery now answers the RFC 8414 §3.1 and RFC 9728 §3.1 canonical path-insertion URLs (`/.well-known/oauth-authorization-server/<issuer path>` and `/.well-known/oauth-protected-resource/<resource path>`), not only the OIDC append form. These are root `.well-known` URLs, so on hosts that intercept a root `/.well-known/` the mid-path append form remains the one that works.
-* Every URL Albert advertises (issuer, endpoints, `resource_metadata`, the MCP endpoint under `albert/mcp/external_url`) now routes through `index.php` when the permalink structure does, instead of assuming `/wp-json/` and `/oauth/authorize` resolve. New `ServerMetadata::url()`. Pretty-permalink sites get the same URLs as before, so existing connections are unaffected.
+* Every URL Albert advertises (issuer, endpoints, `resource_metadata`, the MCP endpoint under `albert/mcp/external_url`, `ClientRegistration::get_endpoint_url()`) now routes through `index.php` when the permalink structure does, and uses `rest_get_url_prefix()` instead of a hard-coded `wp-json`. New `ServerMetadata::url()`. Pretty-permalink sites get the same URLs as before, so existing connections are unaffected.
+* `ServerMetadata::base_url()` now delegates to `Server::get_base_url()`, so `albert/mcp/external_url` is read once per request and validated in one place.
 
 **Credits**
 
-* Thanks to seb94100 for the report and access logs that pinpointed the permalink issue.
+* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting the Claude Code sign-in problem.
+* [Sébastien](https://wordpress.org/support/users/seb94100/) for reporting the /index.php/ connection problem, with the logs that pinpointed it.
 
 = 1.4.1 =
 Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that handle the sign-in discovery address themselves.
@@ -388,7 +390,7 @@ Releases before 1.1.1 are listed in `changelog.txt`, bundled with the plugin.
 == Upgrade Notice ==
 
 = 1.4.2 =
-Fixes AI assistants failing to connect, including Claude Code and sites whose permalinks contain /index.php/. Recommended if any assistant could not connect.
+Fixes Claude Code and other AI assistants that could not connect, including on sites whose page addresses include /index.php/. Recommended if an assistant could not connect.
 
 = 1.4.1 =
 Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that were blocking the sign-in step. Recommended if any assistant could not connect.
