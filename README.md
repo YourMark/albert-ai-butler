@@ -24,6 +24,8 @@ Think of abilities as superpowers that you can grant to AI assistants - from man
 - **PHP**: 8.1 or higher (8.3+ recommended)
 - **WooCommerce**: 10.4 or higher (if WooCommerce integration is used)
 - **MySQL**: 8.0+ or MariaDB 10.5+
+- **HTTPS**: required for OAuth
+- **Permalinks**: any setting other than Plain
 
 ## Installation
 
@@ -116,6 +118,31 @@ Adds safe mode, which holds destructive actions for your approval, and closes a 
 - `BaseAbility::check_rest_permission()` no longer carries a dead regex branch for pattern routes — a `preg_match()` against the REST route table's keys that could never match. The behaviour it fell through to is now explicit: a single-object route such as `/wp/v2/posts/(?P<id>[\d]+)` is gated by the ability's declared capability at this pre-execution stage, because its endpoint permission callback needs a target id that is not known yet; the exact per-object check still runs at execution via `rest_do_request()`. Plain collection routes still delegate to their own permission callback. No behaviour change.
 - `albert/create-user` no longer accepts a `password` input. It is gone from the schema, so a schema-validating client cannot send one; the password is generated with `wp_generate_password()` at execution time and never disclosed. The result carries a one-time `password_reset_url`, declared in `sensitive_output_keys` so every `after_execute` observer sees `[redacted]` while the caller gets the real link. No notification email is sent, deliberately: `wp_new_user_notification()` mints a reset key of its own, and whichever key is issued second invalidates the first, so emailing would either kill the returned link or return a dead one. `albert/update-user` likewise drops `password` from its schema and refuses a supplied one at execution with `password_change_refused`. The Abilities API does not forbid unrecognised keys, and refusing at execution means the attempt is logged rather than swallowed as a validation rejection, which `ToolCallObserver` deliberately does not record. Both abilities gained `instructions` annotations so a model is told at call time rather than learning by rejection.
 - New read-only pattern abilities `albert/find-patterns` and `albert/view-pattern`. They expose theme- and plugin-registered patterns (`WP_Block_Patterns_Registry`) and user `wp_block` patterns: find returns summaries filterable by search term and category, view returns one pattern's block markup by name. Backed by `Albert\Blocks\PatternCatalog`; each pattern carries a `source` of `registered` or `user`, plus a `syncStatus` and, for user patterns, an `id`, so a synced pattern can be reused by reference (`core/block`) rather than copied. `albert/create-pattern` composes blocks through the serializer and stores them as a wp_block pattern, synced or unsynced. `albert/update-pattern` and `albert/delete-pattern` edit and remove user patterns (registered patterns are read-only).
+
+### 1.4.2
+
+Fixes AI assistants that could not connect to some sites.
+
+**Improvements**
+
+- AI assistants can't connect when your permalinks (Settings → Permalinks) are set to "Plain". Albert's Dashboard now tells you when that's the case, with a link to change it. Any other permalink setting works.
+
+**Fixes**
+
+- Claude Code and some other AI assistants stopped at the sign-in step with an error about your site's sign-in details. They now find everything they need and connect.
+- AI assistants such as ChatGPT could not connect to sites whose page addresses include /index.php/ (for example example.com/index.php/about/). Albert now uses addresses that work with your permalink setting.
+
+**Developer**
+
+- The authorization server metadata now advertises `jwks_uri`, served from a new `albert/v1/oauth/jwks` REST route that publishes the token signing key's public half as an RFC 7517 JSON Web Key Set. Clients that validate the metadata before authenticating (Claude Code's MCP SDK requires `jwks_uri` to be a string, though RFC 8414 marks it optional) previously failed discovery outright.
+- Discovery now answers the RFC 8414 §3.1 and RFC 9728 §3.1 canonical path-insertion URLs (`/.well-known/oauth-authorization-server/<issuer path>` and `/.well-known/oauth-protected-resource/<resource path>`), not only the OIDC append form. These are root `.well-known` URLs, so on hosts that intercept a root `/.well-known/` the mid-path append form remains the one that works.
+- Every URL Albert advertises (issuer, endpoints, `resource_metadata`, the MCP endpoint under `albert/mcp/external_url`, `ClientRegistration::get_endpoint_url()`) now routes through `index.php` when the permalink structure does, and uses `rest_get_url_prefix()` instead of a hard-coded `wp-json`. New `ServerMetadata::url()`. Pretty-permalink sites get the same URLs as before, so existing connections are unaffected.
+- `ServerMetadata::base_url()` now delegates to `Server::get_base_url()`, so `albert/mcp/external_url` is read once per request and validated in one place.
+
+**Credits**
+
+- [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting the Claude Code sign-in problem.
+- [Sébastien](https://wordpress.org/support/users/seb94100/) for reporting the /index.php/ connection problem, with the logs that pinpointed it.
 
 ### 1.4.1
 

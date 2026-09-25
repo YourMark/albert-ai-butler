@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Exception;
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\Plugin;
+use Albert\OAuth\Jwks;
 use Albert\OAuth\Server\AuthorizationServerFactory;
 use Albert\OAuth\ServerMetadata;
 use League\OAuth2\Server\Exception\OAuthServerException;
@@ -89,6 +90,18 @@ class OAuthController implements Hookable {
 			[
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => [ $this, 'handle_protected_resource_metadata' ],
+				'permission_callback' => '__return_true',
+			]
+		);
+
+		// JSON Web Key Set - the public half of the token signing key. Named as
+		// `jwks_uri` in the authorization server metadata (see ServerMetadata).
+		register_rest_route(
+			Plugin::rest_namespace(),
+			'/oauth/jwks',
+			[
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'handle_jwks' ],
 				'permission_callback' => '__return_true',
 			]
 		);
@@ -207,6 +220,21 @@ class OAuthController implements Hookable {
 	 */
 	public function handle_protected_resource_metadata(): WP_REST_Response {
 		$response = new WP_REST_Response( ServerMetadata::protected_resource(), 200 );
+		$response->header( 'Cache-Control', 'public, max-age=3600' );
+
+		return $response;
+	}
+
+	/**
+	 * Handle JSON Web Key Set request.
+	 *
+	 * Returns the RFC 7517 key set published as `jwks_uri` in the metadata.
+	 *
+	 * @return WP_REST_Response The key set response.
+	 * @since 1.4.2
+	 */
+	public function handle_jwks(): WP_REST_Response {
+		$response = new WP_REST_Response( Jwks::document(), 200 );
 		$response->header( 'Cache-Control', 'public, max-age=3600' );
 
 		return $response;
