@@ -113,6 +113,26 @@ class ServerMetadataTest extends TestCase {
 	}
 
 	/**
+	 * `jwks_uri` is present and a non-empty string.
+	 *
+	 * The regression this guards: the field was absent entirely, and a client
+	 * that validates the metadata before it authenticates — Claude Code's MCP
+	 * SDK — rejected the document with "jwks_uri: expected string, received
+	 * undefined", failing sign-in before a token was ever exchanged. RFC 8414
+	 * marks the field optional; that client does not.
+	 *
+	 * @return void
+	 */
+	public function test_declares_a_string_jwks_uri(): void {
+		$metadata = ServerMetadata::authorization_server();
+
+		$this->assertArrayHasKey( 'jwks_uri', $metadata );
+		$this->assertIsString( $metadata['jwks_uri'] );
+		$this->assertNotEmpty( $metadata['jwks_uri'] );
+		$this->assertStringStartsWith( ServerMetadata::base_url() . '/wp-json/', $metadata['jwks_uri'] );
+	}
+
+	/**
 	 * REST URLs are built on the OAuth base URL, not on `rest_url()`.
 	 *
 	 * An MCP client told to use an external URL must be handed endpoints on

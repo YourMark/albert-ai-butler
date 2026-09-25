@@ -90,12 +90,10 @@ class OAuthDiscovery implements Hookable {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
 
-		$path = $this->extract_well_known_path( $request_uri );
+		$discovery = $this->classify_well_known( $request_uri );
 
-		if ( $path === 'oauth-protected-resource' ) {
-			$wp->query_vars['albert_oauth_discovery'] = 'protected-resource';
-		} elseif ( $path === 'oauth-authorization-server' ) {
-			$wp->query_vars['albert_oauth_discovery'] = 'authorization-server';
+		if ( $discovery !== '' ) {
+			$wp->query_vars['albert_oauth_discovery'] = $discovery;
 		}
 	}
 
@@ -108,9 +106,35 @@ class OAuthDiscovery implements Hookable {
 	 * @since 1.1.1
 	 */
 	private function is_well_known_request( string $url ): bool {
-		$path = $this->extract_well_known_path( $url );
+		return $this->classify_well_known( $url ) !== '';
+	}
 
-		return $path === 'oauth-protected-resource' || $path === 'oauth-authorization-server';
+	/**
+	 * Classify a URL as one of Albert's discovery endpoints, or not one.
+	 *
+	 * Recognises both the empty-path root form (`oauth-authorization-server`)
+	 * and the RFC 8414 §3.1 / RFC 9728 §3.1 path-insertion form, where a resource
+	 * path follows the well-known type (`oauth-authorization-server/wp-json/...`).
+	 * Prefix matching, so an upstream proxy's added trailing slash does not
+	 * change the answer, the same resilience the rewrite layer needs.
+	 *
+	 * @param string $url The URL to inspect.
+	 *
+	 * @return string `authorization-server`, `protected-resource`, or `''`.
+	 * @since 1.4.2
+	 */
+	private function classify_well_known( string $url ): string {
+		$suffix = $this->extract_well_known_path( $url );
+
+		if ( $suffix === 'oauth-authorization-server' || str_starts_with( $suffix, 'oauth-authorization-server/' ) ) {
+			return 'authorization-server';
+		}
+
+		if ( $suffix === 'oauth-protected-resource' || str_starts_with( $suffix, 'oauth-protected-resource/' ) ) {
+			return 'protected-resource';
+		}
+
+		return '';
 	}
 
 	/**
@@ -170,6 +194,28 @@ class OAuthDiscovery implements Hookable {
 		// OAuth Protected Resource Metadata (RFC 9728 / MCP spec).
 		add_rewrite_rule(
 			'^\.well-known/oauth-protected-resource/?$',
+			'index.php?albert_oauth_discovery=protected-resource',
+			'top'
+		);
+
+		// The RFC 8414 §3.1 / RFC 9728 §3.1 canonical form, where the issuer or
+		// resource path is inserted *after* the well-known segment (for us,
+		// `/.well-known/oauth-authorization-server/wp-json/albert/v1/oauth`). A
+		// strict client builds exactly this and never tries the append form the
+		// routes above cover. The single document is served for any resource
+		// path under the type: this site has one authorization server and one
+		// protected resource, and the document is public and identical either
+		// way. These are root `.well-known` URLs, so on a host that intercepts a
+		// root `/.well-known/` they never reach WordPress — the mid-path append
+		// form remains the one that always works there (see ServerMetadata).
+		add_rewrite_rule(
+			'^\.well-known/oauth-authorization-server/.+$',
+			'index.php?albert_oauth_discovery=authorization-server',
+			'top'
+		);
+
+		add_rewrite_rule(
+			'^\.well-known/oauth-protected-resource/.+$',
 			'index.php?albert_oauth_discovery=protected-resource',
 			'top'
 		);

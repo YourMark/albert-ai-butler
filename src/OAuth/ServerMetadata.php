@@ -58,6 +58,16 @@ class ServerMetadata {
 			'token_endpoint'                        => self::rest_url( Plugin::rest_namespace() . '/oauth/token' ),
 			'registration_endpoint'                 => self::rest_url( Plugin::rest_namespace() . '/oauth/register' ),
 
+			/*
+			 * `jwks_uri` is optional under RFC 8414, but a conforming client
+			 * validates the metadata before it authenticates and some — Claude
+			 * Code's MCP SDK among them — require it to be a string. Omitting it
+			 * fails discovery outright. It is a mid-path REST URL, not a
+			 * `.well-known` path, so hosts that intercept a root `/.well-known/`
+			 * leave it alone (see issuer_url()).
+			 */
+			'jwks_uri'                              => self::rest_url( Plugin::rest_namespace() . '/oauth/jwks' ),
+
 			// Recommended fields.
 			'response_types_supported'              => [ 'code' ],
 			'grant_types_supported'                 => [ 'authorization_code', 'refresh_token' ],
