@@ -109,6 +109,32 @@ class OAuthDiscoveryTest extends TestCase {
 	}
 
 	/**
+	 * The RFC 8414 §3.1 path-insertion form is intercepted.
+	 *
+	 * A strict client looks up `/.well-known/oauth-authorization-server/<issuer
+	 * path>` rather than the append form Albert also serves. This is the row the
+	 * user's conformance test measured as a 404.
+	 *
+	 * @return void
+	 */
+	public function test_intercepts_authorization_server_path_insertion_form(): void {
+		$wp = $this->intercept( '/.well-known/oauth-authorization-server/wp-json/albert/v1/oauth' );
+
+		$this->assertSame( 'authorization-server', $wp->query_vars['albert_oauth_discovery'] ?? null );
+	}
+
+	/**
+	 * The RFC 9728 §3.1 path-insertion form is intercepted.
+	 *
+	 * @return void
+	 */
+	public function test_intercepts_protected_resource_path_insertion_form(): void {
+		$wp = $this->intercept( '/.well-known/oauth-protected-resource/wp-json/albert/v1/mcp' );
+
+		$this->assertSame( 'protected-resource', $wp->query_vars['albert_oauth_discovery'] ?? null );
+	}
+
+	/**
 	 * A query string after the path does not block interception.
 	 *
 	 * @return void
@@ -163,6 +189,8 @@ class OAuthDiscoveryTest extends TestCase {
 			'https://example.test/.well-known/oauth-protected-resource/',
 			'https://example.test/.well-known/oauth-authorization-server',
 			'https://example.test/.well-known/oauth-authorization-server/',
+			'https://example.test/.well-known/oauth-authorization-server/wp-json/albert/v1/oauth',
+			'https://example.test/.well-known/oauth-protected-resource/wp-json/albert/v1/mcp',
 		];
 
 		foreach ( $urls as $url ) {
