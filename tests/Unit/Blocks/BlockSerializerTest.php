@@ -105,6 +105,35 @@ class BlockSerializerTest extends TestCase {
 
 	// Per-block round-trips
 
+	public function test_sourced_attributes_are_kept_out_of_the_comment_json(): void {
+		albert_test_register_block_type(
+			'core/paragraph',
+			false,
+			[
+				'content'   => [
+					'type'   => 'rich-text',
+					'source' => 'rich-text',
+				],
+				'dropCap'   => [ 'type' => 'boolean' ],
+				'className' => [ 'type' => 'string' ],
+			]
+		);
+
+		$markup = $this->serializer->serialize(
+			[
+				[
+					'name'       => 'core/paragraph',
+					'attributes' => [
+						'content' => 'Hello',
+						'dropCap' => true,
+					],
+				],
+			]
+		);
+
+		$this->assertSame( '<!-- wp:paragraph {"dropCap":true} --><p>Hello</p><!-- /wp:paragraph -->', $markup );
+	}
+
 	public function test_paragraph_round_trip(): void {
 		$markup = $this->serializer->serialize(
 			[
