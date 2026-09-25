@@ -12,6 +12,7 @@ namespace Albert\OAuth;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Core\Plugin;
+use Albert\MCP\Server as McpServer;
 
 /**
  * ServerMetadata class
@@ -116,25 +117,14 @@ class ServerMetadata {
 	/**
 	 * The base URL for OAuth endpoints.
 	 *
-	 * Uses the external URL setting when one is configured and valid, otherwise
-	 * `home_url()`.
+	 * The external URL override when one is set and valid, otherwise `home_url()`.
+	 * Delegates so the override filter is read, cached and diagnosed in one place.
 	 *
 	 * @return string The base URL.
 	 * @since 1.4.0
 	 */
 	public static function base_url(): string {
-		$external_url = (string) apply_filters( 'albert/mcp/external_url', '' );
-		$external_url = rtrim( $external_url, '/' );
-
-		if ( $external_url !== '' ) {
-			$validated = wp_http_validate_url( $external_url );
-
-			if ( $validated !== false ) {
-				return $validated;
-			}
-		}
-
-		return home_url();
+		return McpServer::get_base_url();
 	}
 
 	/**
