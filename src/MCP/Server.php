@@ -100,6 +100,10 @@ class Server implements Hookable {
 		// Add `site` and `skills` to the discovery response, so an assistant
 		// knows what this site is before it starts guessing.
 		( new DiscoveryContext() )->register_hooks();
+
+		// CORE_TOOL_ABILITIES otherwise only exist while the adapter's default
+		// server is on, which any plugin can switch off for the whole site.
+		( new AdapterAbilities() )->register_hooks();
 	}
 
 	/**
