@@ -4,7 +4,7 @@ Tags: ai assistant, chatgpt, claude, ai, mcp
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.4.2
+Stable tag: 1.4.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -191,6 +191,21 @@ Documentation at [albertwp.com/docs](https://albertwp.com/docs/), or the [WordPr
 5. The Skills screen: the task guides Albert ships, so you can read the exact guidance a connected assistant follows
 
 == Changelog ==
+
+= 1.4.3 =
+Fixes AI assistants that connected but could not do anything.
+
+**Fixes**
+
+* AI assistants could connect to your site but found no tools to use when another plugin switched off a shared component Albert relies on. Albert now sets up what it needs itself.
+
+**Developer**
+
+* Albert now registers the `mcp-adapter/discover-abilities`, `mcp-adapter/get-ability-info` and `mcp-adapter/execute-ability` abilities (and their `mcp-adapter` category) when nothing else has. The MCP adapter only registers them while its default server is enabled, so a plugin returning `false` from `mcp_adapter_create_default_server` left Albert's server with zero tools. Existing registrations are never replaced. New `Albert\MCP\AdapterAbilities`.
+
+**Credits**
+
+* [Sébastien](https://wordpress.org/support/users/seb94100/) for reporting assistants that connected but found no tools.
 
 = 1.4.2 =
 Fixes AI assistants that could not connect to some sites.
@@ -388,6 +403,9 @@ A bug-fix release.
 Releases before 1.1.1 are listed in `changelog.txt`, bundled with the plugin.
 
 == Upgrade Notice ==
+
+= 1.4.3 =
+Fixes AI assistants that connected to your site but found no tools to use. Recommended if your assistant says Albert has no tools.
 
 = 1.4.2 =
 Fixes Claude Code and other AI assistants that could not connect, including on sites whose page addresses include /index.php/. Recommended if an assistant could not connect.

@@ -97,6 +97,22 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.4.3
+
+Fixes AI assistants that connected but could not do anything.
+
+**Fixes**
+
+- AI assistants could connect to your site but found no tools to use when another plugin switched off a shared component Albert relies on. Albert now sets up what it needs itself.
+
+**Developer**
+
+- Albert now registers the `mcp-adapter/discover-abilities`, `mcp-adapter/get-ability-info` and `mcp-adapter/execute-ability` abilities (and their `mcp-adapter` category) when nothing else has. The MCP adapter only registers them while its default server is enabled, so a plugin returning `false` from `mcp_adapter_create_default_server` left Albert's server with zero tools. Existing registrations are never replaced. New `Albert\MCP\AdapterAbilities`.
+
+**Credits**
+
+- [Sébastien](https://wordpress.org/support/users/seb94100/) for reporting assistants that connected but found no tools.
+
 ### 1.4.2
 
 Fixes AI assistants that could not connect to some sites.
