@@ -365,8 +365,10 @@ class BlockSerializer {
 	 * Preserve a block's markup-sourced attribute content when it has no inner
 	 * blocks or raw html/plaintext.
 	 *
-	 * Returns the first populated text-sourced attribute's sanitised value as
-	 * innerHTML (core/verse `content`, …). When nothing text-sourced is
+	 * Returns every populated text-sourced attribute's sanitised value as
+	 * innerHTML (core/verse `content`, …). All of them, not the first: a
+	 * 'rich-text' one is kept out of the comment JSON, so markup is the only
+	 * place it survives. When nothing text-sourced is
 	 * capturable, the bool is true if a populated but unreproducible value remains
 	 * (structural source or non-scalar) — the signal to refuse rather than
 	 * self-close and lose it.
@@ -377,12 +379,18 @@ class BlockSerializer {
 	 * @since 1.5.0
 	 */
 	private function markup_attribute_html( string $name, array $attributes ): array {
+		$parts = [];
+
 		foreach ( $this->schema->text_sourced_attributes( $name ) as $attribute_name ) {
 			$value = $attributes[ $attribute_name ] ?? null;
 
 			if ( is_scalar( $value ) && (string) $value !== '' ) {
-				return [ $this->rich_text( (string) $value ), false ];
+				$parts[] = $this->rich_text( (string) $value );
 			}
+		}
+
+		if ( $parts !== [] ) {
+			return [ implode( "\n", $parts ), false ];
 		}
 
 		// No text content: flag any other populated (unreproducible) markup value.
@@ -553,6 +561,12 @@ class BlockSerializer {
 				$inner_content[] = null;
 			}
 		}
+
+		// Core validates comment-JSON attributes on every render and raises a
+		// notice for a type it doesn't know ('rich-text'). Narrower than the
+		// editor, which drops every sourced attribute: BlockReader reads only the
+		// comment, so a `url` or `alt` kept there stays visible to view-post.
+		$attrs = array_diff_key( $attrs, array_flip( $this->schema->unvalidatable_sourced_attributes( $name ) ) );
 
 		return [
 			'blockName'    => $name,
