@@ -8,6 +8,7 @@
 namespace Albert\Tests\Integration\Blocks;
 
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
+use Albert\Blocks\BlockReader;
 use Albert\Blocks\BlockSerializer;
 use Albert\Tests\TestCase;
 use WP_Block_Type_Registry;
@@ -118,21 +119,24 @@ class SerializedMarkupTest extends TestCase {
 	}
 
 	/**
-	 * A sourced attribute is read from the markup, so the comment JSON must not carry it.
+	 * Core validates every comment-JSON attribute on render; none may carry a type it rejects.
 	 *
 	 * @return void
 	 */
-	public function test_no_sourced_attribute_reaches_the_comment_json(): void {
+	public function test_no_attribute_core_cannot_validate_reaches_the_comment_json(): void {
 		$markup   = ( new BlockSerializer() )->serialize( $this->every_templated_block() );
 		$registry = WP_Block_Type_Registry::get_instance();
+		$allowed  = [ 'array', 'object', 'string', 'number', 'integer', 'boolean', 'null' ];
 		$offences = [];
 
-		$walk = static function ( array $blocks ) use ( &$walk, $registry, &$offences ): void {
+		$walk = static function ( array $blocks ) use ( &$walk, $registry, $allowed, &$offences ): void {
 			foreach ( $blocks as $block ) {
 				$type = $block['blockName'] === null ? null : $registry->get_registered( $block['blockName'] );
 
 				foreach ( array_keys( $block['attrs'] ) as $attribute ) {
-					if ( isset( $type->attributes[ $attribute ]['source'] ) ) {
+					$types = (array) ( $type->attributes[ $attribute ]['type'] ?? [] );
+
+					if ( isset( $type->attributes[ $attribute ] ) && ( $types === [] || array_diff( $types, $allowed ) !== [] ) ) {
 						$offences[] = "{$block['blockName']}.{$attribute}";
 					}
 				}
@@ -142,7 +146,34 @@ class SerializedMarkupTest extends TestCase {
 		};
 		$walk( parse_blocks( $markup ) );
 
-		$this->assertSame( [], $offences, "Sourced attributes in the comment JSON:\n{$markup}" );
+		$this->assertSame( [], $offences, "Attributes core cannot validate in the comment JSON:\n{$markup}" );
+	}
+
+	/**
+	 * What BlockReader shows for a written block: validatable attributes survive, rich text is in plaintext.
+	 *
+	 * @return void
+	 */
+	public function test_block_reader_still_sees_what_was_written(): void {
+		$markup = ( new BlockSerializer() )->serialize( $this->every_templated_block() );
+		$tree   = ( new BlockReader() )->read( $markup );
+		$by     = [];
+
+		$walk = static function ( array $blocks ) use ( &$walk, &$by ): void {
+			foreach ( $blocks as $block ) {
+				$by[ $block['name'] ][] = $block;
+				$walk( $block['innerBlocks'] );
+			}
+		};
+		$walk( $tree );
+
+		$image = $by['core/image'][0];
+		$this->assertSame( 'https://example.com/image.jpg', $image['attributes']['url'] ?? null );
+		$this->assertSame( 'An image', $image['attributes']['alt'] ?? null );
+		$this->assertSame( 'https://example.com/', $by['core/button'][0]['attributes']['url'] ?? null );
+		$this->assertSame( 'A button', $by['core/button'][0]['plaintext'] );
+		$this->assertSame( 2, $by['core/heading'][0]['attributes']['level'] ?? null );
+		$this->assertSame( 'A heading', $by['core/heading'][0]['plaintext'] );
 	}
 
 	/**
@@ -168,13 +199,8 @@ class SerializedMarkupTest extends TestCase {
 			$notices[] = "{$function_name}: {$message}";
 		};
 		add_action( 'doing_it_wrong_run', $collect, 10, 2 );
-		// Silence the trigger_error() the notice would otherwise raise, so the collected list is the failure.
-		add_filter( 'doing_it_wrong_trigger_error', '__return_false' );
-
 		$html = do_blocks( get_post( $result['id'] )->post_content );
-
 		remove_action( 'doing_it_wrong_run', $collect );
-		remove_filter( 'doing_it_wrong_trigger_error', '__return_false' );
 
 		$this->assertSame( [], $notices );
 
