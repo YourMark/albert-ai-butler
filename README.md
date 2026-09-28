@@ -109,7 +109,6 @@ Website: https://yourmark.nl
 - Content stored in a text-sourced attribute (`core/verse`'s `content`, and the documented "put text in attributes" contract) is materialised into the block's markup rather than left inert in the comment JSON, where it would be lost on reload. Content stored in a structural source that can't be reproduced without the block's own `save()` (an element attribute, a `query`) is refused with an actionable error instead of silently dropped.
 - Adds `BlockSchema::markup_sourced_attributes()` and `BlockSchema::text_sourced_attributes()`, the registry readers behind those decisions.
 - `BlockSerializer::make_block()` now emits one inner-block placeholder per child even when a template supplies no `%children%` marker, so inner blocks can never be dropped from `innerContent`; nesting blocks under a block that doesn't accept them now warns rather than surprising the caller later.
-- Sourced block attributes typed `rich-text` (such as `content` and `text`) are no longer written into the block comment JSON, where core flagged them on every render. They live in the block's markup and read back as `plaintext`. Adds `BlockSchema::unvalidatable_sourced_attributes()`.
 
 ### 1.4.1
 
