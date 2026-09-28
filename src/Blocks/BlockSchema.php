@@ -125,6 +125,14 @@ class BlockSchema {
 	}
 
 	/**
+	 * The types rest_validate_value_from_schema() accepts without a notice.
+	 *
+	 * @var array<int, string>
+	 * @since 1.5.0
+	 */
+	private const REST_SCHEMA_TYPES = [ 'array', 'object', 'string', 'number', 'integer', 'boolean', 'null' ];
+
+	/**
 	 * Attribute `source` values stored as the block's inner text/markup, so the
 	 * value can be preserved by materialising it into innerHTML.
 	 *
@@ -180,24 +188,32 @@ class BlockSchema {
 	}
 
 	/**
-	 * Attribute names of a block that declare any `source`, and so never belong
-	 * in the block's comment JSON. Mirrors the editor's serializer, which skips
-	 * every sourced attribute whatever the source.
+	 * Sourced attributes whose `type` core's REST schema validator rejects (in
+	 * practice 'rich-text'). Core validates comment-JSON attributes on every
+	 * render, so each of these raises a notice if stored there.
 	 *
 	 * @param string $name Block name.
 	 * @return array<int, string>
 	 * @since 1.5.0
 	 */
-	public function sourced_attributes( string $name ): array {
+	public function unvalidatable_sourced_attributes( string $name ): array {
 		$schema     = $this->block_schema( $name );
 		$attributes = is_array( $schema['attributes'] ?? null ) ? $schema['attributes'] : [];
+		$matched    = [];
 
-		$sourced = array_filter(
-			$attributes,
-			static fn ( $definition ): bool => is_array( $definition ) && isset( $definition['source'] )
-		);
+		foreach ( $attributes as $attribute_name => $definition ) {
+			if ( ! is_array( $definition ) || ! isset( $definition['source'] ) ) {
+				continue;
+			}
 
-		return array_map( 'strval', array_keys( $sourced ) );
+			$types = (array) ( $definition['type'] ?? [] );
+
+			if ( $types === [] || array_diff( $types, self::REST_SCHEMA_TYPES ) !== [] ) {
+				$matched[] = (string) $attribute_name;
+			}
+		}
+
+		return $matched;
 	}
 
 	/**
