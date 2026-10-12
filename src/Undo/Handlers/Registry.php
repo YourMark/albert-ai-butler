@@ -29,6 +29,13 @@ final class Registry {
 	private array $handlers = [];
 
 	/**
+	 * Ids of handlers dropped for failing.
+	 *
+	 * @var array<int, string>
+	 */
+	private array $dropped = [];
+
+	/**
 	 * Collect handlers from the filter. Anything that is not a {@see Handler}, or
 	 * whose id is empty or holds a colon, is ignored.
 	 *
@@ -99,7 +106,22 @@ final class Registry {
 	 * @since 1.5.0
 	 */
 	public function drop( string $id ): void {
+		if ( isset( $this->handlers[ $id ] ) ) {
+			$this->dropped[] = $id;
+		}
+
 		unset( $this->handlers[ $id ] );
+	}
+
+	/**
+	 * Handlers dropped for failing. Their tables may already have been trusted
+	 * as covered, so the entry notes them.
+	 *
+	 * @return array<int, string>
+	 * @since 1.5.0
+	 */
+	public function dropped(): array {
+		return $this->dropped;
 	}
 
 	/**
@@ -168,6 +190,12 @@ final class Registry {
 		global $wpdb;
 
 		$table = strtolower( $table );
+
+		// Every blog's core tables, not only this one's: `wp_2_posts` is core too.
+		$core = implode( '|', array_map( 'preg_quote', array_values( $wpdb->tables( 'all', false ) ) ) );
+		if ( preg_match( '/^' . preg_quote( strtolower( $wpdb->base_prefix ), '/' ) . '(?:\d+_)?(?:' . $core . ')$/', $table ) ) {
+			return true;
+		}
 
 		foreach ( array_merge( array_values( $wpdb->tables( 'all' ) ), Tables::all() ) as $name ) {
 			if ( strtolower( (string) $name ) === $table ) {

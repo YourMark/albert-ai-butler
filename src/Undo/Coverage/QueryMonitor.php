@@ -79,6 +79,17 @@ final class QueryMonitor {
 	];
 
 	/**
+	 * Queries a covered writer also makes without any hook: on a taxonomy with
+	 * `sort`, wp_set_object_terms() rewrites the order of terms already
+	 * assigned in one upsert, and no relationship hook fires for those.
+	 *
+	 * @var array<string, string>
+	 */
+	private const UNCOVERED_QUERIES = [
+		'wp_set_object_terms' => 'ON DUPLICATE KEY UPDATE',
+	];
+
+	/**
 	 * Core writers that change only a credential, noted as that secret by name.
 	 *
 	 * @var array<string, string>
@@ -201,7 +212,7 @@ final class QueryMonitor {
 
 		if ( self::captured_core_table( $table ) ) {
 			if ( ! self::is_transient_write( $table, $query ) ) {
-				$this->note_writer( $table );
+				$this->note_writer( $table, $query );
 			}
 			return;
 		}
@@ -242,10 +253,11 @@ final class QueryMonitor {
 	 * `wp_insert_post()` is still attributed to the plugin that made it.
 	 *
 	 * @param string $table The table written.
+	 * @param string $query The query.
 	 *
 	 * @return void
 	 */
-	private function note_writer( string $table ): void {
+	private function note_writer( string $table, string $query ): void {
 		$frames  = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace -- Attributes a direct write to its caller.
 		$in_wpdb = false;
 		$file    = '';
@@ -264,7 +276,7 @@ final class QueryMonitor {
 			$function = $frame['function'];
 			$class    = $frame['class'] ?? '';
 
-			if ( $class === '' && self::is_core_file( $file ) ) {
+			if ( $class === '' && self::is_core_file( $file ) && ! self::is_uncovered_query( $function, $query ) ) {
 				if ( in_array( $function, self::COVERED_WRITERS, true ) ) {
 					return;
 				}
@@ -282,6 +294,18 @@ final class QueryMonitor {
 		}
 
 		$this->recorder->direct_write( $table, 'an unknown caller' );
+	}
+
+	/**
+	 * Whether a covered writer's query is one it makes without a hook.
+	 *
+	 * @param string $writer The writing function.
+	 * @param string $query  The query.
+	 *
+	 * @return bool
+	 */
+	private static function is_uncovered_query( string $writer, string $query ): bool {
+		return isset( self::UNCOVERED_QUERIES[ $writer ] ) && stripos( $query, self::UNCOVERED_QUERIES[ $writer ] ) !== false;
 	}
 
 	/**
@@ -347,7 +371,8 @@ final class QueryMonitor {
 	}
 
 	/**
-	 * Whether a direct `options` write is to transients, which are noise however they are written.
+	 * Whether a direct `options` write touches only transients, which are noise
+	 * however they are written.
 	 *
 	 * @param string $table Table name.
 	 * @param string $query The query.
@@ -357,12 +382,13 @@ final class QueryMonitor {
 	private static function is_transient_write( string $table, string $query ): bool {
 		global $wpdb;
 
-		return strcasecmp( $table, $wpdb->options ) === 0 && str_contains( $query, '_transient_' );
+		return strcasecmp( $table, $wpdb->options ) === 0 && self::only_names( $query, 'option_name', [ '_transient_', '_site_transient_' ] );
 	}
 
 	/**
-	 * Whether a multisite `sitemeta` write is a site transient. Network options
-	 * are not captured, but their transients are noise as options' are.
+	 * Whether a multisite `sitemeta` write touches only site transients.
+	 * Network options are not captured, but their transients are noise as
+	 * options' are.
 	 *
 	 * @param string $table Table name.
 	 * @param string $query The query.
@@ -372,6 +398,43 @@ final class QueryMonitor {
 	private static function is_network_noise( string $table, string $query ): bool {
 		global $wpdb;
 
-		return is_multisite() && strcasecmp( $table, $wpdb->sitemeta ) === 0 && str_contains( $query, '_site_transient_' );
+		return is_multisite() && strcasecmp( $table, $wpdb->sitemeta ) === 0 && self::only_names( $query, 'meta_key', [ '_site_transient_' ] );
+	}
+
+	/**
+	 * Whether every name the query selects rows by starts with one of the
+	 * prefixes: the column compared (`=` or `LIKE`) only with such literals,
+	 * at least once, and no `OR` that could widen it. Values are not looked
+	 * at, so a transient mentioned in a payload proves nothing.
+	 *
+	 * @param string             $query    The query.
+	 * @param string             $column   The name column.
+	 * @param array<int, string> $prefixes Allowed name prefixes.
+	 *
+	 * @return bool
+	 */
+	private static function only_names( string $query, string $column, array $prefixes ): bool {
+		if ( preg_match( '/\bOR\b/i', $query ) ) {
+			return false;
+		}
+
+		if ( ! preg_match_all( '/`?' . $column . '`?\s*(=|LIKE|IN)\s*(\(?)\s*\'((?:[^\'\\\\]++|\\\\.)*+)\'/i', $query, $matches, PREG_SET_ORDER ) ) {
+			return false;
+		}
+
+		foreach ( $matches as $match ) {
+			$operator = strtoupper( $match[1] );
+			$name     = stripslashes( $match[3] );
+
+			// In LIKE an unescaped `_` matches any character, so only the
+			// escaped prefix (what esc_like() produces) is a transient.
+			$starts = static fn( string $prefix ): bool => str_starts_with( $name, $operator === 'LIKE' ? str_replace( '_', '\\_', $prefix ) : $prefix );
+
+			if ( $operator === 'IN' || ! array_filter( $prefixes, $starts ) ) {
+				return false;
+			}
+		}
+
+		return preg_match_all( '/`?' . $column . '`?/i', $query ) === count( $matches );
 	}
 }

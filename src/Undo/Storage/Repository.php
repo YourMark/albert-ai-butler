@@ -39,6 +39,27 @@ class Repository {
 	public const RUN_GAP_SECONDS = 600;
 
 	/**
+	 * Longest a session may run before the next call starts a new one.
+	 *
+	 * @var int
+	 */
+	public const RUN_MAX_SECONDS = DAY_IN_SECONDS;
+
+	/**
+	 * Most names kept in `other_tables` or an effect's list.
+	 *
+	 * @var int
+	 */
+	private const MAX_NAMES = 50;
+
+	/**
+	 * Longest name kept in those lists.
+	 *
+	 * @var int
+	 */
+	private const MAX_NAME_LENGTH = 191;
+
+	/**
 	 * Start an entry, joining the connection's current session when there is one.
 	 *
 	 * @param WindowContext $context The call.
@@ -52,16 +73,7 @@ class Repository {
 		$table   = Tables::changes();
 		$blog_id = get_current_blog_id();
 
-		$run_id = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT run_id FROM %i WHERE client_id = %s AND user_id = %d AND blog_id = %d AND COALESCE(finished_at, created_at) >= %s ORDER BY id DESC LIMIT 1',
-				$table,
-				$context->client_id,
-				$context->user_id,
-				$blog_id,
-				gmdate( 'Y-m-d H:i:s', time() - self::RUN_GAP_SECONDS )
-			)
-		);
+		$run_id = $this->current_run( $context, $blog_id );
 
 		$inserted = $wpdb->insert(
 			$table,
@@ -98,6 +110,43 @@ class Repository {
 			'id'     => $id,
 			'run_id' => $run_id,
 		];
+	}
+
+	/**
+	 * The session a new entry joins, or 0 to start one.
+	 *
+	 * Same connection, user, blog and MCP session (two chats on one connection
+	 * are two sessions), the last call under {@see self::RUN_GAP_SECONDS} ago,
+	 * and the session started under {@see self::RUN_MAX_SECONDS} ago, so an
+	 * always-busy connection cannot keep old before-images alive by never
+	 * pausing.
+	 *
+	 * @param WindowContext $context The call.
+	 * @param int           $blog_id The blog.
+	 *
+	 * @return int
+	 */
+	private function current_run( WindowContext $context, int $blog_id ): int {
+		global $wpdb;
+
+		$table = Tables::changes();
+		$sql   = 'SELECT run_id FROM %i WHERE client_id = %s AND user_id = %d AND blog_id = %d AND COALESCE(finished_at, created_at) >= %s AND '
+			. ( $context->session_id === null ? 'session_id IS NULL' : 'session_id = %s' )
+			. ' ORDER BY id DESC LIMIT 1';
+		$args  = [ $table, $context->client_id, $context->user_id, $blog_id, gmdate( 'Y-m-d H:i:s', time() - self::RUN_GAP_SECONDS ) ];
+		if ( $context->session_id !== null ) {
+			$args[] = $context->session_id;
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Fixed fragments; values are placeholders.
+		$run_id = (int) $wpdb->get_var( $wpdb->prepare( $sql, ...$args ) );
+		if ( $run_id === 0 ) {
+			return 0;
+		}
+
+		$started = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT created_at FROM %i WHERE id = %d', $table, $run_id ) );
+
+		return $started >= gmdate( 'Y-m-d H:i:s', time() - self::RUN_MAX_SECONDS ) ? $run_id : 0;
 	}
 
 	/**
@@ -162,13 +211,18 @@ class Repository {
 	 * @param int                  $item_count   Items stored.
 	 * @param int|null             $log_id       The ability-log row for the same call.
 	 *
-	 * @return void
+	 * @return bool Whether the row was updated.
 	 * @since 1.5.0
 	 */
-	public function finish_entry( int $change_id, string $status, ?string $reason, array $other_tables, array $effects, int $item_count, ?int $log_id ): void {
+	public function finish_entry( int $change_id, string $status, ?string $reason, array $other_tables, array $effects, int $item_count, ?int $log_id ): bool {
 		global $wpdb;
 
-		$wpdb->update(
+		$other_tables = self::capped( $other_tables );
+		if ( isset( $effects['secrets'] ) && is_array( $effects['secrets'] ) ) {
+			$effects['secrets'] = self::capped( $effects['secrets'] );
+		}
+
+		$updated = $wpdb->update(
 			Tables::changes(),
 			[
 				'status'       => $status,
@@ -181,6 +235,30 @@ class Repository {
 			],
 			[ 'id' => $change_id ]
 		);
+
+		return $updated !== false;
+	}
+
+	/**
+	 * A list cut to what its column can hold: a call writing hundreds of
+	 * tables would otherwise overflow it, and WordPress turns off strict mode,
+	 * so the JSON would be silently truncated.
+	 *
+	 * @param array<int|string, mixed> $names Names.
+	 *
+	 * @return array<int, string>
+	 */
+	private static function capped( array $names ): array {
+		$names = array_map( static fn( $name ): string => mb_substr( (string) $name, 0, self::MAX_NAME_LENGTH ), array_values( $names ) );
+
+		if ( count( $names ) <= self::MAX_NAMES ) {
+			return $names;
+		}
+
+		$kept   = array_slice( $names, 0, self::MAX_NAMES );
+		$kept[] = sprintf( '+%d more', count( $names ) - self::MAX_NAMES );
+
+		return $kept;
 	}
 
 	/**
@@ -283,6 +361,7 @@ class Repository {
 				$before
 			)
 		);
+		self::check();
 	}
 
 	/**
@@ -300,6 +379,7 @@ class Repository {
 			$wpdb->prepare( 'SELECT run_id FROM %i GROUP BY run_id HAVING MAX(created_at) < %s', Tables::changes(), $before )
 		);
 
+		self::check();
 		$this->prune_runs( array_map( 'intval', $runs ), 'age' );
 	}
 
@@ -329,6 +409,7 @@ class Repository {
 			)
 		);
 
+		self::check();
 		$this->prune_runs( array_map( 'intval', $runs ), 'runs' );
 	}
 
@@ -345,6 +426,7 @@ class Repository {
 
 		$items  = Tables::change_items();
 		$excess = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(SUM(image_bytes), 0) FROM %i WHERE pruned IS NULL', $items ) ) - $max_bytes;
+		self::check();
 
 		if ( $excess <= 0 ) {
 			return false;
@@ -354,6 +436,7 @@ class Repository {
 			$wpdb->prepare( 'SELECT run_id, SUM(image_bytes) AS bytes, MAX(change_id) AS last_change FROM %i WHERE pruned IS NULL GROUP BY run_id ORDER BY last_change', $items ),
 			ARRAY_A
 		);
+		self::check();
 
 		$prune = [];
 		foreach ( is_array( $sizes ) ? $sizes : [] as $size ) {
@@ -384,12 +467,15 @@ class Repository {
 			'intval',
 			$wpdb->get_col( $wpdb->prepare( 'SELECT run_id FROM %i GROUP BY run_id HAVING MAX(created_at) < %s', Tables::changes(), $before ) )
 		);
+		self::check();
 
 		foreach ( array_chunk( $runs, 500 ) as $chunk ) {
 			$in = implode( ',', array_fill( 0, count( $chunk ), '%d' ) );
 			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Placeholders built to match the chunk.
 			$wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE run_id IN ($in)", Tables::change_items(), ...$chunk ) );
+			self::check();
 			$wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE run_id IN ($in)", Tables::changes(), ...$chunk ) );
+			self::check();
 			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		}
 	}
@@ -497,6 +583,21 @@ class Repository {
 	}
 
 	/**
+	 * Throw when the last query failed: wpdb reports errors by return value,
+	 * so a failing prune would otherwise pass for one with nothing to do.
+	 *
+	 * @return void
+	 * @throws \RuntimeException When the last query failed.
+	 */
+	private static function check(): void {
+		global $wpdb;
+
+		if ( $wpdb->last_error !== '' ) {
+			throw new \RuntimeException( 'Change journal query failed.' );
+		}
+	}
+
+	/**
 	 * Drop the before-images of whole sessions, keeping their rows.
 	 *
 	 * @param array<int, int> $runs   Session ids.
@@ -518,6 +619,7 @@ class Repository {
 					...$chunk
 				)
 			);
+			self::check();
 			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		}
 	}

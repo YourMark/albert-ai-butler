@@ -145,6 +145,7 @@ albert-ai-butler/
 │   │
 │   ├── Cron/
 │   │   ├── AllowedUserExpiry.php
+│   │   ├── ChangeJournalPrune.php      # Holds the change journal to its retention policy
 │   │   ├── ConnectionRetentionSweep.php
 │   │   ├── PendingActionSweep.php      # Expires, fails stale claims, prunes the safe-mode queue
 │   │   └── TokenCleanup.php
@@ -579,13 +580,17 @@ immediately before it writes, after every short-circuit (`update_option`, not
 `pre_update_option`; the `{$type}_meta` actions, not the cancellable filters),
 and for creates the hooks that fire once the row exists. Rows core rewrites in
 one query as a side effect (children reparented on delete, a post's comments
-trashed with it) are captured one by one at the hook just before.
+trashed with it, a deleted user's posts handed to another) are captured one by
+one at the hook just before. A meta row renamed by id is captured under its old
+key too: `update_metadata_by_mid()` fires the hook with the new key only.
 
 **The table check makes it honest.** `Coverage\QueryMonitor` reads each query's
 target table (`Coverage\WriteTarget`, fail-closed: unknown keywords, `/*!` and
-`/*M!` outside strings, multi-table writes and other databases are unreadable).
-Strings are skipped with a linear scan, not a regex: a regex over quoted strings
-exhausted PCRE's stack on a long post body.
+`/*M!` outside strings, a second statement after `;`, multi-table writes and
+other databases are unreadable).
+Strings and comments are skipped with a linear scan, not regexes: a regex over
+quoted strings exhausted PCRE's stack on a long post body, and one with a
+required character rescans the whole query on every call.
 A write to WordPress's own tables counts as covered only when the function that
 issued it, found from the backtrace, is a core function whose hooks capture it
 (`QueryMonitor::COVERED_WRITERS`). Anything else is a `direct_write`, noted with
@@ -593,7 +598,10 @@ its writer: `wp_postmeta, written directly by
 WC_Product_Data_Store_CPT::update_product_stock() (woocommerce)`. WooCommerce's
 atomic stock update is the common case, and `wp_publish_post()`,
 `wp_set_comment_status()` and `wp_set_option_autoload_values()` are flagged the
-same way. `wp_set_password()` is noted as the `user_pass` secret instead.
+same way, as is the term-order upsert `wp_set_object_terms()` makes on a sorted
+taxonomy. `wp_set_password()` is noted as the `user_pass` secret instead. A
+direct transient write is noise only when every name it selects by is an
+(escaped) transient; a transient in a value proves nothing.
 `AbilitySweepTest` runs every Albert write ability through a window and checks
 the verdict, so a misclassified writer shows up there. Any other table, a structure
 change or an unreadable query is `other_table`. A full SQL parser was tried and
@@ -602,12 +610,17 @@ removed: it was the source of every "says complete when it is not" bug.
 **Buffered, written at the end**, because a WooCommerce transaction rollback
 would take journal rows with it. Only the entry row is written early, and again
 if a rollback removed it. Over 8 MB or 2,000 entities the call is `too_large`,
-and nothing more is read. The journal's own queries run through
-`Recorder::quietly()`, which restores wpdb's per-query state.
+and nothing more is read. A value over 32 MB is never encoded. The journal's
+own queries run through `Recorder::quietly()`, which restores wpdb's per-query
+state. A failed read throws rather than passing for "did not exist", which would
+record an existing row as created.
 
 **At the end** each entity is re-read and compared without volatile fields; one
 left as it was is dropped, so a read-only call leaves no entry. Per-field hashes
-of the new state are stored for the revert's changed-since check.
+of the new state are stored for the revert's changed-since check. A re-read that
+fails keeps the item and makes the entry `record_failed`; an entry whose writing
+fails half way is closed the same way rather than left `recording`.
+`other_tables` and the secrets list hold at most 50 names (`+N more`).
 
 **Reason codes** (`reason`, NULL when revertable, most serious first):
 `interrupted`, `record_failed`, `too_large`, `removed` (a deleted user),
@@ -618,19 +631,28 @@ captured, `effects` what no revert takes back (email counts, secrets by name),
 **Secrets are never stored**: `user_pass`, `user_activation_key` and
 `post_password` columns, the known names (salts, `session_tokens`,
 `_application_passwords`, `albert_oauth_*`, ...), any option or meta key whose
-name looks like a credential (`smtp_pass`, `*_api_key`, `*secret*`), and any
-value holding one inside an array or serialized object, under a telling key or
-as a `name`/`value` pair. A change to one is noted by name and makes the entry
+name looks like a credential (`smtp_pass`, `*_api_key`, `consumer_key`,
+`*secret*`, `*token*`), matched as MySQL finds the row (case, trailing spaces,
+and the name actually stored), and any value holding one: under a telling key
+or as a `name`/`value` pair at any depth of an array, serialized object or JSON
+string, or in a known credential format (`Bearer …`, `sk_live_…`, `ghp_…`,
+private keys). Name matching cannot be complete; it is tuned to catch too much
+(a yes/no setting called `…_generate_password` is not revertable) rather than
+too little. A comment's IP address and browser are never stored either. A change to one is noted by name and makes the entry
 unrevertable; a password change is spotted with an in-memory fingerprint of the
-password column only (WordPress clears the activation key on every email
-change). Noise
+password column only. WordPress clears the activation key on every email
+change, so a reset key changing is deliberately not noted: an entry does not
+show a password-reset request, and a revert never brings an old key back. Noise
 (transients, `cron`, locks, `_edit_lock`) is ignored; the `albert/undo/excluded_*`
 filters can only add noise.
 
 **Handlers** (`albert/undo/handlers`) cover a plugin's own tables, never
-WordPress's or Albert's; one that throws is dropped for the window.
+WordPress's or Albert's on any blog; one that throws is dropped for the window
+and named in `other_tables`, since its tables may already have been trusted.
+Their state goes through the same secret scan.
 
-**Failures**, including a nightly prune that throws, are counted in
+**Failures**, including a prune whose query fails (wpdb reports errors by
+return value, so `Repository` checks `last_error` and throws), are counted in
 `albert_undo_failures` (`Undo\FailureCounter`), so "nothing recorded" never looks
 like "nothing changed".
 
@@ -639,12 +661,16 @@ sessions per item, 50 MB) with no filter; an add-on registers its own class on
 `albert/undo/register_retention_policy`. `Cron\ChangeJournalPrune` prunes whole
 sessions nightly: by age from the last call, then a session that changed an
 item later changed by two other sessions (ranked by last change, so overlapping
-sessions order correctly), then by size, least recently active first. Age and the per-item cap
-are also enforced on read. A pruned item keeps its row; entries are deleted 30
+sessions order correctly), then by size, least recently active first. Age and
+the per-item cap are also enforced on read. A request that recorded something also prunes on
+`shutdown`, at most hourly (`ChangeJournalPrune::soon()`), so retention holds
+where WP-Cron never runs. A pruned item keeps its row; entries are deleted 30
 days past the window.
 
-**Sessions**: same client and user, no gap over 10 minutes; `run_id` is the
-first entry's id.
+**Sessions**: same client, user, blog and MCP session (two chats on one
+connection are two sessions), no gap over 10 minutes, and at most a day long,
+so a connection that never pauses cannot keep old before-images alive.
+`run_id` is the first entry's id.
 
 **Tables**: `albert_changes`, `albert_change_items`, created by `dbDelta` when
 the plugin version advances; an existing dev install needs

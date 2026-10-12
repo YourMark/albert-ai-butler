@@ -12,6 +12,7 @@ use Albert\Database\Installer;
 use Albert\Database\Tables;
 use Albert\Tests\TestCase;
 use Albert\Undo\Entity;
+use Albert\Undo\FailureCounter;
 use Albert\Undo\Retention\FreeRetentionPolicy;
 use Albert\Undo\Retention\Registrar;
 use Albert\Undo\Retention\RetentionPolicy;
@@ -97,14 +98,13 @@ class ChangeJournalPruneTest extends TestCase {
 
 		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
 
-		$this->assertNull( $this->item( $first )['pruned'], 'Its session had a call within the window.' );
-		$this->assertIsArray( $this->item( $first )['before'] );
+		$this->assertSame( [ null ], $this->stored( $first ), 'Its session had a call within the window.' );
 
 		$this->age( $last, 3 * DAY_IN_SECONDS );
 		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
 
-		$this->assertSame( 'age', $this->item( $first )['pruned'] );
-		$this->assertSame( 'age', $this->item( $last )['pruned'] );
+		$this->assertSame( [ 'age' ], $this->stored( $first ) );
+		$this->assertSame( [ 'age' ], $this->stored( $last ) );
 	}
 
 	/**
@@ -133,14 +133,15 @@ class ChangeJournalPruneTest extends TestCase {
 		$newest = $this->record( 'client-c', Entity::post( 42 ) );
 		$more   = $this->record( 'client-c', Entity::post( 42 ) );
 
-		$this->assertSame( 'runs', $this->item( $oldest )['pruned'], 'Enforced before the nightly prune runs.' );
+		$this->assertSame( 'runs', $this->item( $oldest )['pruned'], 'Enforced on read before the prune runs.' );
+		$this->assertSame( [ null, null ], $this->stored( $oldest ) );
 
 		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
 
-		$this->assertSame( [ 'runs', 'runs' ], array_column( $this->journal->items( $oldest ), 'pruned' ) );
-		$this->assertNull( $this->item( $middle )['pruned'] );
-		$this->assertNull( $this->item( $newest )['pruned'], 'Two calls in one session count once.' );
-		$this->assertNull( $this->item( $more )['pruned'] );
+		$this->assertSame( [ 'runs', 'runs' ], $this->stored( $oldest ) );
+		$this->assertSame( [ null ], $this->stored( $middle ) );
+		$this->assertSame( [ null ], $this->stored( $newest ), 'Two calls in one session count once.' );
+		$this->assertSame( [ null ], $this->stored( $more ) );
 	}
 
 	/**
@@ -157,9 +158,10 @@ class ChangeJournalPruneTest extends TestCase {
 
 		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
 
-		$this->assertSame( 'runs', $this->item( $between )['pruned'] );
-		$this->assertNull( $this->item( $early_start )['pruned'] );
-		$this->assertNull( $this->item( $late_change )['pruned'] );
+		$this->assertSame( [ 'runs' ], $this->stored( $between ) );
+		$this->assertSame( [ null ], $this->stored( $early_start ) );
+		$this->assertSame( [ null ], $this->stored( $late_change ) );
+		$this->assertNull( $this->item( $early_start )['pruned'], 'Read-time ranking agrees.' );
 	}
 
 	/**
@@ -175,8 +177,8 @@ class ChangeJournalPruneTest extends TestCase {
 		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
 
 		$this->assertNotNull( $this->journal->entry( $old ), 'A pruned entry keeps its row.' );
-		$this->assertSame( 'age', $this->item( $old )['pruned'] );
-		$this->assertNull( $this->item( $fresh )['pruned'] );
+		$this->assertSame( [ 'age' ], $this->stored( $old ) );
+		$this->assertSame( [ null ], $this->stored( $fresh ) );
 	}
 
 	/**
@@ -214,6 +216,80 @@ class ChangeJournalPruneTest extends TestCase {
 		$this->assertSame( 'size', $this->item( $quiet )['pruned'] );
 		$this->assertNull( $this->item( $long_running )['pruned'] );
 		$this->assertNull( $this->item( $latest )['pruned'] );
+	}
+
+	/**
+	 * A policy may lift the per-item cap (0) or tighten it.
+	 *
+	 * @return void
+	 */
+	public function test_a_policy_sets_the_per_item_cap(): void {
+		$first  = $this->record( 'client-a', Entity::option( 'x' ) );
+		$second = $this->record( 'client-b', Entity::option( 'x' ) );
+		$third  = $this->record( 'client-c', Entity::option( 'x' ) );
+
+		( new ChangeJournalPrune( $this->journal, $this->policy( 2, PHP_INT_MAX, 0 ) ) )->run();
+		$this->assertSame( [ null ], $this->stored( $first ), 'No limit keeps every session.' );
+
+		( new ChangeJournalPrune( $this->journal, $this->policy( 2, PHP_INT_MAX, 1 ) ) )->run();
+		$this->assertSame( [ 'runs' ], $this->stored( $first ) );
+		$this->assertSame( [ 'runs' ], $this->stored( $second ) );
+		$this->assertSame( [ null ], $this->stored( $third ) );
+	}
+
+	/**
+	 * A prune whose query fails is counted, not mistaken for one with nothing to do.
+	 *
+	 * @return void
+	 */
+	public function test_a_failing_prune_is_counted(): void {
+		delete_option( FailureCounter::OPTION );
+		$break = static fn( $query ) => is_string( $query ) && str_contains( $query, 'HAVING MAX(created_at)' ) ? 'SELECT broken FROM nowhere_at_all' : $query;
+
+		add_filter( 'query', $break );
+		$suppress = $GLOBALS['wpdb']->suppress_errors( true );
+		try {
+			( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
+		} finally {
+			$GLOBALS['wpdb']->suppress_errors( $suppress );
+			remove_filter( 'query', $break );
+		}
+
+		$this->assertSame( 1, FailureCounter::get()['count'] );
+	}
+
+	/**
+	 * The nightly event is scheduled once and fully removed on deactivation.
+	 *
+	 * @return void
+	 */
+	public function test_schedule_and_unschedule(): void {
+		ChangeJournalPrune::unschedule();
+		ChangeJournalPrune::schedule();
+		ChangeJournalPrune::schedule();
+
+		$this->assertNotFalse( wp_next_scheduled( ChangeJournalPrune::HOOK ) );
+		$this->assertCount( 1, array_filter( _get_cron_array(), static fn( $hooks ) => isset( $hooks[ ChangeJournalPrune::HOOK ] ) ) );
+
+		ChangeJournalPrune::unschedule();
+		$this->assertFalse( wp_next_scheduled( ChangeJournalPrune::HOOK ) );
+	}
+
+	/**
+	 * A request that recorded something prunes at its end, at most once an hour,
+	 * so retention holds when WP-Cron never runs.
+	 *
+	 * @return void
+	 */
+	public function test_a_recording_request_prunes_at_most_hourly(): void {
+		delete_transient( ChangeJournalPrune::SOON_LOCK );
+		remove_all_actions( 'shutdown' );
+
+		ChangeJournalPrune::soon();
+		ChangeJournalPrune::soon();
+
+		$this->assertSame( 1, count( $GLOBALS['wp_filter']['shutdown']->callbacks[ PHP_INT_MAX ] ?? [] ) );
+		$this->assertNotFalse( get_transient( ChangeJournalPrune::SOON_LOCK ) );
 	}
 
 	/**
@@ -264,6 +340,27 @@ class ChangeJournalPruneTest extends TestCase {
 	}
 
 	/**
+	 * Each item's `pruned` column as stored, without the read-time check, so a
+	 * test proves the prune itself ran.
+	 *
+	 * @param int $change_id Entry id.
+	 *
+	 * @return array<int, string|null>
+	 */
+	private function stored( int $change_id ): array {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Assertion read.
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT pruned, before_image IS NULL AS emptied FROM %i WHERE change_id = %d ORDER BY id', Tables::change_items(), $change_id ), ARRAY_A );
+
+		foreach ( $rows as $row ) {
+			$this->assertSame( $row['pruned'] !== null, (bool) $row['emptied'], 'A pruned item has lost its before-image, and only then.' );
+		}
+
+		return array_column( $rows, 'pruned' );
+	}
+
+	/**
 	 * An entry's single item.
 	 *
 	 * @param int $change_id Entry id.
@@ -294,19 +391,21 @@ class ChangeJournalPruneTest extends TestCase {
 	 *
 	 * @param int $days  Days.
 	 * @param int $bytes Byte ceiling.
+	 * @param int $runs  Sessions kept per item; 0 for no limit.
 	 *
 	 * @return RetentionPolicy
 	 */
-	private function policy( int $days, int $bytes ): RetentionPolicy {
-		return new class( $days, $bytes ) implements RetentionPolicy {
+	private function policy( int $days, int $bytes, int $runs = 0 ): RetentionPolicy {
+		return new class( $days, $bytes, $runs ) implements RetentionPolicy {
 
 			/**
 			 * Build.
 			 *
 			 * @param int $days  Days.
 			 * @param int $bytes Bytes.
+			 * @param int $runs  Sessions per item.
 			 */
-			public function __construct( private int $days, private int $bytes ) {}
+			public function __construct( private int $days, private int $bytes, private int $runs ) {}
 
 			/**
 			 * {@inheritDoc}
@@ -319,7 +418,7 @@ class ChangeJournalPruneTest extends TestCase {
 			 * {@inheritDoc}
 			 */
 			public function runs_per_item(): int {
-				return 0;
+				return $this->runs;
 			}
 
 			/**

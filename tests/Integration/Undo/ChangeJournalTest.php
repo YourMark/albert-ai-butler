@@ -26,6 +26,7 @@ use Albert\Undo\Journal;
 use Albert\Undo\Recorder;
 use Albert\Undo\Storage\Repository;
 use Albert\Undo\Window;
+use Albert\Undo\WindowContext;
 use WP\MCP\Core\McpServer;
 use WP\MCP\Domain\Tools\McpTool;
 use WP\MCP\Infrastructure\ErrorHandling\NullMcpErrorHandler;
@@ -373,7 +374,7 @@ class ChangeJournalTest extends TestCase {
 
 			$this->call();
 
-			$this->assertSame( [ $table ], json_decode( (string) $this->only_entry()['other_tables'], true ) );
+			$this->assertSame( [ $table, 'broken (handler failed)' ], json_decode( (string) $this->only_entry()['other_tables'], true ) );
 		} finally {
 			remove_filter( 'albert/undo/handlers', $hook );
 		}
@@ -634,6 +635,280 @@ class ChangeJournalTest extends TestCase {
 	}
 
 	/**
+	 * Renaming a meta row by id (the custom fields box does) records the old
+	 * key, which the hook does not name.
+	 *
+	 * @return void
+	 */
+	public function test_a_renamed_meta_row_records_its_old_key(): void {
+		$post_id = self::factory()->post->create();
+		$meta_id = (int) add_post_meta( $post_id, 'acme_old', 'v' );
+
+		$this->work = static fn() => update_metadata_by_mid( 'post', $meta_id, 'v', 'acme_new' );
+
+		$this->call();
+
+		$entry = $this->only_entry();
+		$items = $this->items_by_key( (int) $entry['id'] );
+
+		$this->assertNull( $entry['reason'], (string) $entry['other_tables'] );
+		$this->assertSame( 'delete', $items[ "meta:post:{$post_id}:acme_old" ]['operation'] );
+		$this->assertSame( 'create', $items[ "meta:post:{$post_id}:acme_new" ]['operation'] );
+	}
+
+	/**
+	 * A secret deleted for every user at once (everyone logged out) is named.
+	 *
+	 * @return void
+	 */
+	public function test_a_bulk_secret_delete_is_named(): void {
+		update_user_meta( $this->user_id, 'session_tokens', [ 'live-session' => [] ] );
+
+		$this->work = static fn() => delete_metadata( 'user', 0, 'session_tokens', '', true );
+
+		$this->call();
+
+		$this->assertSame( [ 'session_tokens' ], json_decode( (string) $this->only_entry()['effects'], true )['secrets'] );
+	}
+
+	/**
+	 * Deleting a user and handing their posts to someone else records the
+	 * posts' previous author; the entry stays unrevertable because the account is gone.
+	 *
+	 * @return void
+	 */
+	public function test_reassigned_posts_are_recorded(): void {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+		$leaving = self::factory()->user->create();
+		$post_id = self::factory()->post->create( [ 'post_author' => $leaving ] );
+
+		$this->work = fn() => wp_delete_user( $leaving, $this->user_id );
+
+		$this->call();
+
+		$entry = $this->only_entry();
+		$items = $this->items_by_key( (int) $entry['id'] );
+
+		$this->assertSame( Recorder::REASON_REMOVED, $entry['reason'] );
+		$this->assertSame( (string) $leaving, (string) $items[ "post:{$post_id}" ]['before']['post_author'] );
+	}
+
+	/**
+	 * Reordering terms on a sorted taxonomy rewrites their order with no
+	 * hook, so it is a direct write, not a silent change.
+	 *
+	 * @return void
+	 */
+	public function test_a_sorted_term_reorder_is_flagged(): void {
+		register_taxonomy( 'acme_sorted', 'post', [ 'sort' => true ] );
+		$post_id = self::factory()->post->create();
+		$first   = self::factory()->term->create( [ 'taxonomy' => 'acme_sorted' ] );
+		$second  = self::factory()->term->create( [ 'taxonomy' => 'acme_sorted' ] );
+		wp_set_object_terms( $post_id, [ $first, $second ], 'acme_sorted' );
+
+		$this->work = static fn() => wp_set_object_terms( $post_id, [ $second, $first ], 'acme_sorted' );
+
+		try {
+			$this->call();
+		} finally {
+			unregister_taxonomy( 'acme_sorted' );
+		}
+
+		$this->assertSame( Recorder::REASON_DIRECT_WRITE, $this->only_entry()['reason'] );
+	}
+
+	/**
+	 * A transient mentioned in a value does not make a direct option write noise.
+	 *
+	 * @return void
+	 */
+	public function test_a_transient_in_a_value_hides_nothing(): void {
+		$this->work = static function (): void {
+			global $wpdb;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The direct write under test.
+			$wpdb->update( $wpdb->options, [ 'option_value' => 'about _transient_ things' ], [ 'option_name' => 'blogname' ] );
+		};
+
+		$this->call();
+
+		$this->assertSame( Recorder::REASON_DIRECT_WRITE, $this->only_entry()['reason'] );
+	}
+
+	/**
+	 * A handler that throws when the call ends costs that item's certainty,
+	 * never the entry: it is closed, and says it is not revertable.
+	 *
+	 * @return void
+	 */
+	public function test_a_failing_reread_closes_the_entry(): void {
+		$handler = $this->rereading_handler();
+		$hook    = static fn() => [ $handler ];
+		add_filter( 'albert/undo/handlers', $hook );
+
+		$this->work = static fn() => update_option( 'acme_banner', wp_generate_password( 8, false ) );
+
+		try {
+			$this->call();
+		} finally {
+			remove_filter( 'albert/undo/handlers', $hook );
+		}
+
+		$entry = $this->only_entry();
+
+		$this->assertSame( Recorder::STATUS_RECORDED, $entry['status'] );
+		$this->assertSame( Recorder::REASON_RECORD_FAILED, $entry['reason'] );
+		$this->assertArrayHasKey( 'option:acme_banner', $this->items_by_key( (int) $entry['id'] ) );
+	}
+
+	/**
+	 * A failed read is a gap, never "did not exist": that would record an
+	 * existing option as created, and a revert would delete it.
+	 *
+	 * @return void
+	 */
+	public function test_a_failed_read_is_never_a_create(): void {
+		update_option( 'acme_banner', 'before' );
+		$break = static fn( $query ) => is_string( $query ) && str_contains( $query, 'SELECT option_name, option_value, autoload' ) ? 'SELECT broken FROM nowhere_at_all' : $query;
+
+		$this->work = static function () use ( $break ): void {
+			add_filter( 'query', $break );
+			update_option( 'acme_banner', 'after' );
+			remove_filter( 'query', $break );
+		};
+
+		$suppress = $GLOBALS['wpdb']->suppress_errors( true );
+		try {
+			$this->call();
+		} finally {
+			$GLOBALS['wpdb']->suppress_errors( $suppress );
+			remove_filter( 'query', $break );
+		}
+
+		$entry = $this->only_entry();
+
+		$this->assertSame( Recorder::REASON_OTHER_TABLE, $entry['reason'] );
+		$this->assertArrayNotHasKey( 'option:acme_banner', $this->items_by_key( (int) $entry['id'] ) );
+	}
+
+	/**
+	 * Secret names are matched as MySQL finds the row: ignoring case and
+	 * trailing spaces, and by the name actually stored.
+	 *
+	 * @return void
+	 */
+	public function test_secret_names_match_as_mysql_does(): void {
+		$user_id = self::factory()->user->create();
+		update_user_meta( $user_id, 'session_tokens', [ 'live-session' => [] ] );
+		update_option( 'acme_header', 'Bearer abc.def.ghi' );
+
+		$this->work = static function () use ( $user_id ): void {
+			update_user_meta( $user_id, 'Session_Tokens ', [ 'other' => [] ] );
+			update_option( 'acme_header', 'none' );
+		};
+
+		$this->call();
+
+		$entry  = $this->only_entry();
+		$stored = serialize( [ $entry, $this->items_by_key( (int) $entry['id'] ) ] ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Searching the whole record.
+
+		$this->assertSame( Recorder::REASON_SECRET, $entry['reason'] );
+		$this->assertStringNotContainsString( 'live-session', $stored );
+		$this->assertStringNotContainsString( 'abc.def.ghi', $stored );
+	}
+
+	/**
+	 * A comment's IP address and browser are never kept: no edit changes them.
+	 *
+	 * @return void
+	 */
+	public function test_a_comment_ip_is_not_stored(): void {
+		$comment = self::factory()->comment->create(
+			[
+				'comment_author_IP' => '203.0.113.9',
+				'comment_agent'     => 'AcmeBrowser/1.0',
+			]
+		);
+
+		$this->work = static fn() => wp_update_comment(
+			[
+				'comment_ID'      => $comment,
+				'comment_content' => 'Edited',
+			]
+		);
+
+		$this->call();
+
+		$before = $this->items_by_key( (int) $this->only_entry()['id'] )[ "comment:{$comment}" ]['before'];
+
+		$this->assertArrayNotHasKey( 'comment_author_IP', $before );
+		$this->assertArrayNotHasKey( 'comment_agent', $before );
+	}
+
+	/**
+	 * A call writing many tables keeps a bounded, valid list of them.
+	 *
+	 * @return void
+	 */
+	public function test_a_long_list_of_tables_is_capped(): void {
+		$this->work = static function (): void {
+			global $wpdb;
+			$suppress = $wpdb->suppress_errors( true );
+			for ( $i = 0; $i < 60; $i++ ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Writes the monitor notes.
+				$wpdb->query( $wpdb->prepare( 'INSERT INTO %i (a) VALUES (1)', "acme_missing_{$i}" ) );
+			}
+			$wpdb->suppress_errors( $suppress );
+		};
+
+		$this->call();
+
+		$tables = json_decode( (string) $this->only_entry()['other_tables'], true );
+
+		$this->assertCount( 51, $tables );
+		$this->assertSame( '+10 more', end( $tables ) );
+	}
+
+	/**
+	 * Two chats on one connection are two sessions, and a session cannot
+	 * outlast a day however busy it is.
+	 *
+	 * @return void
+	 */
+	public function test_sessions_follow_the_mcp_session_and_end_after_a_day(): void {
+		$context = static fn( ?string $session ) => new WindowContext( WindowContext::SOURCE_MCP, 'acme/work', 1, 'client-acme', null, null, $session );
+
+		$first  = $this->journal->create_entry( $context( 'chat-1' ) );
+		$second = $this->journal->create_entry( $context( 'chat-2' ) );
+		$again  = $this->journal->create_entry( $context( 'chat-1' ) );
+
+		$this->assertNotSame( $first['run_id'], $second['run_id'] );
+		$this->assertSame( $first['run_id'], $again['run_id'] );
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Ages the session's first call.
+		$wpdb->update( Tables::changes(), [ 'created_at' => gmdate( 'Y-m-d H:i:s', time() - Repository::RUN_MAX_SECONDS - 60 ) ], [ 'id' => $first['id'] ] );
+
+		$this->assertNotSame( $first['run_id'], $this->journal->create_entry( $context( 'chat-1' ) )['run_id'] );
+	}
+
+	/**
+	 * A handler may not declare another blog's core tables either.
+	 *
+	 * @return void
+	 */
+	public function test_handlers_cannot_claim_another_blogs_core_tables(): void {
+		global $wpdb;
+
+		$hook = fn() => [ $this->handler( 'acme', [ '2_posts' ], false ) ];
+		add_filter( 'albert/undo/handlers', $hook );
+		try {
+			$this->assertFalse( Registry::load()->covers_table( $wpdb->base_prefix . '2_posts' ) );
+		} finally {
+			remove_filter( 'albert/undo/handlers', $hook );
+		}
+	}
+
+	/**
 	 * A read-only call leaves nothing behind.
 	 *
 	 * @return void
@@ -866,6 +1141,76 @@ class ChangeJournalTest extends TestCase {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The direct write under test.
 		$wpdb->query( $wpdb->prepare( "UPDATE %i SET meta_value = meta_value - 1 WHERE post_id = %d AND meta_key = '_stock'", $wpdb->postmeta, $post_id ) );
+	}
+
+	/**
+	 * A handler that captures one entity of its own and fails to read it again
+	 * when the call ends.
+	 *
+	 * @return Handler
+	 */
+	private function rereading_handler(): Handler {
+		return new class() implements Handler {
+
+			/**
+			 * Reads so far.
+			 *
+			 * @var int
+			 */
+			private int $reads = 0;
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function id(): string {
+				return 'acme_reread';
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function tables(): array {
+				return [];
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function derived_tables(): array {
+				return [];
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function claims( Entity $entity ): bool {
+				return false;
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function open( Recorder $recorder ): void {
+				$recorder->capture( Entity::custom( 'acme_reread', 'one' ) );
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function close(): void {}
+
+			/**
+			 * {@inheritDoc}
+			 *
+			 * @throws \RuntimeException On the second read.
+			 */
+			public function read( string $key ): ?array {
+				if ( ++$this->reads > 1 ) {
+					throw new \RuntimeException( 'gone' );
+				}
+				return [ 'value' => 'v' ];
+			}
+		};
 	}
 
 	/**

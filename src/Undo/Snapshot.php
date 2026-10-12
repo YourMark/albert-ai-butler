@@ -42,6 +42,14 @@ final class Snapshot {
 	];
 
 	/**
+	 * Comment fields never stored: personal data that no edit changes, so a
+	 * revert has no use for it. A deleted comment comes back without them.
+	 *
+	 * @var array<int, string>
+	 */
+	private const COMMENT_PERSONAL = [ 'comment_author_IP', 'comment_agent' ];
+
+	/**
 	 * Fields WordPress rewrites on every save, left out when comparing states so
 	 * they never look like somebody's edit. Still kept in the before-image.
 	 *
@@ -150,11 +158,39 @@ final class Snapshot {
 	 * @param Entity $entity The entity.
 	 *
 	 * @return array<string, mixed>|null
+	 * @throws \RuntimeException When the read fails.
 	 */
 	private function read_here( Entity $entity ): ?array {
 		global $wpdb;
 
 		$parts = $entity->parts;
+
+		// Cleared first: a handler's read may run no query, and an earlier
+		// failure must not be taken for this read's. Recorder::quietly() puts
+		// the caller's value back.
+		$wpdb->last_error = '';
+		$state            = $this->query( $entity, $parts );
+
+		// A failed read must not pass for "did not exist": that would record an
+		// existing row as created, and a revert would delete it.
+		if ( self::failed() ) {
+			throw new \RuntimeException( 'Snapshot read failed.' );
+		}
+
+		return $state;
+	}
+
+	/**
+	 * The queries behind {@see self::read_here()}.
+	 *
+	 * @param Entity             $entity The entity.
+	 * @param array<int, string> $parts  Its key parts.
+	 *
+	 * @return array<string, mixed>|null
+	 * @throws \RuntimeException When a first query fails before a second runs.
+	 */
+	private function query( Entity $entity, array $parts ): ?array {
+		global $wpdb;
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The journal must read the stored rows, not the cache.
 		switch ( $entity->type ) {
@@ -164,18 +200,21 @@ final class Snapshot {
 
 			case Entity::COMMENT:
 				$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE comment_ID = %d', $wpdb->comments, (int) $parts[0] ), ARRAY_A );
-				return is_array( $row ) ? $row : null;
+				return is_array( $row ) ? self::without( $row, self::COMMENT_PERSONAL ) : null;
 
 			case Entity::USER:
 				$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE ID = %d', $wpdb->users, (int) $parts[0] ), ARRAY_A );
 				return is_array( $row ) ? self::without( $row, Exclusions::CREDENTIAL_COLUMNS[ Entity::USER ] ) : null;
 
 			case Entity::OPTION:
-				$row = $wpdb->get_row( $wpdb->prepare( 'SELECT option_value, autoload FROM %i WHERE option_name = %s', $wpdb->options, $parts[0] ), ARRAY_A );
+				$row = $wpdb->get_row( $wpdb->prepare( 'SELECT option_name, option_value, autoload FROM %i WHERE option_name = %s', $wpdb->options, $parts[0] ), ARRAY_A );
 				return is_array( $row ) ? $row : null;
 
 			case Entity::TERM:
 				$term = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE term_id = %d', $wpdb->terms, (int) $parts[0] ), ARRAY_A );
+				if ( self::failed() ) {
+					throw new \RuntimeException( 'Snapshot read failed.' );
+				}
 				if ( ! is_array( $term ) ) {
 					return null;
 				}
@@ -206,7 +245,7 @@ final class Snapshot {
 				}
 				$rows = $wpdb->get_results(
 					$wpdb->prepare(
-						'SELECT %i AS meta_id, meta_value FROM %i WHERE %i = %d AND meta_key = %s ORDER BY %i',
+						'SELECT %i AS meta_id, meta_key, meta_value FROM %i WHERE %i = %d AND meta_key = %s ORDER BY %i',
 						$table[2],
 						$wpdb->{$table[0]},
 						$table[1],
@@ -225,6 +264,17 @@ final class Snapshot {
 		// phpcs:enable
 
 		return null;
+	}
+
+	/**
+	 * Whether the last query failed.
+	 *
+	 * @return bool
+	 */
+	private static function failed(): bool {
+		global $wpdb;
+
+		return $wpdb->last_error !== '';
 	}
 
 	/**

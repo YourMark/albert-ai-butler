@@ -69,6 +69,35 @@ class WriteTargetTest extends TestCase {
 	}
 
 	/**
+	 * Every scan is linear: a long run of comments before or after the
+	 * statement is read in well under a second, where re-slicing the string or
+	 * a regex with a required character took seconds.
+	 *
+	 * @return void
+	 */
+	public function test_long_runs_of_comments_stay_linear(): void {
+		$started = microtime( true );
+
+		$this->assertSame( WriteTarget::READ, WriteTarget::of( str_repeat( '/**/ ', 400000 ) . 'SELECT 1' )->kind );
+		$this->assertWrite( 'wp_posts', str_repeat( "-- x\n", 400000 ) . 'UPDATE wp_posts SET a = 1' );
+		$this->assertWrite( 'wp_posts', 'UPDATE wp_posts SET a = 1 ' . str_repeat( '/**/ ', 400000 ) );
+
+		$this->assertLessThan( 2.0, microtime( true ) - $started );
+	}
+
+	/**
+	 * Only `/*!` and `/*M!` are code; any other comment, an optimizer hint
+	 * included, is a comment.
+	 *
+	 * @return void
+	 */
+	public function test_only_versioned_comments_are_code(): void {
+		$this->assertWrite( 'wp_posts', '/*foo! x */ UPDATE wp_posts SET a = 1' );
+		$this->assertWrite( 'wp_posts', '/*+ BKA(t1) */ UPDATE wp_posts SET a = 1' );
+		$this->assertSame( WriteTarget::UNREADABLE, WriteTarget::of( '/*m!100100 DELETE FROM wp_users */' )->kind );
+	}
+
+	/**
 	 * Anything it cannot read exactly is unreadable, never a read.
 	 *
 	 * @return void

@@ -11,6 +11,8 @@ namespace Albert\Database;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Cron\ChangeJournalPrune;
+
 /**
  * Installer class
  *
@@ -74,6 +76,8 @@ class Installer {
 		'albert_safe_mode_ttl_minutes',
 		// The Context screen's instructions and section toggles.
 		'albert_context',
+		// Change journal: its own failure count, read by the Dashboard.
+		'albert_undo_failures',
 		// Legacy options retired in earlier releases, cleared here for completeness.
 		'albert_logging_db_version',
 		'albert_oauth_db_version',
@@ -388,6 +392,8 @@ class Installer {
 		foreach ( self::USER_META as $meta_key ) {
 			delete_metadata( 'user', 0, $meta_key, '', true );
 		}
+
+		delete_transient( ChangeJournalPrune::SOON_LOCK );
 	}
 
 	/**

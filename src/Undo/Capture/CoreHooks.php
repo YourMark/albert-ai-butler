@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Undo\Entity;
 use Albert\Undo\Exclusions;
 use Albert\Undo\Recorder;
+use Albert\Undo\Snapshot;
 
 /**
  * Takes before-images at the hooks WordPress fires immediately before it writes.
@@ -111,7 +112,14 @@ final class CoreHooks {
 
 		foreach ( self::META_TYPES as $type ) {
 			$this->on( "add_{$type}_meta", fn( $object_id, $meta_key ) => $this->meta( $type, $object_id, $meta_key ), 2 );
-			$this->on( "update_{$type}_meta", fn( $meta_id, $object_id, $meta_key ) => $this->meta( $type, $object_id, $meta_key ), 3 );
+			$this->on(
+				"update_{$type}_meta",
+				function ( $meta_id, $object_id, $meta_key ) use ( $type ): void {
+					$this->meta( $type, $object_id, $meta_key );
+					$this->renamed_meta( $type, (int) $meta_id, (string) $meta_key );
+				},
+				3
+			);
 			$this->on( "delete_{$type}_meta", fn( $meta_ids, $object_id, $meta_key ) => $this->meta( $type, $object_id, $meta_key ), 3 );
 		}
 
@@ -154,7 +162,17 @@ final class CoreHooks {
 			3
 		);
 		$this->on( 'user_register', fn( $user_id ) => $this->created( Entity::user( (int) $user_id ) ) );
-		$this->on( 'delete_user', $user );
+		$this->on(
+			'delete_user',
+			function ( $user_id, $reassign = null ): void {
+				$this->capture( Entity::user( (int) $user_id ) );
+				// wp_delete_user() hands the posts over in one query, with no hook per post.
+				if ( $reassign ) {
+					$this->each( 'SELECT ID FROM %i WHERE post_author = %d', 'posts', (int) $user_id, Entity::post( ... ) );
+				}
+			},
+			2
+		);
 		$this->on( 'wpmu_delete_user', $user );
 
 		$this->on(
@@ -209,8 +227,8 @@ final class CoreHooks {
 	}
 
 	/**
-	 * Capture a meta key. A delete across every object passes 0 and cannot be
-	 * captured per object, so it is noted as a gap instead.
+	 * Capture a meta key. A delete across every object passes 0 and is noted
+	 * instead: as a secret by name, or as a gap.
 	 *
 	 * @param string $type      Meta type.
 	 * @param mixed  $object_id Object ID.
@@ -228,12 +246,56 @@ final class CoreHooks {
 			return;
 		}
 
+		// A delete across every object cannot be captured per object.
 		try {
-			if ( Exclusions::meta_key( $meta_key ) === null ) {
-				$this->recorder->untracked( "{$type} meta {$meta_key}" );
-			}
+			$class = Exclusions::meta_key( $meta_key );
 		} catch ( \Throwable $e ) {
+			$class = null;
+		}
+
+		if ( $class === Exclusions::SECRET ) {
+			$this->recorder->secret( $meta_key );
+		} elseif ( $class === null ) {
 			$this->recorder->untracked( "{$type} meta {$meta_key}" );
+		}
+	}
+
+	/**
+	 * Capture the old key of a meta row whose key is changing.
+	 *
+	 * The custom fields box renames a row through update_metadata_by_mid(),
+	 * which fires the hook with the new key only, so the old key's row would be
+	 * gone with nothing recorded.
+	 *
+	 * @param string $type     Meta type.
+	 * @param int    $meta_id  Row id.
+	 * @param string $meta_key The key it is being written under.
+	 *
+	 * @return void
+	 */
+	private function renamed_meta( string $type, int $meta_id, string $meta_key ): void {
+		$table = Snapshot::META_TABLES[ $type ] ?? null;
+		if ( $table === null || $meta_id <= 0 ) {
+			return;
+		}
+
+		$row = null;
+
+		try {
+			$this->recorder->quietly(
+				function () use ( $table, $meta_id, &$row ): void {
+					global $wpdb;
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The stored row, before it changes.
+					$row = $wpdb->get_row( $wpdb->prepare( 'SELECT %i AS object_id, meta_key FROM %i WHERE %i = %d', $table[1], $wpdb->{$table[0]}, $table[2], $meta_id ), ARRAY_A );
+				}
+			);
+		} catch ( \Throwable $e ) {
+			$this->recorder->untracked( "{$type} meta" );
+			return;
+		}
+
+		if ( is_array( $row ) && (string) $row['meta_key'] !== $meta_key ) {
+			$this->meta( $type, (int) $row['object_id'], (string) $row['meta_key'] );
 		}
 	}
 

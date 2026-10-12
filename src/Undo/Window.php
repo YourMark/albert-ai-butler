@@ -11,6 +11,7 @@ namespace Albert\Undo;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Cron\ChangeJournalPrune;
 use Albert\Undo\Handlers\Registry;
 use Albert\Undo\Storage\Repository;
 
@@ -110,7 +111,11 @@ final class Window {
 		}
 
 		try {
-			return $recorder->finish( $status );
+			$entry_id = $recorder->finish( $status );
+			if ( $entry_id !== null ) {
+				ChangeJournalPrune::soon();
+			}
+			return $entry_id;
 		} catch ( \Throwable $e ) {
 			// Recording is a safety net for the call, never a reason for it to fail.
 			FailureCounter::record( 1 );

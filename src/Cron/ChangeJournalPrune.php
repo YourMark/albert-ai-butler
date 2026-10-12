@@ -51,6 +51,20 @@ class ChangeJournalPrune implements Hookable {
 	const ABANDONED_SECONDS = HOUR_IN_SECONDS;
 
 	/**
+	 * Least time between two prunes run at the end of a request.
+	 *
+	 * @var int
+	 */
+	const SOON_INTERVAL = HOUR_IN_SECONDS;
+
+	/**
+	 * Transient that throttles {@see self::soon()}.
+	 *
+	 * @var string
+	 */
+	const SOON_LOCK = 'albert_undo_prune_lock';
+
+	/**
 	 * The journal store.
 	 *
 	 * @var Repository
@@ -99,6 +113,24 @@ class ChangeJournalPrune implements Hookable {
 			// Counted, so retention that stopped working shows on the Dashboard instead of nowhere.
 			FailureCounter::record( 1 );
 		}
+	}
+
+	/**
+	 * Also prune at the end of a request that recorded something, at most once
+	 * per {@see self::SOON_INTERVAL}: WP-Cron only runs on traffic and can be
+	 * switched off, and before-images are personal data that must not outlive
+	 * the window because a cron never ran.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public static function soon(): void {
+		if ( get_transient( self::SOON_LOCK ) !== false ) {
+			return;
+		}
+
+		set_transient( self::SOON_LOCK, 1, self::SOON_INTERVAL );
+		add_action( 'shutdown', [ new self(), 'run' ], PHP_INT_MAX );
 	}
 
 	/**

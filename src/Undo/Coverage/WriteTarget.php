@@ -45,7 +45,7 @@ final class WriteTarget {
 	 *
 	 * @var string
 	 */
-	private const IDENT = '((?:`[^`]+`|[A-Za-z0-9_$]+)(?:\s*\.\s*(?:`[^`]+`|[A-Za-z0-9_$]+))?)';
+	private const IDENT = '((?:`[^`]+`|[A-Za-z0-9_$]+)(?:\s*\.\s*(?:`[^`]+`|[A-Za-z0-9_$]+))?)(?![A-Za-z0-9_$\x80-\xFF])';
 
 	/**
 	 * Build a result.
@@ -69,7 +69,7 @@ final class WriteTarget {
 	 * @since 1.5.0
 	 */
 	public static function of( string $sql ): WriteTarget {
-		if ( self::has_executable_comment( $sql ) ) {
+		if ( self::has_hidden_code( $sql ) ) {
 			return new self( self::UNREADABLE );
 		}
 
@@ -93,8 +93,8 @@ final class WriteTarget {
 		}
 
 		return match ( $keyword ) {
-			'INSERT'   => self::write( '/^INSERT\s+(?:(?:LOW_PRIORITY|DELAYED|HIGH_PRIORITY|IGNORE)\s+)*(?:INTO\s+)?' . self::IDENT . '/i', $sql ),
-			'REPLACE'  => self::write( '/^REPLACE\s+(?:(?:LOW_PRIORITY|DELAYED)\s+)*(?:INTO\s+)?' . self::IDENT . '/i', $sql ),
+			'INSERT'   => self::write( '/^INSERT\s+(?:(?:LOW_PRIORITY|DELAYED|HIGH_PRIORITY|IGNORE)\s+)*(?:INTO\s+)?+' . self::IDENT . '/i', $sql ),
+			'REPLACE'  => self::write( '/^REPLACE\s+(?:(?:LOW_PRIORITY|DELAYED)\s+)*(?:INTO\s+)?+' . self::IDENT . '/i', $sql ),
 			'UPDATE'   => self::single_table( '/^UPDATE\s+(?:(?:LOW_PRIORITY|IGNORE)\s+)*' . self::IDENT . '(.*?)\bSET\b/is', $sql ),
 			'DELETE'   => self::single_table( '/^DELETE\s+(?:(?:LOW_PRIORITY|QUICK|IGNORE)\s+)*FROM\s+' . self::IDENT . '(.*?)(?:\bWHERE\b|\bORDER\b|\bLIMIT\b|$)/is', $sql ),
 			'TRUNCATE' => self::write( '/^TRUNCATE\s+(?:TABLE\s+)?' . self::IDENT . '/i', $sql, true ),
@@ -183,16 +183,17 @@ final class WriteTarget {
 	}
 
 	/**
-	 * Whether the query holds a comment the server runs as code: MySQL's `/*!`
-	 * and MariaDB's `/*M!`. Quoted strings are skipped, so a CSS licence banner
-	 * in post content is data, not a gap; an unbalanced quote fails closed.
+	 * Whether the query holds code past what its first keyword says: a comment
+	 * the server runs as code, or a second statement after a `;`. Quoted
+	 * strings are skipped, so a CSS licence banner in post content is data,
+	 * not a gap; an unbalanced quote fails closed.
 	 *
 	 * @param string $sql The query.
 	 *
 	 * @return bool
 	 */
-	private static function has_executable_comment( string $sql ): bool {
-		if ( ! str_contains( $sql, '/*' ) ) {
+	private static function has_hidden_code( string $sql ): bool {
+		if ( ! str_contains( $sql, '/*' ) && ! str_contains( $sql, ';' ) ) {
 			return false;
 		}
 
@@ -204,37 +205,30 @@ final class WriteTarget {
 		$at     = 0;
 
 		while ( true ) {
-			$at += strcspn( $sql, "'\"`/#-", $at );
+			$at += strcspn( $sql, "'\"`/#-;", $at );
 			if ( $at >= $length ) {
 				return false;
 			}
 
-			$char = $sql[ $at ];
-			$next = $sql[ $at + 1 ] ?? '';
-
-			if ( $char === '/' && $next === '*' ) {
-				if ( preg_match( '#\G/\*[A-Za-z]*!#', $sql, $match, 0, $at ) ) {
-					return true;
-				}
-				$end = strpos( $sql, '*/', $at + 2 );
-				if ( $end === false ) {
-					return true;
-				}
-				$at = $end + 2;
-			} elseif ( $char === '#' || ( $char === '-' && $next === '-' && preg_match( '/\G--(?:[\x00-\x20]|$)/', $sql, $match, 0, $at ) ) ) {
-				$end = strpos( $sql, "\n", $at );
-				if ( $end === false ) {
-					return false;
-				}
-				$at = $end + 1;
-			} elseif ( $char === '/' || $char === '-' ) {
-				++$at;
-			} else {
-				$at = self::string_end( $sql, $at, $char );
-				if ( $at === null ) {
-					return true;
-				}
+			if ( self::is_executable_comment_at( $sql, $at ) ) {
+				return true;
 			}
+
+			if ( $sql[ $at ] === ';' ) {
+				// A trailing `;` ends the statement; anything after it is another.
+				$rest = self::strip_leading_comments( substr( $sql, $at + 1 ) );
+				return $rest === null || trim( $rest, " \t\n\r\0\x0B\f;" ) !== '';
+			}
+
+			$char = $sql[ $at ];
+			$past = in_array( $char, [ "'", '"', '`' ], true ) ? self::string_end( $sql, $at, $char ) : self::comment_end( $sql, $at );
+
+			if ( $past === null ) {
+				return true;
+			}
+
+			// Not a string or comment after all: a lone `/` or `-`.
+			$at = $past === $at ? $at + 1 : $past;
 		}
 	}
 
@@ -268,35 +262,81 @@ final class WriteTarget {
 	}
 
 	/**
-	 * Remove leading whitespace, comments and opening parentheses.
+	 * Whether a comment the server runs as code starts at an offset: MySQL's
+	 * `/*!` or MariaDB's `/*M!`. Anything else after `/*`, an optimizer hint
+	 * `/*+` included, is a comment.
+	 *
+	 * Compared by character: PCRE looks ahead for a pattern's required `!`
+	 * before matching, which costs a pass over the rest of a long query on
+	 * every call.
+	 *
+	 * @param string $sql The query.
+	 * @param int    $at  Offset.
+	 *
+	 * @return bool
+	 */
+	private static function is_executable_comment_at( string $sql, int $at ): bool {
+		if ( substr( $sql, $at, 2 ) !== '/*' ) {
+			return false;
+		}
+
+		$next = $sql[ $at + 2 ] ?? '';
+
+		return $next === '!' || ( ( $next === 'M' || $next === 'm' ) && ( $sql[ $at + 3 ] ?? '' ) === '!' );
+	}
+
+	/**
+	 * Where a comment starting at an offset ends, just past it.
 	 *
 	 * `--` starts a comment only when followed by whitespace or a control
-	 * character, as in MySQL; otherwise it is left, and the query is unreadable.
+	 * character, as in MySQL.
+	 *
+	 * @param string $sql The query.
+	 * @param int    $at  Offset.
+	 *
+	 * @return int|null The offset past the comment, `$at` itself when none
+	 *                  starts there, or null when a block comment never closes.
+	 */
+	private static function comment_end( string $sql, int $at ): ?int {
+		$char = $sql[ $at ] ?? '';
+
+		if ( $char === '/' && ( $sql[ $at + 1 ] ?? '' ) === '*' ) {
+			$end = strpos( $sql, '*/', $at + 2 );
+			return $end === false ? null : $end + 2;
+		}
+
+		if ( $char === '#' || ( $char === '-' && ( $sql[ $at + 1 ] ?? '' ) === '-' && ord( $sql[ $at + 2 ] ?? ' ' ) <= 0x20 ) ) {
+			$end = strpos( $sql, "\n", $at );
+			return $end === false ? strlen( $sql ) : $end + 1;
+		}
+
+		return $at;
+	}
+
+	/**
+	 * Remove leading whitespace, comments and opening parentheses, by offset
+	 * so a long run of them stays linear.
 	 *
 	 * @param string $sql The query.
 	 *
 	 * @return string|null The rest, or null on an unterminated block comment.
 	 */
 	private static function strip_leading_comments( string $sql ): ?string {
+		$at = 0;
+
 		while ( true ) {
-			$sql = ltrim( $sql, " \t\n\r\0\x0B\f(" );
+			$at  += strspn( $sql, " \t\n\r\0\x0B\f(", $at );
+			$past = self::comment_end( $sql, $at );
 
-			if ( str_starts_with( $sql, '/*' ) ) {
-				$end = strpos( $sql, '*/', 2 );
-				if ( $end === false ) {
-					return null;
-				}
-				$sql = substr( $sql, $end + 2 );
-				continue;
+			if ( $past === null ) {
+				return null;
 			}
 
-			if ( str_starts_with( $sql, '#' ) || preg_match( '/^--(?:[\x00-\x20]|$)/', $sql ) ) {
-				$end = strpos( $sql, "\n" );
-				$sql = $end === false ? '' : substr( $sql, $end + 1 );
-				continue;
+			if ( $past === $at ) {
+				return substr( $sql, $at );
 			}
 
-			return $sql;
+			$at = $past;
 		}
 	}
 }

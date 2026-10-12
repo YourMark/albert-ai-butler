@@ -18,6 +18,12 @@ defined( 'ABSPATH' ) || exit;
  */
 final class WindowContext {
 
+	/**
+	 * What opened the window: an MCP tool call, a safe-mode approval, or an
+	 * upload-link redemption.
+	 *
+	 * @var string
+	 */
 	public const SOURCE_MCP      = 'mcp';
 	public const SOURCE_APPROVAL = 'approval';
 	public const SOURCE_UPLOAD   = 'upload_link';

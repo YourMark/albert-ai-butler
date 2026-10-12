@@ -68,12 +68,38 @@ final class Exclusions {
 	private const SECRET_META_KEYS = [ 'session_tokens', '_application_passwords', 'mcp_adapter_sessions*' ];
 
 	/**
-	 * Names that look like a credential: a telling word anywhere, or a short
-	 * one standing as its own segment (`smtp_pass`, not `compass`).
+	 * Names that look like a credential: a telling word anywhere, a `*_key`
+	 * that names a kind of secret, or a short word standing as its own
+	 * segment (`smtp_pass`, not `compass`). A false positive only costs a
+	 * revert; a miss stores the credential.
 	 *
 	 * @var string
 	 */
-	private const SECRET_NAME = '/password|passwd|secret|api_?key|private_?key|access_?token|refresh_?token|auth_?token|licen[cs]e_?key|credential|(?:^|[_\-.])(?:pass|pwd|token|tokens|salt)(?:$|[_\-.])/i';
+	private const SECRET_NAME = '/pass(?:word|wd|phrase)|secret|credential|authori[sz]ation|bearer|api[_\-.]?key|(?:access|consumer|client|encryption|signing|app|private|licen[cs]e|auth|totp|hmac|webhook|smtp|mail|stripe|paypal)[_\-.]?key|tokens?(?![a-z])|(?:backup|recovery)[_\-.]?codes?|(?:smtp|mail|db|ftp|proxy|admin)[_\-.]?pass|(?:^|[_\-.])(?:pass|pwd\d*|salt|otp)(?:$|[_\-.\d])/i';
+
+	/**
+	 * Values that are a credential whatever they are stored under: an
+	 * authorization header, well-known API key formats, a private key.
+	 *
+	 * @var string
+	 */
+	private const SECRET_VALUE = '/^(?:Bearer\s+\S|Basic\s+[A-Za-z0-9+\/=]{8,})|^(?:sk|rk)_(?:live|test)_|^gh[pousr]_[A-Za-z0-9]{20,}|^github_pat_|^xox[abprs]-|^AKIA[0-9A-Z]{16}$|-----BEGIN [A-Z ]*PRIVATE KEY-----/';
+
+	/**
+	 * Longest value scanned for credentials. Anything larger is never stored
+	 * either: the recorder treats it as too large.
+	 *
+	 * @var int
+	 */
+	private const MAX_SCAN_BYTES = 33554432;
+
+	/**
+	 * How deep a value is scanned. Data nested deeper is treated as a secret:
+	 * what could not be read through is not stored.
+	 *
+	 * @var int
+	 */
+	private const MAX_SCAN_DEPTH = 32;
 
 	/**
 	 * Shortest prefix a filter may exclude with a trailing `*`.
@@ -168,8 +194,10 @@ final class Exclusions {
 	}
 
 	/**
-	 * Whether a captured option or meta value holds a credential under a
-	 * telling key, like a payment gateway's settings array with its secret key.
+	 * Whether a captured state holds a credential the name check could not
+	 * see: a stored option name or meta key that is one (MySQL matched the
+	 * requested name ignoring case, accents and trailing spaces), or a value
+	 * holding one at any depth, like a payment gateway's settings array.
 	 *
 	 * @param Entity                    $entity The entity.
 	 * @param array<string, mixed>|null $state  Its state as {@see Snapshot} reads it.
@@ -178,41 +206,42 @@ final class Exclusions {
 	 * @since 1.5.0
 	 */
 	public static function holds_secret( Entity $entity, ?array $state ): bool {
-		$raw = match ( $entity->type ) {
-			Entity::OPTION => [ $state['option_value'] ?? null ],
-			Entity::META   => array_column( is_array( $state['values'] ?? null ) ? $state['values'] : [], 'meta_value' ),
-			default        => [],
+		if ( $state === null ) {
+			return false;
+		}
+
+		$rows = is_array( $state['values'] ?? null ) ? $state['values'] : [];
+
+		[ $names, $values ] = match ( $entity->type ) {
+			Entity::OPTION => [ [ $state['option_name'] ?? '' ], [ $state['option_value'] ?? null ] ],
+			Entity::META   => [ array_column( $rows, 'meta_key' ), array_column( $rows, 'meta_value' ) ],
+			Entity::CUSTOM => [ [], [ $state ] ],
+			default        => [ [], [] ],
 		};
 
-		foreach ( $raw as $value ) {
-			if ( ! is_string( $value ) ) {
-				continue;
+		foreach ( $names as $name ) {
+			if ( is_string( $name ) && self::matches( $name, $entity->type === Entity::OPTION ? self::SECRET_OPTIONS : self::SECRET_META_KEYS ) ) {
+				return true;
 			}
-
-			// Silenced: a corrupt stored value must not print a notice into the call's response.
-			$decoded = is_serialized( $value ) ? @unserialize( $value, [ 'allowed_classes' => false ] ) : json_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize, WordPress.PHP.NoSilencedErrors.Discouraged -- No classes allowed.
-
-			if ( ( is_array( $decoded ) || is_object( $decoded ) ) && self::has_secret_key( self::fields( $decoded ) ) ) {
+			if ( is_string( $name ) && preg_match( self::SECRET_NAME, $name ) ) {
 				return true;
 			}
 		}
 
-		return false;
+		return self::contains_secret( $values, self::MAX_SCAN_DEPTH );
 	}
 
 	/**
 	 * Whether data holds a non-empty credential, at any depth: under a telling
-	 * key (`secret_key`), or as a `name`/`value` pair naming one.
-	 *
-	 * Past the depth limit it answers yes: data it could not finish reading is
-	 * not stored.
+	 * key (`secret_key`), as a `name`/`value` pair naming one, as a value in a
+	 * known credential format, or inside a serialized or JSON string.
 	 *
 	 * @param array<mixed> $data  The data.
 	 * @param int          $depth Remaining depth.
 	 *
 	 * @return bool
 	 */
-	private static function has_secret_key( array $data, int $depth = 32 ): bool {
+	private static function contains_secret( array $data, int $depth ): bool {
 		if ( $depth < 0 ) {
 			return true;
 		}
@@ -224,19 +253,58 @@ final class Exclusions {
 		}
 
 		foreach ( $data as $key => $value ) {
+			if ( is_string( $key ) && self::is_filled( $value ) && preg_match( self::SECRET_NAME, $key ) ) {
+				return true;
+			}
+
 			if ( is_array( $value ) || is_object( $value ) ) {
-				if ( self::has_secret_key( self::fields( $value ), $depth - 1 ) ) {
+				if ( self::contains_secret( self::fields( $value ), $depth - 1 ) ) {
 					return true;
 				}
 				continue;
 			}
 
-			if ( is_string( $key ) && self::is_filled( $value ) && preg_match( self::SECRET_NAME, $key ) ) {
+			if ( ! is_string( $value ) || $value === '' || strlen( $value ) > self::MAX_SCAN_BYTES ) {
+				continue;
+			}
+
+			if ( preg_match( self::SECRET_VALUE, $value ) ) {
+				return true;
+			}
+
+			$decoded = self::decode( $value );
+			if ( $decoded === false ) {
+				return true;
+			}
+			if ( ( is_array( $decoded ) || is_object( $decoded ) ) && self::contains_secret( self::fields( $decoded ), $depth - 1 ) ) {
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	/**
+	 * A stored string's structure, if it has one.
+	 *
+	 * @param string $value The value.
+	 *
+	 * @return mixed The decoded value, null when it is plain text, or false
+	 *               when it is JSON nested too deep to read.
+	 */
+	private static function decode( string $value ) {
+		if ( is_serialized( $value ) ) {
+			// Silenced: a corrupt stored value must not print a notice into the call's response.
+			return @unserialize( $value, [ 'allowed_classes' => false ] ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize, WordPress.PHP.NoSilencedErrors.Discouraged -- No classes allowed.
+		}
+
+		if ( $value[0] !== '{' && $value[0] !== '[' ) {
+			return null;
+		}
+
+		$decoded = json_decode( $value, true );
+
+		return json_last_error() === JSON_ERROR_DEPTH ? false : $decoded;
 	}
 
 	/**
@@ -260,14 +328,20 @@ final class Exclusions {
 	}
 
 	/**
-	 * Whether a value is a non-empty scalar.
+	 * Whether a value could be a credential: a non-empty string, or an array
+	 * or object with any field. Numbers and booleans are counts and flags
+	 * (`active_tokens => 0`), never a credential.
 	 *
 	 * @param mixed $value The value.
 	 *
 	 * @return bool
 	 */
 	private static function is_filled( $value ): bool {
-		return is_scalar( $value ) && (string) $value !== '';
+		if ( is_array( $value ) || is_object( $value ) ) {
+			return (array) $value !== [];
+		}
+
+		return is_string( $value ) && $value !== '';
 	}
 
 	/**
@@ -320,7 +394,8 @@ final class Exclusions {
 	}
 
 	/**
-	 * Match a name against exact names and `prefix*` patterns.
+	 * Match a name against exact names and `prefix*` patterns, as MySQL would
+	 * find the row: ignoring case and trailing spaces.
 	 *
 	 * @param string             $name     The name.
 	 * @param array<int, string> $patterns Patterns.
@@ -328,7 +403,10 @@ final class Exclusions {
 	 * @return bool
 	 */
 	private static function matches( string $name, array $patterns ): bool {
+		$name = strtolower( rtrim( $name, ' ' ) );
+
 		foreach ( $patterns as $pattern ) {
+			$pattern = strtolower( $pattern );
 			if ( str_ends_with( $pattern, '*' ) ? str_starts_with( $name, substr( $pattern, 0, -1 ) ) : $name === $pattern ) {
 				return true;
 			}

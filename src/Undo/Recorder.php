@@ -402,6 +402,7 @@ final class Recorder {
 				);
 			} catch ( \Throwable $e ) {
 				++$this->failures;
+				$this->mark_failed();
 			}
 		}
 
@@ -560,8 +561,21 @@ final class Recorder {
 	private function write( string $status ): ?int {
 		$kept = [];
 
+		$lost = false;
+
 		foreach ( $this->items as $item ) {
-			$after  = $this->snapshot->read( $item['entity'] );
+			try {
+				$after = $this->snapshot->read( $item['entity'] );
+			} catch ( \Throwable $e ) {
+				// Unknown new state: kept, so the change is listed, but not revertable.
+				++$this->failures;
+				$lost              = true;
+				$item['after']     = [];
+				$item['operation'] = 'update';
+				$kept[]            = $item;
+				continue;
+			}
+
 			$hashes = self::field_hashes( Snapshot::comparable( $item['entity'], $after ) );
 
 			if ( ( $after !== null ) === $item['existed'] && $hashes === $item['before'] ) {
@@ -596,7 +610,6 @@ final class Recorder {
 		}
 
 		$stored = 0;
-		$lost   = false;
 
 		foreach ( $kept as $item ) {
 			$inserted = $this->repository->insert_item(
@@ -618,7 +631,11 @@ final class Recorder {
 			}
 		}
 
-		$this->repository->finish_entry(
+		foreach ( $this->handlers->dropped() as $id ) {
+			$this->untracked( "{$id} (handler failed)" );
+		}
+
+		$finished = $this->repository->finish_entry(
 			$this->entry['id'],
 			$status,
 			$this->reason( $status, $kept, $lost ),
@@ -627,6 +644,10 @@ final class Recorder {
 			$stored,
 			ExecutionLogMarker::row_id( $this->context->ability_name )
 		);
+
+		if ( ! $finished ) {
+			++$this->failures;
+		}
 
 		return $this->entry['id'];
 	}
@@ -688,6 +709,29 @@ final class Recorder {
 		}
 
 		return $effects;
+	}
+
+	/**
+	 * Close an entry whose writing failed half way, so it does not sit as an
+	 * open recording that looks like nothing went wrong.
+	 *
+	 * @return void
+	 */
+	private function mark_failed(): void {
+		if ( $this->entry === null ) {
+			return;
+		}
+
+		try {
+			$this->quietly(
+				function (): void {
+					$this->repository->finish_entry( $this->entry['id'], self::STATUS_RECORDED, self::REASON_RECORD_FAILED, [], [], 0, null );
+				}
+			);
+		} catch ( \Throwable $e ) {
+			// The nightly sweep marks it interrupted.
+			unset( $e );
+		}
 	}
 
 	/**
