@@ -536,13 +536,9 @@ class Installer {
 	/**
 	 * Change journal DDL: one row per recorded assistant call.
 	 *
-	 * `run_id` groups calls from one connection with no gap longer than ten
-	 * minutes (a session), and is the id of its first entry. `reason` says why
-	 * an entry cannot be reverted, NULL when it can; `other_tables` names the
-	 * tables written that the journal does not capture, and `effects` what no
-	 * revert takes back (emails sent, credentials changed, by name only).
-	 * `pending_action_id` ties a safe-mode approved run to its row, `log_id` to
-	 * the ability-log row for the same call, `session_id` to the MCP session.
+	 * `run_id` is the session, the id of its first entry. `reason` is why the
+	 * entry cannot be reverted (NULL when it can), `other_tables` what was
+	 * written but not captured.
 	 *
 	 * @param string $charset_collate Charset/collation clause.
 	 *
@@ -581,12 +577,8 @@ class Installer {
 	/**
 	 * Change journal items DDL: one row per entity a recorded call changed.
 	 *
-	 * `before_image` is the entity as it was before the call, serialized and
-	 * compressed; NULL for a create, for a call too large to keep, and once
-	 * pruned (`pruned` says why). `after_hashes` holds one hash per field of the
-	 * state the call left, so a revert can tell whose edit came later.
-	 * `entity_hash` identifies the entity across calls and blogs. `claimed_by`
-	 * names a handler that restores this entity itself.
+	 * `before_image` is NULL for a create, a call too large to keep, and once
+	 * pruned (`pruned` says why). `after_hashes` lets a revert see later edits.
 	 *
 	 * @param string $charset_collate Charset/collation clause.
 	 *

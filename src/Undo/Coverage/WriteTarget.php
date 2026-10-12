@@ -24,6 +24,11 @@ defined( 'ABSPATH' ) || exit;
  */
 final class WriteTarget {
 
+	/**
+	 * What a query does.
+	 *
+	 * @var string
+	 */
 	public const READ       = 'read';
 	public const WRITE      = 'write';
 	public const UNREADABLE = 'unreadable';
@@ -64,8 +69,7 @@ final class WriteTarget {
 	 * @since 1.5.0
 	 */
 	public static function of( string $sql ): WriteTarget {
-		// MySQL runs a versioned comment's body, so it is code, not a comment.
-		if ( str_contains( $sql, '/*!' ) ) {
+		if ( self::has_executable_comment( $sql ) ) {
 			return new self( self::UNREADABLE );
 		}
 
@@ -126,7 +130,9 @@ final class WriteTarget {
 			return new self( self::UNREADABLE );
 		}
 
-		return new self( self::WRITE, self::table_name( $match[1] ), $structure );
+		$table = self::table_name( $match[1] );
+
+		return $table === null ? new self( self::UNREADABLE ) : new self( self::WRITE, $table, $structure );
 	}
 
 	/**
@@ -149,21 +155,54 @@ final class WriteTarget {
 			return new self( self::UNREADABLE );
 		}
 
-		return new self( self::WRITE, self::table_name( $match[1] ) );
+		$table = self::table_name( $match[1] );
+
+		return $table === null ? new self( self::UNREADABLE ) : new self( self::WRITE, $table );
 	}
 
 	/**
-	 * The table part of a possibly schema-qualified, backticked name.
+	 * The table of a possibly schema-qualified, backticked name, or null when it
+	 * names another database: `other_db.wp_posts` is not this site's posts table.
 	 *
 	 * @param string $ident The identifier.
 	 *
-	 * @return string
+	 * @return string|null
 	 */
-	private static function table_name( string $ident ): string {
+	private static function table_name( string $ident ): ?string {
 		$parts = preg_split( '/\s*\.\s*/', $ident );
-		$last  = is_array( $parts ) ? (string) end( $parts ) : $ident;
+		if ( ! is_array( $parts ) ) {
+			return null;
+		}
+		$parts = array_map( static fn( string $part ): string => trim( $part, '`' ), $parts );
 
-		return trim( $last, '`' );
+		if ( count( $parts ) > 1 && ( ! defined( 'DB_NAME' ) || strcasecmp( $parts[0], (string) DB_NAME ) !== 0 ) ) {
+			return null;
+		}
+
+		return (string) end( $parts );
+	}
+
+	/**
+	 * Whether the query holds a comment the server runs as code: MySQL's `/*!`
+	 * and MariaDB's `/*M!`. Quoted strings are skipped, so a CSS licence banner
+	 * in post content is data, not a gap; an unbalanced quote fails closed.
+	 *
+	 * @param string $sql The query.
+	 *
+	 * @return bool
+	 */
+	private static function has_executable_comment( string $sql ): bool {
+		$code = preg_replace( '/\'(?:[^\'\\\\]|\\\\.)*\'|"(?:[^"\\\\]|\\\\.)*"/s', '', $sql );
+
+		if ( ! is_string( $code ) ) {
+			return true;
+		}
+
+		if ( str_contains( $code, "'" ) || str_contains( $code, '"' ) ) {
+			return (bool) preg_match( '#/\*[A-Za-z]*!#', $sql );
+		}
+
+		return (bool) preg_match( '#/\*[A-Za-z]*!#', $code );
 	}
 
 	/**

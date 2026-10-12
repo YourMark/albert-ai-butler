@@ -30,7 +30,7 @@ class WriteTargetTest extends TestCase {
 		$this->assertWrite( 'wp_options', "INSERT IGNORE INTO wp_options (option_name) VALUES ('a') ON DUPLICATE KEY UPDATE option_value = 'b'" );
 		$this->assertWrite( 'wp_posts', 'UPDATE LOW_PRIORITY wp_posts p SET p.post_status = 1' );
 		$this->assertWrite( 'wp_posts', 'DELETE FROM wp_posts AS p WHERE p.ID = 1' );
-		$this->assertWrite( 'acme_log', 'INSERT INTO shop.`acme_log` (note) VALUES (1)' );
+		$this->assertWrite( 'wp_posts', "UPDATE `wp_posts` SET `post_content` = '/*! banner */ a{}' WHERE `ID` = 1" );
 	}
 
 	/**
@@ -64,6 +64,9 @@ class WriteTargetTest extends TestCase {
 		$cases = [
 			'/*!50000 UPDATE wp_options SET option_value = 1 */',
 			'SELECT 1 /*! ; DELETE FROM wp_posts */',
+			'/*M!100100 DELETE FROM wp_posts */',
+			"UPDATE wp_posts SET post_title = 'it\\' /*! x */",
+			'INSERT INTO other_db.wp_posts (ID) VALUES (1)',
 			'WITH x AS (SELECT 1) DELETE FROM wp_posts',
 			'CALL acme_cleanup()',
 			"LOAD DATA INFILE 'x' INTO TABLE wp_posts",

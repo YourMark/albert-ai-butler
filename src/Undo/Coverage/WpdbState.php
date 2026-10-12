@@ -14,15 +14,10 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Runs the journal's own queries without the caller being able to tell.
  *
- * The journal queries between a caller's statements (in a before-write hook,
- * or inside wpdb's `query` filter), and code reads wpdb's per-query state
- * afterwards: `insert_id` after an insert, `rows_affected`, `last_error`. All
- * of it is put back. So is one protected flag: `wpdb::insert()`/`update()`
- * switch off the whole-query charset check (`check_current_query`) because
- * they already checked each field, and every completed query switches it back
- * on, so a read nested in the filter would re-arm a check the caller disabled
- * and a valid insert could be refused. wpdb's magic setter refuses that flag,
- * so it is restored through a closure bound to wpdb's scope.
+ * The journal reads between a caller's statements, and the caller then reads
+ * `insert_id`, `rows_affected` or `last_error`, so all of it is put back. So is
+ * the protected `check_current_query` flag: a nested query re-arms it, which
+ * would make wpdb refuse a valid insert the caller already checked per field.
  *
  * @since 1.5.0
  */

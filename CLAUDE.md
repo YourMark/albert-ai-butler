@@ -564,97 +564,83 @@ developer writes and safe mode is Albert's first boolean-shaped setting.
 
 Records the previous value of what an assistant call changes, so it can be
 reverted ("Revert" in the UI). PR 1 records only; the revert engine, the
-`find-changes`/`revert-change` abilities and the Changes screen follow. Design
-and decisions: the 1.5.0 planning doc 06 (outside the repo).
+`find-changes`/`revert-change` abilities and the Changes screen follow.
 
-**No per-ability work.** `Undo\Journal` opens a window on
-`mcp_adapter_pre_tool_call` (priority `PHP_INT_MAX`, after anything that blocks
-the call) and closes it on `mcp_adapter_tool_call_result` (`PHP_INT_MIN`).
-`SafeMode\Approver` opens one around an approved run (stamped with the
-pending-action id), and `UploadLinkController` one around an upload-link
-redemption (the link carries the minting connection). Only with a
-`ConnectionContext` (or the row's or link's client): wp-admin, the editor,
-WP-CLI and cron are never recorded and never checked. A throw the adapter
-swallows skips the result filter; `shutdown` closes the window as
-`interrupted`, and the next tool call in the same request closes it first.
+**Windows, no per-ability work.** `Undo\Journal` opens a window on
+`mcp_adapter_pre_tool_call` (`PHP_INT_MAX`, after anything that blocks the call)
+and closes it on `mcp_adapter_tool_call_result` (`PHP_INT_MIN`).
+`SafeMode\Approver` and `UploadLinkController` open one around an approved run
+and an upload-link redemption. Only with a connection: wp-admin, WP-CLI and cron
+are never recorded. A window the adapter never closes is closed on `shutdown` as
+`interrupted`.
 
-**Capture is the hooks.** `Capture\CoreHooks` takes before-images at the hooks
-WordPress fires immediately before it writes, after every short-circuit:
-`update_option` rather than `pre_update_option`, the `{$type}_meta` actions
-rather than the cancellable `{$type}_metadata` filters, `add_term_relationship`
-/ `delete_term_relationships`, `delete_attachment` (noting `media files`).
-Creates come from the hooks that fire once the row exists (`wp_insert_post`,
-`add_attachment`, `created_term`, `user_register`, `wp_insert_comment`).
+**Capture is the hooks.** `Capture\CoreHooks` uses the hooks WordPress fires
+immediately before it writes, after every short-circuit (`update_option`, not
+`pre_update_option`; the `{$type}_meta` actions, not the cancellable filters),
+and for creates the hooks that fire once the row exists. Rows core rewrites in
+one query as a side effect (children reparented on delete, a post's comments
+trashed with it) are captured one by one at the hook just before.
 
-**The table check is honesty, not capture.** `Coverage\QueryMonitor` reads only
-the target table of each query (`Coverage\WriteTarget`). WordPress's own tables
-are covered by the hooks; any other table, a structure change, or a query it
-cannot read is noted in `other_tables`, and the entry cannot be reverted. It
-fails closed: a statement is a read only if it starts with a known read-only
-keyword, `/*!` anywhere is unreadable, leading comments are stripped, and a
-multi-table UPDATE or DELETE is unreadable. A full SQL parser was built first
-and removed: it was the source of every "says complete when it is not" bug in
-review, for writes Albert's abilities never make. Accepted gap: a few core
-internals write without a hook (`wp_publish_post()`, `wp_set_comment_status()`,
-reparenting on delete).
+**The table check makes it honest.** `Coverage\QueryMonitor` reads each query's
+target table (`Coverage\WriteTarget`, fail-closed: unknown keywords, `/*!` and
+`/*M!` outside strings, multi-table writes and other databases are unreadable).
+A write to WordPress's own tables counts as covered only when the function that
+issued it, found from the backtrace, is a core function whose hooks capture it
+(`QueryMonitor::COVERED_WRITERS`). Anything else is a `direct_write`, noted with
+its writer: `wp_postmeta, written directly by
+WC_Product_Data_Store_CPT::update_product_stock() (woocommerce)`. WooCommerce's
+atomic stock update is the common case, and `wp_publish_post()` and
+`wp_set_comment_status()` are flagged the same way. Any other table, a structure
+change or an unreadable query is `other_table`. A full SQL parser was tried and
+removed: it was the source of every "says complete when it is not" bug.
 
-**Buffered, then written at the end.** Before-images are held in memory
-(compressed) and written when the call ends, because WooCommerce wraps writes in
-a transaction and a rollback would take journal rows with it. Only the entry row
-is written on first capture, so a hard kill leaves a `recording` row the nightly
-sweep marks interrupted; if a rollback removed it, it is written again. Over 8 MB
-or 2,000 entities the call is recorded as `too_large`. The monitor does no
-database work; the journal's own reads run through `Recorder::quietly()`, which
-restores wpdb's per-query state (including the protected `check_current_query`
-flag, through a closure bound to wpdb's scope).
+**Buffered, written at the end**, because a WooCommerce transaction rollback
+would take journal rows with it. Only the entry row is written early, and again
+if a rollback removed it. Over 8 MB or 2,000 entities the call is `too_large`,
+and nothing more is read. The journal's own queries run through
+`Recorder::quietly()`, which restores wpdb's per-query state.
 
-**At the end**, each entity is re-read and compared without volatile fields
-(`post_modified*`, meta ids): one left as it was is dropped, so a read-only call
-leaves no entry. Per-field sha256 hashes of the new state are stored for the
-revert's changed-since check. Every entity carries its blog, and `Snapshot`
-switches blogs to read it.
+**At the end** each entity is re-read and compared without volatile fields; one
+left as it was is dropped, so a read-only call leaves no entry. Per-field hashes
+of the new state are stored for the revert's changed-since check.
 
-**Reason codes** (`albert_changes.reason`, NULL when revertable, most serious
-first): `interrupted`, `record_failed`, `too_large`, `other_table`, `removed`
-(a deleted user), `secret`. `effects` lists what no revert takes back: emails
-attempted/failed (counts only) and changed secrets by name. `log_id` links the
-ability-log row for the same call (`ExecutionLogMarker::row_id()`), and
-`session_id` the MCP session.
+**Reason codes** (`reason`, NULL when revertable, most serious first):
+`interrupted`, `record_failed`, `too_large`, `removed` (a deleted user),
+`direct_write`, `other_table`, `secret`. `other_tables` lists what was not
+captured, `effects` what no revert takes back (email counts, secrets by name),
+`log_id` the ability-log row, `session_id` the MCP session.
 
-**Never stored**: `user_pass`, `user_activation_key`, `session_tokens`,
-`_application_passwords`, `mcp_adapter_sessions*`, the salts and keys,
-`recovery_keys`, `albert_oauth_*`. A change to one is noted by name and makes the
-entry unrevertable; a password change is spotted with an in-memory fingerprint.
-Noise (transients, `cron`, `rewrite_rules`, updater locks, `_edit_lock`,
-`_edit_last`) is ignored. The `albert/undo/excluded_*` filters can only add
-noise, and refuse `*` or a prefix shorter than three characters.
+**Secrets are never stored**: the known names (salts, `session_tokens`,
+`_application_passwords`, `albert_oauth_*`, ...), any option or meta key whose
+name looks like a credential (`smtp_pass`, `*_api_key`, `*secret*`), and any
+value holding a non-empty credential-looking key inside an array (a payment
+gateway's settings). A change to one is noted by name and makes the entry
+unrevertable; a password change is spotted with an in-memory fingerprint. Noise
+(transients, `cron`, locks, `_edit_lock`) is ignored; the `albert/undo/excluded_*`
+filters can only add noise.
 
-**Handlers** (`albert/undo/handlers`) cover a plugin's own tables. They may not
-declare WordPress's or Albert's tables, and one that throws is dropped for the
-window, so its tables are noted rather than trusted.
+**Handlers** (`albert/undo/handlers`) cover a plugin's own tables, never
+WordPress's or Albert's; one that throws is dropped for the window.
 
-**Failures** are counted in the `albert_undo_failures` option
-(`Undo\FailureCounter`), written after the window closes, so "nothing recorded"
-never looks like "nothing changed".
+**Failures**, including a nightly prune that throws, are counted in
+`albert_undo_failures` (`Undo\FailureCounter`), so "nothing recorded" never looks
+like "nothing changed".
 
-**Retention** is a `RetentionPolicy`: Free's are class constants (2 days, the last 2
-sessions per item, 50 MB)
-with no filter. An add-on replaces it by registering a class on
-`albert/undo/register_retention_policy`; there is deliberately no one-line
-filter. `Cron\ChangeJournalPrune` runs nightly on whole sessions, counted from a
-session's last call: age, then sessions beyond the per-item count (a session
-falls out whole when any item it changed has two newer sessions), then bytes
-(oldest first), closes rows stuck
-`recording` for an hour, and deletes entries 30 days past the window. Age and the
-per-item count are also enforced when items are read. A pruned item keeps its row and loses its
-before-image.
+**Retention** is a `RetentionPolicy`: Free's are constants (2 days, the last 2
+sessions per item, 50 MB) with no filter; an add-on registers its own class on
+`albert/undo/register_retention_policy`. `Cron\ChangeJournalPrune` prunes whole
+sessions nightly: by age from the last call, then a session that changed an
+item later changed by two other sessions (ranked by last change, so overlapping
+sessions order correctly), then by size, oldest first. Age and the per-item cap
+are also enforced on read. A pruned item keeps its row; entries are deleted 30
+days past the window.
 
-**Sessions**: same client and user, no gap over 10 minutes. `run_id` is the
-session's first entry id, so ordering by it is chronological.
+**Sessions**: same client and user, no gap over 10 minutes; `run_id` is the
+first entry's id.
 
-**Tables**: `albert_changes`, `albert_change_items`. Created by `dbDelta`, which
-only runs when the plugin version advances, so an existing dev install needs
-`Installer::install()` (or a version bump) before recording.
+**Tables**: `albert_changes`, `albert_change_items`, created by `dbDelta` when
+the plugin version advances; an existing dev install needs
+`Installer::install()` first.
 
 #### Connections screen (1.4.0)
 

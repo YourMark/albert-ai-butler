@@ -71,10 +71,11 @@ final class Window {
 			$recorder = new Recorder( $context, new Repository(), $handlers, new Snapshot( $handlers ) );
 			$recorder->start();
 		} catch ( \Throwable $e ) {
-			FailureCounter::record( 1 );
+			// Abandon first, so the counter's own option write is not recorded.
 			if ( isset( $recorder ) ) {
 				self::abandon( $recorder );
 			}
+			FailureCounter::record( 1 );
 			return false;
 		}
 

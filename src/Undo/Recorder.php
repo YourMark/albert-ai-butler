@@ -21,29 +21,36 @@ use Albert\Undo\Storage\Repository;
 /**
  * The journal entry for one call while it runs: before-images in, a verdict out.
  *
- * Capture is by entity, first touch wins: the first before-image taken during
- * the call is the state before the call, whatever writes follow. Before-images
- * are held in memory and written when the call ends, because a plugin may wrap
- * the call's writes in a transaction (WooCommerce does by default) and a
- * rollback would take journal rows written in between with it. Only the entry
- * row is written early, so a process killed outright still leaves a trace the
- * nightly sweep marks interrupted; if a rollback removed it, it is written again.
+ * First touch wins: the first before-image of an entity is its state before
+ * the call. Images are held in memory and written at the end, because a
+ * WooCommerce transaction rollback would take journal rows with it. Only the
+ * entry row is written early, so a killed process still leaves a trace.
  *
- * When the call ends each entity is read again. One the call left as it found
- * it is dropped, so a read-only call leaves no entry at all.
+ * At the end each entity is read again; one left as it was is dropped.
  *
  * @since 1.5.0
  */
 final class Recorder {
 
+	/**
+	 * Entry statuses.
+	 *
+	 * @var string
+	 */
 	public const STATUS_RECORDED    = 'recorded';
 	public const STATUS_INTERRUPTED = 'interrupted';
 
+	/**
+	 * Why an entry cannot be reverted, most serious first.
+	 *
+	 * @var string
+	 */
 	public const REASON_INTERRUPTED   = 'interrupted';
 	public const REASON_RECORD_FAILED = 'record_failed';
 	public const REASON_TOO_LARGE     = 'too_large';
-	public const REASON_OTHER_TABLE   = 'other_table';
 	public const REASON_REMOVED       = 'removed';
+	public const REASON_DIRECT_WRITE  = 'direct_write';
+	public const REASON_OTHER_TABLE   = 'other_table';
 	public const REASON_SECRET        = 'secret';
 
 	/**
@@ -101,6 +108,20 @@ final class Recorder {
 	 * @var array<string, true>
 	 */
 	private array $untracked = [];
+
+	/**
+	 * Whether a plugin wrote WordPress's own tables without the hooks.
+	 *
+	 * @var bool
+	 */
+	private bool $direct_write = false;
+
+	/**
+	 * Entities refused after reading, because their value held a credential.
+	 *
+	 * @var array<string, true>
+	 */
+	private array $refused = [];
 
 	/**
 	 * Credentials the call changed, by name. Never their values.
@@ -194,6 +215,7 @@ final class Recorder {
 	 * @since 1.5.0
 	 */
 	public function start(): void {
+		ExecutionLogMarker::forget_row( $this->context->ability_name );
 		$this->hooks->attach();
 		$this->monitor->attach();
 
@@ -238,6 +260,12 @@ final class Recorder {
 			$entity,
 			function () use ( $entity, $captured_by ): void {
 				$before = $this->snapshot->read( $entity );
+
+				if ( Exclusions::holds_secret( $entity, $before ) ) {
+					$this->refused[ $entity->id() ]                                 = true;
+					$this->secrets[ $entity->parts[ count( $entity->parts ) - 1 ] ] = true;
+					return;
+				}
 
 				if ( $entity->type === Entity::USER && $before !== null ) {
 					$this->credentials[ (int) $entity->parts[0] ] = Snapshot::credential_fingerprint( (int) $entity->parts[0] );
@@ -287,6 +315,20 @@ final class Recorder {
 	 */
 	public function untracked( string $what ): void {
 		$this->untracked[ $what ] = true;
+	}
+
+	/**
+	 * Note a write to WordPress's own tables that bypassed the hooks, so nothing captured it.
+	 *
+	 * @param string $table  The table.
+	 * @param string $writer The function that issued the query.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function direct_write( string $table, string $writer ): void {
+		$this->direct_write = true;
+		$this->untracked( "{$table}, written directly by {$writer}" );
 	}
 
 	/**
@@ -381,17 +423,24 @@ final class Recorder {
 	 * @return bool
 	 */
 	private function admit( Entity $entity ): bool {
-		if ( $this->failed || isset( $this->items[ $entity->id() ] ) ) {
+		if ( $this->failed || isset( $this->items[ $entity->id() ] ) || isset( $this->refused[ $entity->id() ] ) ) {
 			return false;
 		}
 
-		$class = Exclusions::classify( $entity );
+		try {
+			$class = Exclusions::classify( $entity );
+		} catch ( \Throwable $e ) {
+			$this->untracked( $entity->type );
+			++$this->failures;
+			return false;
+		}
 
 		if ( $class === Exclusions::SECRET ) {
 			$this->secrets[ $entity->parts[ count( $entity->parts ) - 1 ] ] = true;
 		}
 
-		return $class === null;
+		// Past the limit nothing more is read or held: the entry is unrevertable already.
+		return $class === null && ! $this->too_large;
 	}
 
 	/**
@@ -425,11 +474,14 @@ final class Recorder {
 			return;
 		}
 
-		$image = null;
-
 		if ( count( $this->items ) >= self::MAX_ITEMS ) {
 			$this->too_large();
-		} elseif ( $before !== null && ! $this->too_large ) {
+			return;
+		}
+
+		$image = null;
+
+		if ( $before !== null ) {
 			$image        = Repository::encode( $before );
 			$this->bytes += strlen( $image );
 
@@ -564,14 +616,19 @@ final class Recorder {
 			return self::REASON_TOO_LARGE;
 		}
 
-		if ( $this->untracked !== [] ) {
-			return self::REASON_OTHER_TABLE;
-		}
-
+		// A deleted account is the plainest reason, whatever else ran alongside it.
 		foreach ( $kept as $item ) {
 			if ( $item['entity']->type === Entity::USER && $item['operation'] === 'delete' ) {
 				return self::REASON_REMOVED;
 			}
+		}
+
+		if ( $this->direct_write ) {
+			return self::REASON_DIRECT_WRITE;
+		}
+
+		if ( $this->untracked !== [] ) {
+			return self::REASON_OTHER_TABLE;
 		}
 
 		return $this->secrets !== [] ? self::REASON_SECRET : null;

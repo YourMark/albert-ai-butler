@@ -16,11 +16,12 @@ use Albert\Database\Tables;
 /**
  * Noise and secrets: two lists, two treatments.
  *
- * Noise (transients, cron, locks) is rewritten constantly by WordPress itself
- * and reverting it would be meaningless, so it is ignored. Secrets (salts,
- * session tokens, application passwords, OAuth keys) are never stored either,
- * but a change to one is noted without its value: the entry then cannot be
- * reverted, and says why, instead of looking complete.
+ * Noise (transients, cron, locks) is ignored: WordPress rewrites it constantly.
+ * Secrets are never stored, but a change to one is noted by name and makes the
+ * entry unrevertable. Besides the known names, any option or meta key whose
+ * name looks like a credential counts as a secret: storing an SMTP password or
+ * API key in plain text costs more than an occasional harmless setting that
+ * cannot be reverted.
  *
  * The filters can only add noise. A filter that removed an entry would make
  * Albert store more, and a pattern of `*` or a two-letter prefix would quietly
@@ -30,6 +31,11 @@ use Albert\Database\Tables;
  */
 final class Exclusions {
 
+	/**
+	 * How an excluded entity is treated.
+	 *
+	 * @var string
+	 */
 	public const NOISE  = 'noise';
 	public const SECRET = 'secret';
 
@@ -60,6 +66,14 @@ final class Exclusions {
 	 * @var array<int, string>
 	 */
 	private const SECRET_META_KEYS = [ 'session_tokens', '_application_passwords', 'mcp_adapter_sessions*' ];
+
+	/**
+	 * Names that look like a credential: a telling word anywhere, or a short
+	 * one standing as its own segment (`smtp_pass`, not `compass`).
+	 *
+	 * @var string
+	 */
+	private const SECRET_NAME = '/password|passwd|secret|api_?key|private_?key|access_?token|refresh_?token|auth_?token|licen[cs]e_?key|credential|(?:^|[_\-.])(?:pass|pwd|token|tokens|salt)(?:$|[_\-.])/i';
 
 	/**
 	 * Shortest prefix a filter may exclude with a trailing `*`.
@@ -100,7 +114,7 @@ final class Exclusions {
 	 * @since 1.5.0
 	 */
 	public static function option( string $name ): ?string {
-		if ( self::matches( $name, self::SECRET_OPTIONS ) ) {
+		if ( self::matches( $name, self::SECRET_OPTIONS ) || preg_match( self::SECRET_NAME, $name ) ) {
 			return self::SECRET;
 		}
 
@@ -128,7 +142,7 @@ final class Exclusions {
 	 * @since 1.5.0
 	 */
 	public static function meta_key( string $meta_key ): ?string {
-		if ( self::matches( $meta_key, self::SECRET_META_KEYS ) ) {
+		if ( self::matches( $meta_key, self::SECRET_META_KEYS ) || preg_match( self::SECRET_NAME, $meta_key ) ) {
 			return self::SECRET;
 		}
 
@@ -146,6 +160,63 @@ final class Exclusions {
 		$extra = apply_filters( 'albert/undo/excluded_meta_keys', [] );
 
 		return self::matches( $meta_key, array_merge( self::NOISE_META_KEYS, self::filtered( $extra ) ) ) ? self::NOISE : null;
+	}
+
+	/**
+	 * Whether a captured option or meta value holds a credential under a
+	 * telling key, like a payment gateway's settings array with its secret key.
+	 *
+	 * @param Entity                    $entity The entity.
+	 * @param array<string, mixed>|null $state  Its state as {@see Snapshot} reads it.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function holds_secret( Entity $entity, ?array $state ): bool {
+		$raw = match ( $entity->type ) {
+			Entity::OPTION => [ $state['option_value'] ?? null ],
+			Entity::META   => array_column( is_array( $state['values'] ?? null ) ? $state['values'] : [], 'meta_value' ),
+			default        => [],
+		};
+
+		foreach ( $raw as $value ) {
+			if ( ! is_string( $value ) ) {
+				continue;
+			}
+
+			$decoded = is_serialized( $value ) ? unserialize( $value, [ 'allowed_classes' => false ] ) : json_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- No classes allowed.
+
+			if ( is_array( $decoded ) && self::has_secret_key( $decoded ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether an array holds a non-empty value under a credential-looking key, at any depth.
+	 *
+	 * @param array<mixed> $data  The data.
+	 * @param int          $depth Remaining depth.
+	 *
+	 * @return bool
+	 */
+	private static function has_secret_key( array $data, int $depth = 5 ): bool {
+		foreach ( $data as $key => $value ) {
+			if ( is_array( $value ) ) {
+				if ( $depth > 0 && self::has_secret_key( $value, $depth - 1 ) ) {
+					return true;
+				}
+				continue;
+			}
+
+			if ( is_string( $key ) && is_scalar( $value ) && (string) $value !== '' && preg_match( self::SECRET_NAME, $key ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

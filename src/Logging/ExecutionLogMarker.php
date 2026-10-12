@@ -100,6 +100,19 @@ class ExecutionLogMarker {
 	}
 
 	/**
+	 * Forget the log row remembered for an ability, so a call that writes none
+	 * is not linked to an earlier call's row in the same request.
+	 *
+	 * @param string $ability_name The ability identifier.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public static function forget_row( string $ability_name ): void {
+		unset( self::$rows[ $ability_name ] );
+	}
+
+	/**
 	 * Reset the marker. Primarily for test isolation.
 	 *
 	 * @return void

@@ -144,6 +144,25 @@ class ChangeJournalPruneTest extends TestCase {
 	}
 
 	/**
+	 * Sessions rank by their last change to the item, not by when they
+	 * started: a session that began first but changed the item last is kept.
+	 *
+	 * @return void
+	 */
+	public function test_overlapping_sessions_rank_by_their_last_change(): void {
+		$early_start = $this->record( 'client-a', Entity::option( 'x' ) );
+		$between     = $this->record( 'client-b', Entity::option( 'x' ) );
+		$late_change = $this->record( 'client-a', Entity::option( 'x' ) );
+		$this->record( 'client-c', Entity::option( 'x' ) );
+
+		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
+
+		$this->assertSame( 'runs', $this->item( $between )['pruned'] );
+		$this->assertNull( $this->item( $early_start )['pruned'] );
+		$this->assertNull( $this->item( $late_change )['pruned'] );
+	}
+
+	/**
 	 * Entries older than the window lose their before-images but keep their rows.
 	 *
 	 * @return void

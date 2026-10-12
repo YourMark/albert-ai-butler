@@ -12,6 +12,7 @@ namespace Albert\Cron;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\Undo\FailureCounter;
 use Albert\Undo\Retention\Registrar;
 use Albert\Undo\Retention\RetentionPolicy;
 use Albert\Undo\Storage\Repository;
@@ -19,12 +20,9 @@ use Albert\Undo\Storage\Repository;
 /**
  * Nightly WP-Cron job that holds the change journal to its retention policy.
  *
- * Prunes whole sessions by age, then those outside the per-item session count,
- * then by total size, oldest first. A pruned item
- * keeps its row and loses its before-image, so the entry can still say what
- * happened and that it can no longer be reverted. Entries are deleted
- * outright after {@see self::DELETE_AFTER_DAYS}, so the journal does not keep a
- * record of every call forever.
+ * Prunes whole sessions by age, then beyond the per-item session count, then
+ * by size, oldest first. A pruned item keeps its row, so the entry can still
+ * say what happened; entries go entirely {@see self::DELETE_AFTER_DAYS} later.
  *
  * @since 1.5.0
  */
@@ -52,12 +50,19 @@ class ChangeJournalPrune implements Hookable {
 	const ABANDONED_SECONDS = HOUR_IN_SECONDS;
 
 	/**
+	 * The journal store.
+	 *
+	 * @var Repository
+	 */
+	private Repository $repository;
+
+	/**
 	 * Wire the prune to its store and policy.
 	 *
 	 * @param Repository|null      $repository The journal store.
 	 * @param RetentionPolicy|null $policy     The policy; defaults to the registered one.
 	 */
-	public function __construct( private ?Repository $repository = null, private ?RetentionPolicy $policy = null ) {
+	public function __construct( ?Repository $repository = null, private ?RetentionPolicy $policy = null ) {
 		$this->repository = $repository ?? new Repository();
 	}
 
@@ -79,19 +84,19 @@ class ChangeJournalPrune implements Hookable {
 	 */
 	public function run(): void {
 		try {
-			$policy     = $this->policy ?? Registrar::current();
-			$repository = $this->repository ?? new Repository();
-			$now        = time();
+			$policy = $this->policy ?? Registrar::current();
+			$now    = time();
 
-			$repository->close_abandoned( gmdate( 'Y-m-d H:i:s', $now - self::ABANDONED_SECONDS ) );
-			$repository->prune_older_than( Repository::cutoff( $policy->max_age_days() ) );
-			$repository->prune_beyond_runs( $policy->runs_per_item() );
-			$repository->prune_to_bytes( $policy->max_bytes() );
-			$repository->delete_older_than(
+			$this->repository->close_abandoned( gmdate( 'Y-m-d H:i:s', $now - self::ABANDONED_SECONDS ) );
+			$this->repository->prune_older_than( Repository::cutoff( $policy->max_age_days() ) );
+			$this->repository->prune_beyond_runs( $policy->runs_per_item() );
+			$this->repository->prune_to_bytes( $policy->max_bytes() );
+			$this->repository->delete_older_than(
 				gmdate( 'Y-m-d H:i:s', $now - ( max( 0, $policy->max_age_days() ) + self::DELETE_AFTER_DAYS ) * DAY_IN_SECONDS )
 			);
-		} catch ( \Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
-			// Never let a cron failure surface to the site.
+		} catch ( \Throwable $e ) {
+			// Counted, so retention that stopped working shows on the Dashboard instead of nowhere.
+			FailureCounter::record( 1 );
 		}
 	}
 

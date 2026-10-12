@@ -421,6 +421,155 @@ class ChangeJournalTest extends TestCase {
 	}
 
 	/**
+	 * A plugin writing WordPress's tables without the hooks, like WooCommerce's
+	 * atomic stock update, makes the entry unrevertable and names the writer.
+	 *
+	 * @return void
+	 */
+	public function test_a_direct_write_to_a_core_table_names_its_writer(): void {
+		$post_id = self::factory()->post->create();
+		update_post_meta( $post_id, '_stock', '5' );
+
+		$this->work = static fn() => self::reduce_stock( $post_id );
+
+		$this->call();
+
+		$entry = $this->only_entry();
+
+		$this->assertSame( Recorder::REASON_DIRECT_WRITE, $entry['reason'] );
+		$this->assertContains( "{$GLOBALS['wpdb']->postmeta}, written directly by " . self::class . '::reduce_stock()', json_decode( (string) $entry['other_tables'], true ) );
+	}
+
+	/**
+	 * Core functions that write without a hook are flagged the same way.
+	 *
+	 * @return void
+	 */
+	public function test_a_hookless_core_write_is_flagged(): void {
+		$post_id = self::factory()->post->create(
+			[
+				'post_status' => 'future',
+				'post_date'   => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ),
+			]
+		);
+
+		$this->work = static fn() => wp_publish_post( $post_id );
+
+		$this->call();
+
+		$entry = $this->only_entry();
+
+		$this->assertSame( Recorder::REASON_DIRECT_WRITE, $entry['reason'] );
+		$this->assertStringContainsString( 'written directly by wp_publish_post() (WordPress)', (string) $entry['other_tables'] );
+	}
+
+	/**
+	 * What WordPress rewrites in one query as a side effect is captured one by
+	 * one, so deleting a parent or trashing a post stays revertable.
+	 *
+	 * @return void
+	 */
+	public function test_side_effect_rows_are_captured(): void {
+		$parent  = self::factory()->post->create( [ 'post_type' => 'page' ] );
+		$child   = self::factory()->post->create(
+			[
+				'post_type'   => 'page',
+				'post_parent' => $parent,
+			]
+		);
+		$post_id = self::factory()->post->create();
+		$comment = self::factory()->comment->create( [ 'comment_post_ID' => $post_id ] );
+
+		$this->work = static function () use ( $parent, $post_id ): void {
+			wp_delete_post( $parent, true );
+			wp_trash_post( $post_id );
+		};
+
+		$this->call();
+
+		$entry = $this->only_entry();
+		$items = $this->items_by_key( (int) $entry['id'] );
+
+		$this->assertNull( $entry['reason'], 'Not captured: ' . (string) $entry['other_tables'] );
+		$this->assertSame( (string) $parent, (string) $items[ "post:{$child}" ]['before']['post_parent'] );
+		$this->assertSame( '1', (string) $items[ "comment:{$comment}" ]['before']['comment_approved'] );
+	}
+
+	/**
+	 * A credential-looking option name, or a credential inside a settings
+	 * array, is a secret: noted by name, never stored.
+	 *
+	 * @return void
+	 */
+	public function test_credential_looking_values_are_secrets(): void {
+		update_option(
+			'woocommerce_acme_gateway_settings',
+			[
+				'enabled'    => 'yes',
+				'secret_key' => 'sk_live_before',
+			]
+		);
+
+		$this->work = static function (): void {
+			update_option( 'mailserver_pass', 'smtp-password' );
+			update_option(
+				'woocommerce_acme_gateway_settings',
+				[
+					'enabled'    => 'no',
+					'secret_key' => 'sk_live_before',
+				]
+			);
+		};
+
+		$this->call();
+
+		$entry  = $this->only_entry();
+		$stored = serialize( [ $entry, $this->items_by_key( (int) $entry['id'] ) ] ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Searching the whole record.
+
+		$this->assertSame( Recorder::REASON_SECRET, $entry['reason'] );
+		$this->assertEqualsCanonicalizing( [ 'mailserver_pass', 'woocommerce_acme_gateway_settings' ], json_decode( (string) $entry['effects'], true )['secrets'] );
+		$this->assertStringNotContainsString( 'sk_live_before', $stored );
+		$this->assertStringNotContainsString( 'smtp-password', $stored );
+	}
+
+	/**
+	 * Past the item limit nothing more is held, and the entry says why.
+	 *
+	 * @return void
+	 */
+	public function test_a_call_past_the_limit_is_too_large(): void {
+		$this->work = static function (): void {
+			for ( $i = 0; $i <= Recorder::MAX_ITEMS + 5; $i++ ) {
+				add_option( "acme_bulk_{$i}", 'v', '', false );
+			}
+		};
+
+		$this->call();
+
+		$entry = $this->only_entry();
+
+		$this->assertSame( Recorder::REASON_TOO_LARGE, $entry['reason'] );
+		$this->assertLessThanOrEqual( Recorder::MAX_ITEMS, (int) $entry['item_count'] );
+	}
+
+	/**
+	 * Deleting a user cannot be reverted: the account, and its password, are gone.
+	 *
+	 * @return void
+	 */
+	public function test_a_deleted_user_is_removed(): void {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+		$target = self::factory()->user->create();
+
+		$this->work = static fn() => wp_delete_user( $target );
+
+		$this->call();
+
+		$entry = $this->only_entry();
+		$this->assertSame( Recorder::REASON_REMOVED, $entry['reason'], (string) $entry['other_tables'] );
+	}
+
+	/**
 	 * A read-only call leaves nothing behind.
 	 *
 	 * @return void
@@ -639,6 +788,20 @@ class ChangeJournalTest extends TestCase {
 		} finally {
 			array_pop( $wp_current_filter );
 		}
+	}
+
+	/**
+	 * Lower stock the way WooCommerce does: one atomic query, no meta hook.
+	 *
+	 * @param int $post_id Product.
+	 *
+	 * @return void
+	 */
+	private static function reduce_stock( int $post_id ): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The direct write under test.
+		$wpdb->query( $wpdb->prepare( "UPDATE %i SET meta_value = meta_value - 1 WHERE post_id = %d AND meta_key = '_stock'", $wpdb->postmeta, $post_id ) );
 	}
 
 	/**

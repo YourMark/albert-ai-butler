@@ -25,7 +25,9 @@ use Albert\Undo\Recorder;
  * rather than the `{$type}_metadata` filters (which another plugin may use to
  * cancel the write). Creates are recorded from the hooks that fire once the new
  * row exists (`wp_insert_post`, `add_attachment`, `created_term`,
- * `user_register`, `wp_insert_comment`).
+ * `user_register`, `wp_insert_comment`). Rows WordPress rewrites in one query
+ * as a side effect (children reparented on delete, a post's comments trashed
+ * with it) are captured one by one at the hook just before.
  *
  * These hooks are the capture. {@see \Albert\Undo\Coverage\QueryMonitor} only
  * notes writes to tables they do not cover.
@@ -69,6 +71,17 @@ final class CoreHooks {
 		$user = fn( $user_id ) => $this->capture( Entity::user( (int) $user_id ) );
 
 		$this->on( 'pre_post_update', $post );
+		// Earlier than pre_post_update: trashing renames the slug before that fires.
+		$this->on(
+			'wp_insert_post_empty_content',
+			function ( $maybe_empty, $postarr ) {
+				if ( is_array( $postarr ) && ! empty( $postarr['ID'] ) ) {
+					$this->capture( Entity::post( (int) $postarr['ID'] ) );
+				}
+				return $maybe_empty;
+			},
+			2
+		);
 		$this->on(
 			'wp_insert_post',
 			function ( $post_id, $post, $update ): void {
@@ -80,7 +93,13 @@ final class CoreHooks {
 		);
 		// Attachments return before `wp_insert_post` fires.
 		$this->on( 'add_attachment', fn( $post_id ) => $this->created( Entity::post( (int) $post_id ) ) );
-		$this->on( 'before_delete_post', $post );
+		$this->on(
+			'before_delete_post',
+			function ( $post_id ): void {
+				$this->capture( Entity::post( (int) $post_id ) );
+				$this->each( 'SELECT ID FROM %i WHERE post_parent = %d', 'posts', (int) $post_id, Entity::post( ... ) );
+			}
+		);
 		$this->on(
 			'delete_attachment',
 			function ( $post_id ): void {
@@ -99,6 +118,15 @@ final class CoreHooks {
 		$this->on( 'edit_terms', $term );
 		$this->on( 'created_term', fn( $term_id ) => $this->created( Entity::term( (int) $term_id ) ) );
 		$this->on( 'pre_delete_term', $term );
+		// Fired by wp_delete_term() before it reparents the deleted term's children.
+		$this->on(
+			'edit_term_taxonomies',
+			function ( $tt_ids ): void {
+				foreach ( (array) $tt_ids as $tt_id ) {
+					$this->each( 'SELECT term_id FROM %i WHERE term_taxonomy_id = %d', 'term_taxonomy', (int) $tt_id, Entity::term( ... ) );
+				}
+			}
+		);
 		$this->on(
 			'add_term_relationship',
 			fn( $object_id, $tt_id, $taxonomy ) => $this->capture( Entity::relationships( (int) $object_id, (string) $taxonomy ) ),
@@ -140,7 +168,16 @@ final class CoreHooks {
 			2
 		);
 		$this->on( 'wp_insert_comment', fn( $comment_id ) => $this->created( Entity::comment( (int) $comment_id ) ) );
-		$this->on( 'delete_comment', fn( $comment_id ) => $this->capture( Entity::comment( (int) $comment_id ) ) );
+		$this->on(
+			'delete_comment',
+			function ( $comment_id ): void {
+				$this->capture( Entity::comment( (int) $comment_id ) );
+				$this->each( 'SELECT comment_ID FROM %i WHERE comment_parent = %d', 'comments', (int) $comment_id, Entity::comment( ... ) );
+			}
+		);
+		$post_comments = fn( $post_id ) => $this->each( 'SELECT comment_ID FROM %i WHERE comment_post_ID = %d', 'comments', (int) $post_id, Entity::comment( ... ) );
+		$this->on( 'trash_post_comments', $post_comments );
+		$this->on( 'untrash_post_comments', $post_comments );
 	}
 
 	/**
@@ -188,8 +225,45 @@ final class CoreHooks {
 
 		if ( (int) $object_id > 0 ) {
 			$this->capture( Entity::meta( $type, (int) $object_id, $meta_key ) );
-		} elseif ( Exclusions::meta_key( $meta_key ) === null ) {
+			return;
+		}
+
+		try {
+			if ( Exclusions::meta_key( $meta_key ) === null ) {
+				$this->recorder->untracked( "{$type} meta {$meta_key}" );
+			}
+		} catch ( \Throwable $e ) {
 			$this->recorder->untracked( "{$type} meta {$meta_key}" );
+		}
+	}
+
+	/**
+	 * Capture every row an id query returns.
+	 *
+	 * @param string   $sql    Query with `%i` for the table and `%d` for the id.
+	 * @param string   $table  wpdb table property.
+	 * @param int      $id     The id.
+	 * @param callable $entity Builds the entity from a row id.
+	 *
+	 * @return void
+	 */
+	private function each( string $sql, string $table, int $id, callable $entity ): void {
+		$ids = [];
+
+		try {
+			$this->recorder->quietly(
+				function () use ( $sql, $table, $id, &$ids ): void {
+					global $wpdb;
+					$ids = $wpdb->get_col( $wpdb->prepare( $sql, $wpdb->{$table}, $id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Fixed queries from this class; reads the rows about to change.
+				}
+			);
+		} catch ( \Throwable $e ) {
+			$this->recorder->untracked( $table );
+			return;
+		}
+
+		foreach ( $ids as $row_id ) {
+			$this->capture( $entity( (int) $row_id ) );
 		}
 	}
 

@@ -20,10 +20,10 @@ use Albert\Undo\WindowContext;
 /**
  * Reads and writes `albert_changes` and `albert_change_items`.
  *
- * Retention works on whole sessions (`run_id`): a session is pruned when its
- * last call is older than the window, or when an item it changed has been
- * changed by the policy's count of newer sessions, never part of it, so
- * "revert this session" never finds half its before-images gone.
+ * Retention prunes whole sessions (`run_id`), never part of one, so "revert
+ * this session" never finds half its before-images gone. A session goes when
+ * its last call is past the window, or when an item it changed was changed
+ * later by as many other sessions as the policy keeps.
  *
  * @since 1.5.0
  *
@@ -88,7 +88,10 @@ class Repository {
 
 		if ( $run_id === 0 ) {
 			$run_id = $id;
-			$wpdb->update( $table, [ 'run_id' => $run_id ], [ 'id' => $id ] );
+			if ( ! $wpdb->update( $table, [ 'run_id' => $run_id ], [ 'id' => $id ] ) ) {
+				$wpdb->delete( $table, [ 'id' => $id ] );
+				return null;
+			}
 		}
 
 		return [
@@ -301,9 +304,10 @@ class Repository {
 	}
 
 	/**
-	 * Prune whole sessions that changed an item later changed by `$keep` newer sessions.
+	 * Prune whole sessions that changed an item later changed by `$keep` other sessions.
 	 *
-	 * `run_id` is the session's first entry id, so ranking by it is chronological.
+	 * Sessions are ranked per item by their last change to it, not by when they
+	 * started: two assistants working at once overlap.
 	 *
 	 * @param int $keep Sessions kept per item; 0 for no limit.
 	 *
@@ -319,7 +323,7 @@ class Repository {
 
 		$runs = $wpdb->get_col(
 			$wpdb->prepare(
-				'SELECT DISTINCT run_id FROM (SELECT run_id, DENSE_RANK() OVER (PARTITION BY entity_hash ORDER BY run_id DESC) AS newer FROM %i) ranked WHERE newer > %d',
+				'SELECT DISTINCT run_id FROM (SELECT run_id, ROW_NUMBER() OVER (PARTITION BY entity_hash ORDER BY last_change DESC) AS newer FROM (SELECT entity_hash, run_id, MAX(change_id) AS last_change FROM %i GROUP BY entity_hash, run_id) per_run) ranked WHERE newer > %d',
 				Tables::change_items(),
 				$keep
 			)
@@ -464,7 +468,7 @@ class Repository {
 	}
 
 	/**
-	 * Whether an item this session changed has since been changed by `$keep` newer sessions.
+	 * Whether an item this session changed was changed later by `$keep` other sessions.
 	 *
 	 * @param int $run_id Session id.
 	 * @param int $keep   Sessions kept per item; 0 for no limit.
@@ -482,8 +486,9 @@ class Repository {
 
 		return (bool) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT 1 FROM %i mine JOIN %i later ON later.entity_hash = mine.entity_hash AND later.run_id > mine.run_id WHERE mine.run_id = %d GROUP BY mine.entity_hash HAVING COUNT(DISTINCT later.run_id) >= %d LIMIT 1',
+				'SELECT 1 FROM (SELECT entity_hash, MAX(change_id) AS last_change FROM %i WHERE run_id = %d GROUP BY entity_hash) mine JOIN %i later ON later.entity_hash = mine.entity_hash AND later.change_id > mine.last_change AND later.run_id <> %d GROUP BY mine.entity_hash HAVING COUNT(DISTINCT later.run_id) >= %d LIMIT 1',
 				$items,
+				$run_id,
 				$items,
 				$run_id,
 				$keep
