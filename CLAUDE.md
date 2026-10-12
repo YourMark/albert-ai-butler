@@ -117,6 +117,20 @@ albert-ai-butler/
 │   │   ├── AuditTrail.php              # Approvals, rejections, expiries, refused writes
 │   │   └── InputPresenter.php          # Masks secret-looking values for the screen only
 │   │
+│   ├── Undo/                           # Change journal: records what assistant calls change, for Revert (doc 06)
+│   │   ├── Journal.php                 # Opens/closes a window around each MCP tool call
+│   │   ├── Window.php                  # Request-scoped window; shutdown closes one left open
+│   │   ├── Recorder.php                # One call's entry: before-images in memory, written at the end
+│   │   ├── Snapshot.php                # Reads an entity's stored rows, credentials stripped
+│   │   ├── Entity.php                  # Post, meta key, term, relationships, option, user, comment (+ blog)
+│   │   ├── Exclusions.php              # Noise (ignored) and secrets (noted by name, never stored)
+│   │   ├── FailureCounter.php          # Counts the journal's own failures for the Dashboard
+│   │   ├── Capture/CoreHooks.php       # WordPress's immediately-before-write hooks
+│   │   ├── Coverage/                   # QueryMonitor + WriteTarget (table-name check), WpdbState
+│   │   ├── Handlers/                   # albert/undo/handlers seam for custom tables
+│   │   ├── Storage/Repository.php      # albert_changes + albert_change_items
+│   │   └── Retention/                  # RetentionPolicy, Free's fixed limits, the Registrar
+│   │
 │   ├── Execution/
 │   │   └── InterceptorDecision.php     # Resolves the MCP execute double-fire
 │   │
@@ -545,6 +559,102 @@ window is an hour rather than a day because the real cost is drift: approving an
 hours-old `update-post` overwrites whatever was edited since. `Gate::means_off()`
 accepts booleans, because `define( 'ALBERT_SAFE_MODE', false )` is what a
 developer writes and safe mode is Albert's first boolean-shaped setting.
+
+#### Change journal (1.5.0, issue 06 PR 1)
+
+Records the previous value of what an assistant call changes, so it can be
+reverted ("Revert" in the UI). PR 1 records only; the revert engine, the
+`find-changes`/`revert-change` abilities and the Changes screen follow. Design
+and decisions: the 1.5.0 planning doc 06 (outside the repo).
+
+**No per-ability work.** `Undo\Journal` opens a window on
+`mcp_adapter_pre_tool_call` (priority `PHP_INT_MAX`, after anything that blocks
+the call) and closes it on `mcp_adapter_tool_call_result` (`PHP_INT_MIN`).
+`SafeMode\Approver` opens one around an approved run (stamped with the
+pending-action id), and `UploadLinkController` one around an upload-link
+redemption (the link carries the minting connection). Only with a
+`ConnectionContext` (or the row's or link's client): wp-admin, the editor,
+WP-CLI and cron are never recorded and never checked. A throw the adapter
+swallows skips the result filter; `shutdown` closes the window as
+`interrupted`, and the next tool call in the same request closes it first.
+
+**Capture is the hooks.** `Capture\CoreHooks` takes before-images at the hooks
+WordPress fires immediately before it writes, after every short-circuit:
+`update_option` rather than `pre_update_option`, the `{$type}_meta` actions
+rather than the cancellable `{$type}_metadata` filters, `add_term_relationship`
+/ `delete_term_relationships`, `delete_attachment` (noting `media files`).
+Creates come from the hooks that fire once the row exists (`wp_insert_post`,
+`add_attachment`, `created_term`, `user_register`, `wp_insert_comment`).
+
+**The table check is honesty, not capture.** `Coverage\QueryMonitor` reads only
+the target table of each query (`Coverage\WriteTarget`). WordPress's own tables
+are covered by the hooks; any other table, a structure change, or a query it
+cannot read is noted in `other_tables`, and the entry cannot be reverted. It
+fails closed: a statement is a read only if it starts with a known read-only
+keyword, `/*!` anywhere is unreadable, leading comments are stripped, and a
+multi-table UPDATE or DELETE is unreadable. A full SQL parser was built first
+and removed: it was the source of every "says complete when it is not" bug in
+review, for writes Albert's abilities never make. Accepted gap: a few core
+internals write without a hook (`wp_publish_post()`, `wp_set_comment_status()`,
+reparenting on delete).
+
+**Buffered, then written at the end.** Before-images are held in memory
+(compressed) and written when the call ends, because WooCommerce wraps writes in
+a transaction and a rollback would take journal rows with it. Only the entry row
+is written on first capture, so a hard kill leaves a `recording` row the nightly
+sweep marks interrupted; if a rollback removed it, it is written again. Over 8 MB
+or 2,000 entities the call is recorded as `too_large`. The monitor does no
+database work; the journal's own reads run through `Recorder::quietly()`, which
+restores wpdb's per-query state (including the protected `check_current_query`
+flag, through a closure bound to wpdb's scope).
+
+**At the end**, each entity is re-read and compared without volatile fields
+(`post_modified*`, meta ids): one left as it was is dropped, so a read-only call
+leaves no entry. Per-field sha256 hashes of the new state are stored for the
+revert's changed-since check. Every entity carries its blog, and `Snapshot`
+switches blogs to read it.
+
+**Reason codes** (`albert_changes.reason`, NULL when revertable, most serious
+first): `interrupted`, `record_failed`, `too_large`, `other_table`, `removed`
+(a deleted user), `secret`. `effects` lists what no revert takes back: emails
+attempted/failed (counts only) and changed secrets by name. `log_id` links the
+ability-log row for the same call (`ExecutionLogMarker::row_id()`), and
+`session_id` the MCP session.
+
+**Never stored**: `user_pass`, `user_activation_key`, `session_tokens`,
+`_application_passwords`, `mcp_adapter_sessions*`, the salts and keys,
+`recovery_keys`, `albert_oauth_*`. A change to one is noted by name and makes the
+entry unrevertable; a password change is spotted with an in-memory fingerprint.
+Noise (transients, `cron`, `rewrite_rules`, updater locks, `_edit_lock`,
+`_edit_last`) is ignored. The `albert/undo/excluded_*` filters can only add
+noise, and refuse `*` or a prefix shorter than three characters.
+
+**Handlers** (`albert/undo/handlers`) cover a plugin's own tables. They may not
+declare WordPress's or Albert's tables, and one that throws is dropped for the
+window, so its tables are noted rather than trusted.
+
+**Failures** are counted in the `albert_undo_failures` option
+(`Undo\FailureCounter`), written after the window closes, so "nothing recorded"
+never looks like "nothing changed".
+
+**Retention** is a `RetentionPolicy`: Free's are class constants (2 days, the last 2
+sessions per item, 50 MB)
+with no filter. An add-on replaces it by registering a class on
+`albert/undo/register_retention_policy`; there is deliberately no one-line
+filter. `Cron\ChangeJournalPrune` runs nightly on whole sessions, counted from a
+session's last call: age, then sessions beyond the per-item count (a session
+falls out whole when any item it changed has two newer sessions), then bytes
+(oldest first), closes rows stuck
+`recording` for an hour, and deletes entries 30 days past the window. Age and the
+per-item count are also enforced when items are read. A pruned item keeps its row and loses its
+before-image.
+
+**Sessions**: same client and user, no gap over 10 minutes. `run_id` is the
+session's first entry id, so ordering by it is chronological.
+
+**Tables**: `albert_changes`, `albert_change_items`. Created by `dbDelta`, which
+only runs when the plugin version advances, so an existing dev install needs
+`Installer::install()` (or a version bump) before recording.
 
 #### Connections screen (1.4.0)
 

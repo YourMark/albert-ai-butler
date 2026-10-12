@@ -80,6 +80,30 @@ class Tables {
 	}
 
 	/**
+	 * The change journal: one row per recorded assistant call.
+	 *
+	 * @return string Prefixed table name.
+	 * @since 1.5.0
+	 */
+	public static function changes(): string {
+		global $wpdb;
+
+		return $wpdb->prefix . 'albert_changes';
+	}
+
+	/**
+	 * The change journal's before-images: one row per entity a recorded call changed.
+	 *
+	 * @return string Prefixed table name.
+	 * @since 1.5.0
+	 */
+	public static function change_items(): string {
+		global $wpdb;
+
+		return $wpdb->prefix . 'albert_change_items';
+	}
+
+	/**
 	 * Every Albert table name, flat.
 	 *
 	 * @return array<int, string> All prefixed table names.
@@ -87,7 +111,7 @@ class Tables {
 	 */
 	public static function all(): array {
 		return array_merge(
-			[ self::ability_log(), self::single_use_tokens(), self::pending_actions() ],
+			[ self::ability_log(), self::single_use_tokens(), self::pending_actions(), self::changes(), self::change_items() ],
 			array_values( self::oauth() )
 		);
 	}

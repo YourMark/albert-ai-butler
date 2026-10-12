@@ -404,6 +404,8 @@ class Installer {
 		$sql = self::ability_log_sql( $charset_collate )
 			. self::single_use_tokens_sql( $charset_collate )
 			. self::pending_actions_sql( $charset_collate )
+			. self::changes_sql( $charset_collate )
+			. self::change_items_sql( $charset_collate )
 			. self::oauth_clients_sql( $charset_collate )
 			. self::oauth_access_tokens_sql( $charset_collate )
 			. self::oauth_refresh_tokens_sql( $charset_collate )
@@ -528,6 +530,91 @@ class Installer {
 			KEY status_created (status, created_at),
 			KEY expires_at (expires_at),
 			KEY dedupe (ability_name, status, input_fingerprint)
+		) $charset_collate;\n\n";
+	}
+
+	/**
+	 * Change journal DDL: one row per recorded assistant call.
+	 *
+	 * `run_id` groups calls from one connection with no gap longer than ten
+	 * minutes (a session), and is the id of its first entry. `reason` says why
+	 * an entry cannot be reverted, NULL when it can; `other_tables` names the
+	 * tables written that the journal does not capture, and `effects` what no
+	 * revert takes back (emails sent, credentials changed, by name only).
+	 * `pending_action_id` ties a safe-mode approved run to its row, `log_id` to
+	 * the ability-log row for the same call, `session_id` to the MCP session.
+	 *
+	 * @param string $charset_collate Charset/collation clause.
+	 *
+	 * @return string CREATE TABLE statement.
+	 * @since 1.5.0
+	 */
+	private static function changes_sql( string $charset_collate ): string {
+		$table = Tables::changes();
+
+		return "CREATE TABLE {$table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			run_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			blog_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			source varchar(20) NOT NULL DEFAULT 'mcp',
+			ability_name varchar(191) NOT NULL,
+			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			client_id varchar(80) DEFAULT NULL,
+			client_name varchar(255) DEFAULT NULL,
+			session_id varchar(191) DEFAULT NULL,
+			pending_action_id bigint(20) unsigned DEFAULT NULL,
+			log_id bigint(20) unsigned DEFAULT NULL,
+			status varchar(20) NOT NULL DEFAULT 'recording',
+			reason varchar(20) DEFAULT NULL,
+			other_tables text DEFAULT NULL,
+			effects text DEFAULT NULL,
+			item_count int(10) unsigned NOT NULL DEFAULT 0,
+			created_at datetime NOT NULL,
+			finished_at datetime DEFAULT NULL,
+			PRIMARY KEY  (id),
+			KEY run_created (run_id, created_at),
+			KEY client_recent (client_id, user_id, blog_id, id),
+			KEY created_at (created_at)
+		) $charset_collate;\n\n";
+	}
+
+	/**
+	 * Change journal items DDL: one row per entity a recorded call changed.
+	 *
+	 * `before_image` is the entity as it was before the call, serialized and
+	 * compressed; NULL for a create, for a call too large to keep, and once
+	 * pruned (`pruned` says why). `after_hashes` holds one hash per field of the
+	 * state the call left, so a revert can tell whose edit came later.
+	 * `entity_hash` identifies the entity across calls and blogs. `claimed_by`
+	 * names a handler that restores this entity itself.
+	 *
+	 * @param string $charset_collate Charset/collation clause.
+	 *
+	 * @return string CREATE TABLE statement.
+	 * @since 1.5.0
+	 */
+	private static function change_items_sql( string $charset_collate ): string {
+		$table = Tables::change_items();
+
+		return "CREATE TABLE {$table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			change_id bigint(20) unsigned NOT NULL,
+			run_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			blog_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			entity_type varchar(20) NOT NULL,
+			entity_key text NOT NULL,
+			entity_hash char(64) NOT NULL,
+			operation varchar(10) NOT NULL,
+			captured_by varchar(10) NOT NULL DEFAULT 'hook',
+			before_image longblob DEFAULT NULL,
+			image_bytes int(10) unsigned NOT NULL DEFAULT 0,
+			after_hashes longtext DEFAULT NULL,
+			claimed_by varchar(100) DEFAULT NULL,
+			pruned varchar(10) DEFAULT NULL,
+			PRIMARY KEY  (id),
+			KEY change_id (change_id),
+			KEY entity_run (entity_hash, run_id),
+			KEY run_pruned (run_id, pruned)
 		) $charset_collate;\n\n";
 	}
 

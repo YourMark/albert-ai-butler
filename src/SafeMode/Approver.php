@@ -11,6 +11,9 @@ namespace Albert\SafeMode;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Undo\Recorder;
+use Albert\Undo\Window;
+use Albert\Undo\WindowContext;
 use WP_Error;
 
 /**
@@ -76,12 +79,30 @@ class Approver {
 		// a ticket never outlives the run it was minted for, even on a throw.
 		ApprovalTicket::arm( $action->ability_name, $action->input );
 
+		// Record the run in the change journal against this row, as the call it
+		// was: the requester and their connection, not the approving admin.
+		$recording = $action->client_id !== null && Window::open(
+			new WindowContext(
+				WindowContext::SOURCE_APPROVAL,
+				$action->ability_name,
+				$action->user_id,
+				$action->client_id,
+				$action->client_name,
+				$action->id
+			)
+		);
+		$status    = Recorder::STATUS_INTERRUPTED;
+
 		try {
 			$result = $this->run_as(
 				$action->user_id,
 				static fn() => $ability->execute( $action->input )
 			);
+			$status = Recorder::STATUS_RECORDED;
 		} finally {
+			if ( $recording ) {
+				Window::close( $status );
+			}
 			ApprovalTicket::clear();
 		}
 
