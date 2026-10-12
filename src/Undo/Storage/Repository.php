@@ -333,7 +333,7 @@ class Repository {
 	}
 
 	/**
-	 * Prune oldest sessions first until the stored before-images fit the ceiling.
+	 * Prune sessions, least recently active first, until the stored before-images fit the ceiling.
 	 *
 	 * @param int $max_bytes Ceiling.
 	 *
@@ -351,7 +351,7 @@ class Repository {
 		}
 
 		$sizes = $wpdb->get_results(
-			$wpdb->prepare( 'SELECT run_id, SUM(image_bytes) AS bytes FROM %i WHERE pruned IS NULL GROUP BY run_id ORDER BY run_id', $items ),
+			$wpdb->prepare( 'SELECT run_id, SUM(image_bytes) AS bytes, MAX(change_id) AS last_change FROM %i WHERE pruned IS NULL GROUP BY run_id ORDER BY last_change', $items ),
 			ARRAY_A
 		);
 

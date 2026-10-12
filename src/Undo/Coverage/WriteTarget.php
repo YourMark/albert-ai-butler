@@ -93,16 +93,16 @@ final class WriteTarget {
 		}
 
 		return match ( $keyword ) {
-			'INSERT'  => self::write( '/^INSERT\s+(?:(?:LOW_PRIORITY|DELAYED|HIGH_PRIORITY|IGNORE)\s+)*(?:INTO\s+)?' . self::IDENT . '/i', $sql ),
-			'REPLACE' => self::write( '/^REPLACE\s+(?:(?:LOW_PRIORITY|DELAYED)\s+)*(?:INTO\s+)?' . self::IDENT . '/i', $sql ),
-			'UPDATE'  => self::single_table( '/^UPDATE\s+(?:(?:LOW_PRIORITY|IGNORE)\s+)*' . self::IDENT . '(.*?)\bSET\b/is', $sql ),
-			'DELETE'  => self::single_table( '/^DELETE\s+(?:(?:LOW_PRIORITY|QUICK|IGNORE)\s+)*FROM\s+' . self::IDENT . '(.*?)(?:\bWHERE\b|\bORDER\b|\bLIMIT\b|$)/is', $sql ),
+			'INSERT'   => self::write( '/^INSERT\s+(?:(?:LOW_PRIORITY|DELAYED|HIGH_PRIORITY|IGNORE)\s+)*(?:INTO\s+)?' . self::IDENT . '/i', $sql ),
+			'REPLACE'  => self::write( '/^REPLACE\s+(?:(?:LOW_PRIORITY|DELAYED)\s+)*(?:INTO\s+)?' . self::IDENT . '/i', $sql ),
+			'UPDATE'   => self::single_table( '/^UPDATE\s+(?:(?:LOW_PRIORITY|IGNORE)\s+)*' . self::IDENT . '(.*?)\bSET\b/is', $sql ),
+			'DELETE'   => self::single_table( '/^DELETE\s+(?:(?:LOW_PRIORITY|QUICK|IGNORE)\s+)*FROM\s+' . self::IDENT . '(.*?)(?:\bWHERE\b|\bORDER\b|\bLIMIT\b|$)/is', $sql ),
 			'TRUNCATE' => self::write( '/^TRUNCATE\s+(?:TABLE\s+)?' . self::IDENT . '/i', $sql, true ),
-			'ALTER'   => self::write( '/^ALTER\s+(?:(?:ONLINE|IGNORE)\s+)*TABLE\s+' . self::IDENT . '/i', $sql, true ),
-			'DROP'    => self::write( '/^DROP\s+(?:TEMPORARY\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?' . self::IDENT . '/i', $sql, true ),
-			'CREATE'  => self::write( '/^CREATE\s+(?:TEMPORARY\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?' . self::IDENT . '/i', $sql, true ),
-			'RENAME'  => self::write( '/^RENAME\s+TABLE\s+' . self::IDENT . '/i', $sql, true ),
-			default   => new self( self::UNREADABLE ),
+			'ALTER'    => self::write( '/^ALTER\s+(?:(?:ONLINE|IGNORE)\s+)*TABLE\s+' . self::IDENT . '/i', $sql, true ),
+			'DROP'     => self::write( '/^DROP\s+(?:TEMPORARY\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?' . self::IDENT . '/i', $sql, true ),
+			'CREATE'   => self::write( '/^CREATE\s+(?:TEMPORARY\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?' . self::IDENT . '/i', $sql, true ),
+			'RENAME'   => self::write( '/^RENAME\s+TABLE\s+' . self::IDENT . '/i', $sql, true ),
+			default    => new self( self::UNREADABLE ),
 		};
 	}
 
@@ -192,17 +192,79 @@ final class WriteTarget {
 	 * @return bool
 	 */
 	private static function has_executable_comment( string $sql ): bool {
-		$code = preg_replace( '/\'(?:[^\'\\\\]|\\\\.)*\'|"(?:[^"\\\\]|\\\\.)*"/s', '', $sql );
-
-		if ( ! is_string( $code ) ) {
-			return true;
+		if ( ! str_contains( $sql, '/*' ) ) {
+			return false;
 		}
 
-		if ( str_contains( $code, "'" ) || str_contains( $code, '"' ) ) {
-			return (bool) preg_match( '#/\*[A-Za-z]*!#', $sql );
-		}
+		// A scan rather than a regex: a pattern over quoted strings exhausts
+		// PCRE's stack on a long post body. Strings and ordinary comments are
+		// skipped whole, so a quote in either cannot pair with a later one and
+		// hide the code between them.
+		$length = strlen( $sql );
+		$at     = 0;
 
-		return (bool) preg_match( '#/\*[A-Za-z]*!#', $code );
+		while ( true ) {
+			$at += strcspn( $sql, "'\"`/#-", $at );
+			if ( $at >= $length ) {
+				return false;
+			}
+
+			$char = $sql[ $at ];
+			$next = $sql[ $at + 1 ] ?? '';
+
+			if ( $char === '/' && $next === '*' ) {
+				if ( preg_match( '#\G/\*[A-Za-z]*!#', $sql, $match, 0, $at ) ) {
+					return true;
+				}
+				$end = strpos( $sql, '*/', $at + 2 );
+				if ( $end === false ) {
+					return true;
+				}
+				$at = $end + 2;
+			} elseif ( $char === '#' || ( $char === '-' && $next === '-' && preg_match( '/\G--(?:[\x00-\x20]|$)/', $sql, $match, 0, $at ) ) ) {
+				$end = strpos( $sql, "\n", $at );
+				if ( $end === false ) {
+					return false;
+				}
+				$at = $end + 1;
+			} elseif ( $char === '/' || $char === '-' ) {
+				++$at;
+			} else {
+				$at = self::string_end( $sql, $at, $char );
+				if ( $at === null ) {
+					return true;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Where a quoted string or identifier ends, just past its closing quote.
+	 *
+	 * @param string $sql   The query.
+	 * @param int    $start Offset of the opening quote.
+	 * @param string $quote The quote character.
+	 *
+	 * @return int|null Null when it never closes.
+	 */
+	private static function string_end( string $sql, int $start, string $quote ): ?int {
+		$length = strlen( $sql );
+		$stops  = $quote === '`' ? '`' : $quote . '\\';
+		$at     = $start + 1;
+
+		while ( true ) {
+			$at += strcspn( $sql, $stops, $at );
+			if ( $at >= $length ) {
+				return null;
+			}
+
+			if ( $sql[ $at ] === '\\' ) {
+				$at += 2;
+				continue;
+			}
+
+			return $at + 1;
+		}
 	}
 
 	/**

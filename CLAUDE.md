@@ -584,13 +584,18 @@ trashed with it) are captured one by one at the hook just before.
 **The table check makes it honest.** `Coverage\QueryMonitor` reads each query's
 target table (`Coverage\WriteTarget`, fail-closed: unknown keywords, `/*!` and
 `/*M!` outside strings, multi-table writes and other databases are unreadable).
+Strings are skipped with a linear scan, not a regex: a regex over quoted strings
+exhausted PCRE's stack on a long post body.
 A write to WordPress's own tables counts as covered only when the function that
 issued it, found from the backtrace, is a core function whose hooks capture it
 (`QueryMonitor::COVERED_WRITERS`). Anything else is a `direct_write`, noted with
 its writer: `wp_postmeta, written directly by
 WC_Product_Data_Store_CPT::update_product_stock() (woocommerce)`. WooCommerce's
-atomic stock update is the common case, and `wp_publish_post()` and
-`wp_set_comment_status()` are flagged the same way. Any other table, a structure
+atomic stock update is the common case, and `wp_publish_post()`,
+`wp_set_comment_status()` and `wp_set_option_autoload_values()` are flagged the
+same way. `wp_set_password()` is noted as the `user_pass` secret instead.
+`AbilitySweepTest` runs every Albert write ability through a window and checks
+the verdict, so a misclassified writer shows up there. Any other table, a structure
 change or an unreadable query is `other_table`. A full SQL parser was tried and
 removed: it was the source of every "says complete when it is not" bug.
 
@@ -610,12 +615,15 @@ of the new state are stored for the revert's changed-since check.
 captured, `effects` what no revert takes back (email counts, secrets by name),
 `log_id` the ability-log row, `session_id` the MCP session.
 
-**Secrets are never stored**: the known names (salts, `session_tokens`,
+**Secrets are never stored**: `user_pass`, `user_activation_key` and
+`post_password` columns, the known names (salts, `session_tokens`,
 `_application_passwords`, `albert_oauth_*`, ...), any option or meta key whose
 name looks like a credential (`smtp_pass`, `*_api_key`, `*secret*`), and any
-value holding a non-empty credential-looking key inside an array (a payment
-gateway's settings). A change to one is noted by name and makes the entry
-unrevertable; a password change is spotted with an in-memory fingerprint. Noise
+value holding one inside an array or serialized object, under a telling key or
+as a `name`/`value` pair. A change to one is noted by name and makes the entry
+unrevertable; a password change is spotted with an in-memory fingerprint of the
+password column only (WordPress clears the activation key on every email
+change). Noise
 (transients, `cron`, locks, `_edit_lock`) is ignored; the `albert/undo/excluded_*`
 filters can only add noise.
 
@@ -631,7 +639,7 @@ sessions per item, 50 MB) with no filter; an add-on registers its own class on
 `albert/undo/register_retention_policy`. `Cron\ChangeJournalPrune` prunes whole
 sessions nightly: by age from the last call, then a session that changed an
 item later changed by two other sessions (ranked by last change, so overlapping
-sessions order correctly), then by size, oldest first. Age and the per-item cap
+sessions order correctly), then by size, least recently active first. Age and the per-item cap
 are also enforced on read. A pruned item keeps its row; entries are deleted 30
 days past the window.
 

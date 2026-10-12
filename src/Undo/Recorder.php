@@ -131,9 +131,9 @@ final class Recorder {
 	private array $secrets = [];
 
 	/**
-	 * In-memory fingerprints of captured users' credentials.
+	 * In-memory fingerprints of captured entities' credential columns, by entity id.
 	 *
-	 * @var array<int, string>
+	 * @var array<string, array{entity: Entity, hash: string}>
 	 */
 	private array $credentials = [];
 
@@ -267,8 +267,12 @@ final class Recorder {
 					return;
 				}
 
-				if ( $entity->type === Entity::USER && $before !== null ) {
-					$this->credentials[ (int) $entity->parts[0] ] = Snapshot::credential_fingerprint( (int) $entity->parts[0] );
+				$hash = $before !== null ? $this->snapshot->credentials( $entity ) : null;
+				if ( $hash !== null ) {
+					$this->credentials[ $entity->id() ] = [
+						'entity' => $entity,
+						'hash'   => $hash,
+					];
 				}
 
 				$this->take( $entity, $before, $captured_by );
@@ -315,6 +319,18 @@ final class Recorder {
 	 */
 	public function untracked( string $what ): void {
 		$this->untracked[ $what ] = true;
+	}
+
+	/**
+	 * Note a credential the call changed, by name, never its value.
+	 *
+	 * @param string $name The secret's name.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function secret( string $name ): void {
+		$this->secrets[ $name ] = true;
 	}
 
 	/**
@@ -482,8 +498,9 @@ final class Recorder {
 		$image = null;
 
 		if ( $before !== null ) {
-			$image        = Repository::encode( $before );
-			$this->bytes += strlen( $image );
+			// Sized before encoding, which would hold a huge row twice more.
+			$image        = self::raw_size( $before ) > self::MAX_CALL_BYTES * 4 ? null : Repository::encode( $before );
+			$this->bytes += $image === null ? self::MAX_CALL_BYTES + 1 : strlen( $image );
 
 			if ( $this->bytes > self::MAX_CALL_BYTES ) {
 				$image = null;
@@ -498,6 +515,26 @@ final class Recorder {
 			'existed' => $before !== null,
 			'by'      => $captured_by,
 		];
+	}
+
+	/**
+	 * Bytes of the strings in a state, without copying it.
+	 *
+	 * @param array<mixed> $state The state.
+	 *
+	 * @return int
+	 */
+	private static function raw_size( array $state ): int {
+		$size = 0;
+
+		array_walk_recursive(
+			$state,
+			static function ( $value ) use ( &$size ): void {
+				$size += is_string( $value ) ? strlen( $value ) : 8;
+			}
+		);
+
+		return $size;
 	}
 
 	/**
@@ -536,9 +573,9 @@ final class Recorder {
 			$kept[]            = $item;
 		}
 
-		foreach ( $this->credentials as $user_id => $fingerprint ) {
-			if ( Snapshot::credential_fingerprint( $user_id ) !== $fingerprint ) {
-				$this->secrets['user_pass'] = true;
+		foreach ( $this->credentials as $credential ) {
+			if ( $this->snapshot->credentials( $credential['entity'] ) !== $credential['hash'] ) {
+				$this->secrets[ Exclusions::CREDENTIAL_COLUMNS[ $credential['entity']->type ][0] ] = true;
 			}
 		}
 

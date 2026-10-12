@@ -46,7 +46,6 @@ final class QueryMonitor {
 		'add_option',
 		'update_option',
 		'delete_option',
-		'wp_set_option_autoload_values',
 		'wp_insert_post',
 		'_transition_post_status',
 		'wp_delete_post',
@@ -71,14 +70,36 @@ final class QueryMonitor {
 
 	/**
 	 * Core writers covered only when called from a given function: the trashed
-	 * suffix is captured when `wp_insert_post()` trashes the post itself, but
-	 * not when it renames another trashed post that wanted the same slug.
+	 * suffix is captured when it renames the post being trashed, not another.
 	 *
 	 * @var array<string, string>
 	 */
 	private const COVERED_WHEN_CALLED_BY = [
 		'wp_add_trashed_suffix_to_post_name_for_post' => 'wp_insert_post',
 	];
+
+	/**
+	 * Core writers that change only a credential, noted as that secret by name.
+	 *
+	 * @var array<string, string>
+	 */
+	private const SECRET_WRITERS = [
+		'wp_set_password' => 'user_pass',
+	];
+
+	/**
+	 * Real paths resolved this request.
+	 *
+	 * @var array<string, string>
+	 */
+	private static array $real_paths = [];
+
+	/**
+	 * Plugin directories by real path, for naming a writer's plugin.
+	 *
+	 * @var array<string, string>|null
+	 */
+	private static ?array $plugins = null;
 
 	/**
 	 * The attached filter callback.
@@ -179,9 +200,8 @@ final class QueryMonitor {
 		}
 
 		if ( self::captured_core_table( $table ) ) {
-			$writer = self::writer();
-			if ( $writer !== null && ! self::is_transient_write( $table, $query ) ) {
-				$this->recorder->direct_write( $table, $writer );
+			if ( ! self::is_transient_write( $table, $query ) ) {
+				$this->note_writer( $table );
 			}
 			return;
 		}
@@ -213,15 +233,19 @@ final class QueryMonitor {
 	}
 
 	/**
-	 * Who issued the current query, unless it is a covered core function.
+	 * Note a write to a WordPress table by who issued it: nothing for a covered
+	 * core function, the secret's name for a credential writer, otherwise a
+	 * direct write naming the function.
 	 *
 	 * The caller is the frame just outside wpdb's own methods (or a subclass's,
 	 * like a database drop-in), so a direct write made from a hook inside
 	 * `wp_insert_post()` is still attributed to the plugin that made it.
 	 *
-	 * @return string|null `Class::method() (plugin)`, or null when covered.
+	 * @param string $table The table written.
+	 *
+	 * @return void
 	 */
-	private static function writer(): ?string {
+	private function note_writer( string $table ): void {
 		$frames  = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace -- Attributes a direct write to its caller.
 		$in_wpdb = false;
 		$file    = '';
@@ -242,17 +266,22 @@ final class QueryMonitor {
 
 			if ( $class === '' && self::is_core_file( $file ) ) {
 				if ( in_array( $function, self::COVERED_WRITERS, true ) ) {
-					return null;
+					return;
 				}
 				if ( isset( self::COVERED_WHEN_CALLED_BY[ $function ] ) && ( $frames[ $i + 1 ]['function'] ?? '' ) === self::COVERED_WHEN_CALLED_BY[ $function ] ) {
-					return null;
+					return;
+				}
+				if ( isset( self::SECRET_WRITERS[ $function ] ) ) {
+					$this->recorder->secret( self::SECRET_WRITERS[ $function ] );
+					return;
 				}
 			}
 
-			return ( $class !== '' ? "{$class}::{$function}()" : "{$function}()" ) . self::origin( $file );
+			$this->recorder->direct_write( $table, ( $class !== '' ? "{$class}::{$function}()" : "{$function}()" ) . self::origin( $file ) );
+			return;
 		}
 
-		return 'an unknown caller';
+		$this->recorder->direct_write( $table, 'an unknown caller' );
 	}
 
 	/**
@@ -276,9 +305,12 @@ final class QueryMonitor {
 	 * @return string
 	 */
 	private static function real( string $path ): string {
-		$real = realpath( $path );
+		if ( ! isset( self::$real_paths[ $path ] ) ) {
+			$real                      = realpath( $path );
+			self::$real_paths[ $path ] = wp_normalize_path( $real === false ? $path : $real );
+		}
 
-		return wp_normalize_path( $real === false ? $path : $real );
+		return self::$real_paths[ $path ];
 	}
 
 	/**
@@ -291,12 +323,19 @@ final class QueryMonitor {
 	private static function origin( string $file ): string {
 		$file = self::real( $file );
 
-		foreach ( [ WP_PLUGIN_DIR, WPMU_PLUGIN_DIR ] as $dir ) {
-			$plugins = glob( wp_normalize_path( $dir ) . '/*', GLOB_ONLYDIR );
-			foreach ( is_array( $plugins ) ? $plugins : [] as $plugin ) {
-				if ( str_starts_with( $file, self::real( $plugin ) . '/' ) ) {
-					return ' (' . basename( $plugin ) . ')';
+		if ( self::$plugins === null ) {
+			self::$plugins = [];
+			foreach ( [ WP_PLUGIN_DIR, WPMU_PLUGIN_DIR ] as $dir ) {
+				$found = glob( wp_normalize_path( $dir ) . '/*', GLOB_ONLYDIR );
+				foreach ( is_array( $found ) ? $found : [] as $plugin ) {
+					self::$plugins[ self::real( $plugin ) . '/' ] = basename( $plugin );
 				}
+			}
+		}
+
+		foreach ( self::$plugins as $path => $plugin ) {
+			if ( str_starts_with( $file, $path ) ) {
+				return " ({$plugin})";
 			}
 		}
 

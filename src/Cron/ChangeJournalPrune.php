@@ -21,8 +21,9 @@ use Albert\Undo\Storage\Repository;
  * Nightly WP-Cron job that holds the change journal to its retention policy.
  *
  * Prunes whole sessions by age, then beyond the per-item session count, then
- * by size, oldest first. A pruned item keeps its row, so the entry can still
- * say what happened; entries go entirely {@see self::DELETE_AFTER_DAYS} later.
+ * by size, least recently active first. A pruned item keeps its row, so the
+ * entry can still say what happened; entries go {@see self::DELETE_AFTER_DAYS}
+ * later.
  *
  * @since 1.5.0
  */

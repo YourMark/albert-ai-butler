@@ -198,6 +198,25 @@ class ChangeJournalPruneTest extends TestCase {
 	}
 
 	/**
+	 * Past the byte ceiling, the session active longest ago goes first, not
+	 * the one that started first.
+	 *
+	 * @return void
+	 */
+	public function test_the_byte_ceiling_spares_a_long_running_session(): void {
+		$long_running = $this->record( 'client-a', Entity::option( 'a' ) );
+		$quiet        = $this->record( 'client-b', Entity::option( 'b' ) );
+		$latest       = $this->record( 'client-a', Entity::option( 'c' ) );
+		$bytes        = (int) $this->item( $latest )['image_bytes'];
+
+		( new ChangeJournalPrune( $this->journal, $this->policy( 2, $bytes * 2 ) ) )->run();
+
+		$this->assertSame( 'size', $this->item( $quiet )['pruned'] );
+		$this->assertNull( $this->item( $long_running )['pruned'] );
+		$this->assertNull( $this->item( $latest )['pruned'] );
+	}
+
+	/**
 	 * Entries are deleted outright once long past the window.
 	 *
 	 * @return void

@@ -533,6 +533,70 @@ class ChangeJournalTest extends TestCase {
 	}
 
 	/**
+	 * Credentials in rows and in objects are never stored: a post's password,
+	 * a password set through wp_set_password(), a key held in a serialized
+	 * object or as a name/value pair.
+	 *
+	 * @return void
+	 */
+	public function test_hidden_credentials_are_secrets(): void {
+		$post_id = self::factory()->post->create( [ 'post_password' => 'door-before' ] );
+		$user_id = self::factory()->user->create();
+		$object  = new \stdClass();
+
+		$object->settings = [ 'apiKey' => 'object-key-before' ];
+		update_option( 'acme_object_settings', $object );
+		update_option(
+			'acme_pairs',
+			[
+				[
+					'name'  => 'stripe_api_key',
+					'value' => 'pair-key-before',
+				],
+			]
+		);
+
+		$this->work = static function () use ( $post_id, $user_id ): void {
+			wp_update_post(
+				[
+					'ID'            => $post_id,
+					'post_password' => 'door-after',
+					'post_title'    => 'Edited',
+				]
+			);
+			wp_set_password( 'a-new-password', $user_id );
+			update_option( 'acme_object_settings', 'replaced' );
+			update_option( 'acme_pairs', [] );
+		};
+
+		$this->call();
+
+		$entry  = $this->only_entry();
+		$stored = serialize( [ $entry, $this->items_by_key( (int) $entry['id'] ) ] ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Searching the whole record.
+
+		$this->assertSame( Recorder::REASON_SECRET, $entry['reason'], (string) $entry['other_tables'] );
+		$this->assertEqualsCanonicalizing( [ 'post_password', 'user_pass', 'acme_object_settings', 'acme_pairs' ], json_decode( (string) $entry['effects'], true )['secrets'] );
+		foreach ( [ 'door-before', 'door-after', 'object-key-before', 'pair-key-before' ] as $secret ) {
+			$this->assertStringNotContainsString( $secret, $stored );
+		}
+	}
+
+	/**
+	 * Core writes that fire no hook are named, not assumed covered.
+	 *
+	 * @return void
+	 */
+	public function test_an_autoload_change_is_a_direct_write(): void {
+		add_option( 'acme_autoloaded', 'v', '', true );
+
+		$this->work = static fn() => wp_set_option_autoload( 'acme_autoloaded', false );
+
+		$this->call();
+
+		$this->assertStringContainsString( 'written directly by wp_set_option_autoload_values() (WordPress)', (string) $this->only_entry()['other_tables'] );
+	}
+
+	/**
 	 * Past the item limit nothing more is held, and the entry says why.
 	 *
 	 * @return void

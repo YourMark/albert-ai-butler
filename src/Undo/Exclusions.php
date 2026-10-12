@@ -83,11 +83,16 @@ final class Exclusions {
 	private const MIN_FILTER_PREFIX = 3;
 
 	/**
-	 * User columns never stored.
+	 * Row columns never stored, by entity type. The first is the password, the
+	 * one whose change is noted: WordPress clears the activation key on any
+	 * email change, which is not a credential change worth refusing a revert for.
 	 *
-	 * @var array<int, string>
+	 * @var array<string, array<int, string>>
 	 */
-	public const USER_COLUMNS = [ 'user_pass', 'user_activation_key' ];
+	public const CREDENTIAL_COLUMNS = [
+		Entity::USER => [ 'user_pass', 'user_activation_key' ],
+		Entity::POST => [ 'post_password' ],
+	];
 
 	/**
 	 * Whether an entity is noise, a secret, or neither.
@@ -184,9 +189,10 @@ final class Exclusions {
 				continue;
 			}
 
-			$decoded = is_serialized( $value ) ? unserialize( $value, [ 'allowed_classes' => false ] ) : json_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- No classes allowed.
+			// Silenced: a corrupt stored value must not print a notice into the call's response.
+			$decoded = is_serialized( $value ) ? @unserialize( $value, [ 'allowed_classes' => false ] ) : json_decode( $value, true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize, WordPress.PHP.NoSilencedErrors.Discouraged -- No classes allowed.
 
-			if ( is_array( $decoded ) && self::has_secret_key( $decoded ) ) {
+			if ( ( is_array( $decoded ) || is_object( $decoded ) ) && self::has_secret_key( self::fields( $decoded ) ) ) {
 				return true;
 			}
 		}
@@ -195,28 +201,73 @@ final class Exclusions {
 	}
 
 	/**
-	 * Whether an array holds a non-empty value under a credential-looking key, at any depth.
+	 * Whether data holds a non-empty credential, at any depth: under a telling
+	 * key (`secret_key`), or as a `name`/`value` pair naming one.
+	 *
+	 * Past the depth limit it answers yes: data it could not finish reading is
+	 * not stored.
 	 *
 	 * @param array<mixed> $data  The data.
 	 * @param int          $depth Remaining depth.
 	 *
 	 * @return bool
 	 */
-	private static function has_secret_key( array $data, int $depth = 5 ): bool {
+	private static function has_secret_key( array $data, int $depth = 32 ): bool {
+		if ( $depth < 0 ) {
+			return true;
+		}
+
+		foreach ( [ 'name', 'key', 'id' ] as $label ) {
+			if ( isset( $data[ $label ], $data['value'] ) && is_string( $data[ $label ] ) && self::is_filled( $data['value'] ) && preg_match( self::SECRET_NAME, $data[ $label ] ) ) {
+				return true;
+			}
+		}
+
 		foreach ( $data as $key => $value ) {
-			if ( is_array( $value ) ) {
-				if ( $depth > 0 && self::has_secret_key( $value, $depth - 1 ) ) {
+			if ( is_array( $value ) || is_object( $value ) ) {
+				if ( self::has_secret_key( self::fields( $value ), $depth - 1 ) ) {
 					return true;
 				}
 				continue;
 			}
 
-			if ( is_string( $key ) && is_scalar( $value ) && (string) $value !== '' && preg_match( self::SECRET_NAME, $key ) ) {
+			if ( is_string( $key ) && self::is_filled( $value ) && preg_match( self::SECRET_NAME, $key ) ) {
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	/**
+	 * An array's or object's fields, with private and protected names unmangled.
+	 *
+	 * Serialized objects come back as `__PHP_Incomplete_Class`, whose cast
+	 * prefixes non-public names with NUL-delimited class names.
+	 *
+	 * @param array<mixed>|object $data The data.
+	 *
+	 * @return array<mixed>
+	 */
+	private static function fields( array|object $data ): array {
+		$fields = [];
+
+		foreach ( (array) $data as $key => $value ) {
+			$fields[ is_string( $key ) ? (string) preg_replace( '/^\0[^\0]*\0/', '', $key ) : $key ] = $value;
+		}
+
+		return $fields;
+	}
+
+	/**
+	 * Whether a value is a non-empty scalar.
+	 *
+	 * @param mixed $value The value.
+	 *
+	 * @return bool
+	 */
+	private static function is_filled( $value ): bool {
+		return is_scalar( $value ) && (string) $value !== '';
 	}
 
 	/**

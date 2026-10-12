@@ -56,6 +56,19 @@ class WriteTargetTest extends TestCase {
 	}
 
 	/**
+	 * A long value is read in linear time: a regex over quoted strings once
+	 * ran out of stack on a long post body and made every such save a gap.
+	 *
+	 * @return void
+	 */
+	public function test_a_long_value_is_still_read(): void {
+		$body = str_repeat( 'it\\\'s "quoted" /*! not code */ ', 20000 );
+
+		$this->assertWrite( 'wp_posts', "UPDATE `wp_posts` SET `post_content` = '{$body}' WHERE `ID` = 1" );
+		$this->assertSame( WriteTarget::UNREADABLE, WriteTarget::of( "UPDATE `wp_posts` SET `post_content` = '{$body}' /*M! code */" )->kind );
+	}
+
+	/**
 	 * Anything it cannot read exactly is unreadable, never a read.
 	 *
 	 * @return void
@@ -65,6 +78,9 @@ class WriteTargetTest extends TestCase {
 			'/*!50000 UPDATE wp_options SET option_value = 1 */',
 			'SELECT 1 /*! ; DELETE FROM wp_posts */',
 			'/*M!100100 DELETE FROM wp_posts */',
+			"UPDATE wp_posts SET a = 1 /* it's */ /*! DELETE FROM wp_users */ /* ' */",
+			"UPDATE wp_posts SET a = 1 -- it's\n/*! DELETE FROM wp_users */ -- '",
+			"UPDATE wp_posts SET a = 1 # it's\n/*! DELETE FROM wp_users */ # '",
 			"UPDATE wp_posts SET post_title = 'it\\' /*! x */",
 			'INSERT INTO other_db.wp_posts (ID) VALUES (1)',
 			'WITH x AS (SELECT 1) DELETE FROM wp_posts',

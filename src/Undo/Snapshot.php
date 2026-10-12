@@ -67,14 +67,56 @@ final class Snapshot {
 	 * @since 1.5.0
 	 */
 	public function read( Entity $entity ): ?array {
+		return self::on_blog( $entity, fn() => $this->read_here( $entity ) );
+	}
+
+	/**
+	 * A fingerprint of an entity's password, kept in memory only, so a call
+	 * that changes it is noticed without the password ever being stored.
+	 *
+	 * @param Entity $entity The entity.
+	 *
+	 * @return string|null Null for an entity without credentials.
+	 * @since 1.5.0
+	 */
+	public function credentials( Entity $entity ): ?string {
+		$column = Exclusions::CREDENTIAL_COLUMNS[ $entity->type ][0] ?? null;
+		if ( $column === null ) {
+			return null;
+		}
+
+		return self::on_blog(
+			$entity,
+			static function () use ( $entity, $column ): string {
+				global $wpdb;
+
+				$table = $entity->type === Entity::USER ? $wpdb->users : $wpdb->posts;
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The stored row, not the cache.
+				$value = $wpdb->get_var( $wpdb->prepare( 'SELECT %i FROM %i WHERE ID = %d', $column, $table, (int) $entity->parts[0] ) );
+
+				return hash( 'sha256', (string) $value );
+			}
+		);
+	}
+
+	/**
+	 * Run a read on the entity's own blog.
+	 *
+	 * @template T
+	 * @param Entity        $entity The entity.
+	 * @param callable(): T $read   The read.
+	 *
+	 * @return T
+	 */
+	private static function on_blog( Entity $entity, callable $read ) {
 		if ( ! is_multisite() || $entity->blog_id === get_current_blog_id() ) {
-			return $this->read_here( $entity );
+			return $read();
 		}
 
 		switch_to_blog( $entity->blog_id );
 
 		try {
-			return $this->read_here( $entity );
+			return $read();
 		} finally {
 			restore_current_blog();
 		}
@@ -103,24 +145,6 @@ final class Snapshot {
 	}
 
 	/**
-	 * A fingerprint of a user's credentials, kept in memory only, so a call that
-	 * changes a password is noticed without the password ever being stored.
-	 *
-	 * @param int $user_id User ID.
-	 *
-	 * @return string
-	 * @since 1.5.0
-	 */
-	public static function credential_fingerprint( int $user_id ): string {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The stored row, not the cache.
-		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT user_pass, user_activation_key FROM %i WHERE ID = %d', $wpdb->users, $user_id ), ARRAY_A );
-
-		return hash( 'sha256', (string) wp_json_encode( $row ) );
-	}
-
-	/**
 	 * Read an entity on the current blog.
 	 *
 	 * @param Entity $entity The entity.
@@ -136,7 +160,7 @@ final class Snapshot {
 		switch ( $entity->type ) {
 			case Entity::POST:
 				$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE ID = %d', $wpdb->posts, (int) $parts[0] ), ARRAY_A );
-				return is_array( $row ) ? self::without( $row, [ 'comment_count' ] ) : null;
+				return is_array( $row ) ? self::without( $row, [ 'comment_count', ...Exclusions::CREDENTIAL_COLUMNS[ Entity::POST ] ] ) : null;
 
 			case Entity::COMMENT:
 				$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE comment_ID = %d', $wpdb->comments, (int) $parts[0] ), ARRAY_A );
@@ -144,7 +168,7 @@ final class Snapshot {
 
 			case Entity::USER:
 				$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE ID = %d', $wpdb->users, (int) $parts[0] ), ARRAY_A );
-				return is_array( $row ) ? self::without( $row, Exclusions::USER_COLUMNS ) : null;
+				return is_array( $row ) ? self::without( $row, Exclusions::CREDENTIAL_COLUMNS[ Entity::USER ] ) : null;
 
 			case Entity::OPTION:
 				$row = $wpdb->get_row( $wpdb->prepare( 'SELECT option_value, autoload FROM %i WHERE option_name = %s', $wpdb->options, $parts[0] ), ARRAY_A );
