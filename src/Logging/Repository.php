@@ -162,6 +162,10 @@ class Repository {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Direct insert required for logging.
 		$inserted = $wpdb->insert( $table_name, $data, $formats );
 
+		if ( $inserted !== false ) {
+			ExecutionLogMarker::remember_row( $ability_name, (int) $wpdb->insert_id );
+		}
+
 		// Prune only when the row was actually written and Free is the writer
 		// (i.e. albert/logging/enabled is true). Skipping the prune on a failed
 		// insert avoids evicting a surviving row without adding a replacement.

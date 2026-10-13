@@ -39,6 +39,10 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/safe_mode/abandoned` | action | An approved run never reported back. It may or may not have completed |
 | `albert/safe_mode/option_write_blocked` | action | `( string $option, string $operation )`. An assistant's write (`write`) or delete (`delete`) of one of Albert's control options was refused, under any spelling the database treats as that option |
 | `albert/safe_mode/option_restored` | action | `( string $option, bool $restored )`. A control option was changed outside the option API during an assistant request (a plugin's own SQL) and was put back; `$restored` is false when it could not be put back or checked |
+| `albert/undo/handlers` | filter | Register `Albert\Undo\Handlers\Handler` objects for a plugin's own tables. A handler captures through the plugin's API while a call is recorded; its `tables()` and `derived_tables()` then count as covered instead of making the entry unrevertable. WordPress's and Albert's own tables are refused, and a handler that throws is dropped for the window. `claims()` takes ownership of an entity core captured (an order's meta), so it is restored once |
+| `albert/undo/excluded_options` | filter | Options the change journal ignores as noise (trailing `*` = prefix of at least three characters; `*` alone is refused). Can only add: Albert's own noise and secret lists always apply |
+| `albert/undo/excluded_meta_keys` | filter | Meta keys the change journal ignores as noise, every meta type. Same rules as above |
+| `albert/undo/register_retention_policy` | action | Receives a `Undo\Retention\Registrar`; call `register()` with a `RetentionPolicy` to replace Free's fixed limits (2 days, the last 2 sessions per item, 50 MB). An action taking a typed class rather than a filter over numbers, so the limits cannot be raised by a one-liner |
 | `albert/admin/submenu_pages` | filter | Add addon admin pages |
 | `albert/abilities_icons` | filter | Customize category icons |
 | `albert/developer_mode` | filter | Toggle developer mode |

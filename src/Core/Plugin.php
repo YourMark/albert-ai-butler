@@ -70,6 +70,7 @@ use Albert\Settings\Overrides as SettingsOverrides;
 use Albert\Settings\Storage as SettingsStorage;
 use Albert\Admin\SkillsPage;
 use Albert\Cron\AllowedUserExpiry;
+use Albert\Cron\ChangeJournalPrune;
 use Albert\Cron\ConnectionRetentionSweep;
 use Albert\Cron\PendingActionSweep;
 use Albert\Cron\TokenCleanup;
@@ -96,6 +97,7 @@ use Albert\SafeMode\ApprovalPolicy as SafeModeApprovalPolicy;
 use Albert\SafeMode\Interceptor as SafeModeInterceptor;
 use Albert\SafeMode\ConnectionGuard as SafeModeConnectionGuard;
 use Albert\SafeMode\OptionRestorer as SafeModeOptionRestorer;
+use Albert\Undo\Journal as UndoJournal;
 use Albert\Admin\Approvals;
 use WP\MCP\Core\McpAdapter;
 
@@ -233,6 +235,12 @@ class Plugin {
 		// in activate() so a site that upgraded into safe mode gets it too.
 		( new PendingActionSweep() )->register_hooks();
 		PendingActionSweep::schedule();
+
+		// Change journal: records what assistant calls change, so they can be
+		// undone. Not admin-only, the window opens on MCP requests.
+		( new UndoJournal() )->register_hooks();
+		( new ChangeJournalPrune() )->register_hooks();
+		ChangeJournalPrune::schedule();
 
 		// Daily sweep of never-used and idle connections. Same self-healing reason.
 		( new ConnectionRetentionSweep() )->register_hooks();
@@ -619,6 +627,9 @@ class Plugin {
 		// Schedule the daily safe-mode pending-actions sweep.
 		PendingActionSweep::schedule();
 
+		// Schedule the nightly change-journal prune.
+		ChangeJournalPrune::schedule();
+
 		// Schedule the daily never-used/idle connection sweep.
 		ConnectionRetentionSweep::schedule();
 
@@ -648,6 +659,7 @@ class Plugin {
 		// Unschedule the daily expired-token cleanup.
 		TokenCleanup::unschedule();
 		PendingActionSweep::unschedule();
+		ChangeJournalPrune::unschedule();
 
 		// Unschedule the daily never-used/idle connection sweep.
 		ConnectionRetentionSweep::unschedule();

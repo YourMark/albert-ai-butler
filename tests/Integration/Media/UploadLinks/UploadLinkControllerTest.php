@@ -17,7 +17,10 @@ use Albert\Database\Installer;
 use Albert\Database\Tables;
 use Albert\Media\UploadLinks\UploadLinkController;
 use Albert\Media\UploadLinks\UploadLinkService;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
+use Albert\Undo\Storage\Repository as ChangeRepository;
+use Albert\Undo\WindowContext;
 use WP_Error;
 use WP_REST_Request;
 
@@ -173,6 +176,33 @@ class UploadLinkControllerTest extends TestCase {
 		$data = $response->get_data();
 		$this->assertArrayHasKey( 'attachment_id', $data );
 		$this->assertNotNull( get_post( $data['attachment_id'] ) );
+	}
+
+	/**
+	 * A link minted over a connection records its upload in the change journal
+	 * as that connection's call; one minted without a connection does not.
+	 *
+	 * @return void
+	 */
+	public function test_an_upload_through_a_connections_link_is_recorded(): void {
+		global $wpdb;
+
+		ConnectionContext::set( 'client-acme' );
+		try {
+			$link = $this->links->mint( $this->admin_id, [] );
+		} finally {
+			ConnectionContext::reset();
+		}
+
+		$response = rest_get_server()->dispatch( $this->multipart_request( $link['upload_token'], $this->jpg_fixture(), 'photo.jpg' ) );
+		$this->assertSame( 201, $response->get_status() );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Assertion read.
+		$entry = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id DESC LIMIT 1', Tables::changes() ), ARRAY_A );
+
+		$this->assertSame( 'client-acme', $entry['client_id'] );
+		$this->assertSame( WindowContext::SOURCE_UPLOAD, $entry['source'] );
+		$this->assertContains( 'post:' . $response->get_data()['attachment_id'], array_map( static fn( $item ) => $item['entity_type'] . ':' . $item['entity_key'], ( new ChangeRepository() )->items( (int) $entry['id'] ) ) );
 	}
 
 	/**

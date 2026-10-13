@@ -69,6 +69,10 @@ src/
                    #   Repository / PendingAction      : the albert_pending_actions queue
                    #   ApprovalPolicy / Approver       : who may decide, and running an approved call
                    #   ConnectionGuard / AuditTrail    : Albert's own options, and the record of what happened
+  Undo/            # Change journal: records what assistant calls change, for Revert (doc 06)
+                   #   Journal / Window / Recorder     : the recording window around a call
+                   #   Capture/ Coverage/              : before-write hooks, the table-name check
+                   #   Storage/ Retention/ Handlers/   : tables, the RetentionPolicy seam, custom-table handlers
   Execution/       # InterceptorDecision : resolves the MCP execute double-fire for any wp_pre_execute_ability consumer
   Settings/        # What a setting's value IS (constant -> filter -> option); read on MCP requests, cron, WP-CLI
   Support/         # WpCompat : WordPress version-capability detection (7.1 feature probes)

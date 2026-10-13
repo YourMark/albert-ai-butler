@@ -134,6 +134,58 @@ class InstallerTest extends TestCase {
 	}
 
 	/**
+	 * Creates the change journal's two tables, with the columns its recorder
+	 * and prune rely on.
+	 *
+	 * @return void
+	 */
+	public function test_install_creates_change_journal_tables(): void {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema introspection.
+		$changes = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', Tables::changes() ) );
+		$items   = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', Tables::change_items() ) );
+		// phpcs:enable
+
+		foreach ( [ 'run_id', 'session_id', 'log_id', 'reason', 'other_tables', 'effects' ] as $column ) {
+			$this->assertContains( $column, $changes );
+		}
+		foreach ( [ 'change_id', 'run_id', 'entity_hash', 'before_image', 'after_hashes', 'pruned', 'image_bytes' ] as $column ) {
+			$this->assertContains( $column, $items );
+		}
+	}
+
+	/**
+	 * Uninstall leaves no change journal behind: its tables and its failure count.
+	 *
+	 * @return void
+	 */
+	public function test_uninstall_removes_the_change_journal(): void {
+		update_option( 'albert_undo_failures', [ 'count' => 1 ] );
+
+		// The test suite turns table drops into temporary-table drops, so the
+		// statement is what can be checked, not the table's absence.
+		$queries = [];
+		$watch   = static function ( $query ) use ( &$queries ) {
+			$queries[] = $query;
+			return $query;
+		};
+
+		add_filter( 'query', $watch );
+		try {
+			Installer::uninstall();
+		} finally {
+			remove_filter( 'query', $watch );
+			Installer::install();
+		}
+
+		$this->assertFalse( (bool) get_option( 'albert_undo_failures' ) );
+		foreach ( [ Tables::changes(), Tables::change_items() ] as $table ) {
+			$this->assertNotEmpty( preg_grep( '/DROP\s+(?:TEMPORARY\s+)?TABLE\s+IF\s+EXISTS\s+`' . preg_quote( $table, '/' ) . '`/i', $queries ), $table );
+		}
+	}
+
+	/**
 	 * Creates the generic single-use token table with the full column set.
 	 *
 	 * @return void
