@@ -60,6 +60,25 @@ class Repository {
 	private const MAX_NAME_LENGTH = 191;
 
 	/**
+	 * The blog whose journal this reads and writes.
+	 *
+	 * Fixed at construction, so a call that switches blogs half way still
+	 * writes its whole entry to the journal it started in.
+	 *
+	 * @var int
+	 */
+	private int $blog_id;
+
+	/**
+	 * Bind the repository to a blog's journal.
+	 *
+	 * @param int|null $blog_id The blog; the current one by default.
+	 */
+	public function __construct( ?int $blog_id = null ) {
+		$this->blog_id = $blog_id ?? get_current_blog_id();
+	}
+
+	/**
 	 * Start an entry, joining the connection's current session when there is one.
 	 *
 	 * @param WindowContext $context The call.
@@ -70,8 +89,8 @@ class Repository {
 	public function create_entry( WindowContext $context ): ?array {
 		global $wpdb;
 
-		$table   = Tables::changes();
-		$blog_id = get_current_blog_id();
+		$table   = Tables::changes( $this->blog_id );
+		$blog_id = $this->blog_id;
 
 		$run_id = $this->current_run( $context, $blog_id );
 
@@ -129,7 +148,7 @@ class Repository {
 	private function current_run( WindowContext $context, int $blog_id ): int {
 		global $wpdb;
 
-		$table = Tables::changes();
+		$table = Tables::changes( $this->blog_id );
 		$sql   = 'SELECT run_id FROM %i WHERE client_id = %s AND user_id = %d AND blog_id = %d AND COALESCE(finished_at, created_at) >= %s AND '
 			. ( $context->session_id === null ? 'session_id IS NULL' : 'session_id = %s' )
 			. ' ORDER BY id DESC LIMIT 1';
@@ -150,17 +169,20 @@ class Repository {
 	}
 
 	/**
-	 * Whether an entry row exists. A rollback in the call can remove one.
+	 * Whether an entry row still exists (a rollback can remove it).
 	 *
 	 * @param int $change_id Entry id.
 	 *
-	 * @return bool
+	 * @return bool True when it exists, or when the database could not say:
+	 *              creating a second entry for one call is the worse mistake.
 	 * @since 1.5.0
 	 */
 	public function entry_exists( int $change_id ): bool {
 		global $wpdb;
 
-		return (bool) $wpdb->get_var( $wpdb->prepare( 'SELECT 1 FROM %i WHERE id = %d', Tables::changes(), $change_id ) );
+		$found = $wpdb->get_var( $wpdb->prepare( 'SELECT 1 FROM %i WHERE id = %d', Tables::changes( $this->blog_id ), $change_id ) );
+
+		return $found !== null || $wpdb->last_error !== '';
 	}
 
 	/**
@@ -182,7 +204,7 @@ class Repository {
 		global $wpdb;
 
 		return (bool) $wpdb->insert(
-			Tables::change_items(),
+			Tables::change_items( $this->blog_id ),
 			[
 				'change_id'    => $change_id,
 				'run_id'       => $run_id,
@@ -223,7 +245,7 @@ class Repository {
 		}
 
 		$updated = $wpdb->update(
-			Tables::changes(),
+			Tables::changes( $this->blog_id ),
 			[
 				'status'       => $status,
 				'reason'       => $reason,
@@ -262,18 +284,20 @@ class Repository {
 	}
 
 	/**
-	 * Delete an entry and its items (the call changed nothing).
+	 * Delete an entry that turned out to record nothing.
 	 *
 	 * @param int $change_id Entry id.
 	 *
-	 * @return void
+	 * @return bool Whether both deletes ran without error.
 	 * @since 1.5.0
 	 */
-	public function delete_entry( int $change_id ): void {
+	public function delete_entry( int $change_id ): bool {
 		global $wpdb;
 
-		$wpdb->delete( Tables::change_items(), [ 'change_id' => $change_id ] );
-		$wpdb->delete( Tables::changes(), [ 'id' => $change_id ] );
+		$items = $wpdb->delete( Tables::change_items( $this->blog_id ), [ 'change_id' => $change_id ] );
+		$entry = $wpdb->delete( Tables::changes( $this->blog_id ), [ 'id' => $change_id ] );
+
+		return $items !== false && $entry !== false;
 	}
 
 	/**
@@ -287,7 +311,7 @@ class Repository {
 	public function entry( int $change_id ): ?array {
 		global $wpdb;
 
-		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', Tables::changes(), $change_id ), ARRAY_A );
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', Tables::changes( $this->blog_id ), $change_id ), ARRAY_A );
 
 		return is_array( $row ) ? $row : null;
 	}
@@ -308,7 +332,7 @@ class Repository {
 		global $wpdb;
 
 		$rows = $wpdb->get_results(
-			$wpdb->prepare( 'SELECT * FROM %i WHERE change_id = %d ORDER BY id', Tables::change_items(), $change_id ),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE change_id = %d ORDER BY id', Tables::change_items( $this->blog_id ), $change_id ),
 			ARRAY_A
 		);
 
@@ -355,7 +379,7 @@ class Repository {
 		$wpdb->query(
 			$wpdb->prepare(
 				"UPDATE %i SET status = %s, reason = %s, finished_at = created_at WHERE status = 'recording' AND created_at < %s",
-				Tables::changes(),
+				Tables::changes( $this->blog_id ),
 				Recorder::STATUS_INTERRUPTED,
 				Recorder::REASON_INTERRUPTED,
 				$before
@@ -376,7 +400,7 @@ class Repository {
 		global $wpdb;
 
 		$runs = $wpdb->get_col(
-			$wpdb->prepare( 'SELECT run_id FROM %i GROUP BY run_id HAVING MAX(created_at) < %s', Tables::changes(), $before )
+			$wpdb->prepare( 'SELECT run_id FROM %i GROUP BY run_id HAVING MAX(created_at) < %s', Tables::changes( $this->blog_id ), $before )
 		);
 
 		self::check();
@@ -404,7 +428,7 @@ class Repository {
 		$runs = $wpdb->get_col(
 			$wpdb->prepare(
 				'SELECT DISTINCT run_id FROM (SELECT run_id, ROW_NUMBER() OVER (PARTITION BY entity_hash ORDER BY last_change DESC) AS newer FROM (SELECT entity_hash, run_id, MAX(change_id) AS last_change FROM %i GROUP BY entity_hash, run_id) per_run) ranked WHERE newer > %d',
-				Tables::change_items(),
+				Tables::change_items( $this->blog_id ),
 				$keep
 			)
 		);
@@ -424,7 +448,7 @@ class Repository {
 	public function prune_to_bytes( int $max_bytes ): bool {
 		global $wpdb;
 
-		$items  = Tables::change_items();
+		$items  = Tables::change_items( $this->blog_id );
 		$excess = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(SUM(image_bytes), 0) FROM %i WHERE pruned IS NULL', $items ) ) - $max_bytes;
 		self::check();
 
@@ -465,16 +489,16 @@ class Repository {
 
 		$runs = array_map(
 			'intval',
-			$wpdb->get_col( $wpdb->prepare( 'SELECT run_id FROM %i GROUP BY run_id HAVING MAX(created_at) < %s', Tables::changes(), $before ) )
+			$wpdb->get_col( $wpdb->prepare( 'SELECT run_id FROM %i GROUP BY run_id HAVING MAX(created_at) < %s', Tables::changes( $this->blog_id ), $before ) )
 		);
 		self::check();
 
 		foreach ( array_chunk( $runs, 500 ) as $chunk ) {
 			$in = implode( ',', array_fill( 0, count( $chunk ), '%d' ) );
 			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Placeholders built to match the chunk.
-			$wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE run_id IN ($in)", Tables::change_items(), ...$chunk ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE run_id IN ($in)", Tables::change_items( $this->blog_id ), ...$chunk ) );
 			self::check();
-			$wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE run_id IN ($in)", Tables::changes(), ...$chunk ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE run_id IN ($in)", Tables::changes( $this->blog_id ), ...$chunk ) );
 			self::check();
 			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		}
@@ -550,7 +574,7 @@ class Repository {
 	private function run_last_seen( int $run_id ): string {
 		global $wpdb;
 
-		return (string) $wpdb->get_var( $wpdb->prepare( 'SELECT MAX(created_at) FROM %i WHERE run_id = %d', Tables::changes(), $run_id ) );
+		return (string) $wpdb->get_var( $wpdb->prepare( 'SELECT MAX(created_at) FROM %i WHERE run_id = %d', Tables::changes( $this->blog_id ), $run_id ) );
 	}
 
 	/**
@@ -568,7 +592,7 @@ class Repository {
 			return false;
 		}
 
-		$items = Tables::change_items();
+		$items = Tables::change_items( $this->blog_id );
 
 		return (bool) $wpdb->get_var(
 			$wpdb->prepare(
@@ -614,7 +638,7 @@ class Repository {
 			$wpdb->query(
 				$wpdb->prepare(
 					"UPDATE %i SET before_image = NULL, image_bytes = 0, pruned = %s WHERE pruned IS NULL AND run_id IN ($in)",
-					Tables::change_items(),
+					Tables::change_items( $this->blog_id ),
 					$reason,
 					...$chunk
 				)

@@ -12,7 +12,7 @@ namespace Albert\Undo;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * How often recording failed, so the Dashboard can say so.
+ * How often recording failed, for the Changes screen to report (issue 06 PR 3).
  *
  * The journal swallows its own errors to keep the call alive, which would make
  * "nothing was recorded" look exactly like "nothing changed". This keeps a count

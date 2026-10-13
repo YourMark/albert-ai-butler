@@ -37,8 +37,8 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/safe_mode/rejected` | action | A person rejected a held call. The ability never ran |
 | `albert/safe_mode/expired` | action | A held call lapsed without a decision |
 | `albert/safe_mode/abandoned` | action | An approved run never reported back. It may or may not have completed |
-| `albert/safe_mode/option_write_blocked` | action | An assistant's write to one of Albert's control options was refused |
-| `albert/safe_mode/option_delete_detected` | action | An assistant *deleted* one of those options. Detection only: WordPress has no `pre_delete_option` filter, so this cannot be prevented, and the hook is named separately from the one above because that one claims a refusal this cannot make |
+| `albert/safe_mode/option_write_blocked` | action | `( string $option, string $operation )`. An assistant's write (`write`) or delete (`delete`) of one of Albert's control options was refused, under any spelling the database treats as that option |
+| `albert/safe_mode/option_restored` | action | `( string $option, bool $restored )`. A control option was changed outside the option API during an assistant request (a plugin's own SQL) and was put back; `$restored` is false when it could not be put back or checked |
 | `albert/undo/handlers` | filter | Register `Albert\Undo\Handlers\Handler` objects for a plugin's own tables. A handler captures through the plugin's API while a call is recorded; its `tables()` and `derived_tables()` then count as covered instead of making the entry unrevertable. WordPress's and Albert's own tables are refused, and a handler that throws is dropped for the window. `claims()` takes ownership of an entity core captured (an order's meta), so it is restored once |
 | `albert/undo/excluded_options` | filter | Options the change journal ignores as noise (trailing `*` = prefix of at least three characters; `*` alone is refused). Can only add: Albert's own noise and secret lists always apply |
 | `albert/undo/excluded_meta_keys` | filter | Meta keys the change journal ignores as noise, every meta type. Same rules as above |

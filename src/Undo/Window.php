@@ -42,6 +42,13 @@ final class Window {
 	private static ?string $source = null;
 
 	/**
+	 * The blog the open window started on, whose journal it writes to.
+	 *
+	 * @var int
+	 */
+	private static int $blog_id = 0;
+
+	/**
 	 * Whether the shutdown fallback is registered.
 	 *
 	 * @var bool
@@ -69,7 +76,8 @@ final class Window {
 		}
 
 		try {
-			$recorder = new Recorder( $context, new Repository(), $handlers, new Snapshot( $handlers ) );
+			self::$blog_id = get_current_blog_id();
+			$recorder      = new Recorder( $context, new Repository( self::$blog_id ), $handlers, new Snapshot( $handlers ) );
 			$recorder->start();
 		} catch ( \Throwable $e ) {
 			// Abandon first, so the counter's own option write is not recorded.
@@ -113,7 +121,7 @@ final class Window {
 		try {
 			$entry_id = $recorder->finish( $status );
 			if ( $entry_id !== null ) {
-				ChangeJournalPrune::soon();
+				ChangeJournalPrune::soon( self::$blog_id );
 			}
 			return $entry_id;
 		} catch ( \Throwable $e ) {

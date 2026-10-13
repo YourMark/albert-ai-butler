@@ -102,6 +102,29 @@ final class Exclusions {
 	private const MAX_SCAN_DEPTH = 32;
 
 	/**
+	 * Memory decoding a stored string may take, as a multiple of its length.
+	 * Measured: JSON of tiny objects up to about 55x, `unserialize()` about 16x.
+	 *
+	 * @var int
+	 */
+	private const DECODE_COST = 64;
+
+	/**
+	 * What {@see self::decode()} returns for a value that must count as a
+	 * secret; `true` is a value `b:1;` decodes to.
+	 *
+	 * @var string
+	 */
+	private const DECODED_SECRET = "\0secret";
+
+	/**
+	 * A captured state could not be checked for one, so it is not stored.
+	 *
+	 * @var string
+	 */
+	public const UNREADABLE = 'unreadable';
+
+	/**
 	 * Shortest prefix a filter may exclude with a trailing `*`.
 	 *
 	 * @var int
@@ -202,12 +225,14 @@ final class Exclusions {
 	 * @param Entity                    $entity The entity.
 	 * @param array<string, mixed>|null $state  Its state as {@see Snapshot} reads it.
 	 *
-	 * @return bool
+	 * @return string|null {@see self::SECRET}, {@see self::UNREADABLE} when a
+	 *                     value is too big to decode in the memory left, or
+	 *                     null when it is clean.
 	 * @since 1.5.0
 	 */
-	public static function holds_secret( Entity $entity, ?array $state ): bool {
+	public static function holds_secret( Entity $entity, ?array $state ): ?string {
 		if ( $state === null ) {
-			return false;
+			return null;
 		}
 
 		$rows = is_array( $state['values'] ?? null ) ? $state['values'] : [];
@@ -221,14 +246,18 @@ final class Exclusions {
 
 		foreach ( $names as $name ) {
 			if ( is_string( $name ) && self::matches( $name, $entity->type === Entity::OPTION ? self::SECRET_OPTIONS : self::SECRET_META_KEYS ) ) {
-				return true;
+				return self::SECRET;
 			}
 			if ( is_string( $name ) && preg_match( self::SECRET_NAME, $name ) ) {
-				return true;
+				return self::SECRET;
 			}
 		}
 
-		return self::contains_secret( $values, self::MAX_SCAN_DEPTH );
+		try {
+			return self::contains_secret( $values, self::MAX_SCAN_DEPTH ) ? self::SECRET : null;
+		} catch ( \LengthException $e ) {
+			return self::UNREADABLE;
+		}
 	}
 
 	/**
@@ -273,7 +302,7 @@ final class Exclusions {
 			}
 
 			$decoded = self::decode( $value );
-			if ( $decoded === false ) {
+			if ( $decoded === self::DECODED_SECRET ) {
 				return true;
 			}
 			if ( ( is_array( $decoded ) || is_object( $decoded ) ) && self::contains_secret( self::fields( $decoded ), $depth - 1 ) ) {
@@ -289,22 +318,66 @@ final class Exclusions {
 	 *
 	 * @param string $value The value.
 	 *
-	 * @return mixed The decoded value, null when it is plain text, or false
-	 *               when it is JSON nested too deep to read.
+	 * @return mixed The decoded value, null when it is plain text, or
+	 *               {@see self::DECODED_SECRET} when it must count as a secret:
+	 *               JSON nested too deep to read, or a corrupt serialized value
+	 *               with a credential among its strings.
+	 * @throws \LengthException When decoding could exhaust the memory left, or
+	 *                           a corrupt value cannot be read through.
 	 */
 	private static function decode( string $value ) {
-		if ( is_serialized( $value ) ) {
-			// Silenced: a corrupt stored value must not print a notice into the call's response.
-			return @unserialize( $value, [ 'allowed_classes' => false ] ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize, WordPress.PHP.NoSilencedErrors.Discouraged -- No classes allowed.
-		}
-
-		if ( $value[0] !== '{' && $value[0] !== '[' ) {
+		$serialized = is_serialized( $value );
+		if ( ! $serialized && $value[0] !== '{' && $value[0] !== '[' ) {
 			return null;
 		}
 
-		$decoded = json_decode( $value, true );
+		// A 10 MB page-builder blob decodes to hundreds of MB; a fatal here would
+		// kill a call that worked before the journal existed.
+		if ( ! self::affordable( strlen( $value ) ) ) {
+			throw new \LengthException( 'Too large to decode.' );
+		}
 
-		return json_last_error() === JSON_ERROR_DEPTH ? false : $decoded;
+		if ( ! $serialized ) {
+			$decoded = json_decode( $value, true );
+
+			return json_last_error() === JSON_ERROR_DEPTH ? self::DECODED_SECRET : $decoded;
+		}
+
+		// Silenced: a corrupt stored value must not print a notice into the call's response.
+		$decoded = @unserialize( $value, [ 'allowed_classes' => false ] ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize, WordPress.PHP.NoSilencedErrors.Discouraged -- No classes allowed.
+		if ( $decoded !== false || $value === 'b:0;' ) {
+			return $decoded;
+		}
+
+		// Corrupt: its structure is lost, so read each of its strings as a
+		// possible key or value.
+		if ( preg_match_all( '/s:\d+:"(.*?)";/s', $value, $strings ) === false ) {
+			throw new \LengthException( 'Could not read a corrupt value.' );
+		}
+		foreach ( $strings[1] as $string ) {
+			if ( preg_match( self::SECRET_NAME, $string ) || preg_match( self::SECRET_VALUE, $string ) ) {
+				return self::DECODED_SECRET;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Whether decoding a string of this length fits in the memory left.
+	 *
+	 * @param int $bytes Its length.
+	 *
+	 * @return bool
+	 */
+	private static function affordable( int $bytes ): bool {
+		$limit = wp_convert_hr_to_bytes( (string) ini_get( 'memory_limit' ) );
+		if ( $limit <= 0 ) {
+			return true;
+		}
+
+		// The limit applies to what PHP has reserved, not only what is in use.
+		return memory_get_usage( true ) + $bytes * self::DECODE_COST < $limit;
 	}
 
 	/**
@@ -353,7 +426,7 @@ final class Exclusions {
 	 * @since 1.5.0
 	 */
 	public static function own_table( string $table ): bool {
-		return in_array( strtolower( $table ), array_map( 'strtolower', Tables::all() ), true );
+		return Tables::is_albert_table( $table );
 	}
 
 	/**
@@ -365,7 +438,7 @@ final class Exclusions {
 	 * @since 1.5.0
 	 */
 	public static function journal_table( string $table ): bool {
-		return in_array( strtolower( $table ), [ strtolower( Tables::changes() ), strtolower( Tables::change_items() ) ], true );
+		return Tables::is_albert_table( $table, true );
 	}
 
 	/**

@@ -197,7 +197,11 @@ final class Registry {
 			return true;
 		}
 
-		foreach ( array_merge( array_values( $wpdb->tables( 'all' ) ), Tables::all() ) as $name ) {
+		if ( Tables::is_albert_table( $table ) ) {
+			return true;
+		}
+
+		foreach ( array_values( $wpdb->tables( 'all' ) ) as $name ) {
 			if ( strtolower( (string) $name ) === $table ) {
 				return true;
 			}

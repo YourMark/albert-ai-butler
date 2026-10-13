@@ -33,6 +33,13 @@ class RiskPolicyTest extends TestCase {
 	private RiskPolicy $risk;
 
 	/**
+	 * The name matcher the policy uses.
+	 *
+	 * @var CaseInsensitiveOptionNames
+	 */
+	private CaseInsensitiveOptionNames $names;
+
+	/**
 	 * Reset hooks/roles and build a fresh policy.
 	 *
 	 * @return void
@@ -44,7 +51,8 @@ class RiskPolicyTest extends TestCase {
 			'administrator' => [ 'manage_options' => true ],
 			'editor'        => [ 'manage_options' => false ],
 		];
-		$this->risk                   = new RiskPolicy();
+		$this->names                  = new CaseInsensitiveOptionNames();
+		$this->risk                   = new RiskPolicy( $this->names );
 	}
 
 	/**
@@ -120,6 +128,53 @@ class RiskPolicyTest extends TestCase {
 			)
 		);
 		$this->assertTrue( $this->risk->must_hold( $this->ability( 'thirdparty/update-option' ), [ 'option_name' => 'admin_email' ] ) );
+	}
+
+	/**
+	 * The option is compared by the matcher, after the trim WordPress applies,
+	 * so a spelling the database treats as the same row is held.
+	 *
+	 * @return void
+	 */
+	public function test_holds_a_high_risk_option_named_in_another_spelling(): void {
+		foreach ( [ 'SITEURL', 'SiteUrl', 'siteurl ', ' Admin_Email' ] as $name ) {
+			$this->assertTrue( $this->risk->must_hold( $this->ability( 'thirdparty/update-option' ), [ 'option' => $name ] ), $name );
+		}
+	}
+
+	/**
+	 * When the database cannot compare names, the call is held.
+	 *
+	 * @return void
+	 */
+	public function test_holds_when_names_cannot_be_compared(): void {
+		$this->names->fail = true;
+
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'thirdparty/update-option' ), [ 'option' => 'blogdescription' ] ) );
+	}
+
+	/**
+	 * A write naming one of Albert's own controls is reported, under any key.
+	 *
+	 * @return void
+	 */
+	public function test_names_a_protected_option(): void {
+		$writer = $this->ability( 'thirdparty/update-option' );
+
+		$this->assertSame( 'albert_safe_mode', $this->risk->protected_option( $writer, [ 'option' => 'Albert_Safe_Mode' ] ) );
+		$this->assertSame( 'albert_privacy_mode', $this->risk->protected_option( $writer, [ 'setting' => 'albert_privacy_mode' ] ) );
+		$this->assertNull( $this->risk->protected_option( $writer, [ 'option' => 'blogdescription' ] ) );
+	}
+
+	/**
+	 * Reading a protected option changes nothing, so a read-only ability may.
+	 *
+	 * @return void
+	 */
+	public function test_a_read_only_ability_may_name_a_protected_option(): void {
+		$reader = new WP_Ability( 'thirdparty/get-option', [ 'annotations' => [ 'readonly' => true ] ] );
+
+		$this->assertNull( $this->risk->protected_option( $reader, [ 'option' => 'albert_safe_mode' ] ) );
 	}
 
 	/**

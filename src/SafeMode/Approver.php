@@ -11,6 +11,7 @@ namespace Albert\SafeMode;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Undo\Recorder;
 use Albert\Undo\Window;
 use Albert\Undo\WindowContext;
@@ -25,11 +26,22 @@ use WP_Error;
  * check: approval says "let this proceed as it would have," it does not lend the
  * caller the approver's capabilities. The run happens under
  * {@see ApprovalTicket} so the interceptor lets it through instead of staging
- * it again.
+ * it again, and under the connection that asked for it, so
+ * {@see ConnectionGuard} still refuses what no connection may write: approving
+ * a call is not approving everything it touches.
  *
  * @since 1.5.0
  */
 class Approver {
+
+	/**
+	 * Stand-in client id for a row staged without one, so the run still counts
+	 * as a connection's. It is not a real client and shows as such in the log.
+	 *
+	 * @since 1.5.0
+	 * @var string
+	 */
+	private const UNKNOWN_CONNECTION = 'albert-approved-run';
 
 	/**
 	 * Wire the approver to its store.
@@ -78,15 +90,18 @@ class Approver {
 		// this single execution through and nothing else. Cleared in a finally so
 		// a ticket never outlives the run it was minted for, even on a throw.
 		ApprovalTicket::arm( $action->ability_name, $action->input );
+		$client_id  = ( $action->client_id ?? '' ) !== '' ? $action->client_id : null;
+		$connection = ConnectionContext::client_id();
+		ConnectionContext::set( $client_id ?? self::UNKNOWN_CONNECTION );
 
 		// Record the run in the change journal against this row, as the call it
 		// was: the requester and their connection, not the approving admin.
-		$recording = $action->client_id !== null && Window::open(
+		$recording = $client_id !== null && Window::open(
 			new WindowContext(
 				WindowContext::SOURCE_APPROVAL,
 				$action->ability_name,
 				$action->user_id,
-				$action->client_id,
+				$client_id,
 				$action->client_name,
 				$action->id
 			)
@@ -103,6 +118,7 @@ class Approver {
 			if ( $recording ) {
 				Window::close( $status );
 			}
+			ConnectionContext::set( $connection );
 			ApprovalTicket::clear();
 		}
 

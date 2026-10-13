@@ -82,25 +82,29 @@ class Tables {
 	/**
 	 * The change journal: one row per recorded assistant call.
 	 *
+	 * @param int|null $blog_id The blog whose journal; the current one by default.
+	 *
 	 * @return string Prefixed table name.
 	 * @since 1.5.0
 	 */
-	public static function changes(): string {
+	public static function changes( ?int $blog_id = null ): string {
 		global $wpdb;
 
-		return $wpdb->prefix . 'albert_changes';
+		return $wpdb->get_blog_prefix( $blog_id ) . 'albert_changes';
 	}
 
 	/**
 	 * The change journal's before-images: one row per entity a recorded call changed.
 	 *
+	 * @param int|null $blog_id The blog whose journal; the current one by default.
+	 *
 	 * @return string Prefixed table name.
 	 * @since 1.5.0
 	 */
-	public static function change_items(): string {
+	public static function change_items( ?int $blog_id = null ): string {
 		global $wpdb;
 
-		return $wpdb->prefix . 'albert_change_items';
+		return $wpdb->get_blog_prefix( $blog_id ) . 'albert_change_items';
 	}
 
 	/**
@@ -114,5 +118,29 @@ class Tables {
 			[ self::ability_log(), self::single_use_tokens(), self::pending_actions(), self::changes(), self::change_items() ],
 			array_values( self::oauth() )
 		);
+	}
+
+	/**
+	 * Whether a table is one of Albert's, on any blog of the network.
+	 *
+	 * @param string $table   Table name.
+	 * @param bool   $journal Only the change journal's two tables.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function is_albert_table( string $table, bool $journal = false ): bool {
+		global $wpdb;
+
+		$tables = $journal ? [ self::changes(), self::change_items() ] : self::all();
+		$names  = [];
+		foreach ( $tables as $name ) {
+			// Unprefixed, so the same table on another blog matches too.
+			$names[] = preg_quote( strtolower( substr( $name, strlen( $wpdb->prefix ) ) ), '/' );
+		}
+
+		$pattern = '/^' . preg_quote( strtolower( $wpdb->base_prefix ), '/' ) . '(?:\d+_)?(?:' . implode( '|', $names ) . ')$/';
+
+		return preg_match( $pattern, strtolower( $table ) ) === 1;
 	}
 }

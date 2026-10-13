@@ -160,7 +160,9 @@ final class QueryMonitor {
 	 * @since 1.5.0
 	 */
 	public function filter( $query ) {
-		if ( ! is_string( $query ) || $this->recorder->is_busy() ) {
+		// An empty query is a statement an earlier filter dropped (safe mode's
+		// guard refusing a write): nothing runs, so there is nothing to note.
+		if ( ! is_string( $query ) || $query === '' || $this->recorder->is_busy() ) {
 			return $query;
 		}
 
@@ -386,9 +388,10 @@ final class QueryMonitor {
 	}
 
 	/**
-	 * Whether a multisite `sitemeta` write touches only site transients.
-	 * Network options are not captured, but their transients are noise as
-	 * options' are.
+	 * Whether a multisite network-table write is noise: site transients and the
+	 * network's user and site counts in `sitemeta` (network options are not
+	 * captured, but these are bookkeeping nothing would revert), or a site's
+	 * `last_updated` stamp in `blogs`.
 	 *
 	 * @param string $table Table name.
 	 * @param string $query The query.
@@ -398,7 +401,19 @@ final class QueryMonitor {
 	private static function is_network_noise( string $table, string $query ): bool {
 		global $wpdb;
 
-		return is_multisite() && strcasecmp( $table, $wpdb->sitemeta ) === 0 && self::only_names( $query, 'meta_key', [ '_site_transient_' ] );
+		if ( ! is_multisite() ) {
+			return false;
+		}
+
+		// Saving a post stamps the site's "last updated" time. Core rewrites the
+		// whole row to do it, so it is known by who asked, not by the SQL.
+		if ( strcasecmp( $table, $wpdb->blogs ) === 0 ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace -- Attribution.
+			return in_array( 'wpmu_update_blogs_date', array_column( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ), 'function' ), true );
+		}
+
+		return strcasecmp( $table, $wpdb->sitemeta ) === 0
+			&& ( self::only_names( $query, 'meta_key', [ '_site_transient_' ] ) || self::only_names( $query, 'meta_key', [ 'user_count', 'blog_count' ], true ) );
 	}
 
 	/**
@@ -410,10 +425,11 @@ final class QueryMonitor {
 	 * @param string             $query    The query.
 	 * @param string             $column   The name column.
 	 * @param array<int, string> $prefixes Allowed name prefixes.
+	 * @param bool               $exact    Whether they are whole names, compared with `=` only.
 	 *
 	 * @return bool
 	 */
-	private static function only_names( string $query, string $column, array $prefixes ): bool {
+	private static function only_names( string $query, string $column, array $prefixes, bool $exact = false ): bool {
 		if ( preg_match( '/\bOR\b/i', $query ) ) {
 			return false;
 		}
@@ -428,9 +444,9 @@ final class QueryMonitor {
 
 			// In LIKE an unescaped `_` matches any character, so only the
 			// escaped prefix (what esc_like() produces) is a transient.
-			$starts = static fn( string $prefix ): bool => str_starts_with( $name, $operator === 'LIKE' ? str_replace( '_', '\\_', $prefix ) : $prefix );
+			$starts = static fn( string $prefix ): bool => $exact ? $name === $prefix : str_starts_with( $name, $operator === 'LIKE' ? str_replace( '_', '\\_', $prefix ) : $prefix );
 
-			if ( $operator === 'IN' || ! array_filter( $prefixes, $starts ) ) {
+			if ( $operator === 'IN' || ( $exact && $operator !== '=' ) || ! array_filter( $prefixes, $starts ) ) {
 				return false;
 			}
 		}

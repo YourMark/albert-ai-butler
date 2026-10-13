@@ -261,10 +261,18 @@ final class Recorder {
 			function () use ( $entity, $captured_by ): void {
 				$before = $this->snapshot->read( $entity );
 
-				if ( Exclusions::holds_secret( $entity, $before ) ) {
+				$verdict = Exclusions::holds_secret( $entity, $before );
+				if ( $verdict === Exclusions::SECRET ) {
 					$this->refused[ $entity->id() ]                                 = true;
 					$this->secrets[ $entity->parts[ count( $entity->parts ) - 1 ] ] = true;
 					return;
+				}
+
+				// Not checked for credentials, so never stored: the call stops
+				// keeping images, and the entity is still tracked so the entry
+				// says what changed.
+				if ( $verdict === Exclusions::UNREADABLE ) {
+					$this->too_large();
 				}
 
 				$hash = $before !== null ? $this->snapshot->credentials( $entity ) : null;
@@ -498,7 +506,7 @@ final class Recorder {
 
 		$image = null;
 
-		if ( $before !== null ) {
+		if ( $before !== null && ! $this->too_large ) {
 			// Sized before encoding, which would hold a huge row twice more.
 			$image        = self::raw_size( $before ) > self::MAX_CALL_BYTES * 4 ? null : Repository::encode( $before );
 			$this->bytes += $image === null ? self::MAX_CALL_BYTES + 1 : strlen( $image );
@@ -571,7 +579,7 @@ final class Recorder {
 				++$this->failures;
 				$lost              = true;
 				$item['after']     = [];
-				$item['operation'] = 'update';
+				$item['operation'] = $item['existed'] ? 'update' : 'create';
 				$kept[]            = $item;
 				continue;
 			}
@@ -594,8 +602,8 @@ final class Recorder {
 		}
 
 		if ( $kept === [] && $this->untracked === [] && $this->secrets === [] ) {
-			if ( $this->entry !== null ) {
-				$this->repository->delete_entry( $this->entry['id'] );
+			if ( $this->entry !== null && ! $this->repository->delete_entry( $this->entry['id'] ) ) {
+				++$this->failures;
 			}
 			return null;
 		}

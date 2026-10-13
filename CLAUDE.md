@@ -124,7 +124,7 @@ albert-ai-butler/
 │   │   ├── Snapshot.php                # Reads an entity's stored rows, credentials stripped
 │   │   ├── Entity.php                  # Post, meta key, term, relationships, option, user, comment (+ blog)
 │   │   ├── Exclusions.php              # Noise (ignored) and secrets (noted by name, never stored)
-│   │   ├── FailureCounter.php          # Counts the journal's own failures for the Dashboard
+│   │   ├── FailureCounter.php          # Counts the journal's own failures, for the Changes screen
 │   │   ├── Capture/CoreHooks.php       # WordPress's immediately-before-write hooks
 │   │   ├── Coverage/                   # QueryMonitor + WriteTarget (table-name check), WpdbState
 │   │   ├── Handlers/                   # albert/undo/handlers seam for custom tables
@@ -498,16 +498,51 @@ resupply, but the word matters and the docblocks say *captured*.
 | High-risk WordPress options | `siteurl`, `home`, `admin_email`, `default_role`, `users_can_register`, `template`, `stylesheet`, `active_plugins`, `blog_public`, `permalink_structure` | Held for approval |
 | Everything else | all other options | Passes through |
 
+Both lists are matched the way the database matches option names
+(`SafeMode\OptionNames`, which asks MySQL under the column's own collation).
+A typical collation ignores case, accents, width and zero-width or control
+characters and treats `ß` as `ss`, so `update_option( 'albért_safe_mode', 'off' )`
+writes the real `albert_safe_mode` row while missing every hook keyed by the
+exact name. No PHP normalisation reproduces that, which is why the first version
+of this check, `strtolower( trim() )`, let accented spellings through.
+`OptionNamesTest` inserts several hundred characters into the name and checks
+the matcher agrees with an actual lookup on every one.
+
 Tier 1 is reserved for *self-defeating* writes, not merely dangerous ones:
 approving "turn safe mode off" destroys the mechanism doing the asking, so there
 is no coherent way to consent to it. `siteurl` is dangerous but not circular, and
 refusing it would overrule an owner on their own site.
 
-**Deletes are detected, not prevented.** WordPress has no `pre_delete_option`
-filter; `delete_option()` fires actions only, so there is nothing to return.
-`albert/safe_mode/option_delete_detected` is a separate hook from
-`option_write_blocked` precisely because that one claims a refusal this cannot
-make, and it logs as an `error` rather than a `warning` because it got through.
+**An assistant cannot change these.** Every route through WordPress is refused
+before it writes; a write around WordPress is undone afterwards, with the limits
+in the last point. Over a connection:
+
+- An update keeps the stored value (`sanitize_option_{$option}`, `pre_update_option`).
+  Only the OAuth key material may be created; a control option is created at its
+  secure default, an add-on's protected option not at all.
+- A delete is refused at `delete_option()`'s row lookup, so WordPress finds no
+  row and returns before it touches its caches. Refusing only the DELETE would
+  leave the option cached as deleted, which a persistent object cache keeps;
+  that DELETE is still dropped as a second layer, with the cache cleared after.
+- An add under another spelling is dropped at the `query` filter: WordPress has
+  no filter to refuse it, but fires `add_option` just before, and the guard arms
+  the one statement that follows. When the database cannot compare names, the
+  write is refused.
+- A call naming a protected option is refused before it can be staged
+  (`RiskPolicy::protected_option()`), so it never reaches the Approvals queue.
+- An approved run executes under the connection that asked for it, so the guard
+  still applies: approving a call is not approving everything it touches.
+- A write that skips the option API (a plugin's own `$wpdb` call, `REPLACE`)
+  makes `SafeMode\OptionRestorer` read the protected rows just before it runs,
+  and put back anything changed once the ability finishes, the tool call ends
+  or the request shuts down (`albert/safe_mode/option_restored`, `false` when it
+  could not be undone or checked). It cannot see SQL that builds the table name
+  at run time or undo anything if the process is killed before shutdown, and
+  another request could read the changed value until the restore.
+
+Refusals fire `albert/safe_mode/option_write_blocked` with the operation
+(`write` or `delete`) and log as a `warning`; a restore logs as an `error`,
+because for a moment the change was real.
 
 **Who may decide: you may decide what you could have done yourself.** An
 administrator decides any row; anybody else decides only their own, and only
@@ -601,11 +636,13 @@ atomic stock update is the common case, and `wp_publish_post()`,
 same way, as is the term-order upsert `wp_set_object_terms()` makes on a sorted
 taxonomy. `wp_set_password()` is noted as the `user_pass` secret instead. A
 direct transient write is noise only when every name it selects by is an
-(escaped) transient; a transient in a value proves nothing.
+(escaped) transient; a transient in a value proves nothing. On a network, a
+site's `last_updated` stamp and the network's user and site counts are noise too.
 `AbilitySweepTest` runs every Albert write ability through a window and checks
 the verdict, so a misclassified writer shows up there. Any other table, a structure
-change or an unreadable query is `other_table`. A full SQL parser was tried and
-removed: it was the source of every "says complete when it is not" bug.
+change or an unreadable query is `other_table`. Do not swap this for a full SQL
+parser: one was tried, and it was the source of every "says complete when it
+is not" bug.
 
 **Buffered, written at the end**, because a WooCommerce transaction rollback
 would take journal rows with it. Only the entry row is written early, and again
@@ -638,13 +675,16 @@ or as a `name`/`value` pair at any depth of an array, serialized object or JSON
 string, or in a known credential format (`Bearer …`, `sk_live_…`, `ghp_…`,
 private keys). Name matching cannot be complete; it is tuned to catch too much
 (a yes/no setting called `…_generate_password` is not revertable) rather than
-too little. A comment's IP address and browser are never stored either. A change to one is noted by name and makes the entry
-unrevertable; a password change is spotted with an in-memory fingerprint of the
+too little. A change to one is noted by name and makes the entry unrevertable; a password change is spotted with an in-memory fingerprint of the
 password column only. WordPress clears the activation key on every email
 change, so a reset key changing is deliberately not noted: an entry does not
 show a password-reset request, and a revert never brings an old key back. Noise
 (transients, `cron`, locks, `_edit_lock`) is ignored; the `albert/undo/excluded_*`
-filters can only add noise.
+filters can only add noise. A comment's IP address and browser are never
+stored. A value is decoded for the scan only when the memory left allows
+(decoding can take over 50 times its size): one that does not fit is not
+stored and the call is `too_large`. A corrupt serialized value is checked
+string by string.
 
 **Handlers** (`albert/undo/handlers`) cover a plugin's own tables, never
 WordPress's or Albert's on any blog; one that throws is dropped for the window
@@ -653,8 +693,9 @@ Their state goes through the same secret scan.
 
 **Failures**, including a prune whose query fails (wpdb reports errors by
 return value, so `Repository` checks `last_error` and throws), are counted in
-`albert_undo_failures` (`Undo\FailureCounter`), so "nothing recorded" never looks
-like "nothing changed".
+`albert_undo_failures` (`Undo\FailureCounter`), so "nothing recorded" need never
+look like "nothing changed". Nothing shows the count yet: the Changes screen
+(PR 3) will.
 
 **Retention** is a `RetentionPolicy`: Free's are constants (2 days, the last 2
 sessions per item, 50 MB) with no filter; an add-on registers its own class on
@@ -672,8 +713,9 @@ connection are two sessions), no gap over 10 minutes, and at most a day long,
 so a connection that never pauses cannot keep old before-images alive.
 `run_id` is the first entry's id.
 
-**Tables**: `albert_changes`, `albert_change_items`, created by `dbDelta` when
-the plugin version advances; an existing dev install needs
+**Tables**: `albert_changes`, `albert_change_items`, per blog; a call's whole
+entry goes to the journal of the blog it started on, even if it switches blogs.
+Created by `dbDelta` when the plugin version advances; an existing dev install needs
 `Installer::install()` first.
 
 #### Connections screen (1.4.0)

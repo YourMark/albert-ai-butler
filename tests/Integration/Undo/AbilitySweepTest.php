@@ -13,6 +13,8 @@ use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
 use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Pages\Create as CreatePage;
+use Albert\Abilities\WordPress\Pages\Delete as DeletePage;
+use Albert\Abilities\WordPress\Pages\Update as UpdatePage;
 use Albert\Abilities\WordPress\Posts\AddBlock;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
 use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
@@ -61,7 +63,18 @@ class AbilitySweepTest extends TestCase {
 			$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', $table ) );
 		}
 
-		wp_set_current_user( self::factory()->user->create( [ 'role' => 'administrator' ] ) );
+		// Several abilities go through the REST server. Its first start in a run
+		// makes the MCP adapter build its default server, which looks up abilities
+		// registered on a one-shot action that has long fired by then, depending
+		// on which test ran first. The sweep needs no MCP server.
+		remove_all_actions( 'mcp_adapter_init' );
+
+		$admin = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		if ( is_multisite() ) {
+			// Creating and deleting users is a network administrator's on multisite.
+			grant_super_admin( $admin );
+		}
+		wp_set_current_user( $admin );
 	}
 
 	/**
@@ -176,6 +189,37 @@ class AbilitySweepTest extends TestCase {
 
 		self::factory()->comment->create( [ 'comment_post_ID' => $post_id ] );
 		$this->assertRevertable( $this->run_ability( new DeletePost(), [ 'id' => $post_id ] ) );
+
+		$this->assertRevertable(
+			$this->run_ability(
+				new DeletePost(),
+				[
+					'id'    => $post_id,
+					'force' => true,
+				]
+			)
+		);
+
+		$page = self::factory()->post->create( [ 'post_type' => 'page' ] );
+		$this->assertRevertable(
+			$this->run_ability(
+				new UpdatePage(),
+				[
+					'id'    => $page,
+					'title' => 'Page, edited',
+				]
+			)
+		);
+		$this->assertRevertable( $this->run_ability( new DeletePage(), [ 'id' => $page ] ) );
+		$this->assertRevertable(
+			$this->run_ability(
+				new DeletePage(),
+				[
+					'id'    => $page,
+					'force' => true,
+				]
+			)
+		);
 	}
 
 	/**
@@ -310,6 +354,11 @@ class AbilitySweepTest extends TestCase {
 				]
 			)
 		);
+
+		if ( is_multisite() ) {
+			// WordPress's REST endpoint does not delete users on a network.
+			return;
+		}
 
 		$this->assertSame(
 			Recorder::REASON_REMOVED,

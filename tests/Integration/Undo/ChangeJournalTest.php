@@ -18,6 +18,7 @@ use Albert\MCP\Server;
 use Albert\OAuth\Server\ConnectionContext;
 use Albert\SafeMode\Approver;
 use Albert\SafeMode\Repository as SafeModeRepository;
+use Albert\Support\WpCompat;
 use Albert\Tests\TestCase;
 use Albert\Undo\Entity;
 use Albert\Undo\Handlers\Handler;
@@ -100,10 +101,9 @@ class ChangeJournalTest extends TestCase {
 		$this->journal = new Repository();
 		$this->user_id = self::factory()->user->create( [ 'role' => 'administrator' ] );
 		wp_set_current_user( $this->user_id );
-		ConnectionContext::set( 'client-acme' );
-
 		delete_option( 'albert_disabled_abilities' );
 		update_option( 'albert_abilities_saved', true );
+		ConnectionContext::set( 'client-acme' );
 
 		// Safe mode would hold an unannotated call; this suite is about recording.
 		add_filter( 'albert/safe_mode/exempt_abilities', static fn( $ids ) => array_merge( (array) $ids, [ self::ABILITY ] ) );
@@ -442,6 +442,140 @@ class ChangeJournalTest extends TestCase {
 	}
 
 	/**
+	 * Safe mode refusing a write to its own options leaves nothing to record:
+	 * the statements it drops never run, so the journal must not read them as
+	 * unreadable writes.
+	 *
+	 * @return void
+	 */
+	public function test_writes_safe_mode_refuses_record_nothing(): void {
+		ConnectionContext::reset();
+		update_option( 'albert_safe_mode', 'on' );
+		ConnectionContext::set( 'client-acme' );
+
+		$this->work = static function (): void {
+			update_option( 'Albert_Safe_Mode', 'off' );
+			add_option( 'ALBERT_PRIVACY_MODE', 'off' );
+			delete_option( 'albert_safe_mode' );
+		};
+
+		$this->call();
+
+		$this->assertSame( 0, $this->entry_count() );
+		$this->assertSame( 'on', get_option( 'albert_safe_mode' ) );
+	}
+
+	/**
+	 * A direct write to safe mode's option is put back, and the entry names the
+	 * ability's writer, not the restore.
+	 *
+	 * @return void
+	 */
+	public function test_a_restored_safe_mode_write_names_only_its_writer(): void {
+		ConnectionContext::reset();
+		update_option( 'albert_safe_mode', 'on' );
+		ConnectionContext::set( 'client-acme' );
+
+		$this->work = static function (): void {
+			global $wpdb;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The direct write under test.
+			$wpdb->query( $wpdb->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s', $wpdb->options, 'off', 'albert_safe_mode' ) );
+		};
+
+		$this->call();
+
+		$entry   = $this->only_entry();
+		$writers = json_decode( (string) $entry['other_tables'], true );
+
+		$this->assertSame( Recorder::REASON_DIRECT_WRITE, $entry['reason'] );
+		$this->assertCount( 1, $writers );
+		$this->assertStringNotContainsString( 'OptionRestorer', $writers[0] );
+
+		wp_cache_flush();
+		$this->assertSame( 'on', get_option( 'albert_safe_mode' ) );
+	}
+
+	/**
+	 * A value too big to check for credentials in the memory left is not
+	 * decoded, not stored, and leaves the call too large to revert.
+	 *
+	 * @return void
+	 */
+	public function test_a_value_too_big_to_check_is_not_stored(): void {
+		$blob = wp_json_encode( array_fill( 0, 50000, [ 'widget' => 'text' ] ) );
+		update_option( 'acme_builder_data', $blob, false );
+
+		$limit      = (string) ini_get( 'memory_limit' );
+		$this->work = static function (): void {
+			// Room for the call, not for decoding the stored blob.
+			ini_set( 'memory_limit', (string) ( memory_get_usage( true ) + 16 * MB_IN_BYTES ) ); // phpcs:ignore WordPress.PHP.IniSet.memory_limit_Disallowed -- The condition under test.
+			update_option( 'acme_builder_data', '[]' );
+		};
+
+		try {
+			$this->call();
+		} finally {
+			ini_set( 'memory_limit', $limit ); // phpcs:ignore WordPress.PHP.IniSet.memory_limit_Disallowed -- Restoring.
+		}
+
+		$entry = $this->only_entry();
+		$this->assertSame( Recorder::REASON_TOO_LARGE, $entry['reason'] );
+		$this->assertStringNotContainsString( 'widget', serialize( $this->items_by_key( (int) $entry['id'] ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Searching the whole record.
+	}
+
+	/**
+	 * A call safe mode holds never runs, so it leaves no entry.
+	 *
+	 * @return void
+	 */
+	public function test_a_held_call_leaves_no_entry(): void {
+		if ( ! WpCompat::supports_execution_lifecycle() ) {
+			$this->markTestSkipped( 'Safe mode needs WordPress 7.1.' );
+		}
+
+		remove_all_filters( 'albert/safe_mode/exempt_abilities' );
+		update_option( 'albert_safe_mode', 'on' );
+		$this->work = static fn() => update_option( 'acme_held', 'changed' );
+
+		$this->call();
+
+		$this->assertFalse( get_option( 'acme_held' ) );
+		$this->assertSame( 0, $this->entry_count() );
+	}
+
+	/**
+	 * A call that switches blogs writes its whole entry to the journal it
+	 * started in, never half to another blog's.
+	 *
+	 * @return void
+	 */
+	public function test_a_cross_blog_call_keeps_one_journal(): void {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Needs multisite.' );
+		}
+
+		$other = self::factory()->blog->create();
+		switch_to_blog( $other );
+		Installer::install();
+		restore_current_blog();
+
+		$this->work = static function () use ( $other ): void {
+			switch_to_blog( $other );
+			update_option( 'acme_cross_blog', 'there' );
+			restore_current_blog();
+			update_option( 'acme_cross_blog', 'here' );
+		};
+
+		$this->call();
+
+		$entry = $this->only_entry();
+		$this->assertEqualsCanonicalizing( [ get_current_blog_id(), $other ], array_map( 'intval', array_column( $this->journal->items( (int) $entry['id'] ), 'blog_id' ) ) );
+
+		global $wpdb;
+		$this->assertSame( '0', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', Tables::changes( $other ) ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Assertion read.
+	}
+
+	/**
 	 * Core functions that write without a hook are flagged the same way.
 	 *
 	 * @return void
@@ -623,6 +757,10 @@ class ChangeJournalTest extends TestCase {
 	 * @return void
 	 */
 	public function test_a_deleted_user_is_removed(): void {
+		if ( is_multisite() ) {
+			$this->markTestSkipped( 'On a network wp_delete_user() only removes the user from this site.' );
+		}
+
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 		$target = self::factory()->user->create();
 
@@ -678,6 +816,10 @@ class ChangeJournalTest extends TestCase {
 	 * @return void
 	 */
 	public function test_reassigned_posts_are_recorded(): void {
+		if ( is_multisite() ) {
+			$this->markTestSkipped( 'On a network wp_delete_user() only removes the user from this site.' );
+		}
+
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 		$leaving = self::factory()->user->create();
 		$post_id = self::factory()->post->create( [ 'post_author' => $leaving ] );

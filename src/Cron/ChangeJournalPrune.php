@@ -110,7 +110,7 @@ class ChangeJournalPrune implements Hookable {
 				gmdate( 'Y-m-d H:i:s', $now - ( max( 0, $policy->max_age_days() ) + self::DELETE_AFTER_DAYS ) * DAY_IN_SECONDS )
 			);
 		} catch ( \Throwable $e ) {
-			// Counted, so retention that stopped working shows on the Dashboard instead of nowhere.
+			// Counted, so retention that stopped working can be reported rather than go unseen.
 			FailureCounter::record( 1 );
 		}
 	}
@@ -121,16 +121,28 @@ class ChangeJournalPrune implements Hookable {
 	 * switched off, and before-images are personal data that must not outlive
 	 * the window because a cron never ran.
 	 *
+	 * @param int|null $blog_id The blog whose journal recorded; the current one by default.
+	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	public static function soon(): void {
-		if ( get_transient( self::SOON_LOCK ) !== false ) {
-			return;
+	public static function soon( ?int $blog_id = null ): void {
+		$blog_id  = $blog_id ?? get_current_blog_id();
+		$switched = is_multisite() && $blog_id !== get_current_blog_id() && switch_to_blog( $blog_id );
+
+		try {
+			if ( get_transient( self::SOON_LOCK ) !== false ) {
+				return;
+			}
+
+			set_transient( self::SOON_LOCK, 1, self::SOON_INTERVAL );
+		} finally {
+			if ( $switched ) {
+				restore_current_blog();
+			}
 		}
 
-		set_transient( self::SOON_LOCK, 1, self::SOON_INTERVAL );
-		add_action( 'shutdown', [ new self(), 'run' ], PHP_INT_MAX );
+		add_action( 'shutdown', [ new self( new Repository( $blog_id ) ), 'run' ], PHP_INT_MAX );
 	}
 
 	/**

@@ -85,14 +85,17 @@ class Interceptor implements Hookable {
 	 * @param Gate                $gate            The safe-mode gate rule.
 	 * @param Repository          $repository      The pending-actions store.
 	 * @param TargetResolver|null $target_resolver Describes the affected object; defaults to a fresh one.
+	 * @param RiskPolicy|null     $risk            Spots a protected option in the input; defaults to a fresh one.
 	 */
 	public function __construct(
 		private InterceptorDecision $decision,
 		private Gate $gate,
 		private Repository $repository,
-		private ?TargetResolver $target_resolver = null
+		private ?TargetResolver $target_resolver = null,
+		private ?RiskPolicy $risk = null
 	) {
 		$this->target_resolver = $target_resolver ?? new TargetResolver();
+		$this->risk            = $risk ?? new RiskPolicy();
 	}
 
 	/**
@@ -143,6 +146,18 @@ class Interceptor implements Hookable {
 		// Only gate calls an assistant made through an Albert connection.
 		if ( ConnectionContext::client_id() === null ) {
 			return $pre;
+		}
+
+		// Albert's own controls are refused, never held: approving "turn safe
+		// mode off" is self-defeating. Checked whether or not the gate is on.
+		$protected = $this->risk->protected_option( $ability, $resolved );
+		if ( $protected !== null ) {
+			ConnectionGuard::announce_blocked( $protected, 'write' );
+
+			return new WP_Error(
+				'albert_protected_option',
+				__( 'This action was not performed. It would change one of Albert\'s own safety settings, which an assistant can never change, and it cannot be approved. Only a person can change these settings, in wp-admin.', 'albert-ai-butler' )
+			);
 		}
 
 		if ( ! $this->gate->must_gate( $ability, $resolved ) ) {
