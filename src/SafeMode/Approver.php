@@ -11,6 +11,7 @@ namespace Albert\SafeMode;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\OAuth\Server\ConnectionContext;
 use WP_Error;
 
 /**
@@ -22,11 +23,21 @@ use WP_Error;
  * check: approval says "let this proceed as it would have," it does not lend the
  * caller the approver's capabilities. The run happens under
  * {@see ApprovalTicket} so the interceptor lets it through instead of staging
- * it again.
+ * it again, and under the connection that asked for it, so
+ * {@see ConnectionGuard} still refuses what no connection may write: approving
+ * a call is not approving everything it touches.
  *
  * @since 1.5.0
  */
 class Approver {
+
+	/**
+	 * The connection an approved run is attributed to when its row has none.
+	 *
+	 * @since 1.5.0
+	 * @var string
+	 */
+	private const UNKNOWN_CONNECTION = 'albert-approved-run';
 
 	/**
 	 * Wire the approver to its store.
@@ -75,6 +86,8 @@ class Approver {
 		// this single execution through and nothing else. Cleared in a finally so
 		// a ticket never outlives the run it was minted for, even on a throw.
 		ApprovalTicket::arm( $action->ability_name, $action->input );
+		$connection = ConnectionContext::client_id();
+		ConnectionContext::set( ( $action->client_id ?? '' ) !== '' ? $action->client_id : self::UNKNOWN_CONNECTION );
 
 		try {
 			$result = $this->run_as(
@@ -82,6 +95,7 @@ class Approver {
 				static fn() => $ability->execute( $action->input )
 			);
 		} finally {
+			ConnectionContext::set( $connection );
 			ApprovalTicket::clear();
 		}
 
