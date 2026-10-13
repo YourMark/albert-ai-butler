@@ -32,7 +32,8 @@ use WP_Error;
 class Approver {
 
 	/**
-	 * The connection an approved run is attributed to when its row has none.
+	 * Stand-in client id for a row staged without one, so the run still counts
+	 * as a connection's. It is not a real client and shows as such in the log.
 	 *
 	 * @since 1.5.0
 	 * @var string

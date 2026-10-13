@@ -250,7 +250,7 @@ class AuditTrail {
 	public static function option_restored( string $option, bool $restored ): void {
 		$message = $restored
 			? sprintf( 'The protected option %s was changed directly in the database during an assistant request. It has been put back.', $option )
-			: sprintf( 'The protected option %s was changed directly in the database during an assistant request, and could not be put back. Check it in Albert\'s settings.', $option );
+			: sprintf( 'The protected option %s may have been changed directly in the database during an assistant request, and could not be checked or put back. Check it in Albert\'s settings.', $option );
 
 		self::record(
 			'albert/protected-option:' . $option,

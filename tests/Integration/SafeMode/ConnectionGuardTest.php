@@ -15,6 +15,7 @@ use Albert\OAuth\Server\ConnectionContext;
 use Albert\SafeMode\ConnectionGuard;
 use Albert\SafeMode\Gate;
 use Albert\SafeMode\OptionRestorer;
+use Albert\Tests\Unit\SafeMode\CaseInsensitiveOptionNames;
 use Albert\Tests\TestCase;
 
 /**
@@ -321,6 +322,66 @@ class ConnectionGuardTest extends TestCase {
 		delete_option( 'albert_paß_test' );
 
 		$this->assertSame( 'kept', $this->stored( 'albert_pass_test' )['option_value'] ?? null );
+		remove_filter( 'albert/safe_mode/protected_options', $protect );
+	}
+
+	/**
+	 * When the database cannot compare names, any write that might reach a
+	 * protected option is refused rather than let through.
+	 *
+	 * @return void
+	 */
+	public function test_writes_are_refused_when_names_cannot_be_compared(): void {
+		self::remove_plugin_instances( ConnectionGuard::class );
+		$names       = new CaseInsensitiveOptionNames();
+		$names->fail = true;
+		( new ConnectionGuard( $names ) )->register_hooks();
+
+		$this->store( 'albert_safe_mode', 'on' );
+
+		add_option( 'Albert_Privacy_Mode', 'off' );
+		update_option( 'Albert_Safe_Mode', 'off' );
+		$this->assertFalse( delete_option( 'Albert_Safe_Mode' ) );
+
+		$this->assertNull( $this->stored( self::OPTION ) );
+		$this->assertSame( 'on', $this->stored( Gate::OPTION )['option_value'] ?? null );
+	}
+
+	/**
+	 * The OAuth key material is minted with `update_option()` and may be, once.
+	 *
+	 * @return void
+	 */
+	public function test_key_material_may_be_minted_but_not_changed(): void {
+		delete_option( 'albert_oauth_encryption_key' );
+
+		update_option( 'albert_oauth_encryption_key', 'minted' );
+		update_option( 'albert_oauth_encryption_key', 'replaced' );
+		update_option( 'Albert_OAuth_Encryption_Key', 'replaced' );
+
+		$this->assertSame(
+			[
+				'option_name'  => 'albert_oauth_encryption_key',
+				'option_value' => 'minted',
+			],
+			$this->stored( 'albert_oauth_encryption_key' )
+		);
+	}
+
+	/**
+	 * An add-on's protected option cannot be created over a connection, even
+	 * when it was added to the list after the guard bound its hooks.
+	 *
+	 * @return void
+	 */
+	public function test_an_add_on_option_cannot_be_created(): void {
+		$protect = static fn( array $options ): array => array_merge( $options, [ 'acme_safety_switch' ] );
+		add_filter( 'albert/safe_mode/protected_options', $protect );
+
+		add_option( 'acme_safety_switch', 'off' );
+		update_option( 'acme_safety_switch', 'off' );
+
+		$this->assertNull( $this->stored( 'acme_safety_switch' ) );
 		remove_filter( 'albert/safe_mode/protected_options', $protect );
 	}
 

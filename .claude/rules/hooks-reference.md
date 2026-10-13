@@ -38,7 +38,7 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/safe_mode/expired` | action | A held call lapsed without a decision |
 | `albert/safe_mode/abandoned` | action | An approved run never reported back. It may or may not have completed |
 | `albert/safe_mode/option_write_blocked` | action | `( string $option, string $operation )`. An assistant's write (`write`) or delete (`delete`) of one of Albert's control options was refused, under any spelling the database treats as that option |
-| `albert/safe_mode/option_restored` | action | `( string $option, bool $restored )`. A control option was changed outside the option API during an assistant request (a plugin's own SQL) and was put back; `$restored` is false when putting it back failed |
+| `albert/safe_mode/option_restored` | action | `( string $option, bool $restored )`. A control option was changed outside the option API during an assistant request (a plugin's own SQL) and was put back; `$restored` is false when it could not be put back or checked |
 | `albert/admin/submenu_pages` | filter | Add addon admin pages |
 | `albert/abilities_icons` | filter | Customize category icons |
 | `albert/developer_mode` | filter | Toggle developer mode |

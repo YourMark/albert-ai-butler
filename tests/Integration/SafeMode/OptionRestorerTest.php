@@ -163,6 +163,46 @@ class OptionRestorerTest extends TestCase {
 	}
 
 	/**
+	 * Restoring happens when the MCP adapter has the tool call's result, and
+	 * the result passes through untouched.
+	 *
+	 * @return void
+	 */
+	public function test_it_restores_when_a_tool_call_ends(): void {
+		$this->sql( "UPDATE {options} SET option_value = 'off' WHERE option_name = 'albert_safe_mode'" );
+
+		$this->assertNotFalse( has_filter( 'mcp_adapter_tool_call_result', [ $this->restorer, 'restore_after_tool_call' ] ) );
+		$this->assertSame( [ 'ok' ], $this->restorer->restore_after_tool_call( [ 'ok' ] ) );
+
+		$this->assertSame( 'on', $this->value( Gate::OPTION ) );
+	}
+
+	/**
+	 * When the rows cannot be read back, that is reported as not restored
+	 * rather than passed over as unchanged.
+	 *
+	 * @return void
+	 */
+	public function test_an_unreadable_table_is_reported(): void {
+		$this->sql( "UPDATE {options} SET option_value = 'off' WHERE option_name = 'albert_safe_mode'" );
+
+		$break      = static fn( $query ) => str_starts_with( (string) $query, "SELECT 'albert_" ) ? 'SELECT broken FROM nowhere' : $query;
+		global $wpdb;
+		$suppressed = $wpdb->suppress_errors();
+		add_filter( 'query', $break, PHP_INT_MAX );
+		$this->restorer->restore();
+		$this->restorer->restore();
+		remove_filter( 'query', $break, PHP_INT_MAX );
+		$wpdb->suppress_errors( $suppressed );
+
+		$this->assertFalse( $this->restored[ Gate::OPTION ] ?? true );
+		$this->assertSame( count( ConnectionGuard::protected_names() ), count( $this->restored ) );
+
+		$this->restorer->restore();
+		$this->assertSame( 'on', $this->value( Gate::OPTION ) );
+	}
+
+	/**
 	 * Without a connection, a direct write is somebody's own code and stays.
 	 *
 	 * @return void

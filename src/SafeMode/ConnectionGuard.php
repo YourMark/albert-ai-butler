@@ -64,6 +64,19 @@ class ConnectionGuard implements Hookable {
 	];
 
 	/**
+	 * The protected options that may be created over a connection: the OAuth
+	 * key material, minted lazily while a token is validated. Never changed.
+	 *
+	 * @since 1.5.0
+	 * @var list<string>
+	 */
+	private const CREATABLE = [
+		'albert_oauth_encryption_key',
+		'albert_oauth_private_key',
+		'albert_oauth_public_key',
+	];
+
+	/**
 	 * The value a refused *creation* falls back to, per control option.
 	 *
 	 * Blocking a change is not enough on its own: most of these have no stored
@@ -141,7 +154,7 @@ class ConnectionGuard implements Hookable {
 
 		// Keyed by any name, so other spellings of a protected option are seen.
 		add_filter( 'pre_update_option', [ $this, 'refuse_variant_update' ], PHP_INT_MAX, 3 );
-		add_action( 'add_option', [ $this, 'refuse_variant_add' ], PHP_INT_MAX );
+		add_action( 'add_option', [ $this, 'refuse_add' ], PHP_INT_MAX );
 		add_action( 'delete_option', [ $this, 'refuse_delete' ], PHP_INT_MAX );
 		add_filter( 'query', [ $this, 'drop_armed_statement' ], PHP_INT_MAX );
 	}
@@ -167,34 +180,42 @@ class ConnectionGuard implements Hookable {
 			return $value;
 		}
 
-		$this->note_blocked( $protected, 'write' );
+		// The key material's first write goes through `update_option()`.
+		if ( $protected === $option && $old_value === false && self::may_be_created( $option ) ) {
+			return $value;
+		}
+
+		$this->note_blocked( $protected === false ? $option : $protected, 'write' );
 
 		return $old_value;
 	}
 
 	/**
-	 * Drop the INSERT of a protected option added under another spelling.
-	 *
-	 * The exact name is left to its sanitize filter, which stores the secure
-	 * default (or lets the OAuth key material be minted).
+	 * Drop the INSERT of a protected option, unless it is the exact name and
+	 * its creation is allowed: a control option's sanitize filter has already
+	 * swapped in the secure default, and the key material may be minted.
 	 *
 	 * @param string $option Option name as added.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	public function refuse_variant_add( $option ): void {
+	public function refuse_add( $option ): void {
 		if ( ConnectionContext::client_id() === null || ! is_string( $option ) ) {
 			return;
 		}
 
 		$protected = $this->protected_match( $option );
-		if ( $protected === null || $protected === $option ) {
+		if ( $protected === null ) {
+			return;
+		}
+
+		if ( $protected === $option && ( array_key_exists( $option, self::SECURE_DEFAULT ) || self::may_be_created( $option ) ) ) {
 			return;
 		}
 
 		global $wpdb;
-		$this->arm( "INSERT INTO `{$wpdb->options}`", $option, $protected, 'write' );
+		$this->arm( "INSERT INTO `{$wpdb->options}`", $option, $protected === false ? $option : $protected, 'write' );
 	}
 
 	/**
@@ -209,7 +230,6 @@ class ConnectionGuard implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function refuse_delete( $option ): void {
-		// Every transient delete passes here, so the static check comes first.
 		if ( ConnectionContext::client_id() === null || ! is_string( $option ) ) {
 			return;
 		}
@@ -220,7 +240,7 @@ class ConnectionGuard implements Hookable {
 		}
 
 		global $wpdb;
-		$this->arm( "DELETE FROM `{$wpdb->options}`", $option, $protected, 'delete' );
+		$this->arm( "DELETE FROM `{$wpdb->options}`", $option, $protected === false ? $option : $protected, 'delete' );
 	}
 
 	/**
@@ -352,7 +372,8 @@ class ConnectionGuard implements Hookable {
 	/**
 	 * Whether a protected option may be created over a connection.
 	 *
-	 * Only one without a secure default: the OAuth key material, minted lazily.
+	 * Only the OAuth key material, minted lazily. A control option is created
+	 * at its secure default instead, and an add-on's not at all.
 	 *
 	 * @param string $option A protected option name.
 	 *
@@ -360,7 +381,7 @@ class ConnectionGuard implements Hookable {
 	 * @since 1.5.0
 	 */
 	public static function may_be_created( string $option ): bool {
-		return ! array_key_exists( $option, self::SECURE_DEFAULT );
+		return in_array( $option, self::CREATABLE, true );
 	}
 
 	/**
@@ -397,7 +418,8 @@ class ConnectionGuard implements Hookable {
 	 *
 	 * @return mixed The stored value over a connection (blocking the change), the
 	 *               secure default for a control switch, or the incoming value
-	 *               otherwise / on legitimate first creation.
+	 *               otherwise: the key material's first write, or an add-on's
+	 *               option, whose INSERT {@see self::refuse_add()} drops.
 	 * @since 1.5.0
 	 */
 	private function refuse( $value, string $option ) {
@@ -414,7 +436,7 @@ class ConnectionGuard implements Hookable {
 			return $stored;
 		}
 
-		if ( ! self::may_be_created( $option ) ) {
+		if ( array_key_exists( $option, self::SECURE_DEFAULT ) ) {
 			$this->note_blocked( $option, 'write' );
 
 			return self::SECURE_DEFAULT[ $option ];
@@ -426,19 +448,18 @@ class ConnectionGuard implements Hookable {
 	/**
 	 * The protected option a name reaches, if any.
 	 *
-	 * Fails closed: when the database cannot answer, the name is treated as
-	 * protected, so the write is refused rather than let through unchecked.
-	 *
 	 * @param string $option Option name as passed.
 	 *
-	 * @return string|null
+	 * @return string|false|null The protected name, null when it is none, or
+	 *                           false when the database could not answer:
+	 *                           callers then refuse, as for a variant.
 	 * @since 1.5.0
 	 */
-	private function protected_match( string $option ): ?string {
+	private function protected_match( string $option ): string|false|null {
 		try {
 			return $this->names->find( $option, self::protected_names() );
 		} catch ( \RuntimeException $e ) {
-			return $option;
+			return false;
 		}
 	}
 

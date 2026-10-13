@@ -34,7 +34,8 @@ use Albert\OAuth\Server\ConnectionContext;
 class OptionRestorer implements Hookable {
 
 	/**
-	 * Core functions whose writes the guard's hooks already see.
+	 * Core functions whose writes the guard's hooks already see, plus
+	 * `wp_set_option_autoload_values()`, which changes only the autoload flag.
 	 *
 	 * @since 1.5.0
 	 * @var list<string>
@@ -56,6 +57,14 @@ class OptionRestorer implements Hookable {
 	 * @var array<string, array{blog: int, rows: array<string, array{option_name: string, option_value: string, autoload: string}|null>}>
 	 */
 	private array $before = [];
+
+	/**
+	 * Tables whose rows could not be read back, already reported.
+	 *
+	 * @since 1.5.0
+	 * @var array<string, true>
+	 */
+	private array $unreadable = [];
 
 	/**
 	 * Whether this class's own queries are running.
@@ -154,6 +163,13 @@ class OptionRestorer implements Hookable {
 		foreach ( $this->before as $table => $state ) {
 			$now = $this->read( $table );
 			if ( $now === null ) {
+				// Unknown is not unchanged: say so, once, and try again later.
+				if ( ! isset( $this->unreadable[ $table ] ) ) {
+					$this->unreadable[ $table ] = true;
+					foreach ( array_keys( $state['rows'] ) as $option ) {
+						$this->report( $option, false );
+					}
+				}
 				continue;
 			}
 
@@ -170,21 +186,32 @@ class OptionRestorer implements Hookable {
 
 				$restored = $this->put_back( $table, $option, $was );
 				$this->flush_cache( $state['blog'], [ $option, $is['option_name'] ?? $option ] );
-
-				/**
-				 * Fires when a protected option changed outside the option API
-				 * during an assistant request, and was put back.
-				 *
-				 * @since 1.5.0
-				 *
-				 * @param string $option   The protected option.
-				 * @param bool   $restored Whether putting it back succeeded.
-				 */
-				do_action( 'albert/safe_mode/option_restored', $option, $restored );
-
-				AuditTrail::option_restored( $option, $restored );
+				$this->report( $option, $restored );
 			}
 		}
+	}
+
+	/**
+	 * Announce a restore, or a change that could not be checked or undone.
+	 *
+	 * @param string $option   The protected option.
+	 * @param bool   $restored Whether it is back as it was.
+	 *
+	 * @return void
+	 */
+	private function report( string $option, bool $restored ): void {
+		/**
+		 * Fires when a protected option changed outside the option API during
+		 * an assistant request and was put back, or could not be.
+		 *
+		 * @since 1.5.0
+		 *
+		 * @param string $option   The protected option.
+		 * @param bool   $restored False when it could not be put back or checked.
+		 */
+		do_action( 'albert/safe_mode/option_restored', $option, $restored );
+
+		AuditTrail::option_restored( $option, $restored );
 	}
 
 	/**
