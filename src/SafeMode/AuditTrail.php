@@ -85,15 +85,16 @@ class AuditTrail {
 	const CODE_OPTION_BLOCKED = 'albert_protected_option_write_blocked';
 
 	/**
-	 * An assistant deleted one of Albert's control options.
+	 * A protected option was changed outside the option API during an
+	 * assistant request, and put back.
 	 *
-	 * An `error`, where a refused write is only a `warning`: this one got
-	 * through. No core filter can short-circuit `delete_option()`.
+	 * An `error`, where a refused write is only a `warning`: for a moment the
+	 * change was real.
 	 *
 	 * @since 1.5.0
 	 * @var string
 	 */
-	const CODE_OPTION_DELETED = 'albert_protected_option_deleted';
+	const CODE_OPTION_RESTORED = 'albert_protected_option_restored';
 
 	/**
 	 * Record an approval.
@@ -224,17 +225,38 @@ class AuditTrail {
 	 * @since 1.5.0
 	 */
 	public static function option_blocked( string $option, string $operation = 'write' ): void {
-		// A write is refused; a delete is only seen. WordPress has no
-		// `pre_delete_option` filter, so the message must not claim otherwise.
 		$message = $operation === 'delete'
-			? sprintf( 'An assistant deleted the protected option %s. Deletion cannot be prevented, only recorded.', $option )
+			? sprintf( 'An assistant attempted to delete the protected option %s. Refused; the option is unchanged.', $option )
 			: sprintf( 'An assistant attempted to write the protected option %s. Refused; the stored value is unchanged.', $option );
 
 		self::record(
 			'albert/protected-option:' . $option,
 			get_current_user_id(),
-			$operation === 'delete' ? Outcome::ERROR : Outcome::WARNING,
-			$operation === 'delete' ? self::CODE_OPTION_DELETED : self::CODE_OPTION_BLOCKED,
+			Outcome::WARNING,
+			self::CODE_OPTION_BLOCKED,
+			$message
+		);
+	}
+
+	/**
+	 * Record a protected option put back after a write that skipped the option API.
+	 *
+	 * @param string $option   The protected option.
+	 * @param bool   $restored Whether putting it back succeeded.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public static function option_restored( string $option, bool $restored ): void {
+		$message = $restored
+			? sprintf( 'The protected option %s was changed directly in the database during an assistant request. It has been put back.', $option )
+			: sprintf( 'The protected option %s may have been changed directly in the database during an assistant request, and could not be checked or put back. Check it in Albert\'s settings.', $option );
+
+		self::record(
+			'albert/protected-option:' . $option,
+			get_current_user_id(),
+			Outcome::ERROR,
+			self::CODE_OPTION_RESTORED,
 			$message
 		);
 	}

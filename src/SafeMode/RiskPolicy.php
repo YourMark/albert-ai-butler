@@ -93,6 +93,23 @@ class RiskPolicy {
 	private const OPTION_KEYS = [ 'option', 'option_name', 'setting' ];
 
 	/**
+	 * Compares option names as the database does.
+	 *
+	 * @since 1.5.0
+	 * @var OptionNames
+	 */
+	private OptionNames $names;
+
+	/**
+	 * Wire the policy.
+	 *
+	 * @param OptionNames|null $names Name matcher; defaults to a fresh one.
+	 */
+	public function __construct( ?OptionNames $names = null ) {
+		$this->names = $names ?? new OptionNames();
+	}
+
+	/**
 	 * Whether this call must be held regardless of its annotation.
 	 *
 	 * @param WP_Ability           $ability The ability about to execute.
@@ -105,6 +122,29 @@ class RiskPolicy {
 		return $this->is_held_ability( $ability->get_name() )
 			|| $this->grants_admin_role( $input )
 			|| $this->writes_high_risk_option( $input );
+	}
+
+	/**
+	 * The protected option this call's input names, if any.
+	 *
+	 * Those are refused rather than held ({@see ConnectionGuard}), so a call
+	 * naming one is never put in front of a person to approve. Matched as the
+	 * database matches names, and an ability declaring itself `readonly` is
+	 * left alone: reading a protected option changes nothing.
+	 *
+	 * @param WP_Ability           $ability The ability about to execute.
+	 * @param array<string, mixed> $input   Its input.
+	 *
+	 * @return string|null
+	 * @since 1.5.0
+	 */
+	public function protected_option( WP_Ability $ability, array $input ): ?string {
+		$annotations = $ability->get_meta_item( 'annotations', [] );
+		if ( is_array( $annotations ) && ( $annotations['readonly'] ?? false ) === true ) {
+			return null;
+		}
+
+		return $this->named_option( $input, ConnectionGuard::protected_names() );
 	}
 
 	/**
@@ -194,12 +234,44 @@ class RiskPolicy {
 			return false;
 		}
 
+		return $this->named_option( $input, $high_risk ) !== null;
+	}
+
+	/**
+	 * The listed option one of the option-naming keys reaches, if any.
+	 *
+	 * Compared by the database, so `SİTEURL` or `sïteurl` is `siteurl`. When the
+	 * database cannot answer, the value itself is returned: holding or refusing
+	 * a call is the safe side.
+	 *
+	 * @param array<string, mixed> $input   Resolved input.
+	 * @param array<mixed>         $options Option names.
+	 *
+	 * @return string|null
+	 * @since 1.5.0
+	 */
+	private function named_option( array $input, array $options ): ?string {
+		$options = array_values( array_filter( $options, 'is_string' ) );
+
 		foreach ( self::OPTION_KEYS as $key ) {
-			if ( isset( $input[ $key ] ) && is_string( $input[ $key ] ) && in_array( $input[ $key ], $high_risk, true ) ) {
-				return true;
+			if ( ! isset( $input[ $key ] ) || ! is_string( $input[ $key ] ) ) {
+				continue;
+			}
+
+			// WordPress trims an option name before it reaches the database.
+			$name = trim( $input[ $key ] );
+
+			try {
+				$match = $this->names->find( $name, $options );
+			} catch ( \RuntimeException $e ) {
+				return $name;
+			}
+
+			if ( $match !== null ) {
+				return $match;
 			}
 		}
 
-		return false;
+		return null;
 	}
 }

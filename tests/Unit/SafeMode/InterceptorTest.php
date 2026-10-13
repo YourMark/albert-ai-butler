@@ -22,6 +22,7 @@ use Albert\SafeMode\Gate;
 use Albert\SafeMode\Interceptor;
 use Albert\SafeMode\PendingAction;
 use Albert\SafeMode\Repository;
+use Albert\SafeMode\RiskPolicy;
 use PHPUnit\Framework\TestCase;
 use WP_Ability;
 use WP_Error;
@@ -158,7 +159,8 @@ class InterceptorTest extends TestCase {
 
 		$this->sentinel    = new \stdClass();
 		$this->repository  = new RecordingRepository();
-		$this->interceptor = new Interceptor( new InterceptorDecision(), new Gate(), $this->repository );
+		$risk              = new RiskPolicy( new CaseInsensitiveOptionNames() );
+		$this->interceptor = new Interceptor( new InterceptorDecision(), new Gate( $risk ), $this->repository, null, $risk );
 	}
 
 	/**
@@ -252,6 +254,30 @@ class InterceptorTest extends TestCase {
 		$this->assertSame( [ 'id' => 42 ], $this->repository->staged[0]['input'] );
 		$this->assertSame( 7, $this->repository->staged[0]['user_id'] );
 		$this->assertSame( 'client-1', $this->repository->staged[0]['client_id'] );
+	}
+
+	/**
+	 * A call writing one of Albert's own controls is refused, never staged:
+	 * there is nothing a person could coherently approve.
+	 *
+	 * @return void
+	 */
+	public function test_refuses_a_protected_option_write_without_staging_it(): void {
+		ConnectionContext::set( 'client-1' );
+
+		$result = $this->interceptor->intercept(
+			$this->sentinel,
+			'acme/update-option',
+			[
+				'option' => 'ALBERT_SAFE_MODE',
+				'value'  => 'off',
+			],
+			$this->destructive( 'acme/update-option' )
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_protected_option', $result->get_error_code() );
+		$this->assertSame( [], $this->repository->staged );
 	}
 
 	/**

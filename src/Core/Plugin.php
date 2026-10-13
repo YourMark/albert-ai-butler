@@ -95,6 +95,7 @@ use Albert\SafeMode\Approver as SafeModeApprover;
 use Albert\SafeMode\ApprovalPolicy as SafeModeApprovalPolicy;
 use Albert\SafeMode\Interceptor as SafeModeInterceptor;
 use Albert\SafeMode\ConnectionGuard as SafeModeConnectionGuard;
+use Albert\SafeMode\OptionRestorer as SafeModeOptionRestorer;
 use Albert\Admin\Approvals;
 use WP\MCP\Core\McpAdapter;
 
@@ -212,7 +213,9 @@ class Plugin {
 		// Refuse writes to Albert's own gate-controlling options while a request
 		// is driven by an assistant, so the gate cannot be turned off by what it
 		// gates. Resource-scoped, so it holds against any ability. Not admin-only.
+		// The restorer puts back what a write skipping the option API changed.
 		( new SafeModeConnectionGuard() )->register_hooks();
+		( new SafeModeOptionRestorer() )->register_hooks();
 
 		// Daily sweep of never-authorised allowed-user invitations. schedule()
 		// is idempotent (guarded by wp_next_scheduled()), so calling it here

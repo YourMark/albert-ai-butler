@@ -21,24 +21,21 @@ use Albert\OAuth\Server\ConnectionContext;
  * Staging is the wrong answer for the switches that control the gate itself:
  * approving "turn safe mode off" is self-defeating. So these are refused
  * outright over a connection, not held. The guard is on the *resource*, keyed
- * on option name, so it is independent of which ability attempts the write —
- * it holds against any third-party ability that will ever be registered, not
- * only Albert's own surface.
+ * on option name, so it holds against any ability, not only Albert's own.
  *
- * Blog options go through `sanitize_option_{$option}`, which fires for both
- * `add_option()` and `update_option()`. Network options have their own store and
- * their own hooks, so they get their own; the shared sanitize filter cannot tell
- * the two apart, and an earlier version read the blog value while a network write
- * was in flight.
+ * Names are matched as the database matches them ({@see OptionNames}): under a
+ * typical collation `Albert_Safe_Mode`, `albért_safe_mode` and a full-width
+ * spelling all reach the real row, while the per-option hooks fire only for the
+ * exact name. So every write is checked by name on the generic hooks too.
  *
- * Creation is refused as well as change. Most of these have no stored row until
- * something writes one, so allowing a first write would have been a bypass
- * wearing the word "creation". Only the OAuth key material may be created, since
- * it is minted lazily during token validation.
+ * - An update keeps the stored value (`sanitize_option_{$option}`, `pre_update_option`).
+ * - The creation of a control option stores its secure default. Only the OAuth
+ *   key material may be created, since it is minted lazily during token validation.
+ * - An add under another spelling, and any delete, are stopped at the query:
+ *   WordPress has no filter to refuse either, but it fires an action just
+ *   before each, and the `query` filter can then drop that one statement.
  *
- * Deletes can only be detected. `delete_option()` fires actions and no filter,
- * so there is nothing to return and the hook that records them is named for what
- * it can actually claim.
+ * Writes that skip the option API are {@see OptionRestorer}'s job.
  *
  * High-risk *site* options (`siteurl`, roles) are a different case: those are
  * held for approval by {@see RiskPolicy}, because a person may legitimately want
@@ -61,6 +58,19 @@ class ConnectionGuard implements Hookable {
 		'albert_disabled_abilities',
 		'albert_allowed_users',
 		'albert_privacy_mode',
+		'albert_oauth_encryption_key',
+		'albert_oauth_private_key',
+		'albert_oauth_public_key',
+	];
+
+	/**
+	 * The protected options that may be created over a connection: the OAuth
+	 * key material, minted lazily while a token is validated. Never changed.
+	 *
+	 * @since 1.5.0
+	 * @var list<string>
+	 */
+	private const CREATABLE = [
 		'albert_oauth_encryption_key',
 		'albert_oauth_private_key',
 		'albert_oauth_public_key',
@@ -99,107 +109,187 @@ class ConnectionGuard implements Hookable {
 	private ?string $last_reported = null;
 
 	/**
-	 * Bind the guard to each protected option's sanitize filter.
+	 * Statements to drop when they reach the `query` filter.
+	 *
+	 * @since 1.5.0
+	 * @var list<array{prefix: string, needle: string, option: string, operation: string}>
+	 */
+	private array $armed = [];
+
+	/**
+	 * Compares option names as the database does.
+	 *
+	 * @since 1.5.0
+	 * @var OptionNames
+	 */
+	private OptionNames $names;
+
+	/**
+	 * Wire the guard.
+	 *
+	 * @param OptionNames|null $names Name matcher; defaults to a fresh one.
+	 */
+	public function __construct( ?OptionNames $names = null ) {
+		$this->names = $names ?? new OptionNames();
+	}
+
+	/**
+	 * Bind the guard to the option hooks.
+	 *
+	 * Last priority throughout, so the guard has the final say.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
 	public function register_hooks(): void {
-		foreach ( $this->protected_options() as $option ) {
-			// Late priority so the guard has the final say over the stored value.
-			add_filter( "sanitize_option_{$option}", [ $this, 'refuse_over_connection' ], 99, 2 );
+		foreach ( self::protected_names() as $option ) {
+			add_filter( "sanitize_option_{$option}", [ $this, 'refuse_over_connection' ], PHP_INT_MAX, 2 );
 
-			// Multisite writes their own store and need their own hooks. These
-			// are real filters with the network value to hand, so a network write
-			// is refused properly rather than coerced through the shared
-			// sanitize filter, which cannot tell the two stores apart.
-			add_filter( "pre_update_site_option_{$option}", [ $this, 'refuse_network_update' ], 99, 3 );
-			add_filter( "pre_add_site_option_{$option}", [ $this, 'refuse_network_add' ], 99, 2 );
-			add_action( "pre_delete_site_option_{$option}", [ $this, 'note_network_delete_attempt' ] );
+			// Network options have their own store and hooks. The shared
+			// sanitize filter cannot tell the two stores apart.
+			add_filter( "pre_update_site_option_{$option}", [ $this, 'refuse_network_update' ], PHP_INT_MAX, 3 );
+			add_filter( "pre_add_site_option_{$option}", [ $this, 'refuse_network_add' ], PHP_INT_MAX, 2 );
+			add_action( "pre_delete_site_option_{$option}", [ $this, 'refuse_network_delete' ], PHP_INT_MAX );
 		}
 
-		// Deletes cannot be prevented, only seen: `delete_option()` fires actions
-		// only, so there is nothing to return. Detection still earns its place,
-		// because an assistant deleting `albert_disabled_abilities` switches every
-		// ability back on and would otherwise leave no trace.
-		add_action( 'delete_option', [ $this, 'note_delete_attempt' ] );
+		// Keyed by any name, so other spellings of a protected option are seen.
+		add_filter( 'pre_update_option', [ $this, 'refuse_variant_update' ], PHP_INT_MAX, 3 );
+		add_action( 'add_option', [ $this, 'refuse_add' ], PHP_INT_MAX );
+		add_action( 'delete_option', [ $this, 'refuse_delete' ], PHP_INT_MAX );
+		add_filter( 'query', [ $this, 'drop_armed_statement' ], PHP_INT_MAX );
 	}
 
 	/**
-	 * Record an attempt to delete a protected network option.
+	 * Refuse an update to a protected option under any spelling, by keeping
+	 * the stored value.
 	 *
-	 * `pre_delete_site_option_{$option}` passes the option name as its first
-	 * argument, so the signature matches {@see self::note_delete_attempt()}; it
-	 * exists separately only because the hook is registered per option and so
-	 * needs no list scan.
+	 * @param mixed  $value     The new value.
+	 * @param string $option    Option name as passed.
+	 * @param mixed  $old_value The stored value.
+	 *
+	 * @return mixed
+	 * @since 1.5.0
+	 */
+	public function refuse_variant_update( $value, $option, $old_value ) {
+		if ( ConnectionContext::client_id() === null || ! is_string( $option ) ) {
+			return $value;
+		}
+
+		$protected = $this->protected_match( $option );
+		if ( $protected === null ) {
+			return $value;
+		}
+
+		// The key material's first write goes through `update_option()`.
+		if ( $protected === $option && $old_value === false && self::may_be_created( $option ) ) {
+			return $value;
+		}
+
+		$this->note_blocked( $protected === false ? $option : $protected, 'write' );
+
+		return $old_value;
+	}
+
+	/**
+	 * Drop the INSERT of a protected option, unless it is the exact name and
+	 * its creation is allowed: a control option's sanitize filter has already
+	 * swapped in the secure default, and the key material may be minted.
+	 *
+	 * @param string $option Option name as added.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function refuse_add( $option ): void {
+		if ( ConnectionContext::client_id() === null || ! is_string( $option ) ) {
+			return;
+		}
+
+		$protected = $this->protected_match( $option );
+		if ( $protected === null ) {
+			return;
+		}
+
+		if ( $protected === $option && ( array_key_exists( $option, self::SECURE_DEFAULT ) || self::may_be_created( $option ) ) ) {
+			return;
+		}
+
+		global $wpdb;
+		$this->arm( "INSERT INTO `{$wpdb->options}`", $option, $protected === false ? $option : $protected, 'write' );
+	}
+
+	/**
+	 * Drop the DELETE of a protected option, under any spelling.
+	 *
+	 * `delete_option` fires after the row is found and immediately before it is
+	 * removed, so the statement it arms is the very next delete of that name.
+	 *
+	 * @param string $option Option name as passed.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function refuse_delete( $option ): void {
+		if ( ConnectionContext::client_id() === null || ! is_string( $option ) ) {
+			return;
+		}
+
+		$protected = $this->protected_match( $option );
+		if ( $protected === null ) {
+			return;
+		}
+
+		global $wpdb;
+		$this->arm( "DELETE FROM `{$wpdb->options}`", $option, $protected === false ? $option : $protected, 'delete' );
+	}
+
+	/**
+	 * Drop the DELETE of a protected network option.
+	 *
+	 * On a single site `delete_site_option()` falls through to
+	 * `delete_option()`, which {@see self::refuse_delete()} covers.
 	 *
 	 * @param string $option The option being deleted.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	public function note_network_delete_attempt( string $option ): void {
-		if ( ConnectionContext::client_id() === null ) {
+	public function refuse_network_delete( $option ): void {
+		if ( ConnectionContext::client_id() === null || ! is_string( $option ) || ! is_multisite() ) {
 			return;
 		}
 
-		$this->announce_delete( $option );
+		global $wpdb;
+		$this->arm( "DELETE FROM `{$wpdb->sitemeta}`", $option, $option, 'delete' );
 	}
 
 	/**
-	 * Record an attempt to delete a protected option over a connection.
+	 * Drop an armed statement, so the add or delete it belongs to fails.
 	 *
-	 * Detection, not prevention, and the name says so. Fires before the row is
-	 * removed but cannot stop it.
+	 * Runs on every query, so it returns at once when nothing is armed. A
+	 * statement is matched by its verb and table and the quoted name, exactly as
+	 * `add_option()`, `delete_option()` and `delete_network_option()` build it.
 	 *
-	 * `delete_option` is a global action that `delete_transient()` also routes
-	 * through, so this is a hot path: the connection check comes first because
-	 * it is a static null comparison, and the list scan only happens for the
-	 * few requests an assistant is actually driving.
+	 * @param string $query The SQL about to run.
 	 *
-	 * @param string $option The option being deleted.
-	 *
-	 * @return void
+	 * @return string The query, or an empty string to drop it.
 	 * @since 1.5.0
 	 */
-	public function note_delete_attempt( string $option ): void {
-		if ( ConnectionContext::client_id() === null ) {
-			return;
+	public function drop_armed_statement( $query ) {
+		if ( $this->armed === [] || ! is_string( $query ) ) {
+			return $query;
 		}
 
-		if ( ! in_array( $option, $this->protected_options(), true ) ) {
-			return;
+		foreach ( $this->armed as $i => $statement ) {
+			if ( str_starts_with( ltrim( $query ), $statement['prefix'] ) && str_contains( $query, $statement['needle'] ) ) {
+				array_splice( $this->armed, $i, 1 );
+				$this->note_blocked( $statement['option'], $statement['operation'] );
+
+				return '';
+			}
 		}
 
-		$this->announce_delete( $option );
-	}
-
-	/**
-	 * Announce a detected delete of a protected option.
-	 *
-	 * @param string $option The option being deleted.
-	 *
-	 * @return void
-	 * @since 1.5.0
-	 */
-	private function announce_delete( string $option ): void {
-		if ( ! $this->first_report( 'delete', $option ) ) {
-			return;
-		}
-
-		/**
-		 * Fires when an assistant deletes one of Albert's protected options.
-		 *
-		 * Deliberately a different hook from `option_write_blocked`: that one
-		 * says the write was refused, and this one cannot make that claim.
-		 *
-		 * @since 1.5.0
-		 *
-		 * @param string $option The option being deleted.
-		 */
-		do_action( 'albert/safe_mode/option_delete_detected', $option );
-
-		AuditTrail::option_blocked( $option, 'delete' );
+		return $query;
 	}
 
 	/**
@@ -230,7 +320,7 @@ class ConnectionGuard implements Hookable {
 			return $value;
 		}
 
-		$this->note_blocked( $option );
+		$this->note_blocked( $option, 'write' );
 
 		return $old_value;
 	}
@@ -253,104 +343,9 @@ class ConnectionGuard implements Hookable {
 			return $value;
 		}
 
-		$this->note_blocked( $option );
+		$this->note_blocked( $option, 'write' );
 
 		return self::SECURE_DEFAULT[ $option ];
-	}
-
-	/**
-	 * Keep the stored value when an assistant tries to change a protected option.
-	 *
-	 * A sanitize filter can only coerce the value, not raise an error, so the
-	 * write "succeeds" from the caller's point of view while storing nothing new.
-	 * That silent coercion is exactly the kind of attempt worth seeing, so every
-	 * block fires an action an observer (Premium's log) can record.
-	 *
-	 * @param mixed  $value  The value about to be written.
-	 * @param string $option The option name.
-	 *
-	 * @return mixed The stored value over a connection (blocking the change), the
-	 *               secure default for a control switch, or the incoming value
-	 *               otherwise / on legitimate first creation.
-	 * @since 1.5.0
-	 */
-	private function refuse( $value, string $option ) {
-		if ( ConnectionContext::client_id() === null ) {
-			return $value;
-		}
-
-		$sentinel = new \stdClass();
-		$stored   = get_option( $option, $sentinel );
-
-		// A change to an existing option is refused by keeping its stored value.
-		if ( $stored !== $sentinel ) {
-			$this->note_blocked( $option );
-
-			return $stored;
-		}
-
-		// A control switch with no stored row falls back to its secure default so
-		// it cannot be created in a weakened state.
-		if ( array_key_exists( $option, self::SECURE_DEFAULT ) ) {
-			$this->note_blocked( $option );
-
-			return self::SECURE_DEFAULT[ $option ];
-		}
-
-		// Anything else unset (OAuth key material) is left to its legitimate
-		// first-time creation.
-		return $value;
-	}
-
-	/**
-	 * Announce a blocked write so it can be logged.
-	 *
-	 * @param string $option The option whose write was refused.
-	 *
-	 * @return void
-	 * @since 1.5.0
-	 */
-	private function note_blocked( string $option ): void {
-		if ( ! $this->first_report( 'write', $option ) ) {
-			return;
-		}
-
-		/**
-		 * Fires when safe mode refuses an assistant's write to a protected option.
-		 *
-		 * @since 1.5.0
-		 *
-		 * @param string $option The option name whose write was refused.
-		 */
-		do_action( 'albert/safe_mode/option_write_blocked', $option );
-
-		AuditTrail::option_blocked( $option );
-	}
-
-	/**
-	 * Whether this attempt has not just been reported through another hook.
-	 *
-	 * One call can pass two of the guard's hooks: `add_site_option()` falls
-	 * through to `add_option()` on a single site, and runs `sanitize_option()`
-	 * after its own filter on a multisite. Only the report is de-duplicated;
-	 * every hook still refuses the write.
-	 *
-	 * @param string $operation `write` or `delete`.
-	 * @param string $option    The option name.
-	 *
-	 * @return bool
-	 * @since 1.5.0
-	 */
-	private function first_report( string $operation, string $option ): bool {
-		$key = $operation . ':' . $option;
-
-		if ( $this->last_reported === $key ) {
-			return false;
-		}
-
-		$this->last_reported = $key;
-
-		return true;
 	}
 
 	/**
@@ -359,7 +354,7 @@ class ConnectionGuard implements Hookable {
 	 * @return list<string>
 	 * @since 1.5.0
 	 */
-	private function protected_options(): array {
+	public static function protected_names(): array {
 		/**
 		 * Filters the options refused over an assistant connection.
 		 *
@@ -371,6 +366,147 @@ class ConnectionGuard implements Hookable {
 		 */
 		$options = apply_filters( 'albert/safe_mode/protected_options', self::PROTECTED );
 
-		return is_array( $options ) ? $options : self::PROTECTED;
+		return is_array( $options ) ? array_values( array_filter( $options, 'is_string' ) ) : self::PROTECTED;
+	}
+
+	/**
+	 * Whether a protected option may be created over a connection.
+	 *
+	 * Only the OAuth key material, minted lazily. A control option is created
+	 * at its secure default instead, and an add-on's not at all.
+	 *
+	 * @param string $option A protected option name.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function may_be_created( string $option ): bool {
+		return in_array( $option, self::CREATABLE, true );
+	}
+
+	/**
+	 * Fire the refusal action and write its activity-log row.
+	 *
+	 * @param string $option    The protected option.
+	 * @param string $operation `write` or `delete`.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public static function announce_blocked( string $option, string $operation ): void {
+		/**
+		 * Fires when safe mode refuses an assistant's write to a protected option.
+		 *
+		 * @since 1.5.0
+		 *
+		 * @param string $option    The option name whose write was refused.
+		 * @param string $operation `write` or `delete`.
+		 */
+		do_action( 'albert/safe_mode/option_write_blocked', $option, $operation );
+
+		AuditTrail::option_blocked( $option, $operation );
+	}
+
+	/**
+	 * Keep the stored value when an assistant tries to change a protected option.
+	 *
+	 * A sanitize filter can only coerce the value, not raise an error, so the
+	 * write "succeeds" from the caller's point of view while storing nothing new.
+	 *
+	 * @param mixed  $value  The value about to be written.
+	 * @param string $option The option name.
+	 *
+	 * @return mixed The stored value over a connection (blocking the change), the
+	 *               secure default for a control switch, or the incoming value
+	 *               otherwise: the key material's first write, or an add-on's
+	 *               option, whose INSERT {@see self::refuse_add()} drops.
+	 * @since 1.5.0
+	 */
+	private function refuse( $value, string $option ) {
+		if ( ConnectionContext::client_id() === null ) {
+			return $value;
+		}
+
+		$sentinel = new \stdClass();
+		$stored   = get_option( $option, $sentinel );
+
+		if ( $stored !== $sentinel ) {
+			$this->note_blocked( $option, 'write' );
+
+			return $stored;
+		}
+
+		if ( array_key_exists( $option, self::SECURE_DEFAULT ) ) {
+			$this->note_blocked( $option, 'write' );
+
+			return self::SECURE_DEFAULT[ $option ];
+		}
+
+		return $value;
+	}
+
+	/**
+	 * The protected option a name reaches, if any.
+	 *
+	 * @param string $option Option name as passed.
+	 *
+	 * @return string|false|null The protected name, null when it is none, or
+	 *                           false when the database could not answer:
+	 *                           callers then refuse, as for a variant.
+	 * @since 1.5.0
+	 */
+	private function protected_match( string $option ): string|false|null {
+		try {
+			return $this->names->find( $option, self::protected_names() );
+		} catch ( \RuntimeException $e ) {
+			return false;
+		}
+	}
+
+	/**
+	 * Arm the next statement with this prefix that names this option.
+	 *
+	 * @param string $prefix    Verb and table, as WordPress writes them.
+	 * @param string $name      Option name as the statement quotes it.
+	 * @param string $option    The protected option, for the report.
+	 * @param string $operation `write` or `delete`.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function arm( string $prefix, string $name, string $option, string $operation ): void {
+		global $wpdb;
+
+		$this->armed[] = [
+			'prefix'    => $prefix,
+			// As prepare() quotes it, minus the placeholder escape wpdb strips before this filter.
+			'needle'    => "'" . $wpdb->remove_placeholder_escape( esc_sql( $name ) ) . "'",
+			'option'    => $option,
+			'operation' => $operation,
+		];
+	}
+
+	/**
+	 * Announce a refusal once per attempt.
+	 *
+	 * One call can pass two of the guard's hooks: `add_site_option()` falls
+	 * through to `add_option()` on a single site, and an update passes both the
+	 * sanitize filter and `pre_update_option`. Only the report is de-duplicated;
+	 * every hook still refuses.
+	 *
+	 * @param string $option    The option whose write was refused.
+	 * @param string $operation `write` or `delete`.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function note_blocked( string $option, string $operation ): void {
+		$key = $operation . ':' . $option;
+		if ( $this->last_reported === $key ) {
+			return;
+		}
+
+		$this->last_reported = $key;
+		self::announce_blocked( $option, $operation );
 	}
 }

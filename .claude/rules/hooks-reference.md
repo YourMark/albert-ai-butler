@@ -37,8 +37,8 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/safe_mode/rejected` | action | A person rejected a held call. The ability never ran |
 | `albert/safe_mode/expired` | action | A held call lapsed without a decision |
 | `albert/safe_mode/abandoned` | action | An approved run never reported back. It may or may not have completed |
-| `albert/safe_mode/option_write_blocked` | action | An assistant's write to one of Albert's control options was refused |
-| `albert/safe_mode/option_delete_detected` | action | An assistant *deleted* one of those options. Detection only: WordPress has no `pre_delete_option` filter, so this cannot be prevented, and the hook is named separately from the one above because that one claims a refusal this cannot make |
+| `albert/safe_mode/option_write_blocked` | action | `( string $option, string $operation )`. An assistant's write (`write`) or delete (`delete`) of one of Albert's control options was refused, under any spelling the database treats as that option |
+| `albert/safe_mode/option_restored` | action | `( string $option, bool $restored )`. A control option was changed outside the option API during an assistant request (a plugin's own SQL) and was put back; `$restored` is false when it could not be put back or checked |
 | `albert/admin/submenu_pages` | filter | Add addon admin pages |
 | `albert/abilities_icons` | filter | Customize category icons |
 | `albert/developer_mode` | filter | Toggle developer mode |

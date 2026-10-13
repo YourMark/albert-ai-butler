@@ -13,8 +13,10 @@ namespace Albert\Tests\Integration\SafeMode;
 
 use Albert\Database\Installer;
 use Albert\Database\Tables;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\SafeMode\ApprovalTicket;
 use Albert\SafeMode\Approver;
+use Albert\SafeMode\Gate;
 use Albert\SafeMode\PendingAction;
 use Albert\SafeMode\Repository;
 use Albert\Tests\TestCase;
@@ -357,5 +359,102 @@ class ApproverTest extends TestCase {
 		$this->assertInstanceOf( WP_Error::class, $second );
 		$this->assertSame( 'albert_already_handled', $second->get_error_code() );
 		$this->assertSame( [], $this->observed, 'The ability must not run a second time.' );
+	}
+
+	/**
+	 * Ways a third-party ability could try to switch safe mode off.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function ways_to_switch_safe_mode_off(): array {
+		return [
+			'update_option'            => [ 'update' ],
+			'update under a lookalike' => [ 'lookalike' ],
+			'delete_option'            => [ 'delete' ],
+			'raw SQL'                  => [ 'sql' ],
+		];
+	}
+
+	/**
+	 * Approving a call does not let it change safe mode: the approved run
+	 * happens under the connection that asked for it, so the guard and the
+	 * restorer still apply.
+	 *
+	 * @dataProvider ways_to_switch_safe_mode_off
+	 *
+	 * @param string $how How the ability writes.
+	 *
+	 * @return void
+	 */
+	public function test_an_approved_call_cannot_switch_safe_mode_off( string $how ): void {
+		update_option( Gate::OPTION, 'on' );
+		$this->register_option_writer( 'albert-test/write-option' );
+
+		$caller   = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		$approver = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		wp_set_current_user( $approver );
+
+		$action = $this->repository->stage( 'albert-test/write-option', [ 'how' => $how ], $caller, 'client-a', 'Claude', DAY_IN_SECONDS );
+		( new Approver( $this->repository ) )->approve( $action, $approver );
+
+		wp_cache_flush();
+		$this->assertTrue( ( new Gate() )->is_enabled() );
+		$this->assertNull( ConnectionContext::client_id(), 'The connection must not outlive the run.' );
+	}
+
+	/**
+	 * Register an ability that tries to turn safe mode off in the way asked.
+	 *
+	 * @param string $name Ability id.
+	 *
+	 * @return void
+	 */
+	private function register_option_writer( string $name ): void {
+		global $wp_current_filter;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- WP core's own abilities tests use this exact pattern to satisfy doing_action() in isolation.
+		$wp_current_filter[] = 'wp_abilities_api_init';
+
+		try {
+			wp_register_ability(
+				$name,
+				[
+					'label'               => 'Test',
+					'description'         => 'Writes the safe-mode option.',
+					'category'            => self::TEST_CATEGORY,
+					'input_schema'        => [
+						'type'       => 'object',
+						'properties' => [ 'how' => [ 'type' => 'string' ] ],
+					],
+					'output_schema'       => [ 'type' => 'object' ],
+					'execute_callback'    => static function ( $input ) {
+						global $wpdb;
+
+						switch ( $input['how'] ) {
+							case 'update':
+								update_option( Gate::OPTION, 'off' );
+								break;
+							case 'lookalike':
+								update_option( 'Albért_Safe_Mode', 'off' );
+								break;
+							case 'delete':
+								delete_option( Gate::OPTION );
+								add_option( 'ALBERT_SAFE_MODE', 'off' );
+								break;
+							case 'sql':
+								// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The bypass under test.
+								$wpdb->query( $wpdb->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s', $wpdb->options, 'off', Gate::OPTION ) );
+								break;
+						}
+
+						return [ 'ok' => true ];
+					},
+					'permission_callback' => '__return_true',
+				]
+			);
+		} finally {
+			array_pop( $wp_current_filter );
+		}
+
+		$this->registered_ids[] = $name;
 	}
 }

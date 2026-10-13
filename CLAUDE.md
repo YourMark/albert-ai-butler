@@ -483,16 +483,47 @@ resupply, but the word matters and the docblocks say *captured*.
 | High-risk WordPress options | `siteurl`, `home`, `admin_email`, `default_role`, `users_can_register`, `template`, `stylesheet`, `active_plugins`, `blog_public`, `permalink_structure` | Held for approval |
 | Everything else | all other options | Passes through |
 
+Both lists are matched the way the database matches option names
+(`SafeMode\OptionNames`, which asks MySQL under the column's own collation).
+A typical collation ignores case, accents, width and zero-width or control
+characters and treats `ß` as `ss`, so `update_option( 'albért_safe_mode', 'off' )`
+writes the real `albert_safe_mode` row while missing every hook keyed by the
+exact name. No PHP normalisation reproduces that, which is why the first version
+of this check, `strtolower( trim() )`, let accented spellings through.
+`OptionNamesTest` inserts several hundred characters into the name and checks
+the matcher agrees with an actual lookup on every one.
+
 Tier 1 is reserved for *self-defeating* writes, not merely dangerous ones:
 approving "turn safe mode off" destroys the mechanism doing the asking, so there
 is no coherent way to consent to it. `siteurl` is dangerous but not circular, and
 refusing it would overrule an owner on their own site.
 
-**Deletes are detected, not prevented.** WordPress has no `pre_delete_option`
-filter; `delete_option()` fires actions only, so there is nothing to return.
-`albert/safe_mode/option_delete_detected` is a separate hook from
-`option_write_blocked` precisely because that one claims a refusal this cannot
-make, and it logs as an `error` rather than a `warning` because it got through.
+**An assistant cannot change these.** Every route through WordPress is refused
+before it writes; a write around WordPress is undone afterwards, with the limits
+in the last point. Over a connection:
+
+- An update keeps the stored value (`sanitize_option_{$option}`, `pre_update_option`).
+  Only the OAuth key material may be created; a control option is created at its
+  secure default, an add-on's protected option not at all.
+- An add under another spelling and any delete are dropped at the `query`
+  filter: WordPress has no filter to refuse either, but fires an action
+  just before each, and the guard arms the one statement that follows. When
+  the database cannot compare names, the write is refused.
+- A call naming a protected option is refused before it can be staged
+  (`RiskPolicy::protected_option()`), so it never reaches the Approvals queue.
+- An approved run executes under the connection that asked for it, so the guard
+  still applies: approving a call is not approving everything it touches.
+- A write that skips the option API (a plugin's own `$wpdb` call, `REPLACE`)
+  makes `SafeMode\OptionRestorer` read the protected rows just before it runs,
+  and put back anything changed once the ability finishes, the tool call ends
+  or the request shuts down (`albert/safe_mode/option_restored`, `false` when it
+  could not be undone or checked). It cannot see SQL that builds the table name
+  at run time or undo anything if the process is killed before shutdown, and
+  another request could read the changed value until the restore.
+
+Refusals fire `albert/safe_mode/option_write_blocked` with the operation
+(`write` or `delete`) and log as a `warning`; a restore logs as an `error`,
+because for a moment the change was real.
 
 **Who may decide: you may decide what you could have done yourself.** An
 administrator decides any row; anybody else decides only their own, and only
