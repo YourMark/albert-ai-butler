@@ -125,6 +125,94 @@ class BlockSchema {
 	}
 
 	/**
+	 * Attribute `source` values stored as the block's inner text/markup, so the
+	 * value can be preserved by materialising it into innerHTML.
+	 *
+	 * @var array<int, string>
+	 * @since 1.5.0
+	 */
+	private const TEXT_CONTENT_SOURCES = [
+		'html',
+		'rich-text',
+		'text',
+		'children',
+		'node',
+		'raw',
+	];
+
+	/**
+	 * Attribute `source` values stored in the markup some other way — an element
+	 * attribute, a nested `query`, or a tag name — which can't be reproduced
+	 * without the block's exact save() output.
+	 *
+	 * @var array<int, string>
+	 * @since 1.5.0
+	 */
+	private const STRUCTURAL_SOURCES = [
+		'attribute',
+		'query',
+		'tag',
+	];
+
+	/**
+	 * Attribute names of a block whose value is stored in its markup (text-content
+	 * or structural). The full sources-API vocabulary read from the registry, so
+	 * third-party blocks classify with no allow-list. Empty if unregistered.
+	 *
+	 * @param string $name Block name.
+	 * @return array<int, string>
+	 * @since 1.5.0
+	 */
+	public function markup_sourced_attributes( string $name ): array {
+		return $this->attributes_sourced_from( $name, array_merge( self::TEXT_CONTENT_SOURCES, self::STRUCTURAL_SOURCES ) );
+	}
+
+	/**
+	 * The {@see markup_sourced_attributes()} subset a serializer can reproduce:
+	 * those stored as inner text/markup (structural sources excluded).
+	 *
+	 * @param string $name Block name.
+	 * @return array<int, string>
+	 * @since 1.5.0
+	 */
+	public function text_sourced_attributes( string $name ): array {
+		return $this->attributes_sourced_from( $name, self::TEXT_CONTENT_SOURCES );
+	}
+
+	/**
+	 * Attribute names of a block whose `source` is in the given set.
+	 *
+	 * @param string             $name    Block name.
+	 * @param array<int, string> $sources `source` values to match.
+	 * @return array<int, string>
+	 * @since 1.5.0
+	 */
+	private function attributes_sourced_from( string $name, array $sources ): array {
+		$schema = $this->block_schema( $name );
+
+		if ( $schema === null ) {
+			return [];
+		}
+
+		$attributes = is_array( $schema['attributes'] ?? null ) ? $schema['attributes'] : [];
+		$matched    = [];
+
+		foreach ( $attributes as $attribute_name => $definition ) {
+			if ( ! is_array( $definition ) ) {
+				continue;
+			}
+
+			$source = $definition['source'] ?? null;
+
+			if ( is_string( $source ) && in_array( $source, $sources, true ) ) {
+				$matched[] = (string) $attribute_name;
+			}
+		}
+
+		return $matched;
+	}
+
+	/**
 	 * Get the schema for a single block, or null if it is not registered.
 	 *
 	 * @param string $name Block name.

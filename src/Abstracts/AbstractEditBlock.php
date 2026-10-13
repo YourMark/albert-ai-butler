@@ -3,8 +3,9 @@
  * Abstract Edit Block Ability
  *
  * Operation base for the "edit one block" ability (posts + pages). Replaces the
- * block at `path` with the complete submitted block spec; all other blocks are
- * preserved byte-for-byte.
+ * block at `path` with the submitted block spec, keeping the target's inner
+ * blocks when the spec omits `innerBlocks`; all other blocks are preserved
+ * byte-for-byte.
  *
  * @package    Albert
  * @subpackage Abstracts
@@ -26,6 +27,14 @@ defined( 'ABSPATH' ) || exit;
 abstract class AbstractEditBlock extends AbstractBlockEdit {
 
 	/**
+	 * How an omitted `innerBlocks` behaves on edit, appended to the block spec description.
+	 *
+	 * @var string
+	 * @since 1.5.0
+	 */
+	private const KEEP_CHILDREN_NOTE = 'Omit innerBlocks to keep the target block\'s existing inner blocks (e.g. to change only a group\'s attributes); send innerBlocks to replace them, or [] to remove them.';
+
+	/**
 	 * Build the input schema for the edit operation.
 	 *
 	 * @return array<string, mixed> Input JSON schema.
@@ -34,6 +43,8 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 	protected function edit_input_schema(): array {
 		$properties          = $this->common_properties();
 		$properties['block'] = $this->block_property();
+
+		$properties['block']['description'] = trim( ( $properties['block']['description'] ?? '' ) . ' ' . self::KEEP_CHILDREN_NOTE );
 
 		return [
 			'type'       => 'object',
@@ -57,6 +68,12 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 			return $built;
 		}
 
-		return $editor->edit( $tree, $this->read_path( $args ), $built, $this->read_expect( $args ) );
+		$spec = $args['block'] ?? null;
+
+		// Omitted innerBlocks means keep the target's children; an explicit array
+		// (including []) is what the caller asked for and replaces them.
+		$keep_children = is_array( $spec ) && ! array_key_exists( 'innerBlocks', $spec );
+
+		return $editor->edit( $tree, $this->read_path( $args ), $built, $this->read_expect( $args ), $keep_children );
 	}
 }
