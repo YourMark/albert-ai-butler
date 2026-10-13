@@ -88,11 +88,30 @@ class BlockTreeEditor {
 			$tree,
 			$path,
 			$expect,
-			static function ( array $siblings, int $actual_index ) use ( $new_block, $keep_children ): array {
+			static function ( array $siblings, int $actual_index ) use ( $new_block, $keep_children, $path ): array|WP_Error {
 				$replacement = $new_block;
+				$target      = $siblings[ $actual_index ];
 
-				if ( $keep_children && ! empty( $siblings[ $actual_index ]['innerBlocks'] ) && is_array( $siblings[ $actual_index ]['innerBlocks'] ) ) {
-					$replacement['innerBlocks'] = array_values( $siblings[ $actual_index ]['innerBlocks'] );
+				if ( $keep_children && ! empty( $target['innerBlocks'] ) && is_array( $target['innerBlocks'] ) ) {
+					// Children kept under a block that can't hold them would end up
+					// inside its markup (e.g. in a heading's <h2>), and dropping them
+					// would lose content, so ask the caller to decide.
+					$same_type = ( $replacement['blockName'] ?? null ) === ( $target['blockName'] ?? null );
+
+					if ( ! $same_type && ! self::is_container_block( $replacement ) ) {
+						return new WP_Error(
+							'block_children_unplaceable',
+							sprintf(
+								/* translators: 1: block name at the path, 2: the path, e.g. [2], 3: replacement block name. */
+								__( "%1\$s at %2\$s has inner blocks, and %3\$s can't contain them. Send innerBlocks explicitly: the blocks to keep, or [] to remove them.", 'albert-ai-butler' ),
+								(string) ( $target['blockName'] ?? '' ),
+								self::format_path( $path ),
+								(string) ( $replacement['blockName'] ?? '' )
+							)
+						);
+					}
+
+					$replacement['innerBlocks'] = array_values( $target['innerBlocks'] );
 					$replacement                = self::sync_inner_content( $replacement );
 				}
 

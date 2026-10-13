@@ -105,10 +105,7 @@ Website: https://yourmark.nl
 
 **Developer**
 
-- `BlockSerializer` no longer treats the presence of a `render_callback` as proof a block stores no markup. Whether a block can be safely self-closed is now decided from what it actually stores — inner blocks, an attribute sourced from the saved markup, or raw content in the spec — read live from the block registry. Hybrid core blocks (`core/cover`, `core/media-text`) and third-party or custom blocks are all handled with no per-block or per-WordPress-version list.
-- Content stored in a text-sourced attribute (`core/verse`'s `content`, and the documented "put text in attributes" contract) is materialised into the block's markup rather than left inert in the comment JSON, where it would be lost on reload. Content stored in a structural source that can't be reproduced without the block's own `save()` (an element attribute, a `query`) is refused with an actionable error instead of silently dropped.
-- Adds `BlockSchema::markup_sourced_attributes()` and `BlockSchema::text_sourced_attributes()`, the registry readers behind those decisions.
-- `BlockSerializer::make_block()` now emits one inner-block placeholder per child even when a template supplies no `%children%` marker, so inner blocks can never be dropped from `innerContent`; nesting blocks under a block that doesn't accept them now warns rather than surprising the caller later.
+- Adds `BlockSchema::markup_sourced_attributes()` and `BlockSchema::text_sourced_attributes()`, which report which of a block's attributes are stored in its saved markup, read from the block registry.
 
 **Credits**
 

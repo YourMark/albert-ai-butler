@@ -150,6 +150,43 @@ class BlockTreeEditorTest extends TestCase {
 		$this->assertStringContainsString( '<p>Inner B</p><!-- /wp:paragraph --></section><!-- /wp:group -->', $out );
 	}
 
+	public function test_edit_refuses_to_keep_children_under_a_leaf_block(): void {
+		$tree = parse_blocks(
+			'<!-- wp:group --><div class="wp-block-group">'
+			. '<!-- wp:paragraph --><p>Inner A</p><!-- /wp:paragraph -->'
+			. '</div><!-- /wp:group -->'
+		);
+
+		$result = $this->editor->edit( $tree, [ 0 ], $this->heading_block(), null, true );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'block_children_unplaceable', $result->get_error_code() );
+	}
+
+	public function test_edit_keeps_children_when_switching_container_type(): void {
+		$tree = parse_blocks(
+			'<!-- wp:group --><div class="wp-block-group">'
+			. '<!-- wp:paragraph --><p>Inner A</p><!-- /wp:paragraph -->'
+			. '</div><!-- /wp:group -->'
+		);
+
+		$quote = [
+			'blockName'    => 'core/quote',
+			'attrs'        => [],
+			'innerBlocks'  => [],
+			'innerHTML'    => '<blockquote class="wp-block-quote"></blockquote>',
+			'innerContent' => [ '<blockquote class="wp-block-quote"></blockquote>' ],
+		];
+
+		$result = $this->editor->edit( $tree, [ 0 ], $quote, null, true );
+		$this->assertIsArray( $result );
+
+		$this->assertStringContainsString(
+			'<blockquote class="wp-block-quote"><!-- wp:paragraph --><p>Inner A</p><!-- /wp:paragraph --></blockquote>',
+			serialize_blocks( $result )
+		);
+	}
+
 	public function test_edit_container_replaces_children_by_default(): void {
 		$tree = parse_blocks(
 			'<!-- wp:group --><div class="wp-block-group">'

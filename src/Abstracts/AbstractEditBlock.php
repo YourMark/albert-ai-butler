@@ -27,6 +27,14 @@ defined( 'ABSPATH' ) || exit;
 abstract class AbstractEditBlock extends AbstractBlockEdit {
 
 	/**
+	 * How an omitted `innerBlocks` behaves on edit, appended to the block spec description.
+	 *
+	 * @var string
+	 * @since 1.5.0
+	 */
+	private const KEEP_CHILDREN_NOTE = 'Omit innerBlocks to keep the target block\'s existing inner blocks (e.g. to change only a group\'s attributes); send innerBlocks to replace them, or [] to remove them.';
+
+	/**
 	 * Build the input schema for the edit operation.
 	 *
 	 * @return array<string, mixed> Input JSON schema.
@@ -36,7 +44,7 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 		$properties          = $this->common_properties();
 		$properties['block'] = $this->block_property();
 
-		$properties['block']['description'] .= ' Omit innerBlocks to keep the target block\'s existing inner blocks (e.g. to change only a group\'s attributes); send innerBlocks to replace them, or [] to remove them.';
+		$properties['block']['description'] = trim( ( $properties['block']['description'] ?? '' ) . ' ' . self::KEEP_CHILDREN_NOTE );
 
 		return [
 			'type'       => 'object',
