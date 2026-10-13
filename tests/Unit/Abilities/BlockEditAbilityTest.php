@@ -230,6 +230,49 @@ class BlockEditAbilityTest extends TestCase {
 		$this->assertStringNotContainsString( 'Inner A', $this->write_calls()[0]['content'] );
 	}
 
+	public function test_edit_into_a_leaf_without_inner_blocks_is_refused_without_writing(): void {
+		$this->set_post( 7, $this->group_with_children() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'path'  => [ 0 ],
+				'block' => [
+					'name'       => 'core/heading',
+					'attributes' => [ 'content' => 'Title' ],
+				],
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'block_children_unplaceable', $result->get_error_code() );
+		$this->assertSame( [], $this->write_calls() );
+	}
+
+	public function test_edit_into_a_leaf_with_empty_inner_blocks_replaces_the_container(): void {
+		$this->set_post( 7, $this->group_with_children() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'path'  => [ 0 ],
+				'block' => [
+					'name'        => 'core/heading',
+					'attributes'  => [ 'content' => 'Title' ],
+					'innerBlocks' => [],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+
+		$content = $this->write_calls()[0]['content'];
+		$this->assertStringContainsString( 'Title', $content );
+		$this->assertStringNotContainsString( 'Inner A', $content );
+	}
+
 	public function test_edit_returns_refreshed_blocks_tree_with_paths(): void {
 		$this->set_post( 7, $this->three_paragraphs() );
 		$this->queue_write_success();

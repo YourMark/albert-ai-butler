@@ -163,6 +163,28 @@ class BlockTreeEditorTest extends TestCase {
 		$this->assertSame( 'block_children_unplaceable', $result->get_error_code() );
 	}
 
+	public function test_edit_refuses_to_keep_children_under_a_hollow_wrapper(): void {
+		$tree = parse_blocks(
+			'<!-- wp:group --><div class="wp-block-group">'
+			. '<!-- wp:paragraph --><p>Inner A</p><!-- /wp:paragraph -->'
+			. '</div><!-- /wp:group -->'
+		);
+
+		// An untemplated block the serializer self-closed: no wrapper markup to hold children.
+		$cover = [
+			'blockName'    => 'core/cover',
+			'attrs'        => [ 'dimRatio' => 50 ],
+			'innerBlocks'  => [],
+			'innerHTML'    => '',
+			'innerContent' => [],
+		];
+
+		$result = $this->editor->edit( $tree, [ 0 ], $cover, null, true );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'block_children_unplaceable', $result->get_error_code() );
+	}
+
 	public function test_edit_keeps_children_when_switching_container_type(): void {
 		$tree = parse_blocks(
 			'<!-- wp:group --><div class="wp-block-group">'

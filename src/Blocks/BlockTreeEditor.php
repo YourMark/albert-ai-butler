@@ -93,21 +93,25 @@ class BlockTreeEditor {
 				$target      = $siblings[ $actual_index ];
 
 				if ( $keep_children && ! empty( $target['innerBlocks'] ) && is_array( $target['innerBlocks'] ) ) {
-					// Children kept under a block that can't hold them would end up
-					// inside its markup (e.g. in a heading's <h2>), and dropping them
-					// would lose content, so ask the caller to decide.
+					// Kept children need a wrapper to sit in. Under a leaf they would land
+					// inside its markup (a heading's <h2>); under a wrapper the serializer
+					// could not build (an untemplated cover) they would be stored bare
+					// without the warning the create path gives. Dropping them would lose
+					// content, so ask the caller to send them.
 					$same_type = ( $replacement['blockName'] ?? null ) === ( $target['blockName'] ?? null );
+					$hollow    = implode( '', array_filter( (array) ( $replacement['innerContent'] ?? [] ), 'is_string' ) ) === '';
 
-					if ( ! $same_type && ! self::is_container_block( $replacement ) ) {
+					if ( $hollow || ( ! $same_type && ! self::is_container_block( $replacement ) ) ) {
 						return new WP_Error(
 							'block_children_unplaceable',
 							sprintf(
 								/* translators: 1: block name at the path, 2: the path, e.g. [2], 3: replacement block name. */
-								__( "%1\$s at %2\$s has inner blocks, and %3\$s can't contain them. Send innerBlocks explicitly: the blocks to keep, or [] to remove them.", 'albert-ai-butler' ),
+								__( "%1\$s at %2\$s has inner blocks, and they can't be kept automatically under %3\$s. Send innerBlocks explicitly: the blocks to keep, or [] to remove them.", 'albert-ai-butler' ),
 								(string) ( $target['blockName'] ?? '' ),
 								self::format_path( $path ),
 								(string) ( $replacement['blockName'] ?? '' )
-							)
+							),
+							[ 'status' => 400 ]
 						);
 					}
 
