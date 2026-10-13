@@ -165,6 +165,27 @@ class Outcome {
 	];
 
 	/**
+	 * Safe mode held the call for a person to approve.
+	 *
+	 * A `warning`, but deliberately not a member of {@see self::POLICY_CODES}
+	 * and classified on its own branch. That set means "you may not" or "this is
+	 * switched off", both of them final. This one means *not yet decided*: the
+	 * same call may well run in a minute once somebody approves it. Filing it
+	 * under policy would quietly widen a set whose docblock is precise about
+	 * what belongs in it.
+	 *
+	 * It shares the outcome because the question `status` asks is what happened
+	 * to this run, and nothing broke: the site stopped it on purpose. Recording
+	 * it as `error` painted the Dashboard activity card red and fired
+	 * `albert/logging/ability_failed` every single time the gate did its job,
+	 * which is precisely the pressure that gets a safety feature switched off.
+	 *
+	 * @since 1.5.0
+	 * @var string
+	 */
+	const HELD_CODE = 'albert_awaiting_approval';
+
+	/**
 	 * Error-code suffix that marks a truthful negative answer.
 	 *
 	 * Albert's own convention: `post_not_found`, `term_not_found`,
@@ -282,7 +303,9 @@ class Outcome {
 	public static function for_error( WP_Error $error, string $ability_name, ?string $failure_stage = null ): string {
 		$code = (string) $error->get_error_code();
 
-		if ( $failure_stage === self::PERMISSION_STAGE || self::is_policy_code( $code ) ) {
+		if ( self::HELD_CODE === $code ) {
+			$status = self::WARNING;
+		} elseif ( $failure_stage === self::PERMISSION_STAGE || self::is_policy_code( $code ) ) {
 			$status = self::WARNING;
 		} elseif ( self::is_not_found_code( $code ) ) {
 			$status = self::SUCCESS;

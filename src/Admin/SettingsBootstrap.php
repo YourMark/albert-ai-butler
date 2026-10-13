@@ -18,6 +18,9 @@ use Albert\Media\UploadLinks\UploadLinkService;
 use Albert\OAuth\AllowedUsers;
 use Albert\OAuth\ConnectionRetention;
 use Albert\Privacy\PrivacyMode;
+use Albert\SafeMode\Gate;
+use Albert\SafeMode\Interceptor;
+use Albert\Support\WpCompat;
 
 /**
  * SettingsBootstrap class.
@@ -39,6 +42,55 @@ class SettingsBootstrap {
 	 */
 	public static function get_builtin_sections(): array {
 		return [
+			[
+				'id'          => 'albert/safe-mode',
+				'title'       => __( 'Safe mode', 'albert-ai-butler' ),
+				'priority'    => 55,
+				'icon'        => 'shield',
+				'description' => __( 'Whether destructive actions an assistant requests wait for your approval.', 'albert-ai-butler' ),
+				'fields'      => [
+					[
+						'id'                => 'enabled',
+						'type'              => 'radio-cards',
+						// Not "Safe mode" again: the section heading above already
+						// says that, and every other section names its controls
+						// for what they do rather than repeating itself.
+						'label'             => __( 'Hold destructive actions', 'albert-ai-butler' ),
+						'option_name'       => Gate::OPTION,
+						'default'           => Gate::DEFAULT_VALUE,
+						'options'           => [
+							'on'  => [
+								'label'       => __( 'On', 'albert-ai-butler' ),
+								'description' => __( 'Deletions and other destructive changes are held on the Approvals screen until you approve them.', 'albert-ai-butler' ),
+								'recommended' => true,
+							],
+							'off' => [
+								'label'       => __( 'Off', 'albert-ai-butler' ),
+								'description' => __( 'Assistants can make destructive changes immediately, without approval.', 'albert-ai-butler' ),
+							],
+						],
+						'sanitize_callback' => [ Gate::class, 'sanitize' ],
+						'disabled'          => [ self::class, 'safe_mode_unavailable' ],
+						'hint'              => [ self::class, 'safe_mode_hint' ],
+					],
+					[
+						'id'                => 'ttl',
+						'type'              => 'number',
+						'label'             => __( 'Approval window', 'albert-ai-butler' ),
+						'description'       => __( 'How long a held action stays approvable before it expires, in minutes. Shorter is safer: approving a stale request can overwrite edits made in the meantime.', 'albert-ai-butler' ),
+						'suffix'            => __( 'minutes', 'albert-ai-butler' ),
+						'option_name'       => Interceptor::TTL_OPTION,
+						'default'           => Interceptor::DEFAULT_TTL_MINUTES,
+						'attributes'        => [
+							'min'  => Interceptor::MIN_TTL_MINUTES,
+							'max'  => Interceptor::MAX_TTL_MINUTES,
+							'step' => 1,
+						],
+						'sanitize_callback' => [ Interceptor::class, 'clamp_minutes' ],
+						'disabled'          => [ self::class, 'safe_mode_unavailable' ],
+					],
+				],
+			],
 			[
 				'id'          => 'albert/privacy',
 				'title'       => __( 'Privacy', 'albert-ai-butler' ),
@@ -203,6 +255,45 @@ class SettingsBootstrap {
 		$formatted = size_format( wp_max_upload_size() );
 
 		return is_string( $formatted ) ? $formatted : '';
+	}
+
+	/**
+	 * Whether this WordPress cannot enforce safe mode at all.
+	 *
+	 * The gate is `wp_pre_execute_ability`, which arrived in WordPress 7.1.
+	 * Albert supports 6.9, where the filter never fires and nothing is held. The
+	 * control is locked there rather than left inviting, because a switch that
+	 * reads On while every deletion runs unattended is the exact false
+	 * reassurance safe mode exists to prevent.
+	 *
+	 * @since 1.5.0
+	 *
+	 * @return bool
+	 */
+	public static function safe_mode_unavailable(): bool {
+		return ! WpCompat::supports_execution_lifecycle();
+	}
+
+	/**
+	 * Why the safe mode control is locked, when it is.
+	 *
+	 * @since 1.5.0
+	 *
+	 * @return array{text: string, tone: string}|null
+	 */
+	public static function safe_mode_hint(): ?array {
+		if ( ! self::safe_mode_unavailable() ) {
+			return null;
+		}
+
+		return [
+			'text' => sprintf(
+				/* translators: %s: the WordPress version this site is running. */
+				__( 'Safe mode needs WordPress 7.1, which added the check it relies on. This site runs %s, so destructive actions are not being held. Update WordPress to switch it on.', 'albert-ai-butler' ),
+				get_bloginfo( 'version' )
+			),
+			'tone' => 'warning',
+		];
 	}
 
 	/**

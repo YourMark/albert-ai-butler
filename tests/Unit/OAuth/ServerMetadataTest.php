@@ -39,6 +39,17 @@ class ServerMetadataTest extends TestCase {
 	}
 
 	/**
+	 * Drop any permalink stub a test installed.
+	 *
+	 * @return void
+	 */
+	protected function tearDown(): void {
+		unset( $GLOBALS['wp_rewrite'] );
+
+		parent::tearDown();
+	}
+
+	/**
 	 * `none` is declared, and the confidential-client methods are still there.
 	 *
 	 * Every loopback/native client — RFC 8252, which is every local MCP bridge
@@ -99,6 +110,26 @@ class ServerMetadataTest extends TestCase {
 			$this->assertArrayHasKey( $field, $metadata );
 			$this->assertNotEmpty( $metadata[ $field ] );
 		}
+	}
+
+	/**
+	 * `jwks_uri` is present and a non-empty string.
+	 *
+	 * The regression this guards: the field was absent entirely, and a client
+	 * that validates the metadata before it authenticates — Claude Code's MCP
+	 * SDK — rejected the document with "jwks_uri: expected string, received
+	 * undefined", failing sign-in before a token was ever exchanged. RFC 8414
+	 * marks the field optional; that client does not.
+	 *
+	 * @return void
+	 */
+	public function test_declares_a_string_jwks_uri(): void {
+		$metadata = ServerMetadata::authorization_server();
+
+		$this->assertArrayHasKey( 'jwks_uri', $metadata );
+		$this->assertIsString( $metadata['jwks_uri'] );
+		$this->assertNotEmpty( $metadata['jwks_uri'] );
+		$this->assertStringStartsWith( ServerMetadata::base_url() . '/wp-json/', $metadata['jwks_uri'] );
 	}
 
 	/**
@@ -175,5 +206,61 @@ class ServerMetadataTest extends TestCase {
 
 		$this->assertSame( $well_known, $rest );
 		$this->assertSame( ServerMetadata::protected_resource(), $well_known );
+	}
+
+	// ─── Permalink structure ────────────────────────────────────────
+
+	/**
+	 * Pretty permalinks produce exactly the URLs 1.4.1 advertised.
+	 *
+	 * A client already connected re-runs discovery against these; any change
+	 * here re-authorises every existing connection.
+	 *
+	 * @return void
+	 */
+	public function test_pretty_permalinks_keep_the_existing_urls(): void {
+		$this->use_permalinks( '/%postname%/' );
+
+		$metadata = ServerMetadata::authorization_server();
+
+		$this->assertSame( 'https://example.test/wp-json/albert/v1/oauth', $metadata['issuer'] );
+		$this->assertSame( 'https://example.test/oauth/authorize', $metadata['authorization_endpoint'] );
+		$this->assertSame( 'https://example.test/wp-json/albert/v1/oauth/token', $metadata['token_endpoint'] );
+		$this->assertSame( 'https://example.test/wp-json/albert/v1/mcp', ServerMetadata::protected_resource()['resource'] );
+	}
+
+	/**
+	 * Index permalinks route every advertised URL through `index.php`.
+	 *
+	 * Such sites usually have no rewrite rules, so a bare `/wp-json/` is the web
+	 * server's 404 and discovery fails before it reaches WordPress.
+	 *
+	 * @return void
+	 */
+	public function test_index_permalinks_route_through_index_php(): void {
+		$this->use_permalinks( '/index.php/%postname%/' );
+
+		$metadata = ServerMetadata::authorization_server();
+		$base     = 'https://example.test/index.php/';
+
+		$this->assertSame( $base . 'wp-json/albert/v1/oauth', $metadata['issuer'] );
+		$this->assertSame( $base . 'oauth/authorize', $metadata['authorization_endpoint'] );
+		$this->assertSame( $base . 'wp-json/albert/v1/oauth/token', $metadata['token_endpoint'] );
+		$this->assertSame( $base . 'wp-json/albert/v1/oauth/register', $metadata['registration_endpoint'] );
+		$this->assertSame( $base . 'wp-json/albert/v1/mcp', ServerMetadata::protected_resource()['resource'] );
+	}
+
+	/**
+	 * Install a `$wp_rewrite` for the given permalink structure.
+	 *
+	 * @param string $structure The permalink structure.
+	 *
+	 * @return void
+	 */
+	private function use_permalinks( string $structure ): void {
+		$rewrite                      = new \WP_Rewrite();
+		$rewrite->permalink_structure = $structure;
+
+		$GLOBALS['wp_rewrite'] = $rewrite; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test fixture for $wp_rewrite.
 	}
 }

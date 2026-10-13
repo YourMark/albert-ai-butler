@@ -435,4 +435,23 @@ class PostsAbilityTest extends TestCase {
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'post_not_found', $result->get_error_code() );
 	}
+
+	/**
+	 * On a trash-disabled site a non-force delete must refuse, not silently
+	 * hard-delete: DeletePost inherits WordPress's REST trash guard.
+	 *
+	 * @return void
+	 */
+	public function test_delete_post_without_force_refuses_when_trash_disabled(): void {
+		add_filter( 'rest_post_trashable', '__return_false' );
+
+		$post_id = self::factory()->post->create( [ 'post_status' => 'publish' ] );
+
+		$result = ( new DeletePost() )->execute( [ 'id' => $post_id ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rest_trash_not_supported', $result->get_error_code() );
+		$this->assertNotNull( get_post( $post_id ), 'The post must survive — no silent permanent delete.' );
+		$this->assertSame( 'publish', get_post_status( $post_id ) );
+	}
 }

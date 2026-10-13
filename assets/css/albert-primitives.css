@@ -1385,6 +1385,11 @@
 	border-color: var(--albert-color-accent);
 }
 
+/* A tinted badge disappears into the tinted card; lift it back onto the surface. */
+.albert-radio-card:has(input:checked) .albert-badge {
+	background: var(--albert-color-surface);
+}
+
 .albert-radio-card__body {
 	min-inline-size: 0;
 }
