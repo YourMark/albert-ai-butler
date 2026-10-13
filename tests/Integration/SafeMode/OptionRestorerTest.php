@@ -203,6 +203,34 @@ class OptionRestorerTest extends TestCase {
 	}
 
 	/**
+	 * Creating an options table, as creating a site on a network does, is let
+	 * through: the new table holds nothing to protect, and reading it first
+	 * would fail and drop the statement.
+	 *
+	 * @return void
+	 */
+	public function test_creating_an_options_table_is_let_through(): void {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Another blog\'s options table is only watched on a network.' );
+		}
+
+		global $wpdb;
+		$table = $wpdb->base_prefix . '99_options';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- The statement under test.
+		$created = $wpdb->query( $wpdb->prepare( 'CREATE TEMPORARY TABLE %i LIKE %i', $table, $wpdb->options ) );
+		$this->assertNotFalse( $created );
+
+		// Nothing was read first: a change made now is not undone.
+		ConnectionContext::reset();
+		update_option( Gate::OPTION, 'off' );
+		$this->restorer->restore();
+
+		$this->assertSame( 'off', $this->value( Gate::OPTION ) );
+		$this->assertSame( [], $this->restored );
+	}
+
+	/**
 	 * Without a connection, a direct write is somebody's own code and stays.
 	 *
 	 * @return void

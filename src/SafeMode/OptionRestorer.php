@@ -103,7 +103,10 @@ class OptionRestorer implements Hookable {
 			return $query;
 		}
 
-		if ( preg_match( '/^[\s(]*(?:SELECT|SHOW|DESCRIBE|DESC|EXPLAIN)\s/i', $query ) === 1 ) {
+		// Reads, and creating a table: a new table holds no protected row yet,
+		// and reading it first would fail and drop the statement creating it.
+		// Other CREATEs (a trigger, procedure or event) can write it later.
+		if ( preg_match( '/^[\s(]*(?:(?:SELECT|SHOW|DESCRIBE|DESC|EXPLAIN)\s|CREATE\s+(?:TEMPORARY\s+)?TABLE\b)/i', $query ) === 1 ) {
 			return $query;
 		}
 
@@ -288,15 +291,17 @@ class OptionRestorer implements Hookable {
 			$selects[] = $wpdb->prepare( 'SELECT %s AS protected, option_name, option_value, autoload FROM %i WHERE option_name = %s', $name, $table, $name );
 		}
 
-		$this->busy = true;
-		try {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Each part prepared above.
-			$found = $wpdb->get_results( implode( ' UNION ALL ', $selects ), ARRAY_A );
-		} finally {
-			$this->busy = false;
-		}
+		$found  = null;
+		$failed = true;
+		$this->own(
+			static function () use ( $wpdb, $selects, &$found, &$failed ): void {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Each part prepared above.
+				$found  = $wpdb->get_results( implode( ' UNION ALL ', $selects ), ARRAY_A );
+				$failed = $wpdb->last_error !== '';
+			}
+		);
 
-		if ( $wpdb->last_error !== '' || ! is_array( $found ) ) {
+		if ( $failed || ! is_array( $found ) ) {
 			return null;
 		}
 
@@ -323,22 +328,41 @@ class OptionRestorer implements Hookable {
 	private function put_back( string $table, string $option, ?array $was ): bool {
 		global $wpdb;
 
+		$done = false;
+		$this->own(
+			static function () use ( $wpdb, $table, $option, $was, &$done ): void {
+				// Matched under the collation, so a row under any spelling goes.
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Restoring a protected row; caches flushed by the caller.
+				if ( $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, $option ) ) === false ) {
+					return;
+				}
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Restoring a protected row; caches flushed by the caller.
+				$done = $was === null || $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, $was['option_name'], $was['option_value'], $was['autoload'] ) ) === 1;
+			}
+		);
+
+		return $done;
+	}
+
+	/**
+	 * Run this class's own queries, unseen by itself.
+	 *
+	 * @param callable $work The queries.
+	 *
+	 * @return void
+	 */
+	private function own( callable $work ): void {
+		global $wpdb;
+
 		$this->busy = true;
+		// A failure is reported by return value; printed, it would corrupt the call's JSON response.
+		$suppressed = $wpdb->suppress_errors();
+
 		try {
-			// Matched under the collation, so a row under any spelling goes.
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Restoring a protected row; caches flushed by the caller.
-			$deleted = $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, $option ) );
-			if ( $deleted === false ) {
-				return false;
-			}
-
-			if ( $was === null ) {
-				return true;
-			}
-
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Restoring a protected row; caches flushed by the caller.
-			return $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, $was['option_name'], $was['option_value'], $was['autoload'] ) ) === 1;
+			$work();
 		} finally {
+			$wpdb->suppress_errors( $suppressed );
 			$this->busy = false;
 		}
 	}

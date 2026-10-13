@@ -505,10 +505,14 @@ in the last point. Over a connection:
 - An update keeps the stored value (`sanitize_option_{$option}`, `pre_update_option`).
   Only the OAuth key material may be created; a control option is created at its
   secure default, an add-on's protected option not at all.
-- An add under another spelling and any delete are dropped at the `query`
-  filter: WordPress has no filter to refuse either, but fires an action
-  just before each, and the guard arms the one statement that follows. When
-  the database cannot compare names, the write is refused.
+- A delete is refused at `delete_option()`'s row lookup, so WordPress finds no
+  row and returns before it touches its caches. Refusing only the DELETE would
+  leave the option cached as deleted, which a persistent object cache keeps;
+  that DELETE is still dropped as a second layer, with the cache cleared after.
+- An add under another spelling is dropped at the `query` filter: WordPress has
+  no filter to refuse it, but fires `add_option` just before, and the guard arms
+  the one statement that follows. When the database cannot compare names, the
+  write is refused.
 - A call naming a protected option is refused before it can be staged
   (`RiskPolicy::protected_option()`), so it never reaches the Approvals queue.
 - An approved run executes under the connection that asked for it, so the guard
