@@ -123,6 +123,72 @@ class ConnectionGuard implements Hookable {
 		// because an assistant deleting `albert_disabled_abilities` switches every
 		// ability back on and would otherwise leave no trace.
 		add_action( 'delete_option', [ $this, 'note_delete_attempt' ] );
+
+		// WordPress finds an option ignoring case and trailing spaces, so
+		// `Albert_Safe_Mode` reaches the real row while missing every hook above,
+		// which are keyed by the exact name. These catch the other spellings.
+		add_filter( 'pre_update_option', [ $this, 'refuse_variant_update' ], 99, 3 );
+		add_action( 'added_option', [ $this, 'remove_variant_add' ] );
+	}
+
+	/**
+	 * Refuse an update to a protected option spelled another way, by keeping
+	 * the stored value.
+	 *
+	 * @param mixed  $value     The new value.
+	 * @param string $option    Option name as passed.
+	 * @param mixed  $old_value The stored value.
+	 *
+	 * @return mixed
+	 * @since 1.5.0
+	 */
+	public function refuse_variant_update( $value, $option, $old_value ) {
+		if ( ConnectionContext::client_id() === null || ! is_string( $option ) ) {
+			return $value;
+		}
+
+		$protected = $this->variant_of( $option );
+		if ( $protected === null ) {
+			return $value;
+		}
+
+		$this->note_blocked( $protected );
+
+		return $old_value;
+	}
+
+	/**
+	 * Remove a protected option just added under another spelling.
+	 *
+	 * WordPress has no filter to refuse an add, and a row stored as
+	 * `Albert_Safe_Mode` would be read back as `albert_safe_mode`. Only the
+	 * exact spelling is deleted, so a real row is never touched; with none
+	 * left, the setting falls back to its secure default.
+	 *
+	 * @param string $option Option name as added.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function remove_variant_add( $option ): void {
+		if ( ConnectionContext::client_id() === null || ! is_string( $option ) ) {
+			return;
+		}
+
+		$protected = $this->variant_of( $option );
+		if ( $protected === null ) {
+			return;
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Exact-spelling delete; delete_option() would match the real row too. Caches cleared below.
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name = BINARY %s', $wpdb->options, $option ) );
+
+		wp_cache_delete( $option, 'options' );
+		wp_cache_delete( 'alloptions', 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
+
+		$this->note_blocked( $protected );
 	}
 
 	/**
@@ -167,11 +233,12 @@ class ConnectionGuard implements Hookable {
 			return;
 		}
 
-		if ( ! in_array( $option, $this->protected_options(), true ) ) {
+		$protected = in_array( $option, $this->protected_options(), true ) ? $option : $this->variant_of( $option );
+		if ( $protected === null ) {
 			return;
 		}
 
-		$this->announce_delete( $option );
+		$this->announce_delete( $protected );
 	}
 
 	/**
@@ -351,6 +418,39 @@ class ConnectionGuard implements Hookable {
 		$this->last_reported = $key;
 
 		return true;
+	}
+
+	/**
+	 * The protected option a name reaches under another spelling, if any:
+	 * MySQL matches option names ignoring case and trailing spaces, and
+	 * WordPress trims them.
+	 *
+	 * @param string $option Option name as passed.
+	 *
+	 * @return string|null The protected name, or null when it is not one, or
+	 *                     is spelled exactly (the exact-name hooks handle that).
+	 */
+	private function variant_of( string $option ): ?string {
+		$normal = self::normalize( $option );
+
+		foreach ( $this->protected_options() as $protected ) {
+			if ( is_string( $protected ) && $protected !== $option && self::normalize( $protected ) === $normal ) {
+				return $protected;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * An option name as the database compares it.
+	 *
+	 * @param string $option Option name.
+	 *
+	 * @return string
+	 */
+	private static function normalize( string $option ): string {
+		return strtolower( trim( $option ) );
 	}
 
 	/**

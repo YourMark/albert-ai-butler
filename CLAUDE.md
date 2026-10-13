@@ -483,6 +483,13 @@ resupply, but the word matters and the docblocks say *captured*.
 | High-risk WordPress options | `siteurl`, `home`, `admin_email`, `default_role`, `users_can_register`, `template`, `stylesheet`, `active_plugins`, `blog_public`, `permalink_structure` | Held for approval |
 | Everything else | all other options | Passes through |
 
+Both lists are matched as the database finds the row, ignoring case and
+surrounding spaces: `update_option( 'Albert_Safe_Mode', 'off' )` reaches the real
+`albert_safe_mode` row, while the guard's per-option hooks are keyed by the exact
+name. `ConnectionGuard` therefore also refuses other spellings on
+`pre_update_option`, removes a just-added one on `added_option` (WordPress has
+no filter to refuse an add), and detects their deletes.
+
 Tier 1 is reserved for *self-defeating* writes, not merely dangerous ones:
 approving "turn safe mode off" destroys the mechanism doing the asking, so there
 is no coherent way to consent to it. `siteurl` is dangerous but not circular, and

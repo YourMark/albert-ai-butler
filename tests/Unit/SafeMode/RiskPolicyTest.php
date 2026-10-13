@@ -123,6 +123,18 @@ class RiskPolicyTest extends TestCase {
 	}
 
 	/**
+	 * The option is named as MySQL would find the row, so a different case or
+	 * a trailing space does not slip past.
+	 *
+	 * @return void
+	 */
+	public function test_holds_a_high_risk_option_named_in_another_case(): void {
+		foreach ( [ 'SITEURL', 'SiteUrl', 'siteurl ', ' Admin_Email' ] as $name ) {
+			$this->assertTrue( $this->risk->must_hold( $this->ability( 'thirdparty/update-option' ), [ 'option' => $name ] ), $name );
+		}
+	}
+
+	/**
 	 * A benign option is not held.
 	 *
 	 * @return void

@@ -194,8 +194,13 @@ class RiskPolicy {
 			return false;
 		}
 
+		// Compared as the database finds the row: ignoring case and surrounding
+		// spaces, so `SITEURL` is held like `siteurl`.
+		$normalize = static fn( $name ): string => strtolower( trim( (string) $name ) );
+		$high_risk = array_map( $normalize, array_filter( $high_risk, 'is_string' ) );
+
 		foreach ( self::OPTION_KEYS as $key ) {
-			if ( isset( $input[ $key ] ) && is_string( $input[ $key ] ) && in_array( $input[ $key ], $high_risk, true ) ) {
+			if ( isset( $input[ $key ] ) && is_string( $input[ $key ] ) && in_array( $normalize( $input[ $key ] ), $high_risk, true ) ) {
 				return true;
 			}
 		}

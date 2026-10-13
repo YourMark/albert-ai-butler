@@ -124,6 +124,56 @@ class ConnectionGuardTest extends TestCase {
 	}
 
 	/**
+	 * WordPress finds an option ignoring case, so a write to `Albert_Safe_Mode`
+	 * would change the real row: it is refused like the real name.
+	 *
+	 * @return void
+	 */
+	public function test_an_update_in_another_case_is_refused(): void {
+		ConnectionContext::reset();
+		update_option( Gate::OPTION, 'on' );
+		ConnectionContext::set( 'client-1' );
+
+		update_option( 'Albert_Safe_Mode', 'off' );
+		update_option( 'ALBERT_SAFE_MODE ', 'off' );
+
+		wp_cache_flush();
+		$this->assertSame( 'on', get_option( Gate::OPTION ) );
+		$this->assertGreaterThanOrEqual( 1, $this->reported( 'write' ) );
+	}
+
+	/**
+	 * Adding a protected option under another case leaves no row behind,
+	 * where the real name would be stored at its secure default.
+	 *
+	 * @return void
+	 */
+	public function test_an_add_in_another_case_leaves_no_row(): void {
+		delete_option( Gate::OPTION );
+
+		add_option( 'Albert_Safe_Mode', 'off' );
+
+		wp_cache_flush();
+		$this->assertFalse( get_option( Gate::OPTION ) );
+		$this->assertSame( 1, $this->reported( 'write' ) );
+	}
+
+	/**
+	 * Deleting under another case deletes the real row, so it is detected too.
+	 *
+	 * @return void
+	 */
+	public function test_a_delete_in_another_case_is_detected(): void {
+		ConnectionContext::reset();
+		update_option( Gate::OPTION, 'on' );
+		ConnectionContext::set( 'client-1' );
+
+		delete_option( 'ALBERT_SAFE_MODE' );
+
+		$this->assertSame( 1, $this->reported( 'delete' ) );
+	}
+
+	/**
 	 * The site-option wrappers are refused too, and reported once per attempt.
 	 *
 	 * On a single site `add_site_option()` passes the network filter and then
