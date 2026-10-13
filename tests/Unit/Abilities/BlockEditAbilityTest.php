@@ -175,6 +175,61 @@ class BlockEditAbilityTest extends TestCase {
 		$this->assertStringNotContainsString( '<p>Two</p>', $calls[0]['content'] );
 	}
 
+	/**
+	 * A group holding two paragraphs.
+	 *
+	 * @return string
+	 */
+	private function group_with_children(): string {
+		return '<!-- wp:group --><div class="wp-block-group">'
+			. '<!-- wp:paragraph --><p>Inner A</p><!-- /wp:paragraph -->'
+			. '<!-- wp:paragraph --><p>Inner B</p><!-- /wp:paragraph -->'
+			. '</div><!-- /wp:group -->';
+	}
+
+	public function test_edit_without_inner_blocks_keeps_the_existing_children(): void {
+		$this->set_post( 7, $this->group_with_children() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'path'  => [ 0 ],
+				'block' => [
+					'name'       => 'core/group',
+					'attributes' => [ 'tagName' => 'section' ],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+
+		$content = $this->write_calls()[0]['content'];
+		$this->assertStringContainsString( '<section class="wp-block-group">', $content );
+		$this->assertStringContainsString( '<p>Inner A</p>', $content );
+		$this->assertStringContainsString( '<p>Inner B</p>', $content );
+	}
+
+	public function test_edit_with_empty_inner_blocks_removes_the_children(): void {
+		$this->set_post( 7, $this->group_with_children() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'path'  => [ 0 ],
+				'block' => [
+					'name'        => 'core/group',
+					'attributes'  => [],
+					'innerBlocks' => [],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertStringNotContainsString( 'Inner A', $this->write_calls()[0]['content'] );
+	}
+
 	public function test_edit_returns_refreshed_blocks_tree_with_paths(): void {
 		$this->set_post( 7, $this->three_paragraphs() );
 		$this->queue_write_success();

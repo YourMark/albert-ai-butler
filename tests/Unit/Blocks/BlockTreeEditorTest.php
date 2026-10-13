@@ -125,6 +125,44 @@ class BlockTreeEditorTest extends TestCase {
 		$this->assertStringNotContainsString( 'Inner B', $out );
 	}
 
+	public function test_edit_container_keeps_children_when_asked(): void {
+		$tree = parse_blocks(
+			'<!-- wp:group --><div class="wp-block-group">'
+			. '<!-- wp:paragraph --><p>Inner A</p><!-- /wp:paragraph -->'
+			. '<!-- wp:paragraph --><p>Inner B</p><!-- /wp:paragraph -->'
+			. '</div><!-- /wp:group -->'
+		);
+
+		// The replacement as the serializer builds it from a spec without innerBlocks.
+		$replacement = [
+			'blockName'    => 'core/group',
+			'attrs'        => [ 'tagName' => 'section' ],
+			'innerBlocks'  => [],
+			'innerHTML'    => '<section class="wp-block-group"></section>',
+			'innerContent' => [ '<section class="wp-block-group"></section>' ],
+		];
+
+		$result = $this->editor->edit( $tree, [ 0 ], $replacement, null, true );
+		$this->assertIsArray( $result );
+
+		$out = serialize_blocks( $result );
+		$this->assertStringContainsString( '<!-- wp:group {"tagName":"section"} --><section class="wp-block-group"><!-- wp:paragraph --><p>Inner A</p>', $out );
+		$this->assertStringContainsString( '<p>Inner B</p><!-- /wp:paragraph --></section><!-- /wp:group -->', $out );
+	}
+
+	public function test_edit_container_replaces_children_by_default(): void {
+		$tree = parse_blocks(
+			'<!-- wp:group --><div class="wp-block-group">'
+			. '<!-- wp:paragraph --><p>Inner A</p><!-- /wp:paragraph -->'
+			. '</div><!-- /wp:group -->'
+		);
+
+		$result = $this->editor->edit( $tree, [ 0 ], $this->heading_block() );
+		$this->assertIsArray( $result );
+
+		$this->assertStringNotContainsString( 'Inner A', serialize_blocks( $result ) );
+	}
+
 	public function test_edit_three_levels_deep_bubbles_through_wrappers(): void {
 		// group[0] > columns[0,0] > column[0,0,0] > paragraph[0,0,0,0]; edit the
 		// paragraph. Exercises sync_inner_content bubbling up through THREE wrappers.

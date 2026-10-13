@@ -73,21 +73,30 @@ class BlockTreeEditor {
 	/**
 	 * Replace the block at a path with a new block.
 	 *
-	 * @param array<int, array<string, mixed>> $tree      Parsed block tree.
-	 * @param array<int, int>                  $path      Logical path of the target block.
-	 * @param array<string, mixed>             $new_block New ParsedBlock to put in its place.
-	 * @param string|null                      $expect    Optional expected block name at the path.
+	 * @param array<int, array<string, mixed>> $tree          Parsed block tree.
+	 * @param array<int, int>                  $path          Logical path of the target block.
+	 * @param array<string, mixed>             $new_block     New ParsedBlock to put in its place.
+	 * @param string|null                      $expect        Optional expected block name at the path.
+	 * @param bool                             $keep_children Carry the target node's inner blocks onto the replacement.
 	 * @return array<int, array<string, mixed>>|WP_Error New tree, or an error.
 	 *
 	 * @since 1.2.0
+	 * @since 1.5.0 Added `$keep_children`.
 	 */
-	public function edit( array $tree, array $path, array $new_block, ?string $expect = null ): array|WP_Error {
+	public function edit( array $tree, array $path, array $new_block, ?string $expect = null, bool $keep_children = false ): array|WP_Error {
 		return $this->mutate(
 			$tree,
 			$path,
 			$expect,
-			static function ( array $siblings, int $actual_index ) use ( $new_block ): array {
-				$siblings[ $actual_index ] = $new_block;
+			static function ( array $siblings, int $actual_index ) use ( $new_block, $keep_children ): array {
+				$replacement = $new_block;
+
+				if ( $keep_children && ! empty( $siblings[ $actual_index ]['innerBlocks'] ) && is_array( $siblings[ $actual_index ]['innerBlocks'] ) ) {
+					$replacement['innerBlocks'] = array_values( $siblings[ $actual_index ]['innerBlocks'] );
+					$replacement                = self::sync_inner_content( $replacement );
+				}
+
+				$siblings[ $actual_index ] = $replacement;
 
 				return $siblings;
 			}

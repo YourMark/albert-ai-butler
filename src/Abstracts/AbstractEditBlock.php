@@ -3,8 +3,9 @@
  * Abstract Edit Block Ability
  *
  * Operation base for the "edit one block" ability (posts + pages). Replaces the
- * block at `path` with the complete submitted block spec; all other blocks are
- * preserved byte-for-byte.
+ * block at `path` with the submitted block spec, keeping the target's inner
+ * blocks when the spec omits `innerBlocks`; all other blocks are preserved
+ * byte-for-byte.
  *
  * @package    Albert
  * @subpackage Abstracts
@@ -35,6 +36,8 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 		$properties          = $this->common_properties();
 		$properties['block'] = $this->block_property();
 
+		$properties['block']['description'] .= ' Omit innerBlocks to keep the target block\'s existing inner blocks (e.g. to change only a group\'s attributes); send innerBlocks to replace them, or [] to remove them.';
+
 		return [
 			'type'       => 'object',
 			'properties' => $properties,
@@ -57,6 +60,12 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 			return $built;
 		}
 
-		return $editor->edit( $tree, $this->read_path( $args ), $built, $this->read_expect( $args ) );
+		$spec = $args['block'] ?? null;
+
+		// Omitted innerBlocks means keep the target's children; an explicit array
+		// (including []) is what the caller asked for and replaces them.
+		$keep_children = is_array( $spec ) && ! array_key_exists( 'innerBlocks', $spec );
+
+		return $editor->edit( $tree, $this->read_path( $args ), $built, $this->read_expect( $args ), $keep_children );
 	}
 }
