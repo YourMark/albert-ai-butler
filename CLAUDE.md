@@ -47,6 +47,7 @@ albert-ai-butler/
 │   │
 │   ├── Admin/
 │   │   ├── AbilitiesPage.php           # Unified flat-list abilities page (Core/ACF/Woo merged)
+│   │   ├── AdapterNudge.php            # Asks owners to install the MCP Adapter plugin
 │   │   ├── Approvals.php               # Safe mode's approve/reject queue (doc 04)
 │   │   ├── Connections.php             # Allowed users & active connections
 │   │   ├── Settings.php                # Plugin settings page

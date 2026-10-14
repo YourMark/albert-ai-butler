@@ -33,6 +33,13 @@ class AdapterNudgeTest extends TestCase {
 	private int $admin_id;
 
 	/**
+	 * Marks the stand-in plugin file, so a run killed mid-test cannot leave it behind for good.
+	 *
+	 * @var string
+	 */
+	private const STAND_IN = 'Albert test stand-in';
+
+	/**
 	 * Whether this test put a stand-in plugin file in place.
 	 *
 	 * @var bool
@@ -49,6 +56,12 @@ class AdapterNudgeTest extends TestCase {
 
 		$this->admin_id = self::factory()->user->create( [ 'role' => 'administrator' ] );
 
+		$file = WP_PLUGIN_DIR . '/' . AdapterSource::PLUGIN_FILE;
+		if ( is_readable( $file ) && str_contains( (string) file_get_contents( $file ), self::STAND_IN ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test fixture.
+			$this->placed_plugin = true;
+			$this->remove_plugin();
+		}
+
 		if ( ! AdapterPlugin::needs_attention() ) {
 			$this->markTestSkipped( 'The MCP Adapter plugin is active in this test environment.' );
 		}
@@ -62,12 +75,24 @@ class AdapterNudgeTest extends TestCase {
 	public function tear_down(): void {
 		set_current_screen( 'front' );
 
-		if ( $this->placed_plugin ) {
-			wp_delete_file( WP_PLUGIN_DIR . '/' . AdapterSource::PLUGIN_FILE );
-			rmdir( dirname( WP_PLUGIN_DIR . '/' . AdapterSource::PLUGIN_FILE ) );
-		}
+		$this->remove_plugin();
 
 		parent::tear_down();
+	}
+
+	/**
+	 * Remove the stand-in plugin file, if this test placed one.
+	 *
+	 * @return void
+	 */
+	private function remove_plugin(): void {
+		if ( ! $this->placed_plugin ) {
+			return;
+		}
+
+		wp_delete_file( WP_PLUGIN_DIR . '/' . AdapterSource::PLUGIN_FILE );
+		rmdir( dirname( WP_PLUGIN_DIR . '/' . AdapterSource::PLUGIN_FILE ) );
+		$this->placed_plugin = false;
 	}
 
 	/**
@@ -83,7 +108,7 @@ class AdapterNudgeTest extends TestCase {
 		}
 
 		wp_mkdir_p( dirname( $file ) );
-		file_put_contents( $file, "<?php\n/*\nPlugin Name: MCP Adapter\n*/\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test fixture.
+		file_put_contents( $file, "<?php\n/*\nPlugin Name: MCP Adapter\nDescription: " . self::STAND_IN . "\n*/\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test fixture.
 		$this->placed_plugin = true;
 	}
 
@@ -256,6 +281,7 @@ class AdapterNudgeTest extends TestCase {
 	 */
 	public function test_plugin_row_spans_the_table(): void {
 		wp_set_current_user( $this->admin_id );
+		unset( $GLOBALS['wp_list_table'] );
 
 		$row = get_echo( [ new AdapterNudge(), 'render_plugin_row' ] );
 

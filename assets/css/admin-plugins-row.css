@@ -18,10 +18,3 @@
 	color: oklch(0.75 0.15 80);
 	content: "\f534" / "";
 }
-
-/* The Composer command moves to its own line rather than breaking mid-word. */
-.plugins .albert-adapter-row code {
-	display: inline-block;
-	max-inline-size: 100%;
-	overflow-wrap: anywhere;
-}

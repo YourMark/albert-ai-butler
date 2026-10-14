@@ -31,26 +31,6 @@ final class AdapterPlugin {
 	public const SLUG = 'mcp-adapter';
 
 	/**
-	 * Whether the plugin is missing or inactive.
-	 *
-	 * @return bool
-	 * @since 1.5.0
-	 */
-	public static function needs_attention(): bool {
-		return ! AdapterSource::plugin_active();
-	}
-
-	/**
-	 * Whether the plugin's files are on this site.
-	 *
-	 * @return bool
-	 * @since 1.5.0
-	 */
-	public static function is_installed(): bool {
-		return file_exists( WP_PLUGIN_DIR . '/' . AdapterSource::PLUGIN_FILE );
-	}
-
-	/**
 	 * The current user fixes it here with one button.
 	 *
 	 * @since 1.5.0
@@ -76,21 +56,45 @@ final class AdapterPlugin {
 	public const ROUTE_ASK = 'ask';
 
 	/**
+	 * Whether the plugin is missing or inactive.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function needs_attention(): bool {
+		return ! AdapterSource::plugin_active();
+	}
+
+	/**
+	 * Whether the plugin's files are on this site.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function is_installed(): bool {
+		return file_exists( WP_PLUGIN_DIR . '/' . AdapterSource::PLUGIN_FILE );
+	}
+
+	/**
 	 * How the current user can get it installed and active.
 	 *
 	 * Activating is a database setting, so it is offered even where plugin files
 	 * are deployed. `DISALLOW_FILE_MODS` removes `install_plugins` from everyone,
 	 * so that case is told apart from a user who merely lacks the capability.
+	 * Where Albert runs network-wide the adapter is activated network-wide too,
+	 * which a site administrator cannot do.
 	 *
 	 * @return string One of the ROUTE_* constants.
 	 * @since 1.5.0
 	 */
 	public static function route(): string {
 		if ( self::is_installed() ) {
-			return current_user_can( 'activate_plugins' ) ? self::ROUTE_BUTTON : self::ROUTE_ASK;
+			$can_activate = self::network_wide() ? current_user_can( 'manage_network_plugins' ) : current_user_can( 'activate_plugins' );
+
+			return $can_activate ? self::ROUTE_BUTTON : self::ROUTE_ASK;
 		}
 
-		if ( ! self::file_mods_allowed() ) {
+		if ( ! wp_is_file_mod_allowed( 'albert_install_mcp_adapter' ) ) {
 			return current_user_can( 'manage_options' ) ? self::ROUTE_DEPLOY : self::ROUTE_ASK;
 		}
 
@@ -106,16 +110,6 @@ final class AdapterPlugin {
 	 */
 	public static function current_user_can_fix(): bool {
 		return self::route() === self::ROUTE_BUTTON;
-	}
-
-	/**
-	 * Whether this site allows installing plugins at all.
-	 *
-	 * @return bool
-	 * @since 1.5.0
-	 */
-	public static function file_mods_allowed(): bool {
-		return wp_is_file_mod_allowed( 'albert_install_mcp_adapter' );
 	}
 
 	/**
