@@ -235,6 +235,19 @@ if ( ! function_exists( 'current_user_can' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_is_file_mod_allowed' ) ) {
+	/**
+	 * Stub wp_is_file_mod_allowed: plugin installs are allowed.
+	 *
+	 * @param string $context Why the check is made.
+	 *
+	 * @return bool
+	 */
+	function wp_is_file_mod_allowed( string $context ): bool {
+		return true;
+	}
+}
+
 if ( ! function_exists( 'wp_get_abilities' ) ) {
 	/**
 	 * Stub wp_get_abilities that reads from $GLOBALS['albert_test_abilities'].

@@ -21,6 +21,7 @@ use Albert\Core\AbilitiesRegistry;
 use Albert\Core\Plugin;
 use Albert\Logging\Outcome;
 use Albert\Logging\Repository as LoggingRepository;
+use Albert\MCP\AdapterPlugin;
 use Albert\MCP\Server as McpServer;
 use Albert\Database\Tables;
 use Albert\OAuth\AllowedUsers;
@@ -365,11 +366,12 @@ class Dashboard implements Hookable {
 	 * @since 1.4.0
 	 */
 	private function render_onboarding_state( bool $has_allowed_users, bool $has_connections, array $abilities, string $mcp_endpoint ): void {
-		// Step 1 (installed) is always done; 4 (review abilities) is optional and
-		// never blocks, so "left" counts the two that actually gate a connection.
-		$done      = 1 + ( $has_allowed_users ? 1 : 0 ) + ( $has_connections ? 1 : 0 );
-		$total     = 4;
-		$remaining = max( 0, 3 - $done );
+		// Step 1 is done once the MCP Adapter plugin is active; 4 (review
+		// abilities) is optional and never blocks, so "left" counts the first three.
+		$adapter_ready = ! AdapterPlugin::needs_attention();
+		$done          = ( $adapter_ready ? 1 : 0 ) + ( $has_allowed_users ? 1 : 0 ) + ( $has_connections ? 1 : 0 );
+		$total         = 4;
+		$remaining     = max( 0, 3 - $done );
 		?>
 		<div class="albert-dashboard__split">
 			<section class="albert-card albert-setup">
@@ -402,26 +404,45 @@ class Dashboard implements Hookable {
 
 				<ol class="albert-setup__steps">
 					<?php
-					$this->render_setup_step(
-						1,
-						true,
-						false,
-						__( 'Plugin installed', 'albert-ai-butler' ),
-						__( 'Done. The OAuth server and MCP endpoint are running.', 'albert-ai-butler' )
-					);
+					if ( $adapter_ready ) {
+						$this->render_setup_step(
+							1,
+							true,
+							false,
+							__( 'Plugin installed', 'albert-ai-butler' ),
+							__( 'Done. The OAuth server and MCP endpoint are running.', 'albert-ai-butler' )
+						);
+					} else {
+						$this->render_setup_step(
+							1,
+							false,
+							true,
+							AdapterPlugin::title(),
+							AdapterPlugin::explanation(),
+							static function (): void {
+								?>
+								<div class="albert-setup__actions">
+									<?php AdapterNudge::render_action(); ?>
+								</div>
+								<?php
+							}
+						);
+					}
 					?>
 
 					<?php
 					$this->render_setup_step(
 						2,
 						$has_allowed_users,
-						! $has_allowed_users,
+						$adapter_ready && ! $has_allowed_users,
 						__( 'Add an allowed user', 'albert-ai-butler' ),
 						__( 'Only the users you pick here can authorise an AI assistant to act on this site.', 'albert-ai-butler' ),
-						function (): void {
+						function () use ( $adapter_ready ): void {
+							// One filled button per screen: the current step's.
+							$button_class = $adapter_ready ? 'button button-primary' : 'button';
 							?>
 							<div class="albert-setup__actions">
-								<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>" class="button button-primary" data-albert-open-userpicker>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>" class="<?php echo esc_attr( $button_class ); ?>" data-albert-open-userpicker>
 									<?php esc_html_e( 'Choose users', 'albert-ai-butler' ); ?>
 								</a>
 							</div>
@@ -434,7 +455,7 @@ class Dashboard implements Hookable {
 					$this->render_setup_step(
 						3,
 						$has_connections,
-						$has_allowed_users && ! $has_connections,
+						$adapter_ready && $has_allowed_users && ! $has_connections,
 						__( 'Connect an AI assistant', 'albert-ai-butler' ),
 						__( 'Paste this endpoint into Claude or ChatGPT as an MCP connector.', 'albert-ai-butler' ),
 						function () use ( $mcp_endpoint ): void {
@@ -996,7 +1017,7 @@ class Dashboard implements Hookable {
 			<?php if ( $action !== null || $dismissible ) { ?>
 				<span class="albert-attention__action">
 					<?php if ( $action !== null && ! empty( $action['url'] ) && ! empty( $action['label'] ) ) { ?>
-						<a class="button button-small" href="<?php echo esc_url( (string) $action['url'] ); ?>"><?php echo esc_html( (string) $action['label'] ); ?></a>
+						<a class="button button-small" href="<?php echo esc_url( (string) $action['url'] ); ?>"<?php $this->render_data_attributes( $action['attributes'] ?? [] ); ?>><?php echo esc_html( (string) $action['label'] ); ?></a>
 					<?php } ?>
 					<?php if ( $dismissible ) { ?>
 						<button
@@ -1009,6 +1030,28 @@ class Dashboard implements Hookable {
 			<?php } ?>
 		</li>
 		<?php
+	}
+
+	/**
+	 * Print an action's `data-*` attributes, ignoring anything else.
+	 *
+	 * @param mixed $attributes Attribute name => value.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function render_data_attributes( $attributes ): void {
+		if ( ! is_array( $attributes ) ) {
+			return;
+		}
+
+		foreach ( $attributes as $name => $value ) {
+			if ( ! is_string( $name ) || ! preg_match( '/^data-[a-z0-9-]+$/', $name ) || ! is_scalar( $value ) ) {
+				continue;
+			}
+
+			printf( ' %1$s="%2$s"', esc_attr( $name ), esc_attr( (string) $value ) );
+		}
 	}
 
 	/**

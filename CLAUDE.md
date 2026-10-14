@@ -47,6 +47,7 @@ albert-ai-butler/
 │   │
 │   ├── Admin/
 │   │   ├── AbilitiesPage.php           # Unified flat-list abilities page (Core/ACF/Woo merged)
+│   │   ├── AdapterNudge.php            # Asks owners to install the MCP Adapter plugin
 │   │   ├── Approvals.php               # Safe mode's approve/reject queue (doc 04)
 │   │   ├── Connections.php             # Allowed users & active connections
 │   │   ├── Settings.php                # Plugin settings page
@@ -136,6 +137,7 @@ albert-ai-butler/
 │   │   └── TokenCleanup.php
 │   │
 │   ├── MCP/
+│   │   ├── AdapterPlugin.php           # Is the MCP Adapter plugin missing, and how to fix it
 │   │   ├── AdapterSource.php           # MCP Adapter plugin first, lib/ copy as fallback
 │   │   └── Server.php                  # MCP protocol handler
 │   │
@@ -366,8 +368,11 @@ time inside the JSON-RPC envelope, and breaks syntactically under truncation,
 where labeled lines degrade gracefully.
 
 One renderer serves both the wire and the Context screen's payload preview, so
-the screen's claim to show exactly what the assistant receives is checkable
-rather than asserted (`AgentContextTest::test_the_screen_preview_matches_the_wire_payload`).
+the screen's claim to show exactly what the assistant receives in `site` and
+`skills` is checkable rather than asserted
+(`AgentContextTest::test_the_screen_preview_matches_the_wire_payload`). The
+response can also carry a `notice`, Albert's own message about the MCP Adapter
+plugin, which is not site context and so not in the preview.
 
 **Design tokens are provenance-gated.** `wp_get_global_settings()` never returns
 empty. WordPress ships its own `theme.json`, so the reader takes only the
@@ -1014,6 +1019,16 @@ alone "would not make the other shared hooks, filters, routes, and identifiers s
   the loaded copy came from.
 - **`lib/mcp-adapter/vendor/` ships.** `.distignore` excludes only the adapter's own
   `mcp-adapter.php` and `readme.txt`, and the release workflow asserts both halves.
+- **Albert asks owners to install the plugin** while it is missing or inactive
+  (`Albert\Admin\AdapterNudge`, wording and links in `Albert\MCP\AdapterPlugin`): the
+  Dashboard's attention card and setup step 1, a notice on every other Albert screen, a notice
+  on Albert's row on the Plugins screen, and Site Health. None is dismissible; each clears once
+  the plugin is active. The button uses core's own `install-plugin` and `activate-plugin` ajax
+  actions, falling back to core's installer (which asks for FTP details when needed). An admin
+  request never starts Albert's copy, which keeps activation clean. WordPress.org forbids
+  installing without the user's click, so Free never auto-installs. `discover-abilities` also
+  carries a `notice` field for users who can act on it, so their assistant passes it on;
+  `albert/mcp/adapter_notice` returning `''` turns it off.
 - **Bumping the adapter:** `composer update --working-dir=lib/mcp-adapter`. Nothing to
   regenerate; the lock and the Jetpack manifests are rebuilt by Composer's own hook.
 - **Verify a shared install:** exactly one adapter class, one firing, both servers present.
