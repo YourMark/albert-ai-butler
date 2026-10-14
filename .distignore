@@ -57,8 +57,8 @@ design_handoff_*/
 # includes/ and never touches either, so they are dead weight — and a second
 # `Plugin Name:` and `Stable tag:` inside our SVN trunk invites a question at
 # review for no benefit.
-vendor/wordpress/mcp-adapter/mcp-adapter.php
-vendor/wordpress/mcp-adapter/readme.txt
+lib/mcp-adapter/vendor/wordpress/mcp-adapter/mcp-adapter.php
+lib/mcp-adapter/vendor/wordpress/mcp-adapter/readme.txt
 
 # Non-permitted vendor files
 vendor/bin/
@@ -68,6 +68,13 @@ vendor/**/.deepsource.toml
 vendor/**/dist/*.asc
 vendor/**/dist/*.asc.sig
 vendor/**/*.bat
+lib/mcp-adapter/vendor/bin/
+lib/mcp-adapter/vendor/*/bin/
+lib/mcp-adapter/vendor/**/.deployignore
+lib/mcp-adapter/vendor/**/.deepsource.toml
+lib/mcp-adapter/vendor/**/dist/*.asc
+lib/mcp-adapter/vendor/**/dist/*.asc.sig
+lib/mcp-adapter/vendor/**/*.bat
 
 # WordPress.org directory assets (screenshots, banners, icons)
 .wordpress-org

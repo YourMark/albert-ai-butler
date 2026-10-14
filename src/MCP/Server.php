@@ -461,7 +461,7 @@ class Server implements Hookable {
 	 * Skills are bundled Markdown playbooks loaded as built McpPrompt instances
 	 * (not abilities), mirroring how resources are supplied. See {@see SkillLoader}.
 	 *
-	 * @return array<int, McpPrompt> The prompt instances to expose.
+	 * @return list<McpPrompt> The prompt instances to expose.
 	 * @since 1.2.0
 	 */
 	private function get_prompts(): array {

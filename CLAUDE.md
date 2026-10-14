@@ -136,6 +136,7 @@ albert-ai-butler/
 │   │   └── TokenCleanup.php
 │   │
 │   ├── MCP/
+│   │   ├── AdapterSource.php           # MCP Adapter plugin first, lib/ copy as fallback
 │   │   └── Server.php                  # MCP protocol handler
 │   │
 │   ├── OAuth/
@@ -165,6 +166,9 @@ albert-ai-butler/
 │   │       ├── ResourceServerFactory.php
 │   │       ├── KeyManager.php          # RSA key management
 │   │       └── TokenValidator.php      # Validates Bearer tokens
+│
+├── lib/
+│   └── mcp-adapter/                    # Bundled MCP adapter, own Composer project (fallback)
 │
 ├── assets/
 │   ├── css/
@@ -928,11 +932,19 @@ composer test
 wp plugin activate albert
 ```
 
-## Bundled MCP adapter (shared, not scoped)
+## Bundled MCP adapter (plugin first, shared, not scoped)
 
-`wordpress/mcp-adapter` (and its dependency `wordpress/php-mcp-schema`) provide the
-`WP\MCP\*` namespace. Other plugins bundle the same package — WooCommerce does, and there is
-a standalone MCP Adapter plugin — so more than one copy on a site is normal and expected.
+`wordpress/mcp-adapter` provides the `WP\MCP\*` namespace (with `wordpress/php-mcp-schema`,
+its own dependency, not Albert's). Since 0.7.0 upstream ships it as the **MCP Adapter plugin** on
+WordPress.org and deprecates bundling it. Other plugins still bundle it (WooCommerce does), so
+more than one copy on a site is normal and expected.
+
+**The plugin supplies the adapter; Albert's copy is a fallback.** Albert keeps a copy in
+`lib/mcp-adapter/` for sites without the plugin and offers it to Jetpack Autoloader only when
+the plugin is not active (`Albert\MCP\AdapterSource`). Offered alongside an equal-version
+plugin, Jetpack picks the plugin read first, `albert-ai-butler` sorts before `mcp-adapter`, and
+the plugin then shows a red notice on every admin screen blaming Albert as an outdated plugin
+bundling its own copy.
 
 **Albert does not scope it, and must not.** The adapter is loaded unscoped and shared, via
 Jetpack Autoloader. That is upstream's supported model and the only one that works.
@@ -960,33 +972,50 @@ alone "would not make the other shared hooks, filters, routes, and identifiers s
 
 ### How it works now
 
-- Both packages are ordinary **`require`** entries, and **`automattic/jetpack-autoloader` is a
-  root requirement** — it generates nothing when pulled in only transitively, which is the whole
-  reason it has to be declared here.
-- `config.allow-plugins` sets `automattic/jetpack-autoloader` to **`true`**. It was `false` under
-  Mozart; if it ever goes back to `false`, the manifests stop being generated and the plugin
-  silently loses its adapter.
-- `albert-ai-butler.php` requires **`vendor/autoload_packages.php`**, Jetpack's entry point, not
-  Composer's `vendor/autoload.php`. It calls WordPress functions, which is safe in a plugin file
-  but *not* before WordPress loads — which is why the test bootstraps still use
-  `vendor/autoload.php`.
-- Jetpack publishes each plugin's copy with its version in
-  `vendor/composer/jetpack_autoload_classmap.php` and loads a single newest copy site-wide. One
-  class, one singleton, one `mcp_adapter_init` firing.
-- Albert's code references bare **`WP\MCP\…`**. Never reintroduce `Albert\Vendor\`.
+- The adapter is required by its own Composer project, **`lib/mcp-adapter/`** (own
+  `composer.json`, lock and `vendor/`), not by the root. The root's `post-install-cmd` /
+  `post-update-cmd` run `composer install` there, so one root install sets up both, in CI and
+  releases too.
+- **`automattic/jetpack-autoloader` is a requirement of both projects**. It generates nothing
+  when pulled in only transitively, and `config.allow-plugins` must keep it **`true`** in both;
+  if it goes back to `false`, the manifests stop being generated and the plugin silently loses
+  its adapter.
+- `albert-ai-butler.php` calls `AdapterSource::offer_fallback()`, which adds `lib/mcp-adapter`
+  to Jetpack's `$jetpack_autoloader_activating_plugins_paths` unless the plugin is active, then
+  requires **`vendor/autoload_packages.php`**, Jetpack's entry point. It calls WordPress
+  functions, which is safe in a plugin file but *not* before WordPress loads, which is why the
+  test bootstraps use `vendor/autoload.php` plus `lib/mcp-adapter/vendor/autoload.php`.
+- Jetpack reads each plugin's `vendor/composer/jetpack_autoload_classmap.php` (ours included,
+  through that list) and loads a single newest copy site-wide. One class, one singleton, one
+  `mcp_adapter_init` firing.
+- Jetpack caches the plugin paths it read in the `jetpack_autoloader_plugin_paths` transient,
+  so `lib/mcp-adapter` can stay a candidate for a request after the plugin activates. Ties go to
+  active plugins first, so an equal version still loads the plugin's copy, and the cache is
+  rewritten without our path on the next request.
+- The adapter reports a "load the plugin instead" deprecation whenever a bundled copy starts.
+  Albert leaves it alone: over REST core sends it as a response header, on WP-CLI it goes to
+  stderr, and it is upstream's signal to developers.
+- The request that activates the plugin counts it as active (same check as Jetpack's), so the
+  fallback is not offered on that request either. WP-CLI activation cannot be detected that way,
+  and logs `Constant WP_MCP_VERSION already defined` once (an unguarded `define()` upstream).
+- Known limits, all harmless (the fallback loads and Albert works, the plugin may show its
+  notice): a plugin folder renamed from `mcp-adapter/` (a GitHub zip as `mcp-adapter-main/`) is
+  not recognised, and on multisite a plugin activated on one site is not seen from network admin.
+- Albert's code references bare **`WP\MCP\…`**. Never reintroduce `Albert\Vendor\`, and never
+  require the adapter or `php-mcp-schema` from the root `composer.json`: that puts Albert's copy
+  back in the race with the plugin's.
 
 ### Consequences worth knowing
 
-- **Albert may run against another plugin's newer copy.** That is the accepted trade-off of the
-  shared model, and the reason `Albert\MCP\AdapterStatus` feature-detects the classes Albert
-  calls rather than checking a version number. If any are missing,
+- **Albert may run against the plugin's or another plugin's newer copy.** That is the accepted
+  trade-off of the shared model, and the reason `Albert\MCP\AdapterStatus` feature-detects the
+  classes Albert calls rather than checking a version number. If any are missing,
   `Albert\MCP\AdapterHealth` reports it in an admin notice and in Site Health, naming the path
   the loaded copy came from.
-- **`vendor/wordpress/` ships.** `.distignore` must not exclude it — that exclusion existed only
-  because scoping made the unscoped copy dangerous. Shipping it is what lets Albert take part in
-  the negotiation.
-- **Bumping the adapter:** `composer update wordpress/mcp-adapter`. Nothing to regenerate; the
-  lock and the Jetpack manifests are rebuilt by Composer's own hook.
+- **`lib/mcp-adapter/vendor/` ships.** `.distignore` excludes only the adapter's own
+  `mcp-adapter.php` and `readme.txt`, and the release workflow asserts both halves.
+- **Bumping the adapter:** `composer update --working-dir=lib/mcp-adapter`. Nothing to
+  regenerate; the lock and the Jetpack manifests are rebuilt by Composer's own hook.
 - **Verify a shared install:** exactly one adapter class, one firing, both servers present.
 
 ```bash
