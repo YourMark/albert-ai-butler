@@ -61,7 +61,8 @@
 	document.addEventListener( 'click', async ( event ) => {
 		const link = event.target.closest( '[data-albert-adapter-install]' );
 
-		if ( ! link ) {
+		// Leave opening it in a new tab or window to the browser.
+		if ( ! link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ) {
 			return;
 		}
 
@@ -80,13 +81,14 @@
 		announce( busyText );
 
 		// Once installed, the installer would only say the folder exists, so a
-		// failed activation falls back to core's activation link instead.
+		// failed activation falls back to core's activation link, or to this
+		// page, which then offers to activate it.
 		let fallbackUrl = link.href;
 
 		try {
 			if ( mode === 'install' ) {
 				const installed = await install();
-				fallbackUrl = installed.activateUrl || fallbackUrl;
+				fallbackUrl = installed.activateUrl || window.location.href.split( '#' )[ 0 ];
 				announce( config.i18n.activating );
 			}
 
@@ -102,7 +104,10 @@
 			window.location.assign( url.toString() );
 		} catch ( error ) {
 			announce( config.i18n.fallback );
-			window.location.assign( fallbackUrl );
+			link.textContent = config.i18n.fallback;
+
+			// Long enough for a screen reader to read the message first.
+			window.setTimeout( () => window.location.assign( fallbackUrl ), 2000 );
 		}
 	} );
 }() );

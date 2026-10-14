@@ -157,13 +157,6 @@
 	margin-inline: 2px 20px;
 }
 
-/* The Composer command moves to its own line rather than breaking mid-word. */
-.albert-adapter-notice code {
-	display: inline-block;
-	max-inline-size: 100%;
-	overflow-wrap: anywhere;
-}
-
 /* Core already pads #wpbody by 46px here, for the taller admin bar. */
 @media screen and (max-width: 782px) {
 	#wpbody-content > .albert-adapter-notice.notice {

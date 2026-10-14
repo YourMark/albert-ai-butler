@@ -170,7 +170,17 @@ class DiscoveryContext implements Hookable {
 			return '';
 		}
 
-		return AdapterPlugin::assistant_notice();
+		/**
+		 * Filters the message Albert asks a connected assistant to pass on
+		 * while the MCP Adapter plugin is missing or inactive.
+		 *
+		 * @since 1.5.0
+		 *
+		 * @param string $notice The message. Return an empty string to send none.
+		 */
+		$notice = apply_filters( 'albert/mcp/adapter_notice', AdapterPlugin::assistant_notice() );
+
+		return is_string( $notice ) ? $notice : '';
 	}
 
 	/**

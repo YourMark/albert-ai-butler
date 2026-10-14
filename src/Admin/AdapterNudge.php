@@ -193,7 +193,7 @@ class AdapterNudge implements Hookable {
 				self::attribute_string(),
 				esc_html( AdapterPlugin::action_label() )
 			)
-			: ' ' . AdapterPlugin::guidance_html();
+			: ' ' . esc_html( AdapterPlugin::guidance() );
 
 		// Core's own "new version available" row, so it reads as part of Albert's.
 		printf(
@@ -327,7 +327,7 @@ class AdapterNudge implements Hookable {
 				esc_html( AdapterPlugin::action_label() )
 			);
 		} else {
-			$result['description'] .= '<p>' . AdapterPlugin::guidance_html() . '</p>';
+			$result['description'] .= '<p>' . esc_html( AdapterPlugin::guidance() ) . '</p>';
 		}
 
 		return $result;
@@ -343,7 +343,7 @@ class AdapterNudge implements Hookable {
 	 */
 	public static function render_action(): void {
 		if ( ! AdapterPlugin::current_user_can_fix() ) {
-			printf( '<p>%s</p>', AdapterPlugin::guidance_html() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in guidance_html().
+			printf( '<p>%s</p>', esc_html( AdapterPlugin::guidance() ) );
 
 			return;
 		}
@@ -402,7 +402,7 @@ class AdapterNudge implements Hookable {
 		);
 
 		if ( ! AdapterPlugin::current_user_can_fix() ) {
-			return $html . '<p>' . AdapterPlugin::guidance_html() . '</p>';
+			return $html . '<p>' . esc_html( AdapterPlugin::guidance() ) . '</p>';
 		}
 
 		return $html . sprintf(

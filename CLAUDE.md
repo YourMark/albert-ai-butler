@@ -367,8 +367,11 @@ time inside the JSON-RPC envelope, and breaks syntactically under truncation,
 where labeled lines degrade gracefully.
 
 One renderer serves both the wire and the Context screen's payload preview, so
-the screen's claim to show exactly what the assistant receives is checkable
-rather than asserted (`AgentContextTest::test_the_screen_preview_matches_the_wire_payload`).
+the screen's claim to show exactly what the assistant receives in `site` and
+`skills` is checkable rather than asserted
+(`AgentContextTest::test_the_screen_preview_matches_the_wire_payload`). The
+response can also carry a `notice`, Albert's own message about the MCP Adapter
+plugin, which is not site context and so not in the preview.
 
 **Design tokens are provenance-gated.** `wp_get_global_settings()` never returns
 empty. WordPress ships its own `theme.json`, so the reader takes only the
@@ -1023,7 +1026,8 @@ alone "would not make the other shared hooks, filters, routes, and identifiers s
   actions, falling back to core's installer (which asks for FTP details when needed). An admin
   request never starts Albert's copy, which keeps activation clean. WordPress.org forbids
   installing without the user's click, so Free never auto-installs. `discover-abilities` also
-  carries a `notice` field for users who can install it, so their assistant passes it on.
+  carries a `notice` field for users who can act on it, so their assistant passes it on;
+  `albert/mcp/adapter_notice` returning `''` turns it off.
 - **Bumping the adapter:** `composer update --working-dir=lib/mcp-adapter`. Nothing to
   regenerate; the lock and the Jetpack manifests are rebuilt by Composer's own hook.
 - **Verify a shared install:** exactly one adapter class, one firing, both servers present.

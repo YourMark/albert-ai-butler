@@ -59,8 +59,8 @@ final class AdapterPlugin {
 	public const ROUTE_BUTTON = 'button';
 
 	/**
-	 * Plugin installs are switched off, so an administrator adds it the way the
-	 * site's plugins are deployed.
+	 * Plugin installs are switched off, so an administrator has to add it
+	 * outside WordPress.
 	 *
 	 * @since 1.5.0
 	 * @var string
@@ -74,15 +74,6 @@ final class AdapterPlugin {
 	 * @var string
 	 */
 	public const ROUTE_ASK = 'ask';
-
-	/**
-	 * The Composer command that adds it, through WordPress Packagist. Shown as
-	 * an example where plugin installs are switched off.
-	 *
-	 * @since 1.5.0
-	 * @var string
-	 */
-	public const COMPOSER_COMMAND = 'composer require wpackagist-plugin/mcp-adapter';
 
 	/**
 	 * How the current user can get it installed and active.
@@ -103,7 +94,8 @@ final class AdapterPlugin {
 			return current_user_can( 'manage_options' ) ? self::ROUTE_DEPLOY : self::ROUTE_ASK;
 		}
 
-		return current_user_can( 'install_plugins' ) ? self::ROUTE_BUTTON : self::ROUTE_ASK;
+		// The button installs and then activates, so it needs both.
+		return current_user_can( 'install_plugins' ) && current_user_can( 'activate_plugins' ) ? self::ROUTE_BUTTON : self::ROUTE_ASK;
 	}
 
 	/**
@@ -137,8 +129,17 @@ final class AdapterPlugin {
 	 */
 	public static function fix_url(): string {
 		if ( ! self::is_installed() ) {
+			// On multisite plugins are installed from the network admin.
+			$installer = is_multisite() ? network_admin_url( 'update.php' ) : admin_url( 'update.php' );
+
 			return wp_nonce_url(
-				self_admin_url( 'update.php?action=install-plugin&plugin=' . self::SLUG ),
+				add_query_arg(
+					[
+						'action' => 'install-plugin',
+						'plugin' => self::SLUG,
+					],
+					$installer
+				),
 				'install-plugin_' . self::SLUG
 			);
 		}
@@ -208,15 +209,16 @@ final class AdapterPlugin {
 	}
 
 	/**
-	 * What to do when there is no button: how to add it, or who to ask.
+	 * What to do when there is no button: who has to act.
 	 *
-	 * @return string Plain text. {@see self::guidance_html()} marks up the command.
+	 * @return string Plain text.
 	 * @since 1.5.0
 	 */
 	public static function guidance(): string {
 		if ( self::route() === self::ROUTE_DEPLOY ) {
-			return __( 'Plugin installs are switched off on this site, so add it the way your other plugins are deployed, then activate it on the Plugins screen. With Composer:', 'albert-ai-butler' )
-				. ' ' . self::COMPOSER_COMMAND;
+			return is_multisite()
+				? __( 'Plugin installs are switched off on this site, so a network administrator needs to look at it.', 'albert-ai-butler' )
+				: __( 'Plugin installs are switched off on this site, so a site administrator needs to look at it.', 'albert-ai-butler' );
 		}
 
 		if ( self::is_installed() ) {
@@ -229,20 +231,6 @@ final class AdapterPlugin {
 	}
 
 	/**
-	 * The guidance as escaped HTML, with the Composer command as code.
-	 *
-	 * @return string
-	 * @since 1.5.0
-	 */
-	public static function guidance_html(): string {
-		return str_replace(
-			esc_html( self::COMPOSER_COMMAND ),
-			'<code>' . esc_html( self::COMPOSER_COMMAND ) . '</code>',
-			esc_html( self::guidance() )
-		);
-	}
-
-	/**
 	 * What Albert tells a connected assistant, for it to pass on.
 	 *
 	 * @return string
@@ -250,11 +238,7 @@ final class AdapterPlugin {
 	 */
 	public static function assistant_notice(): string {
 		if ( self::route() === self::ROUTE_DEPLOY ) {
-			return sprintf(
-				/* translators: %s: the Composer command that installs the plugin */
-				__( 'Albert, the plugin connecting you to this site, needs the MCP Adapter plugin from WordPress.org. Albert still works for now, but a coming update will require it. Plugin installs are switched off on this site, so tell the user to add it the way their plugins are deployed (with Composer: "%s") and activate it on the Plugins screen.', 'albert-ai-butler' ),
-				self::COMPOSER_COMMAND
-			);
+			return __( 'Albert, the plugin connecting you to this site, needs the MCP Adapter plugin from WordPress.org. Albert still works for now, but a coming update will require it. Plugin installs are switched off on this site, so tell the user a site administrator needs to look at it.', 'albert-ai-butler' );
 		}
 
 		return self::is_installed()
