@@ -60,6 +60,7 @@ use Albert\Abilities\WooCommerce\ViewCustomer;
 use Albert\Abilities\WooCommerce\ViewOrder;
 use Albert\Abilities\WooCommerce\ViewProduct;
 use Albert\Admin\AbilitiesPage;
+use Albert\Admin\AdapterNudge;
 use Albert\Admin\Assets;
 use Albert\Admin\Connections;
 use Albert\Admin\ContextPage;
@@ -256,6 +257,9 @@ class Plugin {
 
 			// Dashboard page (creates top-level menu and first submenu).
 			( new Dashboard( $logging_repository ) )->register_hooks();
+
+			// Asks the owner to install the MCP Adapter plugin, wherever they look.
+			( new AdapterNudge() )->register_hooks();
 
 			// Unified abilities page (toggle abilities on/off).
 			( new AbilitiesPage() )->register_hooks();

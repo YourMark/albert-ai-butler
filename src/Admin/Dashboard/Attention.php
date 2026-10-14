@@ -114,7 +114,8 @@ class Attention {
 		 *
 		 * Each item is `[ id, tone, tone_label, title, detail, action, dismissible ]`
 		 * where `tone` is danger|warning|info and `action` is
-		 * `[ 'label' => string, 'url' => string ]` or null.
+		 * `[ 'label' => string, 'url' => string ]` or null. An action may add
+		 * `'attributes' => [ 'data-…' => string ]` for a script to hook (1.5.0).
 		 *
 		 * @since 1.4.0
 		 *

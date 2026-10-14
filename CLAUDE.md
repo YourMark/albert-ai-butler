@@ -136,6 +136,7 @@ albert-ai-butler/
 │   │   └── TokenCleanup.php
 │   │
 │   ├── MCP/
+│   │   ├── AdapterPlugin.php           # Is the MCP Adapter plugin missing, and how to fix it
 │   │   ├── AdapterSource.php           # MCP Adapter plugin first, lib/ copy as fallback
 │   │   └── Server.php                  # MCP protocol handler
 │   │
@@ -1014,6 +1015,15 @@ alone "would not make the other shared hooks, filters, routes, and identifiers s
   the loaded copy came from.
 - **`lib/mcp-adapter/vendor/` ships.** `.distignore` excludes only the adapter's own
   `mcp-adapter.php` and `readme.txt`, and the release workflow asserts both halves.
+- **Albert asks owners to install the plugin** while it is missing or inactive
+  (`Albert\Admin\AdapterNudge`, wording and links in `Albert\MCP\AdapterPlugin`): the
+  Dashboard's attention card and setup step 1, a notice on every other Albert screen, a notice
+  on Albert's row on the Plugins screen, and Site Health. None is dismissible; each clears once
+  the plugin is active. The button uses core's own `install-plugin` and `activate-plugin` ajax
+  actions, falling back to core's installer (which asks for FTP details when needed). An admin
+  request never starts Albert's copy, which keeps activation clean. WordPress.org forbids
+  installing without the user's click, so Free never auto-installs. `discover-abilities` also
+  carries a `notice` field for users who can install it, so their assistant passes it on.
 - **Bumping the adapter:** `composer update --working-dir=lib/mcp-adapter`. Nothing to
   regenerate; the lock and the Jetpack manifests are rebuilt by Composer's own hook.
 - **Verify a shared install:** exactly one adapter class, one firing, both servers present.
