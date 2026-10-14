@@ -202,8 +202,8 @@ class SchemaPreparer {
 	/**
 	 * Prepare the schemas embedded in a get-ability-info result.
 	 *
-	 * Fires on the raw execution result, before the adapter wraps it into a
-	 * protocol DTO, so the `input_schema` / `output_schema` keys are plain
+	 * Fires on the raw execution result, before the adapter turns it into a
+	 * protocol response, so the `input_schema` / `output_schema` keys are plain
 	 * arrays returned by the meta-tool. Every other tool, and every non-array
 	 * result (e.g. a WP_Error), passes through untouched.
 	 *
