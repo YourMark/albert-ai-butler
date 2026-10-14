@@ -136,6 +136,7 @@ albert-ai-butler/
 │   │   └── TokenCleanup.php
 │   │
 │   ├── MCP/
+│   │   ├── AdapterSource.php           # MCP Adapter plugin first, lib/ copy as fallback
 │   │   └── Server.php                  # MCP protocol handler
 │   │
 │   ├── OAuth/
@@ -165,6 +166,9 @@ albert-ai-butler/
 │   │       ├── ResourceServerFactory.php
 │   │       ├── KeyManager.php          # RSA key management
 │   │       └── TokenValidator.php      # Validates Bearer tokens
+│
+├── lib/
+│   └── mcp-adapter/                    # Bundled MCP adapter, own Composer project (fallback)
 │
 ├── assets/
 │   ├── css/
@@ -930,8 +934,8 @@ wp plugin activate albert
 
 ## Bundled MCP adapter (plugin first, shared, not scoped)
 
-`wordpress/mcp-adapter` (and its dependency `wordpress/php-mcp-schema`) provide the
-`WP\MCP\*` namespace. Since 0.7.0 upstream ships it as the **MCP Adapter plugin** on
+`wordpress/mcp-adapter` provides the `WP\MCP\*` namespace (with `wordpress/php-mcp-schema`,
+its own dependency, not Albert's). Since 0.7.0 upstream ships it as the **MCP Adapter plugin** on
 WordPress.org and deprecates bundling it. Other plugins still bundle it (WooCommerce does), so
 more than one copy on a site is normal and expected.
 
@@ -987,6 +991,13 @@ alone "would not make the other shared hooks, filters, routes, and identifiers s
 - Jetpack caches the plugin paths it read in the `jetpack_autoloader_plugin_paths` transient.
   `AdapterSource::forget_cached_paths()` clears it when the plugin activates, so a newer cached
   fallback cannot outrank it.
+- The adapter reports a "load the plugin instead" deprecation whenever a bundled copy starts.
+  Over REST core already sends deprecations as a response header; on WP-CLI (the stdio
+  transport) it printed on every command with `WP_DEBUG` on. `AdapterSource` keeps that one
+  notice out of PHP's error output. It only ever reached developers, never site owners.
+- The request that activates the plugin counts it as active (same check as Jetpack's), so the
+  fallback is not offered on that request either. WP-CLI activation cannot be detected that way,
+  and logs `Constant WP_MCP_VERSION already defined` once (an unguarded `define()` upstream).
 - Albert's code references bare **`WP\MCP\…`**. Never reintroduce `Albert\Vendor\`, and never
   require the adapter or `php-mcp-schema` from the root `composer.json`: that puts Albert's copy
   back in the race with the plugin's.
