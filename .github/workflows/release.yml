@@ -264,6 +264,13 @@ jobs:
           npm ci
           npm run build
 
+      - name: Verify the bundled MCP adapter is installed
+        # Installed by Composer's post-install hook. Without it the deploy would
+        # ship a plugin with no adapter for sites lacking the MCP Adapter plugin.
+        run: |
+          test -f lib/mcp-adapter/vendor/composer/jetpack_autoload_classmap.php \
+            || { echo "::error::lib/mcp-adapter/vendor is missing; the bundled MCP adapter was not installed"; exit 1; }
+
       - name: Deploy to WordPress.org
         uses: 10up/action-wordpress-plugin-deploy@stable
         with:
