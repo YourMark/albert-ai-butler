@@ -5,11 +5,13 @@ parameters:
 		- src/
 	excludePaths:
 		- vendor/
+		- lib/
 		- tests/
 		- bin/
 	bootstrapFiles:
 		- phpstan-bootstrap.php
 		- vendor/autoload.php
+		- lib/mcp-adapter/vendor/autoload.php
 		- vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
 		- vendor/php-stubs/woocommerce-stubs/woocommerce-packages-stubs.php
 	scanDirectories:

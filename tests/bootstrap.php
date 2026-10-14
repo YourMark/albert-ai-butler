@@ -8,6 +8,9 @@
 // Composer autoloader for the plugin.
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 
+// The bundled MCP adapter lives in its own Composer project. See Albert\MCP\AdapterSource.
+require_once dirname( __DIR__ ) . '/lib/mcp-adapter/vendor/autoload.php';
+
 // Define the path to the Yoast PHPUnit Polyfills.
 define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', dirname( __DIR__ ) . '/vendor/yoast/phpunit-polyfills/' );
 

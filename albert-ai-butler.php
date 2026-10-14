@@ -18,6 +18,7 @@
 
 // Prevent direct access.
 use Albert\Core\Plugin;
+use Albert\MCP\AdapterSource;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -36,14 +37,12 @@ define( 'ALBERT_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
  * `wordpress/mcp-adapter` coordinates through global WordPress hook names, a
  * fixed default-server id and a fixed REST route. None of those can be made
  * unique per copy, so two copies of the library in one request collide — which
- * is why upstream does not support namespace-prefixing it (WordPress/mcp-adapter#172)
- * and requires this autoloader instead.
+ * is why upstream does not support namespace-prefixing it (WordPress/mcp-adapter#172).
  *
- * Jetpack Autoloader publishes each plugin's copy with its version and loads a
- * single newest copy site-wide, so Albert, WooCommerce and the standalone MCP
- * Adapter plugin all resolve the same `WP\MCP\` classes. One class, one
- * singleton, one `mcp_adapter_init` — the collision cannot occur rather than
- * being worked around.
+ * The adapter normally comes from the MCP Adapter plugin. Albert's own copy in
+ * `lib/mcp-adapter/` is offered to Jetpack only when that plugin is not active,
+ * and Jetpack loads a single newest copy site-wide, so one class, one
+ * singleton and one `mcp_adapter_init` remain. See {@see AdapterSource}.
  *
  * `autoload_packages.php` is Jetpack's entry point; it calls WordPress
  * functions, which is safe here because a plugin file only runs once core is
@@ -53,6 +52,10 @@ define( 'ALBERT_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 if ( ! file_exists( ALBERT_PLUGIN_DIR . 'vendor/autoload_packages.php' ) ) {
 	return;
 }
+
+require_once ALBERT_PLUGIN_DIR . 'src/MCP/AdapterSource.php';
+AdapterSource::offer_fallback( ALBERT_PLUGIN_DIR );
+add_action( 'activated_plugin', [ AdapterSource::class, 'forget_cached_paths' ] );
 
 require_once ALBERT_PLUGIN_DIR . 'vendor/autoload_packages.php';
 
