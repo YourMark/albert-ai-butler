@@ -988,16 +988,19 @@ alone "would not make the other shared hooks, filters, routes, and identifiers s
 - Jetpack reads each plugin's `vendor/composer/jetpack_autoload_classmap.php` (ours included,
   through that list) and loads a single newest copy site-wide. One class, one singleton, one
   `mcp_adapter_init` firing.
-- Jetpack caches the plugin paths it read in the `jetpack_autoloader_plugin_paths` transient.
-  `AdapterSource::forget_cached_paths()` clears it when the plugin activates, so a newer cached
-  fallback cannot outrank it.
+- Jetpack caches the plugin paths it read in the `jetpack_autoloader_plugin_paths` transient,
+  so `lib/mcp-adapter` can stay a candidate for a request after the plugin activates. Ties go to
+  active plugins first, so an equal version still loads the plugin's copy, and the cache is
+  rewritten without our path on the next request.
 - The adapter reports a "load the plugin instead" deprecation whenever a bundled copy starts.
-  Over REST core already sends deprecations as a response header; on WP-CLI (the stdio
-  transport) it printed on every command with `WP_DEBUG` on. `AdapterSource` keeps that one
-  notice out of PHP's error output. It only ever reached developers, never site owners.
+  Albert leaves it alone: over REST core sends it as a response header, on WP-CLI it goes to
+  stderr, and it is upstream's signal to developers.
 - The request that activates the plugin counts it as active (same check as Jetpack's), so the
   fallback is not offered on that request either. WP-CLI activation cannot be detected that way,
   and logs `Constant WP_MCP_VERSION already defined` once (an unguarded `define()` upstream).
+- Known limits, all harmless (the fallback loads and Albert works, the plugin may show its
+  notice): a plugin folder renamed from `mcp-adapter/` (a GitHub zip as `mcp-adapter-main/`) is
+  not recognised, and on multisite a plugin activated on one site is not seen from network admin.
 - Albert's code references bare **`WP\MCP\…`**. Never reintroduce `Albert\Vendor\`, and never
   require the adapter or `php-mcp-schema` from the root `composer.json`: that puts Albert's copy
   back in the race with the plugin's.

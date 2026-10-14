@@ -42,9 +42,7 @@ class AdapterSourceTest extends TestCase {
 		$GLOBALS['albert_test_options']                         = [];
 		$GLOBALS['albert_test_site_options']                    = [];
 		$GLOBALS['albert_test_site']                            = [];
-		$GLOBALS['albert_test_transients']                      = [];
 		$GLOBALS['jetpack_autoloader_activating_plugins_paths'] = null;
-		$GLOBALS['albert_test_hooks']                           = [];
 		$_REQUEST                                               = [];
 	}
 
@@ -58,7 +56,7 @@ class AdapterSourceTest extends TestCase {
 			unlink( WP_PLUGIN_DIR . '/' . AdapterSource::PLUGIN_FILE );
 		}
 
-		unset( $GLOBALS['albert_test_site_options'], $GLOBALS['albert_test_site'], $GLOBALS['albert_test_transients'] );
+		unset( $GLOBALS['albert_test_site_options'], $GLOBALS['albert_test_site'] );
 		$GLOBALS['jetpack_autoloader_activating_plugins_paths'] = null;
 		$_REQUEST = [];
 		parent::tearDown();
@@ -166,21 +164,6 @@ class AdapterSourceTest extends TestCase {
 	}
 
 	/**
-	 * Activating the MCP Adapter plugin clears Jetpack's cached paths; anything else does not.
-	 *
-	 * @return void
-	 */
-	public function test_forgets_cached_paths_only_for_the_adapter_plugin(): void {
-		$GLOBALS['albert_test_transients']['jetpack_autoloader_plugin_paths'] = [ 'cached' ];
-
-		AdapterSource::forget_cached_paths( 'akismet/akismet.php' );
-		$this->assertArrayHasKey( 'jetpack_autoloader_plugin_paths', $GLOBALS['albert_test_transients'] );
-
-		AdapterSource::forget_cached_paths( AdapterSource::PLUGIN_FILE );
-		$this->assertArrayNotHasKey( 'jetpack_autoloader_plugin_paths', $GLOBALS['albert_test_transients'] );
-	}
-
-	/**
 	 * The request activating the plugin counts it, before WordPress lists it.
 	 *
 	 * @return void
@@ -232,27 +215,5 @@ class AdapterSourceTest extends TestCase {
 			'_wpnonce' => 'abc',
 		];
 		$this->assertFalse( AdapterSource::plugin_active() );
-	}
-
-	/**
-	 * Offering the fallback also listens for the adapter's bundled-copy notice.
-	 *
-	 * @return void
-	 */
-	public function test_offering_the_fallback_listens_for_the_bundled_notice(): void {
-		AdapterSource::offer_fallback( '/albert' );
-
-		$hooks = array_column( $GLOBALS['albert_test_hooks'], 'hook' );
-		$this->assertContains( 'deprecated_function_run', $hooks );
-	}
-
-	/**
-	 * Only the adapter's own notice is recognised, nothing else that is deprecated.
-	 *
-	 * @return void
-	 */
-	public function test_recognises_only_the_adapters_bundled_notice(): void {
-		$this->assertTrue( AdapterSource::is_bundled_notice( 'WP\\MCP\\Core\\McpAdapter' ) );
-		$this->assertFalse( AdapterSource::is_bundled_notice( 'get_page_by_title' ) );
 	}
 }

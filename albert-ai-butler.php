@@ -55,7 +55,6 @@ if ( ! file_exists( ALBERT_PLUGIN_DIR . 'vendor/autoload_packages.php' ) ) {
 
 require_once ALBERT_PLUGIN_DIR . 'src/MCP/AdapterSource.php';
 AdapterSource::offer_fallback( ALBERT_PLUGIN_DIR );
-add_action( 'activated_plugin', [ AdapterSource::class, 'forget_cached_paths' ] );
 
 require_once ALBERT_PLUGIN_DIR . 'vendor/autoload_packages.php';
 

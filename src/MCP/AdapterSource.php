@@ -40,14 +40,6 @@ final class AdapterSource {
 	public const FALLBACK_DIR = 'lib/mcp-adapter';
 
 	/**
-	 * Jetpack Autoloader's cache of the plugin paths it reads manifests from.
-	 *
-	 * @since 1.5.0
-	 * @var string
-	 */
-	private const JETPACK_PATHS_CACHE = 'jetpack_autoloader_plugin_paths';
-
-	/**
 	 * Whether the MCP Adapter plugin supplies the adapter on this request.
 	 *
 	 * `WP_MCP_DIR` is defined by the plugin's own bootstrap, which only runs
@@ -131,67 +123,5 @@ final class AdapterSource {
 		}
 
 		$jetpack_autoloader_activating_plugins_paths[] = rtrim( $plugin_dir, '/\\' ) . '/' . self::FALLBACK_DIR;
-
-		add_action( 'deprecated_function_run', [ self::class, 'silence_bundled_notice' ] );
-	}
-
-	/**
-	 * Whether a deprecation is the adapter's "load the plugin instead" notice.
-	 *
-	 * @param string $function_name The deprecated function, as core reports it.
-	 *
-	 * @return bool
-	 * @since 1.5.0
-	 */
-	public static function is_bundled_notice( string $function_name ): bool {
-		return $function_name === \WP\MCP\Core\McpAdapter::class;
-	}
-
-	/**
-	 * Keep the adapter's bundled-copy notice out of PHP's error output.
-	 *
-	 * Over REST core already turns deprecations into a response header. On
-	 * WP-CLI, which serves the stdio transport, it would print on every command
-	 * while `WP_DEBUG` is on. Core fires this action just before its trigger
-	 * filter, so the filter is skipped once.
-	 *
-	 * @param string $function_name The deprecated function.
-	 *
-	 * @return void
-	 * @since 1.5.0
-	 */
-	public static function silence_bundled_notice( $function_name ): void {
-		if ( is_string( $function_name ) && self::is_bundled_notice( $function_name ) ) {
-			add_filter( 'deprecated_function_trigger_error', [ self::class, 'skip_trigger_once' ] );
-		}
-	}
-
-	/**
-	 * Suppress one deprecation trigger, then step aside.
-	 *
-	 * @return bool Always false.
-	 * @since 1.5.0
-	 */
-	public static function skip_trigger_once(): bool {
-		remove_filter( 'deprecated_function_trigger_error', [ self::class, 'skip_trigger_once' ] );
-
-		return false;
-	}
-
-	/**
-	 * Forget Jetpack's cached plugin paths once the MCP Adapter plugin activates.
-	 *
-	 * Our fallback is among them. An equal version still goes to the plugin,
-	 * but a newer fallback would win until the cache refreshed.
-	 *
-	 * @param string $plugin The plugin that was activated.
-	 *
-	 * @return void
-	 * @since 1.5.0
-	 */
-	public static function forget_cached_paths( string $plugin ): void {
-		if ( $plugin === self::PLUGIN_FILE ) {
-			delete_transient( self::JETPACK_PATHS_CACHE );
-		}
 	}
 }

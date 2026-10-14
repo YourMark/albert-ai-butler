@@ -12,10 +12,9 @@ require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 require_once dirname( __DIR__ ) . '/lib/mcp-adapter/vendor/autoload.php';
 
 // The suite runs on Albert's bundled copy, which reports a "load the MCP Adapter
-// plugin instead" deprecation the first time it starts. AdapterSource keeps it
-// out of PHP's error output on real sites, but the test listener records the
-// deprecation itself and would fail whichever test booted the adapter. The
-// adapter skips the report once this constant exists.
+// plugin instead" deprecation the first time it starts. The test listener would
+// fail whichever test booted the adapter. The adapter skips the report once this
+// constant exists.
 define( 'WP_MCP_VERSION', '0.0.0-albert-tests' );
 
 // Define the path to the Yoast PHPUnit Polyfills.
