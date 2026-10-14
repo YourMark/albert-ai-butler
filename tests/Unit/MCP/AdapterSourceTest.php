@@ -44,6 +44,8 @@ class AdapterSourceTest extends TestCase {
 		$GLOBALS['albert_test_site']                            = [];
 		$GLOBALS['albert_test_transients']                      = [];
 		$GLOBALS['jetpack_autoloader_activating_plugins_paths'] = null;
+		$GLOBALS['albert_test_hooks']                           = [];
+		$_REQUEST                                               = [];
 	}
 
 	/**
@@ -58,6 +60,7 @@ class AdapterSourceTest extends TestCase {
 
 		unset( $GLOBALS['albert_test_site_options'], $GLOBALS['albert_test_site'], $GLOBALS['albert_test_transients'] );
 		$GLOBALS['jetpack_autoloader_activating_plugins_paths'] = null;
+		$_REQUEST = [];
 		parent::tearDown();
 	}
 
@@ -175,5 +178,81 @@ class AdapterSourceTest extends TestCase {
 
 		AdapterSource::forget_cached_paths( AdapterSource::PLUGIN_FILE );
 		$this->assertArrayNotHasKey( 'jetpack_autoloader_plugin_paths', $GLOBALS['albert_test_transients'] );
+	}
+
+	/**
+	 * The request activating the plugin counts it, before WordPress lists it.
+	 *
+	 * @return void
+	 */
+	public function test_counts_the_plugin_being_activated_this_request(): void {
+		$this->install_plugin();
+		$_REQUEST = [
+			'action'   => 'activate',
+			'plugin'   => AdapterSource::PLUGIN_FILE,
+			'_wpnonce' => 'abc',
+		];
+
+		$this->assertTrue( AdapterSource::plugin_active() );
+	}
+
+	/**
+	 * A bulk activation that includes the plugin counts it too.
+	 *
+	 * @return void
+	 */
+	public function test_counts_the_plugin_in_a_bulk_activation(): void {
+		$this->install_plugin();
+		$_REQUEST = [
+			'action'   => 'activate-selected',
+			'checked'  => [ 'akismet/akismet.php', AdapterSource::PLUGIN_FILE ],
+			'_wpnonce' => 'abc',
+		];
+
+		$this->assertTrue( AdapterSource::plugin_active() );
+	}
+
+	/**
+	 * Without a nonce, or for another plugin, an activation request does not count.
+	 *
+	 * @return void
+	 */
+	public function test_ignores_activation_requests_without_a_nonce_or_for_other_plugins(): void {
+		$this->install_plugin();
+
+		$_REQUEST = [
+			'action' => 'activate',
+			'plugin' => AdapterSource::PLUGIN_FILE,
+		];
+		$this->assertFalse( AdapterSource::plugin_active() );
+
+		$_REQUEST = [
+			'action'   => 'activate',
+			'plugin'   => 'akismet/akismet.php',
+			'_wpnonce' => 'abc',
+		];
+		$this->assertFalse( AdapterSource::plugin_active() );
+	}
+
+	/**
+	 * Offering the fallback also listens for the adapter's bundled-copy notice.
+	 *
+	 * @return void
+	 */
+	public function test_offering_the_fallback_listens_for_the_bundled_notice(): void {
+		AdapterSource::offer_fallback( '/albert' );
+
+		$hooks = array_column( $GLOBALS['albert_test_hooks'], 'hook' );
+		$this->assertContains( 'deprecated_function_run', $hooks );
+	}
+
+	/**
+	 * Only the adapter's own notice is recognised, nothing else that is deprecated.
+	 *
+	 * @return void
+	 */
+	public function test_recognises_only_the_adapters_bundled_notice(): void {
+		$this->assertTrue( AdapterSource::is_bundled_notice( 'WP\\MCP\\Core\\McpAdapter' ) );
+		$this->assertFalse( AdapterSource::is_bundled_notice( 'get_page_by_title' ) );
 	}
 }
