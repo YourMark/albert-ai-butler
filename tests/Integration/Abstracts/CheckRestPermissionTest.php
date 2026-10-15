@@ -119,20 +119,69 @@ class CheckRestPermissionTest extends TestCase {
 	}
 
 	/**
-	 * Pattern route with a `(?P<id>...)` named group matches and delegates.
+	 * A single-object (pattern) route falls back to the declared capability rather
+	 * than delegating.
+	 *
+	 * Its permission callback needs the target object's id, which is unknown at
+	 * this stage, so delegating would report a spurious "invalid id" instead of a
+	 * verdict. We prove the fallback runs (not delegation) by registering a
+	 * callback that would DENY if it were ever called: a subscriber who holds the
+	 * fallback capability must still pass.
 	 *
 	 * @return void
 	 */
-	public function test_pattern_route_matches_and_delegates(): void {
-		wp_set_current_user( self::factory()->user->create( [ 'role' => 'administrator' ] ) );
-
-		$ability = $this->make_ability(
-			'/wp/v2/posts/(?P<id>[\d]+)',
-			'GET',
-			'read'
+	public function test_pattern_route_falls_back_to_capability_not_delegation(): void {
+		register_rest_route(
+			'albert-test/v1',
+			'/thing/(?P<id>[\d]+)',
+			[
+				'methods'             => 'GET',
+				'callback'            => '__return_true',
+				// Would deny if delegated to — but a pattern route never delegates.
+				'permission_callback' => static fn () => new WP_Error( 'delegated_should_not_happen', 'Nope', [ 'status' => 418 ] ),
+			]
 		);
 
+		// Subscriber holds `read` (the fallback), lacks anything else.
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
+
+		$ability = $this->make_ability( '/albert-test/v1/thing/(?P<id>[\d]+)', 'GET', 'read' );
+
+		// True means the capability fallback ran; the deny-callback was never used.
 		$this->assertTrue( $ability->invoke() );
+	}
+
+	/**
+	 * A single-object (pattern) route is gated by the declared capability, not by
+	 * the endpoint's (allowing) permission callback.
+	 *
+	 * The callback would ALLOW if delegated to, but the subscriber lacks the
+	 * fallback capability, so the check must deny — proving the capability gate is
+	 * what runs for pattern routes.
+	 *
+	 * @return void
+	 */
+	public function test_pattern_route_capability_denies_without_delegating(): void {
+		register_rest_route(
+			'albert-test/v1',
+			'/widget/(?P<id>[\d]+)',
+			[
+				'methods'             => 'DELETE',
+				'callback'            => '__return_true',
+				// Would allow if delegated to — but a pattern route never delegates.
+				'permission_callback' => '__return_true',
+			]
+		);
+
+		// Subscriber lacks `manage_options`, so the fallback must deny.
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
+
+		$ability = $this->make_ability( '/albert-test/v1/widget/(?P<id>[\d]+)', 'DELETE', 'manage_options' );
+
+		$result = $ability->invoke();
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_permission_denied', $result->get_error_code() );
 	}
 
 	/**

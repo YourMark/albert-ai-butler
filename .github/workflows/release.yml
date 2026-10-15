@@ -60,9 +60,9 @@ jobs:
           coverage: none
 
       - name: Install production dependencies
-        # One install, no build step. The MCP library is an ordinary runtime
-        # requirement now, and Jetpack Autoloader writes its manifests from
-        # Composer's own hook — nothing to generate first, nothing to strip after.
+        # One install, no build step. Composer's post-install hook also installs
+        # the bundled MCP adapter in lib/mcp-adapter/, and Jetpack Autoloader
+        # writes both manifests from Composer's own hook.
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-progress
 
       - name: Setup Node
@@ -113,6 +113,7 @@ jobs:
             LICENSE \
             src \
             vendor \
+            lib/mcp-adapter/vendor/composer/jetpack_autoload_classmap.php \
             assets/build/js \
             skills/block-editor.md
           do
@@ -134,11 +135,9 @@ jobs:
 
       - name: Strip non-permitted vendor files
         run: |
-          # vendor/wordpress/ deliberately DOES ship now. Albert loads it through
-          # Jetpack Autoloader, which resolves one newest copy of WP\MCP\ across
-          # every plugin bundling it, so shipping ours is what lets Albert take
-          # part rather than what breaks other plugins.
-          find build/albert-ai-butler/vendor -name "*.sh" -type f -delete
+          # The bundled adapter in lib/mcp-adapter/vendor/ deliberately ships. It
+          # is Albert's fallback when the MCP Adapter plugin is not active.
+          find build/albert-ai-butler/vendor build/albert-ai-butler/lib -name "*.sh" -type f -delete
 
           # The adapter also ships as a standalone plugin; nothing here loads
           # its bootstrap or its readme, and .distignore excludes both so the
@@ -149,10 +148,10 @@ jobs:
           # .distignore silently stopped matching anything, which is the same
           # class of quiet failure that kept skills/ out of every release.
           for f in mcp-adapter.php readme.txt; do
-            test -f "vendor/wordpress/mcp-adapter/$f" \
-              || { echo "::error::vendor/wordpress/mcp-adapter/$f is gone; upstream layout changed and .distignore now matches nothing"; exit 1; }
+            test -f "lib/mcp-adapter/vendor/wordpress/mcp-adapter/$f" \
+              || { echo "::error::lib/mcp-adapter/vendor/wordpress/mcp-adapter/$f is gone; upstream layout changed and .distignore now matches nothing"; exit 1; }
 
-            test ! -e "build/albert-ai-butler/vendor/wordpress/mcp-adapter/$f" \
+            test ! -e "build/albert-ai-butler/lib/mcp-adapter/vendor/wordpress/mcp-adapter/$f" \
               || { echo "::error::$f reached the package; .distignore no longer excludes it"; exit 1; }
           done
 
@@ -264,6 +263,13 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      - name: Verify the bundled MCP adapter is installed
+        # Installed by Composer's post-install hook. Without it the deploy would
+        # ship a plugin with no adapter for sites lacking the MCP Adapter plugin.
+        run: |
+          test -f lib/mcp-adapter/vendor/composer/jetpack_autoload_classmap.php \
+            || { echo "::error::lib/mcp-adapter/vendor is missing; the bundled MCP adapter was not installed"; exit 1; }
 
       - name: Deploy to WordPress.org
         uses: 10up/action-wordpress-plugin-deploy@stable

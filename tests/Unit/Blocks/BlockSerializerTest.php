@@ -602,17 +602,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertStringContainsString( '<!-- wp:verse', $result['markup'] );
 	}
 
-	// Content-loss regression: hybrid blocks (render_callback + inner blocks)
-	//
-	// core/cover (since WP 6.0) and core/media-text render from a callback yet
-	// still store their inner blocks. The old serializer used the presence of a
-	// render_callback as a proxy for "stores no innerHTML" and emitted these
-	// self-closing, silently dropping every child with a success response —
-	// the most severe bug in the block pipeline. The serializer now decides
-	// self-closing on whether the block actually carries markup content
-	// (inner blocks, a markup-sourced attribute, or raw spec content), read
-	// live from the registry, so the same logic protects third-party and
-	// custom blocks with no per-block knowledge.
+	// Hybrid blocks (render_callback + stored inner blocks, e.g. core/cover) must not self-close.
 
 	public function test_hybrid_block_with_inner_blocks_keeps_its_children(): void {
 		// core/cover: a dynamic block (render_callback) that nonetheless stores

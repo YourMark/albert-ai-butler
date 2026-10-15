@@ -53,7 +53,6 @@ require_once dirname( __DIR__ ) . '/stubs/function-exists-shadow.php';
 use Albert\MCP\SchemaPreparer;
 use Albert\MCP\Server;
 use WP\MCP\Core\McpServer;
-use WP\McpSchema\Server\Tools\DTO\Tool;
 use PHPUnit\Framework\TestCase;
 use WP_Error;
 
@@ -90,22 +89,17 @@ class SchemaPreparerTest extends TestCase {
 	 *
 	 * WooCommerce and others bundle the same adapter under the same namespace, so
 	 * every server is an `instanceof McpServer` and only the id tells them apart.
-	 * Matching on the class alone meant Albert rewrote their tool schemas.
+	 * Matching on the class alone meant Albert rewrote their results.
 	 *
 	 * @return void
 	 */
 	public function test_another_plugins_server_is_untouched(): void {
 		$this->set_71( true );
 
-		$tool   = Tool::fromArray(
-			[
-				'name'        => 'wc-get-orders',
-				'inputSchema' => $this->schema_with_server_keys(),
-			]
-		);
-		$result = ( new SchemaPreparer() )->prepare_tools_list( [ $tool ], $this->server( 'woo' ) );
+		$result   = [ 'input_schema' => $this->schema_with_server_keys() ];
+		$prepared = ( new SchemaPreparer() )->prepare_ability_info_result( $result, [], 'mcp-adapter-get-ability-info', null, $this->server( 'woo' ) );
 
-		$this->assertSame( $tool, $result[0] );
+		$this->assertSame( $result, $prepared );
 	}
 
 	/**
@@ -151,63 +145,8 @@ class SchemaPreparerTest extends TestCase {
 		parent::tearDown();
 	}
 
-	/**
-	 * On 7.1 the tools/list schemas are stripped, and each item stays a Tool DTO.
-	 *
-	 * @return void
-	 */
-	public function test_tools_list_strips_server_keys_on_71(): void {
-		$this->set_71( true );
 
-		$tool   = Tool::fromArray(
-			[
-				'name'        => 'albert/demo',
-				'inputSchema' => $this->schema_with_server_keys(),
-			]
-		);
-		$result = ( new SchemaPreparer() )->prepare_tools_list( [ $tool ], $this->server() );
 
-		$this->assertInstanceOf( Tool::class, $result[0] );
-
-		$title = json_decode( (string) wp_json_encode( $result[0]->toArray() ), true )['inputSchema']['properties']['title'];
-		$this->assertArrayNotHasKey( 'sanitize_callback', $title );
-		$this->assertArrayNotHasKey( 'validate_callback', $title );
-		$this->assertArrayNotHasKey( 'arg_options', $title );
-		$this->assertSame( 'string', $title['type'] );
-		$this->assertSame( 'The title', $title['description'] );
-	}
-
-	/**
-	 * Below 7.1 the server-only keys survive, because nothing can strip them.
-	 *
-	 * @return void
-	 */
-	public function test_tools_list_keeps_server_keys_below_71(): void {
-		$this->set_71( false );
-
-		$tool   = Tool::fromArray(
-			[
-				'name'        => 'albert/demo',
-				'inputSchema' => $this->schema_with_server_keys(),
-			]
-		);
-		$result = ( new SchemaPreparer() )->prepare_tools_list( [ $tool ], $this->server() );
-
-		$title = json_decode( (string) wp_json_encode( $result[0]->toArray() ), true )['inputSchema']['properties']['title'];
-		$this->assertArrayHasKey( 'sanitize_callback', $title );
-		$this->assertSame( 'string', $title['type'] );
-	}
-
-	/**
-	 * A non-array tools value (e.g. a foreign filter short-circuit) is passed through.
-	 *
-	 * @return void
-	 */
-	public function test_tools_list_ignores_non_array(): void {
-		$this->set_71( true );
-
-		$this->assertSame( 'unexpected', ( new SchemaPreparer() )->prepare_tools_list( 'unexpected', $this->server() ) );
-	}
 
 	/**
 	 * On 7.1 the get-ability-info result has both embedded schemas stripped.
@@ -360,30 +299,17 @@ class SchemaPreparerTest extends TestCase {
 	}
 
 	/**
-	 * Both filters ignore a call from another plugin's MCP server (or none),
-	 * so Albert never mutates a foreign server's tools or results.
+	 * A call from something that is not an MCP server (or none) is left alone.
 	 *
 	 * @return void
 	 */
 	public function test_ignores_foreign_or_missing_server(): void {
 		$this->set_71( true );
 
-		$tool    = Tool::fromArray(
-			[
-				'name'        => 'albert/demo',
-				'inputSchema' => $this->schema_with_server_keys(),
-			]
-		);
-		$foreign = new \stdClass();
+		$result = [ 'input_schema' => $this->schema_with_server_keys() ];
 
-		// Foreign server: tools list untouched (same Tool instance back).
-		$tools = ( new SchemaPreparer() )->prepare_tools_list( [ $tool ], $foreign );
-		$this->assertSame( $tool, $tools[0] );
-
-		// Missing server: get-ability-info result untouched.
-		$result   = [ 'input_schema' => $this->schema_with_server_keys() ];
-		$prepared = ( new SchemaPreparer() )->prepare_ability_info_result( $result, [], 'mcp-adapter/get-ability-info', null, null );
-		$this->assertSame( $result, $prepared );
+		$this->assertSame( $result, ( new SchemaPreparer() )->prepare_ability_info_result( $result, [], 'mcp-adapter/get-ability-info', null, new \stdClass() ) );
+		$this->assertSame( $result, ( new SchemaPreparer() )->prepare_ability_info_result( $result, [], 'mcp-adapter/get-ability-info', null, null ) );
 	}
 
 	/**
@@ -452,56 +378,5 @@ class SchemaPreparerTest extends TestCase {
 		);
 	}
 
-	/**
-	 * A tool with no input parameters (empty/absent `properties`) is prepared
-	 * without error and still lists — the DTO rebuild must not choke on it.
-	 *
-	 * @return void
-	 */
-	public function test_tools_list_handles_zero_argument_tool(): void {
-		$this->set_71( true );
 
-		$tool   = Tool::fromArray(
-			[
-				'name'        => 'albert/zero-arg',
-				'inputSchema' => [ 'type' => 'object' ],
-			]
-		);
-		$result = ( new SchemaPreparer() )->prepare_tools_list( [ $tool ], $this->server() );
-
-		$this->assertInstanceOf( Tool::class, $result[0] );
-		$this->assertStringContainsString(
-			'"properties":{}',
-			(string) wp_json_encode( $result[0]->toArray()['inputSchema'] )
-		);
-	}
-
-	/**
-	 * On the tools/list path a nested empty object map is restored to `{}` and
-	 * survives the Tool DTO rebuild.
-	 *
-	 * @return void
-	 */
-	public function test_tools_list_nested_empty_object_map_stays_object(): void {
-		$this->set_71( true );
-
-		$tool   = Tool::fromArray(
-			[
-				'name'        => 'albert/nested',
-				'inputSchema' => [
-					'type'       => 'object',
-					'properties' => [
-						'meta' => [
-							'type'       => 'object',
-							'properties' => [],
-						],
-					],
-				],
-			]
-		);
-		$result = ( new SchemaPreparer() )->prepare_tools_list( [ $tool ], $this->server() );
-
-		$meta = json_decode( (string) wp_json_encode( $result[0]->toArray()['inputSchema'] ), false )->properties->meta;
-		$this->assertEquals( new \stdClass(), $meta->properties );
-	}
 }

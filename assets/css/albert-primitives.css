@@ -146,6 +146,25 @@
 	margin-block-start: var(--albert-space-200);
 }
 
+/*
+ * The MCP Adapter notice (`Admin\AdapterNudge`). Screens without a
+ * `wp-header-end`, such as the React ones, leave it directly under the
+ * navigation rather than inside the page, so there it takes the page's own
+ * spacing and alignment instead of core's 5px and 15px.
+ */
+#wpbody-content > .albert-adapter-notice.notice {
+	margin-block: var(--albert-space-600) var(--albert-space-400);
+	margin-inline: 2px 20px;
+}
+
+/* Core already pads #wpbody by 46px here, for the taller admin bar. */
+@media screen and (max-width: 782px) {
+	#wpbody-content > .albert-adapter-notice.notice {
+		margin-block-start: 10px;
+		margin-inline-end: 10px;
+	}
+}
+
 /* ==========================================================================
    Classes add-ons render
 
@@ -1383,6 +1402,11 @@
 .albert-radio-card:has(input:checked) {
 	background: var(--albert-color-accent-surface);
 	border-color: var(--albert-color-accent);
+}
+
+/* A tinted badge disappears into the tinted card; lift it back onto the surface. */
+.albert-radio-card:has(input:checked) .albert-badge {
+	background: var(--albert-color-surface);
 }
 
 .albert-radio-card__body {

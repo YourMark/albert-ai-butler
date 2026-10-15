@@ -435,4 +435,28 @@ class PagesAbilityTest extends TestCase {
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'page_not_found', $result->get_error_code() );
 	}
+
+	/**
+	 * On a trash-disabled site a non-force delete must refuse, not silently
+	 * hard-delete: DeletePage inherits WordPress's REST trash guard.
+	 *
+	 * @return void
+	 */
+	public function test_delete_page_without_force_refuses_when_trash_disabled(): void {
+		add_filter( 'rest_page_trashable', '__return_false' );
+
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+			]
+		);
+
+		$result = ( new DeletePage() )->execute( [ 'id' => $page_id ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rest_trash_not_supported', $result->get_error_code() );
+		$this->assertNotNull( get_post( $page_id ), 'The page must survive — no silent permanent delete.' );
+		$this->assertSame( 'publish', get_post_status( $page_id ) );
+	}
 }

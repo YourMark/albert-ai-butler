@@ -1,0 +1,21 @@
+{
+    "name": "yourmark/albert-mcp-adapter-fallback",
+    "description": "The MCP Adapter copy Albert offers when the MCP Adapter plugin is not active.",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=8.1",
+        "automattic/jetpack-autoloader": "^6.0",
+        "wordpress/mcp-adapter": "^0.7.0"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "platform": {
+            "php": "8.1"
+        },
+        "allow-plugins": {
+            "automattic/jetpack-autoloader": true
+        }
+    }
+}

@@ -295,7 +295,7 @@ class DiscoveryHealth implements Hookable {
 				esc_html__( 'The discovery address %s does not return Albert&#8217;s data, so connecting an assistant will fail at sign-in until it is fixed.', 'albert-ai-butler' ),
 				'<code>' . esc_html( $this->discovery_url() ) . '</code>'
 			) . '</p>'
-			. '<p>' . esc_html__( 'This is the hosting environment, not Albert: your host is blocking requests whose path contains .well-known before they reach WordPress. Ask your host to allow that path through, or serve it at the edge. Albert&#8217;s data is correct and available at its /wp-json/ address.', 'albert-ai-butler' ) . '</p>'
+			. '<p>' . esc_html__( 'This is the hosting environment, not Albert: your host is blocking requests whose path contains .well-known before they reach WordPress. Ask your host to allow that path through, or serve it at the edge. Albert&#8217;s data is correct and available at its REST API address.', 'albert-ai-butler' ) . '</p>'
 		);
 	}
 

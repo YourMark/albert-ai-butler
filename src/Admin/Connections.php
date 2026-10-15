@@ -792,6 +792,7 @@ class Connections implements Hookable {
 						</p>
 					</div>
 				</div>
+				<hr class="wp-header-end">
 
 				<?php Notices::render( 'albert_connections' ); ?>
 
@@ -2025,6 +2026,7 @@ class Connections implements Hookable {
 						</a>
 					</div>
 				</div>
+				<hr class="wp-header-end">
 
 				<?php Notices::render( 'albert_connections' ); ?>
 

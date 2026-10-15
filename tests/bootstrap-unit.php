@@ -42,3 +42,6 @@ if ( ! function_exists( '_n' ) ) {
 
 // Composer autoloader for the plugin.
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
+
+// The bundled MCP adapter lives in its own Composer project. See Albert\MCP\AdapterSource.
+require_once dirname( __DIR__ ) . '/lib/mcp-adapter/vendor/autoload.php';
