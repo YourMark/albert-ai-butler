@@ -64,15 +64,23 @@ src/
   Context/         # Agent context: what a connected assistant is told
                    #   SiteContext / PayloadRenderer / Payload / Readers/
   Media/           # Shared media handling + upload links (MimeAllowlist, AttachmentImporter, UploadLinks/)
+  SafeMode/        # Holds destructive assistant calls for a person to approve (WP 7.1 gate)
+                   #   Interceptor / Gate / RiskPolicy : what gets held, and why
+                   #   Repository / PendingAction      : the albert_pending_actions queue
+                   #   ApprovalPolicy / Approver       : who may decide, and running an approved call
+                   #   ConnectionGuard / AuditTrail    : Albert's own options, and the record of what happened
+  Execution/       # InterceptorDecision : resolves the MCP execute double-fire for any wp_pre_execute_ability consumer
   Settings/        # What a setting's value IS (constant -> filter -> option); read on MCP requests, cron, WP-CLI
   Support/         # WpCompat : WordPress version-capability detection (7.1 feature probes)
   MCP/             # MCP protocol server
+                   #   AdapterSource : MCP Adapter plugin first, Albert's lib/mcp-adapter copy as fallback
   OAuth/           # Full OAuth 2.0 server (entities, repos, endpoints)
   Utilities/       # Standalone helpers (BlockConverter)
 tests/
   Unit/            # PHPUnit tests (no WordPress dependency)
   Integration/     # WP_UnitTestCase tests
 assets/            # CSS and JS for admin UI
+lib/mcp-adapter/   # Bundled MCP adapter, its own Composer project (fallback when the plugin is inactive)
 ```
 
 Full per-directory detail is in the root [`CLAUDE.md`](CLAUDE.md).

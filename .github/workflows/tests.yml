@@ -10,12 +10,16 @@ on:
       - '**.php'
       - 'composer.json'
       - 'composer.lock'
+      - 'lib/mcp-adapter/composer.json'
+      - 'lib/mcp-adapter/composer.lock'
       - 'phpunit.xml.dist'
   pull_request:
     paths:
       - '**.php'
       - 'composer.json'
       - 'composer.lock'
+      - 'lib/mcp-adapter/composer.json'
+      - 'lib/mcp-adapter/composer.lock'
       - 'phpunit.xml.dist'
   release:
     types: [published]
@@ -156,10 +160,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Compatibility policy: last 2 stable X.Y versions of WooCommerce.
-        # 'latest' tracks the current release (11.1); '11.0' is the previous X.Y.
+        # Compatibility policy: the current stable X.Y and the two before it.
+        # 'latest' tracks the current release (11.2, checked 2026-10-15).
         # The install script resolves MAJOR.MINOR shorthand to the highest stable patch.
-        woocommerce: ['latest', '11.0']
+        woocommerce: ['latest', '11.1', '11.0']
 
     services:
       mysql:

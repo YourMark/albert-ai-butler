@@ -57,7 +57,7 @@ class SkillLoader {
 	 * Suitable for passing straight to the adapter's `create_server()` prompts
 	 * argument. Files that cannot be parsed into a valid prompt are skipped.
 	 *
-	 * @return array<int, McpPrompt> The skill prompts.
+	 * @return list<McpPrompt> The skill prompts.
 	 * @since 1.2.0
 	 */
 	public function prompts(): array {

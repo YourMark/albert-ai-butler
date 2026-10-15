@@ -15,6 +15,8 @@ use Albert\Context\SkillIndex;
 use Albert\Core\AbilitiesState;
 use Albert\MCP\Server as McpServer;
 use Albert\MCP\Skills\SkillRegistry;
+use Albert\SafeMode\Gate;
+use Albert\Support\WpCompat;
 
 /**
  * What on this site needs the owner to do something.
@@ -96,8 +98,10 @@ class Attention {
 		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
 
 		$items = array_merge(
+			$this->plain_permalinks(),
 			$this->unreachable_skills(),
-			$this->broken_endpoint_override()
+			$this->broken_endpoint_override(),
+			$this->safe_mode_unenforceable()
 		);
 
 		/**
@@ -110,7 +114,8 @@ class Attention {
 		 *
 		 * Each item is `[ id, tone, tone_label, title, detail, action, dismissible ]`
 		 * where `tone` is danger|warning|info and `action` is
-		 * `[ 'label' => string, 'url' => string ]` or null.
+		 * `[ 'label' => string, 'url' => string ]` or null. An action may add
+		 * `'attributes' => [ 'data-…' => string ]` for a script to hook (1.5.0).
 		 *
 		 * @since 1.4.0
 		 *
@@ -210,6 +215,39 @@ class Attention {
 	}
 
 	/**
+	 * Plain permalinks, which no assistant can connect through.
+	 *
+	 * An exception to "a deliberate setting is not an item": the owner chose
+	 * Plain, but not the consequence. With no rewrite rules only query strings
+	 * reach WordPress, and the OAuth issuer must be a path (RFC 8414 forbids a
+	 * query), so every connection fails. Not dismissible for the same reason.
+	 *
+	 * @since 1.4.2
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function plain_permalinks(): array {
+		if ( (string) get_option( 'permalink_structure' ) !== '' ) {
+			return [];
+		}
+
+		return [
+			[
+				'id'          => 'permalinks-plain',
+				'tone'        => 'danger',
+				'tone_label'  => __( 'Can\'t connect', 'albert-ai-butler' ),
+				'title'       => __( 'Assistants can\'t connect while permalinks are set to Plain', 'albert-ai-butler' ),
+				'detail'      => __( 'Albert\'s sign-in addresses need a permalink structure. Choose any other setting, such as Post name.', 'albert-ai-butler' ),
+				'action'      => [
+					'label' => __( 'Change permalinks', 'albert-ai-butler' ),
+					'url'   => admin_url( 'options-permalink.php' ),
+				],
+				'dismissible' => false,
+			],
+		];
+	}
+
+	/**
 	 * An endpoint override that was rejected.
 	 *
 	 * The filter returned something `wp_http_validate_url()` refused, so the
@@ -234,6 +272,48 @@ class Attention {
 				'title'       => __( 'The endpoint address set in code was rejected', 'albert-ai-butler' ),
 				'detail'      => __( 'An albert/mcp/external_url filter returned an address Albert could not use, so assistants are being given this site\'s own address instead.', 'albert-ai-butler' ),
 				'action'      => null,
+				'dismissible' => false,
+			],
+		];
+	}
+
+	/**
+	 * Safe mode is switched on but this WordPress cannot enforce it.
+	 *
+	 * The gate is `wp_pre_execute_ability`, added in WordPress 7.1. Below that
+	 * the filter never fires, so every destructive call runs unattended while
+	 * the setting reads On. Believing you are covered when you are not is worse
+	 * than knowing you are not, which is the whole reason this is here and not
+	 * left to the Settings screen alone.
+	 *
+	 * Only when safe mode is switched on: an owner who turned it off holds no
+	 * false belief to correct, and this card does not nag about deliberate
+	 * choices.
+	 *
+	 * @since 1.5.0
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function safe_mode_unenforceable(): array {
+		if ( WpCompat::supports_execution_lifecycle() || ! ( new Gate() )->is_enabled() ) {
+			return [];
+		}
+
+		return [
+			[
+				'id'          => 'safe-mode-unenforceable',
+				'tone'        => 'danger',
+				'tone_label'  => __( 'Not active', 'albert-ai-butler' ),
+				'title'       => __( 'Safe mode is on but cannot hold anything', 'albert-ai-butler' ),
+				'detail'      => sprintf(
+					/* translators: %s: the WordPress version this site is running. */
+					__( 'Holding destructive actions for approval needs WordPress 7.1. This site runs %s, so deletions an assistant requests are carried out immediately and the Approvals screen stays empty.', 'albert-ai-butler' ),
+					get_bloginfo( 'version' )
+				),
+				'action'      => [
+					'label' => __( 'Update WordPress', 'albert-ai-butler' ),
+					'url'   => admin_url( 'update-core.php' ),
+				],
 				'dismissible' => false,
 			],
 		];

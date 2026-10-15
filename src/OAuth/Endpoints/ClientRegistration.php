@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\Plugin;
 use Albert\OAuth\Repositories\ClientRepository;
+use Albert\OAuth\ServerMetadata;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -556,6 +557,6 @@ class ClientRegistration implements Hookable {
 	 * @since 1.0.0
 	 */
 	public static function get_endpoint_url(): string {
-		return rest_url( Plugin::rest_namespace() . '/oauth/register' );
+		return ServerMetadata::rest_url( Plugin::rest_namespace() . '/oauth/register' );
 	}
 }

@@ -372,7 +372,6 @@ class ExecuteSchemaTest extends TestCase {
 			[
 				'username' => 'schematest',
 				'email'    => 'schematest@albert.test',
-				'password' => 'strong-password-xyz-12345',
 			],
 			'CreateUser'
 		);
