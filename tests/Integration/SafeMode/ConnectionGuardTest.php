@@ -40,6 +40,13 @@ class ConnectionGuardTest extends TestCase {
 	private array $reports = [];
 
 	/**
+	 * The guard under test.
+	 *
+	 * @var ConnectionGuard
+	 */
+	private ConnectionGuard $guard;
+
+	/**
 	 * Swap the plugin's guard for a fresh one bound through register_hooks().
 	 *
 	 * The plugin's instance remembers its last report across tests, so a fresh
@@ -53,7 +60,8 @@ class ConnectionGuardTest extends TestCase {
 		self::remove_plugin_instances( ConnectionGuard::class );
 		self::remove_plugin_instances( OptionRestorer::class );
 
-		( new ConnectionGuard() )->register_hooks();
+		$this->guard = new ConnectionGuard();
+		$this->guard->register_hooks();
 
 		$this->reports = [];
 		add_action(
@@ -311,21 +319,60 @@ class ConnectionGuardTest extends TestCase {
 
 	/**
 	 * If the row lookup is ever not refused, the dropped DELETE still leaves the
-	 * cache reading the stored value, not the "deleted" WordPress set.
+	 * cache reading the stored value once the request ends, not the "deleted"
+	 * WordPress wrote after it. A cold alloptions cache queries between the
+	 * DELETE and that write, so a clear on the next query would come too early.
+	 *
+	 * @dataProvider alloptions_cache_states
+	 *
+	 * @param bool $warm Whether alloptions is cached before the delete.
 	 *
 	 * @return void
 	 */
-	public function test_a_dropped_delete_does_not_leave_the_cache_saying_deleted(): void {
+	public function test_a_dropped_delete_does_not_leave_the_cache_saying_deleted( bool $warm ): void {
 		$this->store( 'albert_disabled_abilities', [ 'albert/delete-post' ] );
+
+		wp_load_alloptions();
+
+		// Cold: the reload delete_option() forces after its DELETE misses the
+		// cache and queries. Emptied at that point, because the guard's own
+		// report reads options and would warm the cache again.
+		$evict = static function ( $pre, $force_cache ) {
+			if ( $force_cache ) {
+				wp_cache_delete( 'alloptions', 'options' );
+			}
+			return $pre;
+		};
+		if ( ! $warm ) {
+			add_filter( 'pre_wp_load_alloptions', $evict, 10, 2 );
+		}
 
 		// Hide the lookup from the guard, as a future core query might.
 		$disguise = static fn( $query ) => str_starts_with( (string) $query, 'SELECT autoload FROM ' ) ? ' ' . $query : $query;
 		add_filter( 'query', $disguise, 1 );
 		delete_option( 'albert_disabled_abilities' );
 		remove_filter( 'query', $disguise, 1 );
+		remove_filter( 'pre_wp_load_alloptions', $evict, 10 );
 
-		$this->assertSame( [ 'albert/delete-post' ], $this->stored( 'albert_disabled_abilities' ) ? get_option( 'albert_disabled_abilities' ) : null );
 		$this->assertSame( 1, $this->reported( 'delete' ) );
+
+		// Called directly: core's other shutdown callbacks would end PHPUnit's output buffering.
+		$this->assertNotFalse( has_action( 'shutdown', [ $this->guard, 'forget_stale_cache' ] ) );
+		$this->guard->forget_stale_cache();
+
+		$this->assertSame( [ 'albert/delete-post' ], get_option( 'albert_disabled_abilities' ) );
+	}
+
+	/**
+	 * Alloptions cached or not before the delete.
+	 *
+	 * @return array<string, array{bool}>
+	 */
+	public static function alloptions_cache_states(): array {
+		return [
+			'warm' => [ true ],
+			'cold' => [ false ],
+		];
 	}
 
 	/**

@@ -229,9 +229,8 @@ class ConnectionGuard implements Hookable {
 	}
 
 	/**
-	 * Drop the DELETE of a protected option, under any spelling: the second
-	 * layer, should the row lookup {@see self::filter_query()} refuses ever
-	 * change shape and get through.
+	 * Second layer: drops the DELETE if the row lookup refused by
+	 * {@see self::filter_query()} ever stops matching.
 	 *
 	 * `delete_option` fires after the row is found and immediately before it is
 	 * removed, so the statement it arms is the very next delete of that name.
@@ -295,10 +294,6 @@ class ConnectionGuard implements Hookable {
 			return $query;
 		}
 
-		if ( $this->stale !== [] ) {
-			$this->forget_stale_cache();
-		}
-
 		if ( ConnectionContext::client_id() !== null && str_starts_with( $query, 'SELECT autoload FROM ' ) ) {
 			$protected = $this->delete_lookup( $query );
 			if ( $protected !== null ) {
@@ -340,6 +335,7 @@ class ConnectionGuard implements Hookable {
 	 * @param string $query The SQL.
 	 *
 	 * @return string|null
+	 * @since 1.5.0
 	 */
 	private function delete_lookup( string $query ): ?string {
 		global $wpdb;
@@ -368,8 +364,12 @@ class ConnectionGuard implements Hookable {
 
 	/**
 	 * Drop the cached copies WordPress changed after a refused DELETE, so the
-	 * option reads from the database again. Runs at the next query and at
-	 * shutdown, so a persistent object cache never keeps "deleted".
+	 * option reads from the database again and a persistent object cache never
+	 * keeps "deleted".
+	 *
+	 * Only at shutdown: WordPress writes those caches after the DELETE, and
+	 * may query in between (a cold `wp_load_alloptions()`), so an earlier
+	 * clear would run before the write it is meant to undo.
 	 *
 	 * @return void
 	 * @since 1.5.0
