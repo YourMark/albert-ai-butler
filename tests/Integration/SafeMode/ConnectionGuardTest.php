@@ -302,10 +302,30 @@ class ConnectionGuardTest extends TestCase {
 		$this->assertFalse( delete_option( 'albert_disabled_abilities' ) );
 		$this->assertFalse( delete_option( self::OPTION ) );
 
-		wp_cache_flush();
+		// Read through the cache, as the rest of the request and a persistent
+		// object cache would: WordPress must not think the options are gone.
 		$this->assertSame( [ 'albert/delete-post' ], get_option( 'albert_disabled_abilities' ) );
 		$this->assertSame( 'strict', get_option( self::OPTION ) );
 		$this->assertSame( 2, $this->reported( 'delete' ) );
+	}
+
+	/**
+	 * If the row lookup is ever not refused, the dropped DELETE still leaves the
+	 * cache reading the stored value, not the "deleted" WordPress set.
+	 *
+	 * @return void
+	 */
+	public function test_a_dropped_delete_does_not_leave_the_cache_saying_deleted(): void {
+		$this->store( 'albert_disabled_abilities', [ 'albert/delete-post' ] );
+
+		// Hide the lookup from the guard, as a future core query might.
+		$disguise = static fn( $query ) => str_starts_with( (string) $query, 'SELECT autoload FROM ' ) ? ' ' . $query : $query;
+		add_filter( 'query', $disguise, 1 );
+		delete_option( 'albert_disabled_abilities' );
+		remove_filter( 'query', $disguise, 1 );
+
+		$this->assertSame( [ 'albert/delete-post' ], $this->stored( 'albert_disabled_abilities' ) ? get_option( 'albert_disabled_abilities' ) : null );
+		$this->assertSame( 1, $this->reported( 'delete' ) );
 	}
 
 	/**
@@ -438,11 +458,13 @@ class ConnectionGuardTest extends TestCase {
 	 * @return void
 	 */
 	public function test_delete_site_option_is_refused_once(): void {
-		$this->store( self::OPTION, 'balanced' );
+		ConnectionContext::reset();
+		update_site_option( self::OPTION, 'balanced' );
+		ConnectionContext::set( 'client-1' );
 
 		$this->assertFalse( delete_site_option( self::OPTION ) );
 
-		$this->assertSame( 'balanced', $this->stored( self::OPTION )['option_value'] ?? null );
+		$this->assertSame( 'balanced', get_site_option( self::OPTION ) );
 		$this->assertSame( 1, $this->reported( 'delete' ) );
 	}
 

@@ -31,9 +31,10 @@ use Albert\OAuth\Server\ConnectionContext;
  * - An update keeps the stored value (`sanitize_option_{$option}`, `pre_update_option`).
  * - The creation of a control option stores its secure default. Only the OAuth
  *   key material may be created, since it is minted lazily during token validation.
- * - An add under another spelling, and any delete, are stopped at the query:
- *   WordPress has no filter to refuse either, but it fires an action just
- *   before each, and the `query` filter can then drop that one statement.
+ * - A delete is refused at its row lookup, before WordPress touches its caches.
+ * - An add under another spelling is stopped at the query: WordPress has no
+ *   filter to refuse it, but fires `add_option` just before, and the `query`
+ *   filter can then drop that one statement.
  *
  * Writes that skip the option API are {@see OptionRestorer}'s job.
  *
@@ -112,9 +113,17 @@ class ConnectionGuard implements Hookable {
 	 * Statements to drop when they reach the `query` filter.
 	 *
 	 * @since 1.5.0
-	 * @var list<array{prefix: string, needle: string, option: string, operation: string}>
+	 * @var list<array{prefix: string, needle: string, name: string, option: string, operation: string}>
 	 */
 	private array $armed = [];
+
+	/**
+	 * Options whose cache WordPress may have marked deleted after a refused delete.
+	 *
+	 * @since 1.5.0
+	 * @var list<string>
+	 */
+	private array $stale = [];
 
 	/**
 	 * Compares option names as the database does.
@@ -156,7 +165,8 @@ class ConnectionGuard implements Hookable {
 		add_filter( 'pre_update_option', [ $this, 'refuse_variant_update' ], PHP_INT_MAX, 3 );
 		add_action( 'add_option', [ $this, 'refuse_add' ], PHP_INT_MAX );
 		add_action( 'delete_option', [ $this, 'refuse_delete' ], PHP_INT_MAX );
-		add_filter( 'query', [ $this, 'drop_armed_statement' ], PHP_INT_MAX );
+		add_filter( 'query', [ $this, 'filter_query' ], PHP_INT_MAX );
+		add_action( 'shutdown', [ $this, 'forget_stale_cache' ], 0 );
 	}
 
 	/**
@@ -219,7 +229,9 @@ class ConnectionGuard implements Hookable {
 	}
 
 	/**
-	 * Drop the DELETE of a protected option, under any spelling.
+	 * Drop the DELETE of a protected option, under any spelling: the second
+	 * layer, should the row lookup {@see self::filter_query()} refuses ever
+	 * change shape and get through.
 	 *
 	 * `delete_option` fires after the row is found and immediately before it is
 	 * removed, so the statement it arms is the very next delete of that name.
@@ -264,19 +276,42 @@ class ConnectionGuard implements Hookable {
 	}
 
 	/**
-	 * Drop an armed statement, so the add or delete it belongs to fails.
+	 * Refuse a delete at its lookup, and drop armed statements.
 	 *
-	 * Runs on every query, so it returns at once when nothing is armed. A
-	 * statement is matched by its verb and table and the quoted name, exactly as
-	 * `add_option()`, `delete_option()` and `delete_network_option()` build it.
+	 * `delete_option()` reads the row's autoload flag before anything else and
+	 * returns when it finds none. Refusing that read stops a delete before
+	 * WordPress touches its caches; dropping the DELETE alone would leave the
+	 * option cached as deleted, which a persistent object cache keeps.
+	 *
+	 * Runs on every query, so it returns at once when nothing applies.
 	 *
 	 * @param string $query The SQL about to run.
 	 *
 	 * @return string The query, or an empty string to drop it.
 	 * @since 1.5.0
 	 */
-	public function drop_armed_statement( $query ) {
-		if ( $this->armed === [] || ! is_string( $query ) ) {
+	public function filter_query( $query ) {
+		if ( ! is_string( $query ) ) {
+			return $query;
+		}
+
+		if ( $this->stale !== [] ) {
+			$this->forget_stale_cache();
+		}
+
+		if ( ConnectionContext::client_id() !== null && str_starts_with( $query, 'SELECT autoload FROM ' ) ) {
+			$protected = $this->delete_lookup( $query );
+			if ( $protected !== null ) {
+				$this->note_blocked( $protected, 'delete' );
+
+				// A lookup that finds nothing. An empty query would leave wpdb
+				// handing back the previous query's row.
+				global $wpdb;
+				return "SELECT autoload FROM {$wpdb->options} WHERE 1 = 0";
+			}
+		}
+
+		if ( $this->armed === [] ) {
 			return $query;
 		}
 
@@ -285,11 +320,73 @@ class ConnectionGuard implements Hookable {
 				array_splice( $this->armed, $i, 1 );
 				$this->note_blocked( $statement['option'], $statement['operation'] );
 
+				if ( $statement['operation'] === 'delete' ) {
+					// WordPress updates its caches after the DELETE whatever it returned.
+					$this->stale[] = $statement['name'];
+				}
+
 				return '';
 			}
 		}
 
 		return $query;
+	}
+
+	/**
+	 * The protected option a `delete_option()` row lookup names, if any.
+	 *
+	 * Matches the statement exactly as core builds it, so nothing else is caught.
+	 *
+	 * @param string $query The SQL.
+	 *
+	 * @return string|null
+	 */
+	private function delete_lookup( string $query ): ?string {
+		global $wpdb;
+
+		$pattern = '/^SELECT autoload FROM ' . preg_quote( $wpdb->options, '/' ) . " WHERE option_name = '((?:[^'\\\\]|\\\\.)*)'$/sD";
+		if ( preg_match( $pattern, $query, $match ) !== 1 ) {
+			return null;
+		}
+
+		// Undo mysqli_real_escape_string().
+		$name = preg_replace_callback(
+			'/\\\\(.)/s',
+			static fn( array $c ): string => [
+				'0' => "\0",
+				'n' => "\n",
+				'r' => "\r",
+				'Z' => "\x1a",
+			][ $c[1] ] ?? $c[1],
+			$match[1]
+		);
+
+		$protected = $this->protected_match( (string) $name );
+
+		return $protected === false ? (string) $name : $protected;
+	}
+
+	/**
+	 * Drop the cached copies WordPress changed after a refused DELETE, so the
+	 * option reads from the database again. Runs at the next query and at
+	 * shutdown, so a persistent object cache never keeps "deleted".
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function forget_stale_cache(): void {
+		if ( $this->stale === [] ) {
+			return;
+		}
+
+		$names       = $this->stale;
+		$this->stale = [];
+
+		foreach ( $names as $name ) {
+			wp_cache_delete( $name, 'options' );
+		}
+		wp_cache_delete( 'alloptions', 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
 	}
 
 	/**
@@ -481,6 +578,7 @@ class ConnectionGuard implements Hookable {
 			'prefix'    => $prefix,
 			// As prepare() quotes it, minus the placeholder escape wpdb strips before this filter.
 			'needle'    => "'" . $wpdb->remove_placeholder_escape( esc_sql( $name ) ) . "'",
+			'name'      => $name,
 			'option'    => $option,
 			'operation' => $operation,
 		];
