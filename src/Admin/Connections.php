@@ -1540,6 +1540,13 @@ class Connections implements Hookable {
 				<?php if ( $expiry !== '' ) { ?>
 					<span class="albert-user-item__expiry"><?php echo esc_html( $expiry ); ?></span>
 				<?php } ?>
+				<?php if ( ! user_can( $user, 'manage_options' ) ) { ?>
+					<?php // Their Connect page, which opens the dialog on arrival: what an agency sends a client. ?>
+					<span class="screen-reader-text" id="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>"><?php echo esc_html( ConnectPage::setup_url() ); ?></span>
+					<button type="button" class="button-link albert-copy-button" data-copy-target="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>">
+						<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
+					</button>
+				<?php } ?>
 			</div>
 			<div class="albert-user-item__sessions">
 				<?php if ( $session_count > 0 ) { ?>
@@ -1557,13 +1564,6 @@ class Connections implements Hookable {
 				<?php } ?>
 			</div>
 			<div class="albert-user-item__actions">
-				<?php if ( ! user_can( $user, 'manage_options' ) ) { ?>
-					<?php // Their Connect page, which opens the dialog on arrival: what an agency sends a client. ?>
-					<span class="screen-reader-text" id="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>"><?php echo esc_html( ConnectPage::setup_url() ); ?></span>
-					<button type="button" class="button-link albert-copy-button" data-copy-target="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>">
-						<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
-					</button>
-				<?php } ?>
 				<?php
 				// Always offered: removing the last person is allowed, it just
 				// has to say what it leaves behind.

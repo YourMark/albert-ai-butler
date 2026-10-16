@@ -720,3 +720,10 @@ a.albert-badge:focus-visible {
 .albert-connections__footer[hidden] {
 	display: none;
 }
+
+/* Under the name, so the row's actions keep their width for Remove. */
+.albert-user-item__text .albert-copy-button {
+	display: block;
+	margin-block-start: var(--albert-space-100);
+	font-size: var(--albert-font-size-sm);
+}
