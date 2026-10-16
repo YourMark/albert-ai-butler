@@ -144,6 +144,25 @@
 				return;
 			}
 
+			const markPublic = target.closest( '[data-albert-mark-public]' );
+			if ( markPublic ) {
+				this.location = 'public';
+				this.saveLocation();
+				this.chooseApp( markPublic.dataset.app );
+				this.focusTitle();
+				return;
+			}
+
+			if ( target.closest( '[data-albert-connect-manual]' ) ) {
+				const panel = this.dialog.querySelector( '[data-albert-connect-panel]:not([hidden])' );
+				const manual = panel ? panel.querySelector( 'details.albert-guide-panel__manual, details.albert-guide-panel__fold' ) : null;
+				if ( manual ) {
+					manual.open = true;
+					manual.querySelector( 'summary' ).focus();
+				}
+				return;
+			}
+
 			const show = target.closest( '[data-albert-show-guide]' );
 			if ( show ) {
 				this.chooseApp( show.dataset.albertShowGuide );

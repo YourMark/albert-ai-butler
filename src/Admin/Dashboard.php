@@ -376,15 +376,14 @@ class Dashboard implements Hookable {
 	 * @since 1.4.0
 	 */
 	private function render_onboarding_state( bool $has_allowed_users, bool $has_connections, array $abilities, string $mcp_endpoint ): void {
-		// Step 1 is always done, Albert's own copy of the adapter runs either
-		// way; 3 is about the person looking, not whoever else connected; 4
-		// (review abilities) is optional and never blocks, so "left" counts
-		// the first three.
+		// Three steps. Installing the MCP Adapter plugin is not one of them:
+		// Albert runs on its own copy, so it is a recommendation under the
+		// list. Step 2 is about the person looking, not whoever else
+		// connected; step 3 (review abilities) is optional and never ticks.
 		$adapter_ready = ! AdapterPlugin::needs_attention();
 		$mine          = $this->get_my_latest_connection();
-		$done          = 1 + ( $has_allowed_users ? 1 : 0 ) + ( $mine !== null ? 1 : 0 );
-		$total         = 4;
-		$remaining     = max( 0, 3 - $done );
+		$done          = ( $has_allowed_users ? 1 : 0 ) + ( $mine !== null ? 1 : 0 );
+		$total         = 3;
 		?>
 		<div class="albert-dashboard__split">
 			<section class="albert-card albert-setup">
@@ -394,9 +393,10 @@ class Dashboard implements Hookable {
 						<p class="albert-card__description">
 							<?php
 							printf(
-								/* translators: %d: number of setup steps still to do. */
-								esc_html( _n( '%d step left.', '%d steps left.', $remaining, 'albert-ai-butler' ) ),
-								(int) $remaining
+								/* translators: 1: steps done, 2: number of steps. */
+								esc_html__( '%1$d of %2$d done', 'albert-ai-butler' ),
+								(int) $done,
+								(int) $total
 							);
 							?>
 						</p>
@@ -416,65 +416,41 @@ class Dashboard implements Hookable {
 				</div>
 
 				<ol class="albert-setup__steps">
-					<?php
-					// Albert runs on its own copy of the MCP Adapter, so this step is
-					// done either way; installing the plugin is a recommendation.
-					$this->render_setup_step(
-						1,
-						true,
-						false,
-						__( 'Plugin installed', 'albert-ai-butler' ),
-						__( 'Done. The OAuth server and MCP endpoint are running.', 'albert-ai-butler' ),
-						$adapter_ready ? null : static function (): void {
-							?>
-							<div class="albert-setup__note">
-								<p>
-									<?php
-									/* translators: %s: what the owner is asked to do, e.g. "Install the MCP Adapter plugin". */
-									echo esc_html( sprintf( __( 'Recommended: %s', 'albert-ai-butler' ), AdapterPlugin::title() ) );
-									?>
-								</p>
-								<?php AdapterNudge::render_action(); ?>
+										<?php
+										$this->render_setup_step(
+											1,
+											$has_allowed_users,
+											! $has_allowed_users,
+											__( 'Add an allowed user', 'albert-ai-butler' ),
+											__( 'Only the users you pick here can authorise an AI assistant to act on this site.', 'albert-ai-butler' ),
+											function (): void {
+												$button_class = 'button button-primary';
+												?>
+							<div class="albert-setup__actions">
+									<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>" class="<?php echo esc_attr( $button_class ); ?>" data-albert-open-userpicker>
+												<?php esc_html_e( 'Choose users', 'albert-ai-butler' ); ?>
+								</a>
 							</div>
-							<?php
-						}
-					);
+												<?php
+											}
+										);
 		?>
 
 					<?php
 					$this->render_setup_step(
 						2,
-						$has_allowed_users,
-						! $has_allowed_users,
-						__( 'Add an allowed user', 'albert-ai-butler' ),
-						__( 'Only the users you pick here can authorise an AI assistant to act on this site.', 'albert-ai-butler' ),
-						function (): void {
-							$button_class = 'button button-primary';
-							?>
-							<div class="albert-setup__actions">
-								<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>" class="<?php echo esc_attr( $button_class ); ?>" data-albert-open-userpicker>
-									<?php esc_html_e( 'Choose users', 'albert-ai-butler' ); ?>
-								</a>
-							</div>
-							<?php
-						}
-					);
-		?>
-
-					<?php
-					$this->render_setup_step(
-						3,
 						$mine !== null,
 						$has_allowed_users && $mine === null,
 						__( 'Connect an AI assistant', 'albert-ai-butler' ),
-						$mine !== null
-							/* translators: 1: the assistant's name, 2: how long ago it connected, e.g. "2 minutes ago". */
-							? sprintf( __( '%1$s connected %2$s.', 'albert-ai-butler' ), $mine['name'], $this->ago( $mine['created_ts'] ) )
-							: __( 'Albert walks you through it, one step at a time, for the app you use.', 'albert-ai-butler' ),
+						'',
 						function () use ( $mine ): void {
 							if ( $mine !== null ) {
 								?>
-								<p class="albert-setup__aside-link">
+								<p class="albert-setup__description">
+									<?php
+									/* translators: 1: the assistant's name, 2: how long ago it connected, e.g. "2 minutes ago". */
+									echo esc_html( sprintf( __( '%1$s connected %2$s.', 'albert-ai-butler' ), $mine['name'], $this->ago( (int) $mine['created_ts'] ) ) );
+									?>
 									<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>"><?php esc_html_e( 'Manage connections', 'albert-ai-butler' ); ?></a>
 								</p>
 								<?php
@@ -492,27 +468,38 @@ class Dashboard implements Hookable {
 					<?php
 					$review = sprintf(
 						/* translators: %d: number of abilities enabled by default. */
-						__( '%d abilities are enabled by default.', 'albert-ai-butler' ),
+						__( '%d abilities are on by default.', 'albert-ai-butler' ),
 						$abilities['enabled']
 					);
 					$this->render_setup_step(
-						4,
+						3,
 						false,
 						false,
 						__( 'Choose what Albert may do', 'albert-ai-butler' ),
-						$review,
-						function (): void {
+						'',
+						function () use ( $review ): void {
 							?>
-							<p class="albert-setup__aside-link">
-								<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-abilities' ) ); ?>">
-									<?php esc_html_e( 'Review them', 'albert-ai-butler' ); ?>
-								</a>
+							<p class="albert-setup__description">
+								<?php echo esc_html( $review ); ?>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-abilities' ) ); ?>"><?php esc_html_e( 'Review them', 'albert-ai-butler' ); ?></a>
 							</p>
 							<?php
 						}
 					);
 		?>
 				</ol>
+
+				<?php if ( ! $adapter_ready ) { ?>
+					<div class="albert-card__body albert-setup__note">
+						<p>
+							<?php
+							/* translators: %s: what the owner is asked to do, e.g. "Install the MCP Adapter plugin". */
+							echo esc_html( sprintf( __( 'Recommended: %s', 'albert-ai-butler' ), AdapterPlugin::title() ) );
+							?>
+						</p>
+						<?php AdapterNudge::render_action(); ?>
+					</div>
+				<?php } ?>
 			</section>
 
 			<div class="albert-dashboard__aside">
@@ -571,7 +558,9 @@ class Dashboard implements Hookable {
 						?>
 					</span>
 				</p>
-				<p class="albert-setup__description"><?php echo esc_html( $description ); ?></p>
+				<?php if ( $description !== '' ) { ?>
+					<p class="albert-setup__description"><?php echo esc_html( $description ); ?></p>
+				<?php } ?>
 				<?php
 				if ( $extra !== null && ! $is_done ) {
 					call_user_func( $extra );

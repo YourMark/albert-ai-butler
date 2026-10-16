@@ -15,6 +15,7 @@ namespace Albert\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Admin\Connections\AppIcon;
 use Albert\Admin\Connections\ClientSetupGuides;
 use Albert\Admin\Connections\ConnectDialog;
 use Albert\Admin\ConnectPage;
@@ -885,7 +886,7 @@ class Connections implements Hookable {
 			<span class="albert-connections__apps-label" aria-hidden="true"><?php echo esc_html( $label ); ?></span>
 			<?php
 			foreach ( $guides as $guide ) {
-				ConnectDialog::render_button( 'button button-secondary', (string) $guide['id'], (string) $guide['label'] );
+				ConnectDialog::render_button( 'button button-secondary', (string) $guide['id'], (string) $guide['label'], (string) $guide['icon'] );
 			}
 			?>
 		</div>
@@ -1019,7 +1020,7 @@ class Connections implements Hookable {
 			?>
 			<div class="albert-card__body">
 				<p class="albert-connections__empty">
-					<?php esc_html_e( 'Nothing is connected yet. Add someone under "Who may connect", then follow the steps for your assistant at the bottom of this page.', 'albert-ai-butler' ); ?>
+					<?php esc_html_e( 'Nothing is connected yet. Connect your app above.', 'albert-ai-butler' ); ?>
 				</p>
 			</div>
 			<?php
@@ -1059,9 +1060,11 @@ class Connections implements Hookable {
 			<div class="albert-card__header">
 				<div class="albert-card__text">
 					<h2 class="albert-card__title"><?php esc_html_e( 'Connected assistants', 'albert-ai-butler' ); ?></h2>
-					<p class="albert-card__description"><?php esc_html_e( 'Names come from the connecting app, so several may look alike. Give one a label to tell them apart.', 'albert-ai-butler' ); ?></p>
+					<?php if ( $count > 0 ) { ?>
+						<p class="albert-card__description"><?php esc_html_e( 'Names come from the app. Add a label to tell them apart.', 'albert-ai-butler' ); ?></p>
+					<?php } ?>
 				</div>
-				<span class="albert-badge" data-albert-connections-count>
+				<span class="albert-badge" data-albert-connections-count<?php echo $count > 0 ? '' : ' hidden'; ?>>
 					<?php $this->render_connections_count_badge( $count ); ?>
 				</span>
 			</div>
@@ -1072,7 +1075,7 @@ class Connections implements Hookable {
 				<?php $this->render_connections_body( $connections ); ?>
 			</div>
 
-			<div class="albert-card__body albert-connections__footer">
+			<div class="albert-card__body albert-connections__footer"<?php echo $count > 0 ? '' : ' hidden'; ?>>
 				<?php
 				$revoke_all_url = wp_nonce_url(
 					add_query_arg(
@@ -1086,7 +1089,6 @@ class Connections implements Hookable {
 				);
 				?>
 				<p class="albert-connections__footnote">
-					<?php esc_html_e( 'Revoking signs that assistant out immediately.', 'albert-ai-butler' ); ?>
 					<a href="<?php echo esc_url( $revoke_all_url ); ?>"
 						class="albert-danger-link"
 						data-albert-disconnect-all
@@ -1124,7 +1126,8 @@ class Connections implements Hookable {
 			<input type="hidden" name="action" value="albert_revoke_selected" />
 		</form>
 
-		<div class="albert-card__body albert-connlist__toolbar">
+		<?php // Nothing to filter or select while the list is empty; kept in the page for the script. ?>
+		<div class="albert-card__body albert-connlist__toolbar"<?php echo $count > 0 ? '' : ' hidden'; ?>>
 			<div class="albert-search albert-connlist__filter">
 				<span class="dashicons dashicons-search albert-search__icon" aria-hidden="true"></span>
 				<input
@@ -1324,7 +1327,7 @@ class Connections implements Hookable {
 
 					<button
 						type="button"
-						class="albert-button-danger albert-conn__revoke albert-disconnect-trigger"
+						class="button-link albert-conn__revoke albert-disconnect-trigger"
 						data-client-name="<?php echo esc_attr( $title ); ?>"
 						data-revoke-url="<?php echo esc_url( $revoke_url ); ?>"
 						data-revoke-full-url="<?php echo esc_url( $revoke_full_url ); ?>">
@@ -1444,7 +1447,7 @@ class Connections implements Hookable {
 			<div class="albert-card__header">
 				<div class="albert-card__text">
 					<h2 class="albert-card__title"><?php esc_html_e( 'Who may connect', 'albert-ai-butler' ); ?></h2>
-					<p class="albert-card__description"><?php esc_html_e( 'Only these users can approve an AI assistant. Everyone else is refused at sign-in.', 'albert-ai-butler' ); ?></p>
+					<p class="albert-card__description"><?php esc_html_e( 'Only these users can approve an assistant.', 'albert-ai-butler' ); ?></p>
 				</div>
 				<button type="button" class="button button-primary" data-albert-open-userpicker>
 					<?php esc_html_e( 'Add user', 'albert-ai-butler' ); ?>
@@ -1467,12 +1470,6 @@ class Connections implements Hookable {
 
 			<div data-albert-userlist-body>
 				<?php $this->render_allowed_users_body( $allowed_users ); ?>
-			</div>
-
-			<div class="albert-card__body albert-connections__footer">
-				<p class="albert-connections__footnote">
-					<?php esc_html_e( 'Removing someone revokes their access immediately, including any assistant they had approved.', 'albert-ai-butler' ); ?>
-				</p>
 			</div>
 		</section>
 		<?php
@@ -1526,7 +1523,12 @@ class Connections implements Hookable {
 				<span class="dashicons dashicons-admin-users"></span>
 			</span>
 			<div class="albert-user-item__text">
-				<strong class="albert-user-item__name"><?php echo esc_html( $user->display_name ); ?></strong>
+				<strong class="albert-user-item__name">
+					<?php echo esc_html( $user->display_name ); ?>
+					<?php if ( $user_id === get_current_user_id() ) { ?>
+						<span class="albert-user-item__you"><?php esc_html_e( 'You', 'albert-ai-butler' ); ?></span>
+					<?php } ?>
+				</strong>
 				<span class="albert-user-item__meta"><?php echo esc_html( $meta ); ?></span>
 				<?php if ( $expiry !== '' ) { ?>
 					<span class="albert-user-item__expiry"><?php echo esc_html( $expiry ); ?></span>
@@ -1555,8 +1557,9 @@ class Connections implements Hookable {
 						<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
 					</button>
 				<?php } ?>
-				<a href="<?php echo esc_url( $remove_url ); ?>"
-					class="albert-danger-link"
+				<?php // The only person on the list has nobody to hand the site to; keep them. ?>
+				<a href="<?php echo esc_url( $remove_url ); ?>"<?php echo count( AllowedUsers::ids() ) > 1 ? '' : ' hidden'; ?>
+					class="button-link"
 					data-albert-remove-user
 					data-albert-confirm="<?php echo esc_attr__( 'Remove this user? Every assistant they have connected is signed out straight away.', 'albert-ai-butler' ); ?>">
 					<?php esc_html_e( 'Remove', 'albert-ai-butler' ); ?>

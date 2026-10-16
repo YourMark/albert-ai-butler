@@ -66,7 +66,7 @@ class GuidePanel {
 				<p class="albert-guide-panel__intro"><?php echo esc_html( $guide['intro'] ); ?></p>
 			<?php } ?>
 
-			<?php self::render_notes( $guide['notes'], $base ); ?>
+			<?php self::render_notes( array_filter( $guide['notes'], static fn( array $note ): bool => ! $note['after'] ), $base ); ?>
 
 			<ol class="albert-guide-panel__steps">
 				<?php foreach ( $guide['steps'] as $index => $step ) { ?>
@@ -80,6 +80,8 @@ class GuidePanel {
 					</li>
 				<?php } ?>
 			</ol>
+
+			<?php self::render_notes( array_filter( $guide['notes'], static fn( array $note ): bool => $note['after'] ), $base ); ?>
 
 			<?php self::render_more( $guide['more'], $base ); ?>
 
@@ -123,6 +125,10 @@ class GuidePanel {
 				<button type="button" class="button button-secondary" data-albert-show-guide="claude-desktop"><?php esc_html_e( 'Show Claude Desktop', 'albert-ai-butler' ); ?></button>
 				<button type="button" class="button button-secondary" data-albert-show-guide="cursor"><?php esc_html_e( 'Show Cursor', 'albert-ai-butler' ); ?></button>
 			</p>
+			<p class="albert-guide-panel__hint">
+				<?php esc_html_e( 'Is this site public after all?', 'albert-ai-butler' ); ?>
+				<button type="button" class="button-link" data-albert-mark-public data-app="<?php echo esc_attr( $guide['id'] ); ?>"><?php esc_html_e( 'Mark it as public', 'albert-ai-butler' ); ?></button>
+			</p>
 		</div>
 		<?php
 	}
@@ -157,8 +163,8 @@ class GuidePanel {
 	/**
 	 * Requirement notes: quiet, so a note never reads as an error.
 	 *
-	 * @param array<int, array{text: string, command: string}> $notes The notes.
-	 * @param string                                           $base  Element id base.
+	 * @param array<int, array{text: string, command: string, after: bool}> $notes The notes.
+	 * @param string                                                        $base  Element id base.
 	 *
 	 * @return void
 	 * @since 1.5.0

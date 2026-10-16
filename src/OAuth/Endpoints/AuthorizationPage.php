@@ -629,12 +629,9 @@ class AuthorizationPage implements Hookable {
 		$this->enqueue_oauth_styles();
 
 		wp_enqueue_script( 'albert-oauth-redirect' );
-		// Tell an open connect dialog in another tab first, so it can show
-		// "connected" now rather than at its next check.
 		wp_add_inline_script(
 			'albert-oauth-redirect',
-			'try{new BroadcastChannel("albert-connect").postMessage("connected");}catch(e){}'
-			. 'setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url ) . ';},1500);'
+			'setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url ) . ';},1500);'
 		);
 
 		?>
@@ -653,12 +650,12 @@ class AuthorizationPage implements Hookable {
 				<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
 			</svg>
 		</div>
-		<h1><?php esc_html_e( 'Connected', 'albert-ai-butler' ); ?></h1>
+		<h1><?php esc_html_e( 'Authorization Successful', 'albert-ai-butler' ); ?></h1>
 		<p>
 			<?php
 			printf(
 				/* translators: %s: client/application name */
-				esc_html__( 'You can go back to %s.', 'albert-ai-butler' ),
+				esc_html__( '%s has been authorized to access your site.', 'albert-ai-butler' ),
 				'<span class="client-name">' . esc_html( $client_name ) . '</span>'
 			);
 			?>
@@ -669,8 +666,7 @@ class AuthorizationPage implements Hookable {
 		<p class="fallback-message">
 			<?php esc_html_e( "If the application doesn't open automatically, please click the button below.", 'albert-ai-butler' ); ?>
 		</p>
-		<?php // The app's own scheme allowed: a desktop app's callback is often not http(s). ?>
-		<a href="<?php echo esc_url( $redirect_url, [ 'https', 'http', (string) wp_parse_url( $redirect_url, PHP_URL_SCHEME ) ] ); ?>" class="button"><?php esc_html_e( 'Return to Application', 'albert-ai-butler' ); ?></a>
+		<a href="<?php echo esc_url( $redirect_url ); ?>" class="button"><?php esc_html_e( 'Return to Application', 'albert-ai-butler' ); ?></a>
 	</div>
 		<?php wp_print_scripts( 'albert-oauth-redirect' ); ?>
 </body>

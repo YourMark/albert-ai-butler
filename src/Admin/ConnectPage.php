@@ -193,7 +193,7 @@ class ConnectPage implements Hookable {
 								<?php
 								foreach ( $guides as $guide ) {
 									if ( ! $guide['needs_public'] ) {
-										ConnectDialog::render_button( 'button button-secondary', $guide['id'], $guide['label'] );
+										ConnectDialog::render_button( 'button button-secondary', $guide['id'], $guide['label'], $guide['icon'] );
 									}
 								}
 								?>
@@ -272,7 +272,7 @@ class ConnectPage implements Hookable {
 								<input type="hidden" name="action" value="<?php echo esc_attr( self::REVOKE_ACTION ); ?>" />
 								<input type="hidden" name="client_id" value="<?php echo esc_attr( $connection['client_id'] ); ?>" />
 								<?php wp_nonce_field( self::REVOKE_ACTION . '_' . $connection['client_id'] ); ?>
-								<button type="submit" class="button-link albert-danger-link">
+								<button type="submit" class="button-link">
 									<?php esc_html_e( 'Revoke', 'albert-ai-butler' ); ?>
 									<span class="screen-reader-text"><?php echo esc_html( $name ); ?></span>
 								</button>

@@ -356,6 +356,12 @@
 	gap: var(--albert-space-200);
 }
 
+/* A quiet text action at the end of the row; red is for the confirmation.
+   Specific enough to beat core's `.wp-core-ui .button-link { margin: 0 }`. */
+.albert-conn__head .albert-conn__revoke.button-link {
+	margin-inline-start: auto;
+}
+
 /**
  * A label can be a sentence: "Bookkeeping assistant for the webshop, invoices
  * only" is a real thing somebody types. It truncates rather than wrapping, so
@@ -574,6 +580,13 @@
 	color: var(--albert-color-text);
 }
 
+.albert-user-item__you {
+	margin-inline-start: var(--albert-space-200);
+	font-size: var(--albert-font-size-sm);
+	font-weight: normal;
+	color: var(--albert-color-text-muted);
+}
+
 .albert-user-item__meta,
 .albert-user-item__expiry {
 	font-size: var(--albert-font-size-sm);
@@ -707,4 +720,9 @@ a.albert-badge:focus-visible {
 
 .albert-conn__actions {
 	margin: 0;
+}
+
+.albert-connlist__toolbar[hidden],
+.albert-connections__footer[hidden] {
+	display: none;
 }
