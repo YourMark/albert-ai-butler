@@ -1,0 +1,189 @@
+/**
+ * The connect guides: one app's numbered steps with their action inline,
+ * quiet requirement notes, copy blocks and manual setup.
+ *
+ * Its own stylesheet because two screens draw the same panel: Connections,
+ * and the connect dialog on the Dashboard. Tokens only.
+ *
+ * @package Albert
+ * @since 1.5.0
+ */
+
+.albert-guide-panel {
+	display: grid;
+	gap: var(--albert-space-300);
+	max-inline-size: 46rem;
+	font-size: var(--albert-font-size-body);
+	line-height: var(--albert-line-height-body);
+	color: var(--albert-color-text);
+}
+
+.albert-guide-panel p {
+	margin: 0;
+}
+
+.albert-guide-panel__steps {
+	display: grid;
+	gap: var(--albert-space-300);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	counter-reset: albert-step;
+}
+
+/* A numbered circle, so the order reads at a glance; the number is real text. */
+.albert-guide-panel__step {
+	display: grid;
+	grid-template-columns: 1.5rem 1fr;
+	column-gap: var(--albert-space-300);
+	row-gap: var(--albert-space-200);
+	counter-increment: albert-step;
+}
+
+.albert-guide-panel__step::before {
+	content: counter(albert-step);
+	grid-row: 1 / span 2;
+	display: grid;
+	place-items: center;
+	inline-size: 1.5rem;
+	block-size: 1.5rem;
+	border: 1px solid var(--albert-color-border-input);
+	border-radius: 50%;
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text);
+}
+
+.albert-guide-panel__text {
+	grid-column: 2;
+	align-self: center;
+}
+
+.albert-guide-panel__step > :not(.albert-guide-panel__text) {
+	grid-column: 2;
+}
+
+.albert-guide-panel__action {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-300);
+}
+
+.albert-guide-panel__meta {
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+/* A copy block: commands wrap only at spaces, never inside a word or URL. */
+.albert-guide-panel__code {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: start;
+	gap: var(--albert-space-200);
+}
+
+.albert-guide-panel__code-label {
+	grid-column: 1 / -1;
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-guide-panel__code pre {
+	margin: 0;
+	padding: var(--albert-space-200) var(--albert-space-300);
+	overflow-x: auto;
+	border-radius: var(--albert-radius-md);
+	background: var(--albert-color-canvas);
+	font-family: var(--albert-font-family-mono);
+	font-size: var(--albert-font-size-sm);
+	line-height: var(--albert-line-height-body);
+	white-space: pre-wrap;
+}
+
+.albert-guide-panel__code pre.albert-guide-panel__block {
+	white-space: pre;
+}
+
+.albert-guide-panel__token {
+	white-space: nowrap;
+}
+
+/* Quiet on purpose: a plan or https requirement must never read as an error. */
+.albert-guide-panel__note {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: var(--albert-space-200);
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-guide-panel__note .dashicons {
+	font-size: 1rem;
+	inline-size: 1rem;
+	block-size: 1rem;
+	margin-block-start: 0.15em;
+}
+
+.albert-guide-panel__note-body {
+	display: grid;
+	gap: var(--albert-space-200);
+}
+
+.albert-guide-panel__more {
+	display: grid;
+	gap: var(--albert-space-200);
+}
+
+.albert-guide-panel__more-title {
+	margin: var(--albert-space-200) 0 0;
+	font-size: var(--albert-font-size-body);
+	font-weight: var(--albert-font-weight-semibold);
+}
+
+.albert-guide-panel__fold,
+.albert-guide-panel__manual {
+	display: grid;
+	gap: var(--albert-space-200);
+}
+
+.albert-guide-panel__fold summary,
+.albert-guide-panel__manual summary {
+	cursor: pointer;
+	color: var(--albert-color-link);
+	inline-size: fit-content;
+	min-block-size: 24px;
+}
+
+.albert-guide-panel__fold summary:focus-visible,
+.albert-guide-panel__manual summary:focus-visible {
+	outline: var(--albert-focus-width) solid var(--albert-focus-color);
+	outline-offset: 2px;
+}
+
+.albert-guide-panel__fold[open],
+.albert-guide-panel__manual[open] {
+	padding-block-end: var(--albert-space-200);
+}
+
+/* The Node.js bridge: last and quietest of the options. */
+.albert-guide-panel__fold--quiet summary {
+	color: var(--albert-color-text-muted);
+	font-size: var(--albert-font-size-sm);
+}
+
+.albert-guide-panel__hint,
+.albert-guide-panel__path {
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-guide-panel__manual-steps {
+	margin: 0;
+	padding-inline-start: var(--albert-space-500);
+}
+
+.albert-guide-panel__alternatives {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--albert-space-200);
+}

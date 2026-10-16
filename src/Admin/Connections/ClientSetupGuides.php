@@ -1,6 +1,6 @@
 <?php
 /**
- * Per-client MCP setup instructions.
+ * Per-app connect instructions.
  *
  * @package Albert
  * @subpackage Admin\Connections
@@ -12,35 +12,40 @@ namespace Albert\Admin\Connections;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * The curated list of assistants Albert tells you how to connect.
+ * The curated list of apps Albert tells you how to connect, as data.
  *
- * One place, deliberately. The same content has to appear on the Connections
- * screen today and in a CLI-produced setup page later, and a list that lives
- * inside a render method can only ever appear once. Everything a caller needs
- * to draw an entry (the steps, the file path, the snippet) is data on the
- * entry, so a second surface renders it without re-deriving anything.
+ * One place, deliberately: the Connections screen, the connect dialog and a
+ * future docs page all draw from it, and a list that lives inside a render
+ * method can only ever appear once. Everything a surface needs is on the
+ * entry: numbered steps with their one action inline (a link, a download, a
+ * command to copy), requirement notes, manual setup, and for "Other apps" the
+ * per-app snippets.
  *
- * Every guide is offered regardless of whether this site is reachable from the
- * internet. A cloud client that cannot reach a `.test` or private host will
- * simply fail to connect when tried; that is a clearer signal than a guide
- * that silently disappears with no explanation on screen.
+ * Every app is listed whatever the site's location. An app that needs a public
+ * site is marked as such on a local one and says why, rather than vanishing:
+ * detection is a guess ({@see SiteLocation}), and a guide that disappears is
+ * more confusing than one that explains itself.
  *
- * **Short and accurate beats long and stale.** Six entries is a decision, not a
- * limit: a list of twenty clients nobody re-checks is worse than five that are
- * right, because a wrong instruction costs more than a missing one. A client
- * only earns a deeplink when it genuinely publishes one; the rest get a copy
- * button, which always works.
+ * Short and accurate beats long and stale. A wrong instruction costs more than
+ * a missing one, so an app only earns a one-click action when it publishes
+ * one, and app-side button labels are kept to the few that are documented.
  *
+ * @phpstan-type AlbertGuideAction array{type: string, label: string, value: string, meta: string}
+ * @phpstan-type AlbertGuideStep array{text: string, action: AlbertGuideAction|null}
+ * @phpstan-type AlbertGuideNote array{text: string, command: string}
+ * @phpstan-type AlbertGuideSnippet array{id: string, label: string, hint: string, snippet: string, quiet: bool}
+ * @phpstan-type AlbertGuideManual array{steps: array<int, string>, path: string, snippet: string, snippet_label: string}
  * @phpstan-type AlbertClientGuide array{
  *     id: string,
  *     label: string,
- *     description: string,
- *     config_path: string,
- *     steps: array<int, string>,
- *     snippet: string,
- *     snippet_label: string,
- *     deeplink: string,
- *     deeplink_label: string
+ *     icon: string,
+ *     needs_public: bool,
+ *     intro: string,
+ *     steps: array<int, AlbertGuideStep>,
+ *     notes: array<int, AlbertGuideNote>,
+ *     manual: AlbertGuideManual|null,
+ *     more: array<int, AlbertGuideSnippet>,
+ *     unavailable: string
  * }
  *
  * @since 1.4.0
@@ -48,195 +53,579 @@ defined( 'ABSPATH' ) || exit;
 class ClientSetupGuides {
 
 	/**
-	 * Every guide, ready to render.
+	 * Every app's guide for this site, in the order the connect flow lists them.
+	 *
+	 * On a local site the apps that need a public site come last, flagged
+	 * `needs_public` with an `unavailable` reason.
 	 *
 	 * @param string $endpoint The live MCP endpoint URL for this site.
+	 * @param string $location {@see SiteLocation::PUBLIC} or {@see SiteLocation::LOCAL}.
 	 *
 	 * @return array<int, AlbertClientGuide> Every guide, in display order.
-	 * @since 1.4.0
+	 * @since 1.5.0
 	 */
-	public static function all( string $endpoint ): array {
+	public static function for_location( string $endpoint, string $location ): array {
+		$context = [
+			'endpoint' => $endpoint,
+			'local'    => $location === SiteLocation::LOCAL,
+			'http'     => wp_parse_url( $endpoint, PHP_URL_SCHEME ) === 'http',
+		];
+
+		if ( $context['local'] ) {
+			return [
+				self::claude_code( $context ),
+				self::cursor( $context ),
+				self::vs_code( $context ),
+				self::other_apps( $context ),
+				self::claude( $context ),
+				self::chatgpt( $context ),
+			];
+		}
+
 		return [
-			self::claude_desktop( $endpoint ),
-			self::claude_code( $endpoint ),
-			self::cursor( $endpoint ),
-			self::vs_code( $endpoint ),
-			self::chatgpt( $endpoint ),
-			self::generic( $endpoint ),
+			self::claude( $context ),
+			self::chatgpt( $context ),
+			self::cursor( $context ),
+			self::vs_code( $context ),
+			self::claude_code( $context ),
+			self::other_apps( $context ),
 		];
 	}
 
 	/**
-	 * Claude Desktop and claude.ai.
+	 * One app's guide for this site.
 	 *
-	 * @param string $endpoint The MCP endpoint URL.
+	 * @param string $id       The guide id.
+	 * @param string $endpoint The live MCP endpoint URL.
+	 * @param string $location {@see SiteLocation::PUBLIC} or {@see SiteLocation::LOCAL}.
+	 *
+	 * @return AlbertClientGuide|null Null for an unknown id.
+	 * @since 1.5.0
+	 */
+	public static function get( string $id, string $endpoint, string $location ): ?array {
+		foreach ( self::for_location( $endpoint, $location ) as $guide ) {
+			if ( $guide['id'] === $id ) {
+				return $guide;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Claude: claude.ai, and the desktop and phone apps' connectors.
+	 *
+	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.4.0
 	 */
-	private static function claude_desktop( string $endpoint ): array {
-		return [
-			'id'             => 'claude',
-			'label'          => __( 'Claude Desktop and claude.ai', 'albert-ai-butler' ),
-			'description'    => __( 'Connects through Anthropic, so your site needs a public web address.', 'albert-ai-butler' ),
-			'config_path'    => '',
-			'steps'          => [
-				__( 'Open Settings, then Connectors.', 'albert-ai-butler' ),
-				__( 'Choose "Add custom connector".', 'albert-ai-butler' ),
-				__( 'Paste the address below as the connector URL and save.', 'albert-ai-butler' ),
-				__( 'Claude opens a WordPress sign-in page. Sign in as a user you allowed below, and approve the request.', 'albert-ai-butler' ),
-			],
-			'snippet'        => $endpoint,
-			'snippet_label'  => __( 'Connector URL', 'albert-ai-butler' ),
-			'deeplink'       => '',
-			'deeplink_label' => '',
-		];
+	private static function claude( array $context ): array {
+		$endpoint = $context['endpoint'];
+
+		// The install link Anthropic publishes opens "Add custom connector" with
+		// the name and address filled in, and still asks the person to confirm.
+		// Named after the site rather than Albert, so several sites stay apart
+		// in the list.
+		$deeplink = 'https://claude.ai/customize/connectors?modal=add-custom-connector'
+			. '&connectorName=' . rawurlencode( self::site_title() )
+			. '&connectorUrl=' . rawurlencode( $endpoint );
+
+		$notes = [];
+		if ( $context['http'] ) {
+			$notes[] = self::note( __( 'Claude needs this site on an https address.', 'albert-ai-butler' ) );
+		}
+		$notes[] = self::note( __( 'A free Claude account can add one custom connector. On a Team or Enterprise plan, an owner adds it for the organisation first.', 'albert-ai-butler' ) );
+
+		return self::guide(
+			[
+				'id'           => 'claude',
+				'label'        => $context['local'] ? __( 'Claude on the web and phone', 'albert-ai-butler' ) : __( 'Claude', 'albert-ai-butler' ),
+				'icon'         => 'claude',
+				'needs_public' => $context['local'],
+				'intro'        => __( 'Claude opens with this site filled in as a connector, for the web, desktop and phone apps.', 'albert-ai-butler' ),
+				'steps'        => [
+					self::step( __( 'Click Add to Claude.', 'albert-ai-butler' ), self::link( __( 'Add to Claude', 'albert-ai-butler' ), $deeplink ) ),
+					self::step( __( 'Claude asks to add the connector: choose Add.', 'albert-ai-butler' ) ),
+					self::approve_step(),
+				],
+				'notes'        => $notes,
+				'manual'       => self::manual(
+					[
+						__( 'In Claude, open Settings, then Connectors.', 'albert-ai-butler' ),
+						__( 'Choose "Add custom connector".', 'albert-ai-butler' ),
+						__( 'Paste the address below as the connector URL and save.', 'albert-ai-butler' ),
+					],
+					$endpoint,
+					__( 'Connector URL', 'albert-ai-butler' )
+				),
+				'unavailable'  => __( 'Claude on the web and phone connects from Anthropic’s servers, which cannot reach a site on your computer.', 'albert-ai-butler' ),
+			]
+		);
 	}
 
 	/**
 	 * Claude Code.
 	 *
-	 * @param string $endpoint The MCP endpoint URL.
+	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.4.0
 	 */
-	private static function claude_code( string $endpoint ): array {
-		return [
-			'id'             => 'claude-code',
-			'label'          => __( 'Claude Code', 'albert-ai-butler' ),
-			'description'    => __( 'Runs on your own computer, so it works with a local site too.', 'albert-ai-butler' ),
-			'config_path'    => '',
-			'steps'          => [
-				__( 'Run the command below in a terminal.', 'albert-ai-butler' ),
-				__( 'Claude Code opens your browser to sign in to WordPress and approve the connection.', 'albert-ai-butler' ),
-				/* translators: %s: the /mcp slash command. */
-				sprintf( __( 'Check it worked by running %s inside Claude Code.', 'albert-ai-butler' ), '/mcp' ),
-			],
-			'snippet'        => sprintf( 'claude mcp add --transport http albert %s', $endpoint ),
-			'snippet_label'  => __( 'Terminal command', 'albert-ai-butler' ),
-			'deeplink'       => '',
-			'deeplink_label' => '',
-		];
+	private static function claude_code( array $context ): array {
+		$command = sprintf( 'claude mcp add --transport http --scope user albert %s', $context['endpoint'] );
+
+		$notes = [];
+		if ( $context['local'] && ! $context['http'] ) {
+			$notes[] = self::note(
+				__( 'If Claude Code says it can’t verify the site’s certificate, start it with this command instead:', 'albert-ai-butler' ),
+				sprintf( 'NODE_EXTRA_CA_CERTS="%s" claude', self::local_root_certificate() )
+			);
+		}
+
+		return self::guide(
+			[
+				'id'    => 'claude-code',
+				'label' => __( 'Claude Code', 'albert-ai-butler' ),
+				'icon'  => 'claude-code',
+				'steps' => [
+					self::step( __( 'Run this command in your terminal.', 'albert-ai-butler' ), self::copy( __( 'Copy', 'albert-ai-butler' ), $command ) ),
+					/* translators: %s: the /mcp slash command. */
+					self::step( sprintf( __( 'In Claude Code, type %s, pick albert and choose Authenticate.', 'albert-ai-butler' ), '/mcp' ) ),
+					self::approve_step(),
+				],
+				'notes' => $notes,
+			]
+		);
 	}
 
 	/**
 	 * Cursor.
 	 *
-	 * @param string $endpoint The MCP endpoint URL.
+	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.4.0
 	 */
-	private static function cursor( string $endpoint ): array {
+	private static function cursor( array $context ): array {
 		$server_config = [
-			'url' => $endpoint,
+			'url' => $context['endpoint'],
 		];
 
-		return [
-			'id'             => 'cursor',
-			'label'          => __( 'Cursor', 'albert-ai-butler' ),
-			'description'    => __( 'Runs on your own computer. Add it once for every project, or per project.', 'albert-ai-butler' ),
-			'config_path'    => '~/.cursor/mcp.json (' . __( 'all projects', 'albert-ai-butler' ) . ')  ·  .cursor/mcp.json (' . __( 'this project only', 'albert-ai-butler' ) . ')',
-			'steps'          => [
-				__( 'Create or open one of the files named above.', 'albert-ai-butler' ),
-				__( 'Add the block below. If the file already has an "mcpServers" section, add the "albert" entry inside it.', 'albert-ai-butler' ),
-				__( 'Reopen Cursor, then approve the WordPress sign-in it offers.', 'albert-ai-butler' ),
-			],
-			'snippet'        => self::json_snippet( [ 'mcpServers' => [ 'albert' => $server_config ] ] ),
-			'snippet_label'  => __( 'mcp.json', 'albert-ai-butler' ),
-			// Cursor publishes this scheme for one-click installs; the config is
-			// the server object, base64-encoded. Encoding here is Cursor's wire
-			// format, not obfuscation.
-			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-			'deeplink'       => 'cursor://anysphere.cursor-deeplink/mcp/install?name=albert&config=' . rawurlencode( base64_encode( (string) wp_json_encode( $server_config ) ) ),
-			'deeplink_label' => __( 'Add to Cursor', 'albert-ai-butler' ),
-		];
+		// Cursor publishes this scheme for one-click installs; the config is the
+		// server object, base64-encoded. Encoding here is Cursor's wire format,
+		// not obfuscation.
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		$deeplink = 'cursor://anysphere.cursor-deeplink/mcp/install?name=albert&config=' . rawurlencode( base64_encode( (string) wp_json_encode( $server_config ) ) );
+
+		return self::guide(
+			[
+				'id'     => 'cursor',
+				'label'  => __( 'Cursor', 'albert-ai-butler' ),
+				'icon'   => 'cursor',
+				'steps'  => [
+					self::step( __( 'Click Add to Cursor.', 'albert-ai-butler' ), self::link( __( 'Add to Cursor', 'albert-ai-butler' ), $deeplink ) ),
+					self::step( __( 'Cursor asks to install the server: choose Install.', 'albert-ai-butler' ) ),
+					self::approve_step(),
+				],
+				'notes'  => self::http_note( $context ),
+				'manual' => self::manual(
+					[
+						__( 'Open the file named below, which applies to every project.', 'albert-ai-butler' ),
+						__( 'Add the block below. If the file already has an "mcpServers" section, add the "albert" entry inside it.', 'albert-ai-butler' ),
+						__( 'Reopen Cursor, then approve the sign-in it offers.', 'albert-ai-butler' ),
+					],
+					self::json_snippet( [ 'mcpServers' => [ 'albert' => $server_config ] ] ),
+					'mcp.json',
+					'~/.cursor/mcp.json'
+				),
+			]
+		);
 	}
 
 	/**
-	 * Visual Studio Code.
+	 * Visual Studio Code with GitHub Copilot.
 	 *
-	 * @param string $endpoint The MCP endpoint URL.
+	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.4.0
 	 */
-	private static function vs_code( string $endpoint ): array {
+	private static function vs_code( array $context ): array {
 		$server_config = [
 			'type' => 'http',
-			'url'  => $endpoint,
+			'url'  => $context['endpoint'],
 		];
 
-		return [
-			'id'             => 'vscode',
-			'label'          => __( 'Visual Studio Code', 'albert-ai-butler' ),
-			'description'    => __( 'Runs on your own computer. Needs GitHub Copilot in agent mode.', 'albert-ai-butler' ),
-			'config_path'    => '.vscode/mcp.json',
-			'steps'          => [
-				__( 'Create the file above in your project folder.', 'albert-ai-butler' ),
-				__( 'Add the block below, then use the Start action VS Code shows above the entry.', 'albert-ai-butler' ),
-				__( 'Approve the WordPress sign-in, then pick Albert\'s tools from the tools list in agent mode.', 'albert-ai-butler' ),
-			],
-			'snippet'        => self::json_snippet( [ 'servers' => [ 'albert' => $server_config ] ] ),
-			'snippet_label'  => __( 'mcp.json', 'albert-ai-butler' ),
-			// VS Code's documented install URI: the query string is the server
-			// object with its name, URL-encoded.
-			'deeplink'       => 'vscode:mcp/install?' . rawurlencode( (string) wp_json_encode( array_merge( [ 'name' => 'albert' ], $server_config ) ) ),
-			'deeplink_label' => __( 'Add to VS Code', 'albert-ai-butler' ),
-		];
+		// VS Code's documented install URI: the query string is the server
+		// object with its name, URL-encoded.
+		$deeplink = 'vscode:mcp/install?' . rawurlencode( (string) wp_json_encode( array_merge( [ 'name' => 'albert' ], $server_config ) ) );
+
+		return self::guide(
+			[
+				'id'     => 'vscode',
+				'label'  => __( 'VS Code', 'albert-ai-butler' ),
+				'icon'   => 'vscode',
+				'intro'  => __( 'Needs GitHub Copilot in agent mode.', 'albert-ai-butler' ),
+				'steps'  => [
+					self::step( __( 'Click Add to VS Code.', 'albert-ai-butler' ), self::link( __( 'Add to VS Code', 'albert-ai-butler' ), $deeplink ) ),
+					self::step( __( 'VS Code asks to install the server: choose Install.', 'albert-ai-butler' ) ),
+					self::approve_step(),
+				],
+				'notes'  => self::http_note( $context ),
+				'manual' => self::manual(
+					[
+						__( 'Create the file named below in your project folder.', 'albert-ai-butler' ),
+						__( 'Add the block below, then use the Start action VS Code shows above the entry.', 'albert-ai-butler' ),
+					],
+					self::json_snippet( [ 'servers' => [ 'albert' => $server_config ] ] ),
+					'mcp.json',
+					'.vscode/mcp.json'
+				),
+			]
+		);
 	}
 
 	/**
 	 * ChatGPT.
 	 *
-	 * @param string $endpoint The MCP endpoint URL.
+	 * No install link: OpenAI publishes none, and the settings it would open
+	 * have moved more than once, so the steps name the setting rather than a
+	 * menu path that may be stale by the time somebody reads it.
+	 *
+	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.4.0
 	 */
-	private static function chatgpt( string $endpoint ): array {
-		return [
-			'id'             => 'chatgpt',
-			'label'          => __( 'ChatGPT', 'albert-ai-butler' ),
-			'description'    => __( 'Connects through OpenAI, so your site needs a public web address. Connectors are not on every ChatGPT plan.', 'albert-ai-butler' ),
-			'config_path'    => '',
-			'steps'          => [
-				__( 'Open Settings, then Connectors, and create a new connector.', 'albert-ai-butler' ),
-				__( 'Paste the address below as the server URL and choose OAuth for authentication.', 'albert-ai-butler' ),
-				__( 'Sign in to WordPress as a user you allowed below, and approve the request.', 'albert-ai-butler' ),
+	private static function chatgpt( array $context ): array {
+		$notes = [];
+		if ( $context['http'] ) {
+			$notes[] = self::note( __( 'ChatGPT needs this site on an https address.', 'albert-ai-butler' ) );
+		}
+		$notes[] = self::note( __( 'Custom connectors need ChatGPT’s Developer mode, which is not on every plan.', 'albert-ai-butler' ) );
+
+		return self::guide(
+			[
+				'id'           => 'chatgpt',
+				'label'        => __( 'ChatGPT', 'albert-ai-butler' ),
+				'icon'         => 'chatgpt',
+				'needs_public' => $context['local'],
+				'steps'        => [
+					self::step( __( 'In ChatGPT’s settings, turn on Developer mode.', 'albert-ai-butler' ) ),
+					self::step( __( 'Create a connector, paste this address as its URL and choose OAuth.', 'albert-ai-butler' ), self::copy( __( 'Copy', 'albert-ai-butler' ), $context['endpoint'] ) ),
+					self::approve_step(),
+				],
+				'notes'        => $notes,
+				'unavailable'  => __( 'ChatGPT connects from OpenAI’s servers, which cannot reach a site on your computer.', 'albert-ai-butler' ),
+			]
+		);
+	}
+
+	/**
+	 * Every other app: the URL first, then the common ones by name, then the
+	 * Node.js bridge for apps that can only start a program.
+	 *
+	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 *
+	 * @return AlbertClientGuide The guide entry.
+	 * @since 1.5.0
+	 */
+	private static function other_apps( array $context ): array {
+		$endpoint = $context['endpoint'];
+
+		return self::guide(
+			[
+				'id'    => 'other',
+				'label' => __( 'Other apps', 'albert-ai-butler' ),
+				'icon'  => 'other',
+				'steps' => [
+					self::step( __( 'Copy the MCP URL.', 'albert-ai-butler' ), self::copy( __( 'Copy', 'albert-ai-butler' ), $endpoint ) ),
+					self::step( __( 'Paste it where your app adds an MCP server. If it asks how to sign in, choose OAuth.', 'albert-ai-butler' ) ),
+					self::approve_step(),
+				],
+				'notes' => self::http_note( $context ),
+				'more'  => [
+					self::snippet(
+						'codex',
+						'Codex',
+						__( 'Run in your terminal. The second command opens the sign-in.', 'albert-ai-butler' ),
+						sprintf( "codex mcp add albert --url %s\ncodex mcp login albert", $endpoint )
+					),
+					self::snippet(
+						'windsurf',
+						'Windsurf',
+						/* translators: %s: the Windsurf config file path. */
+						sprintf( __( 'Add to %s', 'albert-ai-butler' ), '~/.codeium/windsurf/mcp_config.json' ),
+						self::json_snippet( [ 'mcpServers' => [ 'albert' => [ 'serverUrl' => $endpoint ] ] ] )
+					),
+					self::snippet(
+						'gemini',
+						'Gemini CLI',
+						/* translators: %s: the Gemini CLI sign-in command. */
+						sprintf( __( 'Run in your terminal, then type %s in Gemini CLI to sign in.', 'albert-ai-butler' ), '/mcp auth albert' ),
+						sprintf( 'gemini mcp add --transport http albert %s', $endpoint )
+					),
+					self::snippet(
+						'cline',
+						'Cline',
+						__( 'In Cline, open MCP Servers, then Remote Servers, and paste this address.', 'albert-ai-butler' ),
+						$endpoint
+					),
+					self::bridge( $context ),
+				],
+			]
+		);
+	}
+
+	/**
+	 * The Node.js bridge, for apps that can only start a local program.
+	 *
+	 * Pinned, so a new release of the bridge cannot change what runs on the
+	 * user's computer without Albert shipping it.
+	 *
+	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 *
+	 * @return AlbertGuideSnippet The snippet.
+	 * @since 1.5.0
+	 */
+	private static function bridge( array $context ): array {
+		$args = [ '-y', 'mcp-remote@0.15.1', $context['endpoint'] ];
+
+		// The bridge refuses a plain http address that is not localhost.
+		if ( $context['http'] ) {
+			$args[] = '--allow-http';
+		}
+
+		$server = [
+			'command' => 'npx',
+			'args'    => $args,
+		];
+
+		// A local https site's certificate is one Node does not trust by default.
+		if ( $context['local'] && ! $context['http'] ) {
+			$server['env'] = [ 'NODE_EXTRA_CA_CERTS' => self::local_root_certificate() ];
+		}
+
+		return self::snippet(
+			'bridge',
+			__( 'For apps that can’t connect to a URL. Needs Node.js 22 or newer.', 'albert-ai-butler' ),
+			'',
+			self::json_snippet( [ 'mcpServers' => [ 'albert' => $server ] ] ),
+			true
+		);
+	}
+
+	/**
+	 * Where this computer keeps the root certificate its local sites are signed with.
+	 *
+	 * On a local site the site's PHP runs on the same computer as the app, so
+	 * the common tools' files can be looked for directly. Unknown tools get a
+	 * placeholder the person fills in, rather than a path that is wrong.
+	 *
+	 * @return string An absolute path, or a placeholder.
+	 * @since 1.5.0
+	 */
+	private static function local_root_certificate(): string {
+		$home = (string) getenv( 'HOME' );
+
+		if ( $home !== '' ) {
+			$candidates = [
+				// Laravel Herd and Valet.
+				$home . '/Library/Application Support/Herd/config/valet/CA/LaravelValetCASelfSigned.pem',
+				$home . '/.config/valet/CA/LaravelValetCASelfSigned.pem',
+				// mkcert, on macOS and Linux.
+				$home . '/Library/Application Support/mkcert/rootCA.pem',
+				$home . '/.local/share/mkcert/rootCA.pem',
+			];
+
+			foreach ( $candidates as $path ) {
+				if ( is_readable( $path ) ) {
+					return $path;
+				}
+			}
+		}
+
+		return __( '<path to your local root certificate>', 'albert-ai-butler' );
+	}
+
+	/**
+	 * The last step every app shares: approving on this site.
+	 *
+	 * @return AlbertGuideStep The step.
+	 * @since 1.5.0
+	 */
+	private static function approve_step(): array {
+		return self::step( __( 'Your browser opens this site: sign in as someone listed under Who may connect, and choose Authorize.', 'albert-ai-butler' ) );
+	}
+
+	/**
+	 * The note for apps that may refuse a plain http address.
+	 *
+	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 *
+	 * @return array<int, AlbertGuideNote> One note, or none on https.
+	 * @since 1.5.0
+	 */
+	private static function http_note( array $context ): array {
+		return $context['http'] ? [ self::note( __( 'This app may need a secure https address for your site.', 'albert-ai-butler' ) ) ] : [];
+	}
+
+	/**
+	 * A guide with every key present, so each surface reads one shape.
+	 *
+	 * @param array<string, mixed> $fields The fields that differ from the defaults.
+	 *
+	 * @return AlbertClientGuide The guide entry.
+	 * @since 1.5.0
+	 */
+	private static function guide( array $fields ): array {
+		/**
+		 * Every key is set by the defaults.
+		 *
+		 * @var AlbertClientGuide $guide
+		 */
+		$guide = array_merge(
+			[
+				'id'           => '',
+				'label'        => '',
+				'icon'         => '',
+				'needs_public' => false,
+				'intro'        => '',
+				'steps'        => [],
+				'notes'        => [],
+				'manual'       => null,
+				'more'         => [],
+				'unavailable'  => '',
 			],
-			'snippet'        => $endpoint,
-			'snippet_label'  => __( 'Server URL', 'albert-ai-butler' ),
-			'deeplink'       => '',
-			'deeplink_label' => '',
+			$fields
+		);
+
+		return $guide;
+	}
+
+	/**
+	 * A numbered step.
+	 *
+	 * @param string                 $text   What to do.
+	 * @param AlbertGuideAction|null $action The step's one action, if it has one.
+	 *
+	 * @return AlbertGuideStep The step.
+	 * @since 1.5.0
+	 */
+	private static function step( string $text, ?array $action = null ): array {
+		return [
+			'text'   => $text,
+			'action' => $action,
 		];
 	}
 
 	/**
-	 * Any other MCP client.
+	 * A link that opens an app.
 	 *
-	 * @param string $endpoint The MCP endpoint URL.
+	 * @param string $label The button label.
+	 * @param string $url   The URL, often an app's own scheme.
 	 *
-	 * @return AlbertClientGuide The guide entry.
-	 * @since 1.4.0
+	 * @return AlbertGuideAction The action.
+	 * @since 1.5.0
 	 */
-	private static function generic( string $endpoint ): array {
+	private static function link( string $label, string $url ): array {
 		return [
-			'id'             => 'generic',
-			'label'          => __( 'Any other MCP client', 'albert-ai-butler' ),
-			'description'    => __( 'The raw details, for a client that is not listed here.', 'albert-ai-butler' ),
-			'config_path'    => '',
-			'steps'          => [
-				__( 'Add the address below as a remote MCP server over HTTP.', 'albert-ai-butler' ),
-				__( 'Choose OAuth 2.1 for authentication. The client registers itself; there is no key to copy.', 'albert-ai-butler' ),
-				__( 'Albert sends the client to WordPress to sign in, and the connection appears on this page once it is approved.', 'albert-ai-butler' ),
-			],
-			'snippet'        => $endpoint,
-			'snippet_label'  => __( 'Server URL', 'albert-ai-butler' ),
-			'deeplink'       => '',
-			'deeplink_label' => '',
+			'type'  => 'link',
+			'label' => $label,
+			'value' => $url,
+			'meta'  => '',
 		];
+	}
+
+	/**
+	 * Something to copy: a command or an address.
+	 *
+	 * @param string $label The button label.
+	 * @param string $text  What is copied.
+	 *
+	 * @return AlbertGuideAction The action.
+	 * @since 1.5.0
+	 */
+	private static function copy( string $label, string $text ): array {
+		return [
+			'type'  => 'copy',
+			'label' => $label,
+			'value' => $text,
+			'meta'  => '',
+		];
+	}
+
+	/**
+	 * A requirement note, with an optional command to copy.
+	 *
+	 * @param string $text    The note.
+	 * @param string $command A command to copy, or ''.
+	 *
+	 * @return AlbertGuideNote The note.
+	 * @since 1.5.0
+	 */
+	private static function note( string $text, string $command = '' ): array {
+		return [
+			'text'    => $text,
+			'command' => $command,
+		];
+	}
+
+	/**
+	 * Manual setup, collapsed under "Set it up by hand".
+	 *
+	 * @param array<int, string> $steps         The steps.
+	 * @param string             $snippet       What to paste.
+	 * @param string             $snippet_label What the snippet is.
+	 * @param string             $path          The file it goes in, or ''.
+	 *
+	 * @return AlbertGuideManual The manual setup.
+	 * @since 1.5.0
+	 */
+	private static function manual( array $steps, string $snippet, string $snippet_label, string $path = '' ): array {
+		return [
+			'steps'         => $steps,
+			'path'          => $path,
+			'snippet'       => $snippet,
+			'snippet_label' => $snippet_label,
+		];
+	}
+
+	/**
+	 * One app's snippet under Other apps.
+	 *
+	 * @param string $id      A stable id.
+	 * @param string $label   The app's name.
+	 * @param string $hint    Where it goes.
+	 * @param string $snippet What to copy.
+	 * @param bool   $quiet   Whether to render it as the last, quietest option.
+	 *
+	 * @return AlbertGuideSnippet The snippet.
+	 * @since 1.5.0
+	 */
+	private static function snippet( string $id, string $label, string $hint, string $snippet, bool $quiet = false ): array {
+		return [
+			'id'      => $id,
+			'label'   => $label,
+			'hint'    => $hint,
+			'snippet' => $snippet,
+			'quiet'   => $quiet,
+		];
+	}
+
+	/**
+	 * The site title as plain text, for an app that shows it as a name.
+	 *
+	 * Entities decoded so "Tom &amp; Jerry" is not encoded a second time.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	private static function site_title(): string {
+		$title = wp_specialchars_decode( (string) get_bloginfo( 'name' ), ENT_QUOTES );
+
+		return $title !== '' ? $title : 'Albert';
 	}
 
 	/**

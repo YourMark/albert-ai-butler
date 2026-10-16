@@ -595,21 +595,25 @@ developer writes and safe mode is Albert's first boolean-shaped setting.
 `Admin\Connections` is where an owner learns whether an assistant can reach this
 site, how to set one up, who may authorise one, and what is connected.
 
-**No reachability check, deliberately.** Albert does not classify whether the
-endpoint's host can be reached from the internet, warn about it, or hide any
-setup guide because of it. Few sites are run somewhere a cloud assistant cannot
-reach, a proper local-site story is coming separately (doc 60, `wp albert
-serve`, over stdio rather than a web address at all), and a guide that silently
-disappears is more confusing than one that simply fails to connect against a
-site the internet cannot reach. An earlier version of this screen did both
-(`Support\HostClassifier` classified the host, and `render_setup_card()` used
-it to drop guides); both were cut for the same reason.
+**Location orders, never hides (1.5.0).** `Admin\Connections\SiteLocation`
+guesses whether the MCP endpoint is public or only reachable on this computer
+(local suffixes such as `.test`, private and loopback IPs, single-label hosts,
+or `WP_ENVIRONMENT_TYPE` `local` while the endpoint is the site's own address).
+The guess reads as one ("Albert thinks…"), an administrator can save the answer
+for the site (`albert_site_location`), and a user who may not change site
+settings picks for themselves only (user meta of the same name). It decides the
+order of the apps and marks Claude on the web and ChatGPT as needing a public
+site on a local one, with the reason and an alternative. It never removes an
+app: an earlier version (`Support\HostClassifier`) hid guides by host and that
+confused people more than a guide that fails.
 
 **Setup content is data, not markup.** `Admin\Connections\ClientSetupGuides`
-holds the curated list (Claude Desktop/claude.ai, Claude Code, Cursor, VS Code,
-ChatGPT, generic) with steps, config path, a copyable snippet built from the
-live endpoint, and a deeplink where the client publishes one. A future CLI docs
-page renders the same array. No credential-bundle export of any kind: a file
+holds the curated list (Claude, Claude Code, Cursor, VS Code, ChatGPT, Other
+apps with Codex, Windsurf, Gemini CLI, Cline and the pinned `mcp-remote` Node
+bridge) as numbered steps with their one action inline (an install link or a
+command to copy), quiet requirement notes, and manual setup, all built from the
+live endpoint. `Admin\Connections\GuidePanel` is the one renderer, so the
+Connections screen and the connect dialog cannot drift. No credential-bundle export of any kind: a file
 holding a permanent plaintext credential is a step back from tokens that are
 scoped, expiring and revocable.
 

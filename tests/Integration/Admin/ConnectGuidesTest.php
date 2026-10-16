@@ -1,0 +1,147 @@
+<?php
+/**
+ * Integration tests for the connect guides and site location.
+ *
+ * @package Albert
+ */
+
+namespace Albert\Tests\Integration\Admin;
+
+use Albert\Admin\Connections\ClientSetupGuides;
+use Albert\Admin\Connections\SiteLocation;
+use Albert\Tests\TestCase;
+
+/**
+ * Connect guide and site location tests.
+ *
+ * @covers \Albert\Admin\Connections\ClientSetupGuides
+ * @covers \Albert\Admin\Connections\SiteLocation
+ */
+class ConnectGuidesTest extends TestCase {
+
+	private const HTTPS = 'https://example.com/wp-json/albert/v1/mcp';
+	private const HTTP  = 'http://site.test/wp-json/albert/v1/mcp';
+
+	/**
+	 * No saved answer before each test.
+	 *
+	 * @return void
+	 */
+	public function set_up(): void {
+		parent::set_up();
+
+		delete_option( SiteLocation::OPTION );
+	}
+
+	/**
+	 * The ids of a guide list, in order.
+	 *
+	 * @param array<int, array<string, mixed>> $guides The guides.
+	 *
+	 * @return array<int, string>
+	 */
+	private function ids( array $guides ): array {
+		return array_column( $guides, 'id' );
+	}
+
+	/**
+	 * Add to Claude carries the site title and the endpoint, both encoded.
+	 *
+	 * @return void
+	 */
+	public function test_add_to_claude_link_encodes_the_site_title_and_endpoint(): void {
+		update_option( 'blogname', 'Tom &amp; Jerry' );
+
+		$guide = ClientSetupGuides::get( 'claude', self::HTTPS, SiteLocation::PUBLIC );
+		$url   = $guide['steps'][0]['action']['value'];
+
+		$this->assertStringStartsWith( 'https://claude.ai/customize/connectors?modal=add-custom-connector', $url );
+		$this->assertStringContainsString( '&connectorName=Tom%20%26%20Jerry', $url );
+		$this->assertStringContainsString( '&connectorUrl=' . rawurlencode( self::HTTPS ), $url );
+	}
+
+	/**
+	 * On a local site, apps on this computer come first and the two that need
+	 * a public site come last, still listed, with a reason.
+	 *
+	 * @return void
+	 */
+	public function test_a_local_site_lists_apps_that_need_a_public_site_last(): void {
+		$guides = ClientSetupGuides::for_location( self::HTTP, SiteLocation::LOCAL );
+
+		$this->assertSame( [ 'claude-code', 'cursor', 'vscode', 'other', 'claude', 'chatgpt' ], $this->ids( $guides ) );
+
+		foreach ( array_slice( $guides, 4 ) as $guide ) {
+			$this->assertTrue( $guide['needs_public'] );
+			$this->assertNotSame( '', $guide['unavailable'] );
+		}
+
+		$this->assertSame( 'Claude on the web and phone', $guides[4]['label'] );
+	}
+
+	/**
+	 * On a public site nothing is marked as needing a public site.
+	 *
+	 * @return void
+	 */
+	public function test_a_public_site_needs_nothing_more(): void {
+		$guides = ClientSetupGuides::for_location( self::HTTPS, SiteLocation::PUBLIC );
+
+		$this->assertSame( [ 'claude', 'chatgpt', 'cursor', 'vscode', 'claude-code', 'other' ], $this->ids( $guides ) );
+		$this->assertSame( [], array_filter( array_column( $guides, 'needs_public' ) ) );
+	}
+
+	/**
+	 * A plain http address gets the https note and a bridge that allows it.
+	 *
+	 * @return void
+	 */
+	public function test_an_http_address_adds_the_https_note_and_allow_http(): void {
+		$claude = ClientSetupGuides::get( 'claude', self::HTTP, SiteLocation::PUBLIC );
+		$other  = ClientSetupGuides::get( 'other', self::HTTP, SiteLocation::LOCAL );
+		$bridge = end( $other['more'] );
+
+		$this->assertSame( 'Claude needs this site on an https address.', $claude['notes'][0]['text'] );
+		$this->assertSame( 'bridge', $bridge['id'] );
+		$this->assertStringContainsString( '"--allow-http"', $bridge['snippet'] );
+		$this->assertStringContainsString( '"mcp-remote@0.15.1"', $bridge['snippet'] );
+	}
+
+	/**
+	 * Local hosts are recognised; public ones are not.
+	 *
+	 * @return void
+	 */
+	public function test_local_hosts(): void {
+		foreach ( [ 'localhost', 'site.test', 'shop.local', 'x.ddev.site', '127.0.0.1', '192.168.1.20', '10.0.0.5', '::1', 'mysite' ] as $host ) {
+			$this->assertTrue( SiteLocation::is_local_host( $host ), $host );
+		}
+
+		foreach ( [ 'example.com', 'albertwp.com', 'dev.albertwp.com', '93.184.216.34' ] as $host ) {
+			$this->assertFalse( SiteLocation::is_local_host( $host ), $host );
+		}
+	}
+
+	/**
+	 * A user's own answer beats the site's, which beats the guess.
+	 *
+	 * @return void
+	 */
+	public function test_answers_resolve_user_then_site_then_guess(): void {
+		$user = self::factory()->user->create();
+
+		$guess = SiteLocation::detect();
+		$this->assertSame( $guess, SiteLocation::current( $user ) );
+		$this->assertTrue( SiteLocation::is_guess( $user ) );
+
+		SiteLocation::save( SiteLocation::LOCAL );
+		$this->assertSame( SiteLocation::LOCAL, SiteLocation::current( $user ) );
+		$this->assertFalse( SiteLocation::is_guess() );
+
+		SiteLocation::save_for_user( $user, SiteLocation::PUBLIC );
+		$this->assertSame( SiteLocation::PUBLIC, SiteLocation::current( $user ) );
+		$this->assertSame( SiteLocation::LOCAL, SiteLocation::current() );
+
+		$this->assertFalse( SiteLocation::save( 'somewhere' ) );
+	}
+}

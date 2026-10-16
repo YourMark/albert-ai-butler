@@ -16,6 +16,8 @@ namespace Albert\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Admin\Connections\ClientSetupGuides;
+use Albert\Admin\Connections\GuidePanel;
+use Albert\Admin\Connections\SiteLocation;
 use Albert\Admin\Connections\UserPickerModal;
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Database\Tables;
@@ -862,17 +864,11 @@ class Connections implements Hookable {
 	/**
 	 * The one hint under the endpoint field, if any.
 	 *
-	 * Reachability messaging (a warning when this site cannot be reached from
-	 * the internet) is deliberately not built yet: few sites are run this way,
-	 * a proper local-site story is coming separately (doc 60, `wp albert serve`,
-	 * over stdio rather than a web address at all), and a generic warning here
-	 * now would only need rewriting once that lands; worse, on the exact sites
-	 * doc 60 is for, it read as confusing rather than helpful.
-	 * {@see self::render_setup_card()} does not gate on reachability either, for
-	 * the same reason: a guide that silently disappears is more confusing than
-	 * one that fails against a site the internet cannot reach.
+	 * Whether the site looks public or local is not said here but by the
+	 * connect card ({@see SiteLocation}), which orders the apps rather than
+	 * warning: a guess about reachability reads as an error when it is wrong.
 	 *
-	 * The one thing still surfaced unconditionally is the external-URL override,
+	 * The one thing surfaced here is the external-URL override,
 	 * because it answers "why does the address above not match this site's own
 	 * web address" and nothing else on this screen does.
 	 *
@@ -1533,11 +1529,11 @@ class Connections implements Hookable {
 	 */
 
 	/**
-	 * The per-client setup card.
+	 * The per-app setup card.
 	 *
-	 * Every guide is shown regardless of whether this host is reachable from
-	 * the internet: {@see self::render_endpoint_hint()} explains why Albert does
-	 * not run that check.
+	 * Ordered by where the site appears to run, with apps that need a public
+	 * site last on a local one. Nothing is hidden: {@see SiteLocation}
+	 * recommends, it does not decide.
 	 *
 	 * @param string $endpoint The MCP endpoint URL.
 	 *
@@ -1545,89 +1541,40 @@ class Connections implements Hookable {
 	 * @since 1.4.0
 	 */
 	private function render_setup_card( string $endpoint ): void {
+		$location = SiteLocation::current();
 		?>
 		<section class="albert-card">
 			<div class="albert-card__header">
 				<div class="albert-card__text">
 					<h2 class="albert-card__title"><?php esc_html_e( 'Connect an assistant', 'albert-ai-butler' ); ?></h2>
-					<p class="albert-card__description"><?php esc_html_e( 'Steps for each assistant we have checked. Open the one you use.', 'albert-ai-butler' ); ?></p>
+					<p class="albert-card__description">
+						<?php
+						echo esc_html(
+							$location === SiteLocation::LOCAL
+								? __( 'Albert thinks this site only runs on this computer, so apps on this computer come first.', 'albert-ai-butler' )
+								: __( 'Albert thinks this site is on the internet, so every app can connect.', 'albert-ai-butler' )
+						);
+						?>
+					</p>
 				</div>
 			</div>
 			<div class="albert-card__body albert-card__body--flush">
-				<?php foreach ( ClientSetupGuides::all( $endpoint ) as $guide ) { ?>
-					<?php $this->render_setup_guide( $guide ); ?>
+				<?php foreach ( ClientSetupGuides::for_location( $endpoint, $location ) as $guide ) { ?>
+					<details class="albert-guide" id="albert-guide-<?php echo esc_attr( $guide['id'] ); ?>" data-albert-guide="<?php echo esc_attr( $guide['id'] ); ?>">
+						<summary class="albert-guide__summary">
+							<span class="dashicons dashicons-arrow-right-alt2 albert-guide__chevron" aria-hidden="true"></span>
+							<span class="albert-guide__label"><?php echo esc_html( $guide['label'] ); ?></span>
+							<?php if ( $guide['needs_public'] ) { ?>
+								<span class="albert-guide__description"><?php esc_html_e( 'Needs a public site', 'albert-ai-butler' ); ?></span>
+							<?php } ?>
+						</summary>
+						<div class="albert-guide__body">
+							<?php GuidePanel::render( $guide, 'albert-setup' ); ?>
+						</div>
+					</details>
 				<?php } ?>
 			</div>
 		</section>
-		<?php
-	}
-
-	/**
-	 * Render one client's setup steps.
-	 *
-	 * A `<details>` rather than a scripted accordion: it opens with the keyboard,
-	 * it is announced correctly, and it works before any JavaScript loads.
-	 *
-	 * @param array<string, mixed> $guide One entry from {@see ClientSetupGuides}.
-	 *
-	 * @return void
-	 * @since 1.4.0
-	 */
-	private function render_setup_guide( array $guide ): void {
-		$id          = (string) $guide['id'];
-		$snippet_id  = 'albert-snippet-' . $id;
-		$config_path = (string) $guide['config_path'];
-		$deeplink    = (string) $guide['deeplink'];
-
-		?>
-		<details class="albert-guide" id="albert-guide-<?php echo esc_attr( $id ); ?>">
-			<summary class="albert-guide__summary">
-				<span class="dashicons dashicons-arrow-right-alt2 albert-guide__chevron" aria-hidden="true"></span>
-				<span class="albert-guide__label"><?php echo esc_html( (string) $guide['label'] ); ?></span>
-				<span class="albert-guide__description"><?php echo esc_html( (string) $guide['description'] ); ?></span>
-			</summary>
-			<div class="albert-guide__body">
-				<?php if ( $config_path !== '' ) { ?>
-					<p class="albert-guide__path">
-						<span class="albert-guide__path-label"><?php esc_html_e( 'File', 'albert-ai-butler' ); ?></span>
-						<code><?php echo esc_html( $config_path ); ?></code>
-					</p>
-				<?php } ?>
-
-				<ol class="albert-guide__steps">
-					<?php foreach ( (array) $guide['steps'] as $step ) { ?>
-						<li><?php echo esc_html( (string) $step ); ?></li>
-					<?php } ?>
-				</ol>
-
-				<?php if ( (string) $guide['snippet'] !== '' ) { ?>
-					<div class="albert-guide__snippet">
-						<div class="albert-guide__snippet-head">
-							<span class="albert-guide__snippet-label" id="<?php echo esc_attr( $snippet_id ); ?>-label">
-								<?php echo esc_html( (string) $guide['snippet_label'] ); ?>
-							</span>
-							<button
-								type="button"
-								class="button button-small albert-copy-button"
-								data-copy-target="<?php echo esc_attr( $snippet_id ); ?>"
-								aria-describedby="<?php echo esc_attr( $snippet_id ); ?>-label">
-								<?php esc_html_e( 'Copy', 'albert-ai-butler' ); ?>
-							</button>
-						</div>
-						<pre class="albert-guide__code" id="<?php echo esc_attr( $snippet_id ); ?>"><?php echo esc_html( (string) $guide['snippet'] ); ?></pre>
-					</div>
-				<?php } ?>
-
-				<?php if ( $deeplink !== '' ) { ?>
-					<p class="albert-guide__deeplink">
-						<a class="button button-secondary" href="<?php echo esc_url( $deeplink, [ 'http', 'https', 'cursor', 'vscode' ] ); ?>">
-							<?php echo esc_html( (string) $guide['deeplink_label'] ); ?>
-						</a>
-						<span class="albert-guide__deeplink-note"><?php esc_html_e( 'Opens the app and fills this in for you.', 'albert-ai-butler' ); ?></span>
-					</p>
-				<?php } ?>
-			</div>
-		</details>
 		<?php
 	}
 
@@ -2148,6 +2095,13 @@ class Connections implements Hookable {
 			ALBERT_PLUGIN_URL . 'assets/css/admin-connections.css',
 			[ Assets::PRIMITIVES_HANDLE ],
 			Assets::version( 'assets/css/admin-connections.css' )
+		);
+
+		wp_enqueue_style(
+			'albert-connect',
+			ALBERT_PLUGIN_URL . 'assets/css/admin-connect.css',
+			[ Assets::PRIMITIVES_HANDLE ],
+			Assets::version( 'assets/css/admin-connect.css' )
 		);
 
 		wp_enqueue_script(
