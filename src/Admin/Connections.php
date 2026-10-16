@@ -15,6 +15,7 @@ namespace Albert\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Admin\Connections\AppIcon;
 use Albert\Admin\Connections\ClientSetupGuides;
 use Albert\Admin\Connections\ConnectDialog;
 use Albert\Admin\Connections\SiteLocation;

@@ -32,7 +32,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @phpstan-type AlbertGuideAction array{type: string, label: string, value: string, meta: string}
  * @phpstan-type AlbertGuideStep array{text: string, action: AlbertGuideAction|null}
- * @phpstan-type AlbertGuideNote array{text: string, command: string}
+ * @phpstan-type AlbertGuideNote array{text: string, command: string, after: bool}
  * @phpstan-type AlbertGuideSnippet array{id: string, label: string, hint: string, snippet: string, quiet: bool}
  * @phpstan-type AlbertGuideManual array{steps: array<int, string>, path: string, snippet: string, snippet_label: string}
  * @phpstan-type AlbertClientGuide array{
@@ -143,7 +143,7 @@ class ClientSetupGuides {
 		if ( $context['http'] ) {
 			$notes[] = self::note( __( 'Claude needs this site on an https address.', 'albert-ai-butler' ) );
 		}
-		$notes[] = self::note( __( 'A free Claude account can add one custom connector. On a Team or Enterprise plan, an owner adds it for the organisation first.', 'albert-ai-butler' ) );
+		$notes[] = self::note( __( 'A free Claude account can add one custom connector. On a Team or Enterprise plan, an owner adds it for the organisation first.', 'albert-ai-butler' ), '', true );
 
 		return self::guide(
 			[
@@ -151,7 +151,6 @@ class ClientSetupGuides {
 				'label'        => $context['local'] ? __( 'Claude on the web and phone', 'albert-ai-butler' ) : __( 'Claude', 'albert-ai-butler' ),
 				'icon'         => 'claude',
 				'needs_public' => $context['local'],
-				'intro'        => __( 'Claude opens with this site filled in as a connector, for the web, desktop and phone apps.', 'albert-ai-butler' ),
 				'steps'        => [
 					self::step( __( 'Click Add to Claude.', 'albert-ai-butler' ), self::link( __( 'Add to Claude', 'albert-ai-butler' ), $deeplink ) ),
 					self::step( __( 'Claude asks to add the connector: choose Add.', 'albert-ai-butler' ) ),
@@ -224,7 +223,8 @@ class ClientSetupGuides {
 		if ( $context['local'] && ! $context['http'] ) {
 			$notes[] = self::note(
 				__( 'If Claude Code says it can’t verify the site’s certificate, start it with this command instead:', 'albert-ai-butler' ),
-				sprintf( 'NODE_EXTRA_CA_CERTS="%s" claude', self::local_root_certificate() )
+				sprintf( 'NODE_EXTRA_CA_CERTS="%s" claude', self::local_root_certificate() ),
+				true
 			);
 		}
 
@@ -311,13 +311,12 @@ class ClientSetupGuides {
 				'id'     => 'vscode',
 				'label'  => __( 'VS Code', 'albert-ai-butler' ),
 				'icon'   => 'vscode',
-				'intro'  => __( 'Needs GitHub Copilot in agent mode.', 'albert-ai-butler' ),
 				'steps'  => [
 					self::step( __( 'Click Add to VS Code.', 'albert-ai-butler' ), self::link( __( 'Add to VS Code', 'albert-ai-butler' ), $deeplink ) ),
 					self::step( __( 'VS Code asks to install the server: choose Install.', 'albert-ai-butler' ) ),
 					self::approve_step(),
 				],
-				'notes'  => self::http_note( $context ),
+				'notes'  => array_merge( [ self::note( __( 'Needs GitHub Copilot in agent mode.', 'albert-ai-butler' ) ) ], self::http_note( $context ) ),
 				'manual' => self::manual(
 					[
 						__( 'Create the file named below in your project folder.', 'albert-ai-butler' ),
@@ -348,7 +347,7 @@ class ClientSetupGuides {
 		if ( $context['http'] ) {
 			$notes[] = self::note( __( 'ChatGPT needs this site on an https address.', 'albert-ai-butler' ) );
 		}
-		$notes[] = self::note( __( 'Custom connectors need ChatGPT’s Developer mode, which is not on every plan.', 'albert-ai-butler' ) );
+		$notes[] = self::note( __( 'Custom connectors need ChatGPT’s Developer mode, which is not on every plan.', 'albert-ai-butler' ), '', true );
 
 		return self::guide(
 			[
@@ -575,16 +574,22 @@ class ClientSetupGuides {
 	/**
 	 * A requirement note, with an optional command to copy.
 	 *
+	 * A requirement that decides whether the steps can work at all (https,
+	 * Copilot) goes above them; a plan limit or a fix for a problem that may
+	 * come up goes below, so it does not stand between the person and step 1.
+	 *
 	 * @param string $text    The note.
 	 * @param string $command A command to copy, or ''.
+	 * @param bool   $after   Whether it goes below the steps.
 	 *
 	 * @return AlbertGuideNote The note.
 	 * @since 1.5.0
 	 */
-	private static function note( string $text, string $command = '' ): array {
+	private static function note( string $text, string $command = '', bool $after = false ): array {
 		return [
 			'text'    => $text,
 			'command' => $command,
+			'after'   => $after,
 		];
 	}
 
