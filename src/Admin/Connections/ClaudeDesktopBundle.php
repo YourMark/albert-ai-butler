@@ -97,7 +97,7 @@ class ClaudeDesktopBundle implements Hookable {
 	public function download(): void {
 		check_admin_referer( self::ACTION );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( ConnectCapability::CAPABILITY ) ) {
 			wp_die( esc_html__( 'You are not allowed to download this file.', 'albert-ai-butler' ), '', [ 'response' => 403 ] );
 		}
 

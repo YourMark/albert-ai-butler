@@ -72,7 +72,7 @@ class ConnectDialog {
 	public static function render_location_line(): void {
 		?>
 		<p class="albert-connect-location" data-albert-location-line>
-			<span data-albert-location-text><?php echo esc_html( self::location_sentence( SiteLocation::current(), SiteLocation::is_guess() ) ); ?></span>
+			<span data-albert-location-text><?php echo esc_html( self::location_sentence( SiteLocation::current( get_current_user_id() ), SiteLocation::is_guess( get_current_user_id() ) ) ); ?></span>
 			<button type="button" class="button-link" data-albert-open-connect data-step="location"><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
 		</p>
 		<?php
@@ -86,7 +86,8 @@ class ConnectDialog {
 	 */
 	public static function render(): void {
 		$endpoint = McpServer::get_endpoint_url();
-		$location = SiteLocation::current();
+		$user_id  = get_current_user_id();
+		$location = SiteLocation::current( $user_id );
 		$guides   = [
 			SiteLocation::PUBLIC => ClientSetupGuides::for_location( $endpoint, SiteLocation::PUBLIC ),
 			SiteLocation::LOCAL  => ClientSetupGuides::for_location( $endpoint, SiteLocation::LOCAL ),
@@ -99,7 +100,7 @@ class ConnectDialog {
 			aria-labelledby="albert-connect-title"
 			data-albert-connect
 			data-location="<?php echo esc_attr( $location ); ?>"
-			data-guess="<?php echo SiteLocation::is_guess() ? '1' : '0'; ?>"
+			data-guess="<?php echo SiteLocation::is_guess( $user_id ) ? '1' : '0'; ?>"
 			data-server-time="<?php echo esc_attr( (string) time() ); ?>">
 			<div class="albert-dialog__header">
 				<div class="albert-dialog__heading">
@@ -156,7 +157,7 @@ class ConnectDialog {
 				</legend>
 				<?php foreach ( $options as $value => [ $label, $description ] ) { ?>
 					<label class="albert-choice">
-						<input type="radio" name="albert-connect-location" value="<?php echo esc_attr( $value ); ?>" <?php checked( SiteLocation::current(), $value ); ?> aria-describedby="albert-connect-location-<?php echo esc_attr( $value ); ?>">
+						<input type="radio" name="albert-connect-location" value="<?php echo esc_attr( $value ); ?>" <?php checked( SiteLocation::current( get_current_user_id() ), $value ); ?> aria-describedby="albert-connect-location-<?php echo esc_attr( $value ); ?>">
 						<span class="albert-choice__text">
 							<span class="albert-choice__label"><?php echo esc_html( $label ); ?></span>
 							<span class="albert-choice__description" id="albert-connect-location-<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $description ); ?></span>
@@ -164,6 +165,9 @@ class ConnectDialog {
 					</label>
 				<?php } ?>
 			</fieldset>
+			<?php if ( ! current_user_can( 'manage_options' ) ) { ?>
+				<p class="albert-connect__context"><?php esc_html_e( 'This changes it for you only. An administrator can change it for the site.', 'albert-ai-butler' ); ?></p>
+			<?php } ?>
 		</section>
 		<?php
 	}

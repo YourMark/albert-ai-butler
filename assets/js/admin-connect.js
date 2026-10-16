@@ -70,10 +70,20 @@
 			}
 
 			window.addEventListener( 'focus', () => this.poll() );
+
+			// A setup link an administrator sent opens straight into the dialog.
+			const url = new URL( window.location.href );
+			if ( url.searchParams.get( 'albert_connect' ) === '1' ) {
+				url.searchParams.delete( 'albert_connect' );
+				window.history.replaceState( null, '', url.toString() );
+				this.open( this.dialog );
+			}
 		},
 
 		open( opener ) {
-			this.opener = opener;
+			// Opened from a setup link, the dialog itself is the "opener": there
+			// is no button to return focus to.
+			this.opener = opener === this.dialog ? null : opener;
 			this.connection = null;
 			this.since = Math.floor( Date.now() / 1000 ) + this.clockOffset - 5;
 
@@ -100,6 +110,7 @@
 				// them as they are now, with the new row marked.
 				const url = new URL( window.location.href );
 				url.searchParams.set( 'albert_new', this.connection.client );
+				url.searchParams.delete( 'albert_connect' );
 				window.location.assign( url.toString() );
 				return;
 			}

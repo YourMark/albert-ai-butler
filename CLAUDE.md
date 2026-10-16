@@ -645,6 +645,19 @@ setup is complete a header button keeps the dialog reachable. The Connections
 layout is fixed in every state: connect card, then the two lists; the old
 per-app accordion is gone, the dialog holds that content.
 
+**Anyone on the list can see how to connect (1.5.0).** `albert_connect`
+(`Admin\Connections\ConnectCapability`, a `user_has_cap` grant) is held by
+administrators and by everyone `AllowedUsers::is_allowed()` says yes to, whatever
+their role, so it follows the list live and an expired invitation grants nothing.
+It gates `Admin\ConnectPage` (the dialog, the MCP URL and the person's own
+connections with a Revoke that drops only their tokens,
+`ClientRepository::revokeUserTokens()`), the dialog's REST routes and the Claude
+Desktop download. Nothing else: logs, settings, abilities and other people's
+connections stay `manage_options`. A non-administrator's location answer is
+saved for them only. Administrators keep Connections; the Connect page is out of
+their menu but reachable, and "Copy setup link" in Who may connect hands a
+non-administrator a link that opens the dialog on arrival.
+
 **Connections group by client, not by token.** A client refreshes hourly, so a
 token-keyed list shows one assistant several times and calls each a connection.
 Revoke has two depths behind one confirm dialog: access token only (the client

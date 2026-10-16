@@ -17,6 +17,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Admin\Connections\ClientSetupGuides;
 use Albert\Admin\Connections\ConnectDialog;
+use Albert\Admin\ConnectPage;
 use Albert\Admin\Connections\SiteLocation;
 use Albert\Admin\Connections\UserPickerModal;
 use Albert\Contracts\Interfaces\Hookable;
@@ -1547,6 +1548,13 @@ class Connections implements Hookable {
 				<?php } ?>
 			</div>
 			<div class="albert-user-item__actions">
+				<?php if ( ! user_can( $user, 'manage_options' ) ) { ?>
+					<?php // Their Connect page, which opens the dialog on arrival: what an agency sends a client. ?>
+					<span class="screen-reader-text" id="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>"><?php echo esc_html( ConnectPage::setup_url() ); ?></span>
+					<button type="button" class="button-link albert-copy-button" data-copy-target="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>">
+						<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
+					</button>
+				<?php } ?>
 				<a href="<?php echo esc_url( $remove_url ); ?>"
 					class="albert-danger-link"
 					data-albert-remove-user

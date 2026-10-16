@@ -64,6 +64,8 @@ use Albert\Admin\AdapterNudge;
 use Albert\Admin\Assets;
 use Albert\Admin\Connections;
 use Albert\Admin\Connections\ClaudeDesktopBundle;
+use Albert\Admin\Connections\ConnectCapability;
+use Albert\Admin\ConnectPage;
 use Albert\Admin\ContextPage;
 use Albert\Admin\Menu;
 use Albert\Admin\Dashboard;
@@ -246,6 +248,9 @@ class Plugin {
 		// and front-end requests too.
 		( new SettingsOverrides() )->register_hooks();
 
+		// Read on REST requests too: the connect dialog's routes check it.
+		( new ConnectCapability() )->register_hooks();
+
 		// Register admin components.
 		if ( is_admin() ) {
 			// Shared admin assets. Registers the design-token stylesheet every
@@ -275,6 +280,7 @@ class Plugin {
 			// Connections page (allowed users + active sessions).
 			( new Connections() )->register_hooks();
 			( new ClaudeDesktopBundle() )->register_hooks();
+			( new ConnectPage() )->register_hooks();
 
 			// Safe-mode approvals queue (approve or reject held destructive calls).
 			( new Approvals( $safe_mode_repository, new SafeModeApprover( $safe_mode_repository ), null, new SafeModeApprovalPolicy() ) )->register_hooks();

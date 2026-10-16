@@ -583,6 +583,10 @@
 .albert-user-item__sessions,
 .albert-user-item__actions {
 	flex-shrink: 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-300);
 }
 
 /* The session count is a link wearing a badge; keep the badge's own colours. */
@@ -691,4 +695,16 @@ a.albert-badge:focus-visible {
 .albert-conn--new {
 	background: var(--albert-color-accent-surface);
 	box-shadow: inset 3px 0 0 var(--albert-color-accent);
+}
+
+/* Your own assistants on the Connect page: name and age, then Revoke. */
+.albert-conn--own {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--albert-space-300);
+}
+
+.albert-conn__actions {
+	margin: 0;
 }

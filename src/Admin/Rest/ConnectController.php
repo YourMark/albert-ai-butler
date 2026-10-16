@@ -11,6 +11,7 @@ namespace Albert\Admin\Rest;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Admin\Connections\ConnectCapability;
 use Albert\Admin\Connections\SiteLocation;
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\Plugin;
@@ -22,8 +23,10 @@ use WP_REST_Response;
  * Two routes: has my new connection arrived yet, and where is this site.
  *
  * Both act on the signed-in person only. Status reports their own
- * connections, never anyone else's, and saving the location writes the
- * site's answer only for someone who may manage options.
+ * connections, never anyone else's. Saving the location writes the site's
+ * answer for someone who may manage options, and only the person's own answer
+ * for anyone else on the allowed list: a wrong site-wide answer would mislead
+ * everybody else.
  *
  * @since 1.5.0
  */
@@ -88,7 +91,7 @@ class ConnectController implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function can_connect(): bool {
-		return current_user_can( 'manage_options' );
+		return current_user_can( ConnectCapability::CAPABILITY );
 	}
 
 	/**
@@ -126,8 +129,15 @@ class ConnectController implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function save_location( WP_REST_Request $request ): WP_REST_Response {
-		SiteLocation::save( (string) $request->get_param( 'location' ) );
+		$location = (string) $request->get_param( 'location' );
+		$user_id  = get_current_user_id();
 
-		return new WP_REST_Response( [ 'location' => SiteLocation::current() ] );
+		if ( current_user_can( 'manage_options' ) ) {
+			SiteLocation::save( $location );
+		} else {
+			SiteLocation::save_for_user( $user_id, $location );
+		}
+
+		return new WP_REST_Response( [ 'location' => SiteLocation::current( $user_id ) ] );
 	}
 }
