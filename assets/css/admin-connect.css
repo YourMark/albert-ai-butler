@@ -9,6 +9,14 @@
  * @since 1.5.0
  */
 
+/* An app's logo: decorative, the name beside it carries the meaning. */
+.albert-app-icon {
+	flex-shrink: 0;
+	inline-size: 1.125rem;
+	block-size: 1.125rem;
+	color: var(--albert-color-text);
+}
+
 .albert-guide-panel {
 	display: grid;
 	gap: var(--albert-space-300);

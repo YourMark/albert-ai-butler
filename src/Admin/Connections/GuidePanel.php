@@ -57,7 +57,7 @@ class GuidePanel {
 				<p class="albert-guide-panel__intro"><?php echo esc_html( $guide['intro'] ); ?></p>
 			<?php } ?>
 
-			<?php self::render_notes( $guide['notes'], $base ); ?>
+			<?php self::render_notes( array_filter( $guide['notes'], static fn( array $note ): bool => ! $note['after'] ), $base ); ?>
 
 			<ol class="albert-guide-panel__steps">
 				<?php foreach ( $guide['steps'] as $index => $step ) { ?>
@@ -71,6 +71,8 @@ class GuidePanel {
 					</li>
 				<?php } ?>
 			</ol>
+
+			<?php self::render_notes( array_filter( $guide['notes'], static fn( array $note ): bool => $note['after'] ), $base ); ?>
 
 			<?php self::render_more( $guide['more'], $base ); ?>
 
@@ -148,8 +150,8 @@ class GuidePanel {
 	/**
 	 * Requirement notes: quiet, so a note never reads as an error.
 	 *
-	 * @param array<int, array{text: string, command: string}> $notes The notes.
-	 * @param string                                           $base  Element id base.
+	 * @param array<int, array{text: string, command: string, after: bool}> $notes The notes.
+	 * @param string                                                        $base  Element id base.
 	 *
 	 * @return void
 	 * @since 1.5.0
