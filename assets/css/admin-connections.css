@@ -356,6 +356,12 @@
 	gap: var(--albert-space-200);
 }
 
+/* A quiet text action at the end of the row; red is for the confirmation.
+   Specific enough to beat core's `.wp-core-ui .button-link { margin: 0 }`. */
+.albert-conn__head .albert-conn__revoke.button-link {
+	margin-inline-start: auto;
+}
+
 /**
  * A label can be a sentence: "Bookkeeping assistant for the webshop, invoices
  * only" is a real thing somebody types. It truncates rather than wrapping, so
@@ -574,6 +580,13 @@
 	color: var(--albert-color-text);
 }
 
+.albert-user-item__you {
+	margin-inline-start: var(--albert-space-200);
+	font-size: var(--albert-font-size-sm);
+	font-weight: normal;
+	color: var(--albert-color-text-muted);
+}
+
 .albert-user-item__meta,
 .albert-user-item__expiry {
 	font-size: var(--albert-font-size-sm);
@@ -649,4 +662,51 @@ a.albert-badge:focus-visible {
 	background: var(--albert-color-danger-surface);
 }
 
-/* ===================================================================}
+/* ==========================================================================
+   Connect card
+   ========================================================================== */
+
+.albert-connections__connect-body {
+	display: grid;
+	gap: var(--albert-space-400);
+}
+
+.albert-connections__connect-body > p {
+	margin: 0;
+}
+
+.albert-connections__url {
+	display: grid;
+	gap: var(--albert-space-200);
+	max-inline-size: 46rem;
+}
+
+.albert-connections__url-label {
+	font-size: var(--albert-font-size-body);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-text);
+}
+
+.albert-connections__apps {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-200);
+}
+
+.albert-connections__apps-label {
+	margin-inline-end: var(--albert-space-100);
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+/* The row the connect dialog just added, until the next visit. */
+.albert-conn--new {
+	background: var(--albert-color-accent-surface);
+	box-shadow: inset 3px 0 0 var(--albert-color-accent);
+}
+
+.albert-connlist__toolbar[hidden],
+.albert-connections__footer[hidden] {
+	display: none;
+}

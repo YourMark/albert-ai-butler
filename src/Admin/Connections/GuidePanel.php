@@ -125,6 +125,10 @@ class GuidePanel {
 				<button type="button" class="button button-secondary" data-albert-show-guide="claude-desktop"><?php esc_html_e( 'Show Claude Desktop', 'albert-ai-butler' ); ?></button>
 				<button type="button" class="button button-secondary" data-albert-show-guide="cursor"><?php esc_html_e( 'Show Cursor', 'albert-ai-butler' ); ?></button>
 			</p>
+			<p class="albert-guide-panel__hint">
+				<?php esc_html_e( 'Is this site public after all?', 'albert-ai-butler' ); ?>
+				<button type="button" class="button-link" data-albert-mark-public data-app="<?php echo esc_attr( $guide['id'] ); ?>"><?php esc_html_e( 'Mark it as public', 'albert-ai-butler' ); ?></button>
+			</p>
 		</div>
 		<?php
 	}

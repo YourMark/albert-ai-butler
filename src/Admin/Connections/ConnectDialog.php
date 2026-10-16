@@ -51,14 +51,20 @@ class ConnectDialog {
 	 * @param string $classes Button classes.
 	 * @param string $app     Open straight at this app's steps, or '' to start at the first question.
 	 * @param string $label   The button text, or '' for the default.
+	 * @param string $icon    An app logo to show before the label, or ''.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	public static function render_button( string $classes = 'button button-primary', string $app = '', string $label = '' ): void {
+	public static function render_button( string $classes = 'button button-primary', string $app = '', string $label = '', string $icon = '' ): void {
 		?>
-		<button type="button" class="<?php echo esc_attr( $classes ); ?>" data-albert-open-connect<?php echo $app !== '' ? ' data-app="' . esc_attr( $app ) . '"' : ''; ?> aria-haspopup="dialog">
-			<?php echo esc_html( $label !== '' ? $label : __( 'Connect an assistant', 'albert-ai-butler' ) ); ?>
+		<button type="button" class="<?php echo esc_attr( $classes . ( $icon !== '' ? ' albert-app-button' : '' ) ); ?>" data-albert-open-connect<?php echo $app !== '' ? ' data-app="' . esc_attr( $app ) . '"' : ''; ?> aria-haspopup="dialog">
+			<?php
+			if ( $icon !== '' ) {
+				AppIcon::render( $icon );
+			}
+			echo esc_html( $label !== '' ? $label : __( 'Connect an assistant', 'albert-ai-butler' ) );
+			?>
 		</button>
 		<?php
 	}
@@ -215,6 +221,7 @@ class ConnectDialog {
 			<?php foreach ( $guides as $guide ) { ?>
 				<label class="albert-choice albert-choice--app">
 					<input type="radio" name="albert-connect-app-<?php echo esc_attr( $location ); ?>" value="<?php echo esc_attr( (string) $guide['id'] ); ?>">
+					<?php AppIcon::render( (string) $guide['icon'] ); ?>
 					<span class="albert-choice__label"><?php echo esc_html( (string) $guide['label'] ); ?></span>
 				</label>
 			<?php } ?>
@@ -270,6 +277,7 @@ class ConnectDialog {
 						<li><?php esc_html_e( 'The app couldn’t reach this site. Check that the address it uses matches the MCP URL.', 'albert-ai-butler' ); ?></li>
 						<li><?php esc_html_e( 'On a site that only runs on this computer, apps that need a public site can’t connect.', 'albert-ai-butler' ); ?></li>
 					</ul>
+					<button type="button" class="button-link" data-albert-connect-manual><?php esc_html_e( 'Set it up by hand instead', 'albert-ai-butler' ); ?></button>
 				</div>
 			</div>
 		</section>

@@ -423,3 +423,29 @@
 	font-size: var(--albert-font-size-body);
 	color: var(--albert-color-text-muted);
 }
+
+/* Logos inside buttons and choice cards sit on the text's line. */
+.albert-app-button {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--albert-space-200);
+}
+
+.albert-app-button .albert-app-icon,
+.albert-choice--app .albert-app-icon {
+	inline-size: 1rem;
+	block-size: 1rem;
+	color: currentColor;
+}
+
+/* The "Instructions for" row reads as a set of choices, not a row of calls to action. */
+.albert-connections__apps .albert-app-button {
+	border-color: var(--albert-color-border-input);
+	background: var(--albert-color-surface);
+	color: var(--albert-color-text);
+}
+
+.albert-connections__apps .albert-app-button:hover {
+	background: var(--albert-color-surface-sunken);
+	color: var(--albert-color-text);
+}
