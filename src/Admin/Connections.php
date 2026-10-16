@@ -15,6 +15,7 @@ namespace Albert\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Admin\Connections\AppIcon;
 use Albert\Admin\Connections\ClientSetupGuides;
 use Albert\Admin\Connections\GuidePanel;
 use Albert\Admin\Connections\SiteLocation;
@@ -1563,6 +1564,7 @@ class Connections implements Hookable {
 					<details class="albert-guide" id="albert-guide-<?php echo esc_attr( $guide['id'] ); ?>" data-albert-guide="<?php echo esc_attr( $guide['id'] ); ?>">
 						<summary class="albert-guide__summary">
 							<span class="dashicons dashicons-arrow-right-alt2 albert-guide__chevron" aria-hidden="true"></span>
+							<?php AppIcon::render( $guide['icon'] ); ?>
 							<span class="albert-guide__label"><?php echo esc_html( $guide['label'] ); ?></span>
 							<?php if ( $guide['needs_public'] ) { ?>
 								<span class="albert-guide__description"><?php esc_html_e( 'Needs a public site', 'albert-ai-butler' ); ?></span>

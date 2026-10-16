@@ -719,3 +719,7 @@ a.albert-badge:focus-visible {
 	border-color: var(--albert-color-danger);
 	background: var(--albert-color-danger-surface);
 }
+
+.albert-guide__summary .albert-app-icon {
+	align-self: center;
+}
