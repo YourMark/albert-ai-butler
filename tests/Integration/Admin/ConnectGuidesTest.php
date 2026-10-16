@@ -69,14 +69,14 @@ class ConnectGuidesTest extends TestCase {
 	public function test_a_local_site_lists_apps_that_need_a_public_site_last(): void {
 		$guides = ClientSetupGuides::for_location( self::HTTP, SiteLocation::LOCAL );
 
-		$this->assertSame( [ 'claude-code', 'cursor', 'vscode', 'other', 'claude', 'chatgpt' ], $this->ids( $guides ) );
+		$this->assertSame( [ 'claude-desktop', 'claude-code', 'cursor', 'vscode', 'other', 'claude', 'chatgpt' ], $this->ids( $guides ) );
 
-		foreach ( array_slice( $guides, 4 ) as $guide ) {
+		foreach ( array_slice( $guides, 5 ) as $guide ) {
 			$this->assertTrue( $guide['needs_public'] );
 			$this->assertNotSame( '', $guide['unavailable'] );
 		}
 
-		$this->assertSame( 'Claude on the web and phone', $guides[4]['label'] );
+		$this->assertSame( 'Claude on the web and phone', $guides[5]['label'] );
 	}
 
 	/**
@@ -92,19 +92,35 @@ class ConnectGuidesTest extends TestCase {
 	}
 
 	/**
-	 * A plain http address gets the https note and a bridge that allows it.
+	 * A plain http address other than localhost gets the https note, and
+	 * Claude Desktop's download is withheld: OAuth will not send the token
+	 * request there, so the file could never connect.
 	 *
 	 * @return void
 	 */
-	public function test_an_http_address_adds_the_https_note_and_allow_http(): void {
-		$claude = ClientSetupGuides::get( 'claude', self::HTTP, SiteLocation::PUBLIC );
-		$other  = ClientSetupGuides::get( 'other', self::HTTP, SiteLocation::LOCAL );
-		$bridge = end( $other['more'] );
+	public function test_an_http_hostname_blocks_what_cannot_sign_in(): void {
+		$claude  = ClientSetupGuides::get( 'claude', self::HTTP, SiteLocation::PUBLIC );
+		$desktop = ClientSetupGuides::get( 'claude-desktop', self::HTTP, SiteLocation::LOCAL );
+		$other   = ClientSetupGuides::get( 'other', self::HTTP, SiteLocation::LOCAL );
+		$bridge  = end( $other['more'] );
 
 		$this->assertSame( 'Claude needs this site on an https address.', $claude['notes'][0]['text'] );
+		$this->assertNotSame( '', $desktop['blocked'] );
 		$this->assertSame( 'bridge', $bridge['id'] );
-		$this->assertStringContainsString( '"--allow-http"', $bridge['snippet'] );
 		$this->assertStringContainsString( '"mcp-remote@0.15.1"', $bridge['snippet'] );
+		$this->assertStringNotContainsString( '--allow-http', $bridge['snippet'] );
+	}
+
+	/**
+	 * Plain http on localhost is fine for apps on this computer.
+	 *
+	 * @return void
+	 */
+	public function test_http_on_localhost_is_not_blocked(): void {
+		$desktop = ClientSetupGuides::get( 'claude-desktop', 'http://localhost:8888/wp-json/albert/v1/mcp', SiteLocation::LOCAL );
+
+		$this->assertSame( '', $desktop['blocked'] );
+		$this->assertSame( 'download', $desktop['steps'][0]['action']['type'] );
 	}
 
 	/**

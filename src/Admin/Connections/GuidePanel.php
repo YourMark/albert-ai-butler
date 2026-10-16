@@ -51,6 +51,15 @@ class GuidePanel {
 			return;
 		}
 
+		if ( $guide['blocked'] !== '' ) {
+			?>
+			<div class="albert-guide-panel albert-guide-panel--unavailable">
+				<p class="albert-guide-panel__intro"><?php echo esc_html( $guide['blocked'] ); ?></p>
+			</div>
+			<?php
+			return;
+		}
+
 		?>
 		<div class="albert-guide-panel">
 			<?php if ( $guide['intro'] !== '' ) { ?>
@@ -109,9 +118,9 @@ class GuidePanel {
 		?>
 		<div class="albert-guide-panel albert-guide-panel--unavailable" id="<?php echo esc_attr( $base ); ?>">
 			<p class="albert-guide-panel__intro"><?php echo esc_html( $guide['unavailable'] ); ?></p>
-			<p class="albert-guide-panel__intro"><?php esc_html_e( 'Use an app on this computer, like Claude Code or Cursor, or put the site online.', 'albert-ai-butler' ); ?></p>
+			<p class="albert-guide-panel__intro"><?php esc_html_e( 'Use an app on this computer, like Claude Desktop or Cursor, or put the site online.', 'albert-ai-butler' ); ?></p>
 			<p class="albert-guide-panel__alternatives">
-				<button type="button" class="button button-secondary" data-albert-show-guide="claude-code"><?php esc_html_e( 'Show Claude Code', 'albert-ai-butler' ); ?></button>
+				<button type="button" class="button button-secondary" data-albert-show-guide="claude-desktop"><?php esc_html_e( 'Show Claude Desktop', 'albert-ai-butler' ); ?></button>
 				<button type="button" class="button button-secondary" data-albert-show-guide="cursor"><?php esc_html_e( 'Show Cursor', 'albert-ai-butler' ); ?></button>
 			</p>
 		</div>

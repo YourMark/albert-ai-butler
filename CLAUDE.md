@@ -617,6 +617,19 @@ Connections screen and the connect dialog cannot drift. No credential-bundle exp
 holding a permanent plaintext credential is a step back from tokens that are
 scoped, expiring and revocable.
 
+**Claude Desktop on a local site gets an install file (1.5.0).** Its connectors
+run on Anthropic's servers, so `Admin\Connections\ClaudeDesktopBundle` serves a
+`.mcpb` built per download: a manifest with this site's MCP URL and
+`NODE_USE_SYSTEM_CA=1` (plus `NODE_EXTRA_CA_CERTS` when
+`LocalCertificate` finds Herd, Valet or mkcert's root), and
+`assets/claude-desktop/bridge.mjs`, a minified esbuild bundle of mcp-remote
+pinned at `BRIDGE_VERSION`, built from `tools/claude-desktop/` (`npm run build`
+there). No secret is in the file; the bridge signs in with OAuth. The MCP SDK
+inside mcp-remote refuses to send the token request over plain http to anything
+but localhost, deliberately and with no override, so on such sites the guide
+withholds the download and says to turn on https rather than offering a file
+that can never connect. Do not patch that check out of the bundle.
+
 **Connections group by client, not by token.** A client refreshes hourly, so a
 token-keyed list shows one assistant several times and calls each a connection.
 Revoke has two depths behind one confirm dialog: access token only (the client

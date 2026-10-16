@@ -45,7 +45,8 @@ defined( 'ABSPATH' ) || exit;
  *     notes: array<int, AlbertGuideNote>,
  *     manual: AlbertGuideManual|null,
  *     more: array<int, AlbertGuideSnippet>,
- *     unavailable: string
+ *     unavailable: string,
+ *     blocked: string
  * }
  *
  * @since 1.4.0
@@ -65,14 +66,21 @@ class ClientSetupGuides {
 	 * @since 1.5.0
 	 */
 	public static function for_location( string $endpoint, string $location ): array {
+		$host    = (string) wp_parse_url( $endpoint, PHP_URL_HOST );
 		$context = [
 			'endpoint' => $endpoint,
 			'local'    => $location === SiteLocation::LOCAL,
 			'http'     => wp_parse_url( $endpoint, PHP_URL_SCHEME ) === 'http',
 		];
 
+		// OAuth sends the token request only over https, or plain http to
+		// this computer by name (localhost and loopback addresses). The MCP
+		// SDK most apps build on refuses anything else.
+		$context['insecure'] = $context['http'] && ! in_array( strtolower( trim( $host, '[]' ) ), [ 'localhost', '127.0.0.1', '::1' ], true );
+
 		if ( $context['local'] ) {
 			return [
+				self::claude_desktop( $context ),
 				self::claude_code( $context ),
 				self::cursor( $context ),
 				self::vs_code( $context ),
@@ -115,7 +123,7 @@ class ClientSetupGuides {
 	/**
 	 * Claude: claude.ai, and the desktop and phone apps' connectors.
 	 *
-	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.4.0
@@ -165,9 +173,46 @@ class ClientSetupGuides {
 	}
 
 	/**
+	 * Claude Desktop on a local site: an install file instead of a connector.
+	 *
+	 * Its connectors run on Anthropic's servers, which cannot reach the site;
+	 * the file runs a bridge on this computer instead. See
+	 * {@see ClaudeDesktopBundle}. On a public site the Claude guide covers
+	 * the desktop app too, so this one is only offered locally.
+	 *
+	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
+	 *
+	 * @return AlbertClientGuide The guide entry.
+	 * @since 1.5.0
+	 */
+	private static function claude_desktop( array $context ): array {
+		$download = [
+			'type'  => 'download',
+			'label' => __( 'Download for Claude Desktop', 'albert-ai-butler' ),
+			'value' => ClaudeDesktopBundle::url(),
+			'meta'  => ClaudeDesktopBundle::filename(),
+		];
+
+		return self::guide(
+			[
+				'id'      => 'claude-desktop',
+				'label'   => __( 'Claude Desktop', 'albert-ai-butler' ),
+				'icon'    => 'claude',
+				'steps'   => [
+					self::step( __( 'Download the install file for this site.', 'albert-ai-butler' ), $download ),
+					self::step( __( 'Open the file. Claude Desktop shows what it adds: choose Install.', 'albert-ai-butler' ) ),
+					self::step( __( 'The first time Claude uses Albert, your browser opens this site: sign in as someone listed under Who may connect, and choose Authorize.', 'albert-ai-butler' ) ),
+				],
+				'notes'   => ClaudeDesktopBundle::is_available() ? [] : [ self::note( __( 'This server is missing PHP’s Zip extension, so it cannot build the file. Use Claude Code, Cursor or another app on this computer instead.', 'albert-ai-butler' ) ) ],
+				'blocked' => $context['insecure'] ? __( 'Claude Desktop needs this site on a secure https address, or on localhost. Turn on https for the site in the tool that runs it (for example Secure in Herd, or SSL in Local), then come back for the file.', 'albert-ai-butler' ) : '',
+			]
+		);
+	}
+
+	/**
 	 * Claude Code.
 	 *
-	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.4.0
@@ -175,7 +220,7 @@ class ClientSetupGuides {
 	private static function claude_code( array $context ): array {
 		$command = sprintf( 'claude mcp add --transport http --scope user albert %s', $context['endpoint'] );
 
-		$notes = [];
+		$notes = self::http_note( $context );
 		if ( $context['local'] && ! $context['http'] ) {
 			$notes[] = self::note(
 				__( 'If Claude Code says it can’t verify the site’s certificate, start it with this command instead:', 'albert-ai-butler' ),
@@ -202,7 +247,7 @@ class ClientSetupGuides {
 	/**
 	 * Cursor.
 	 *
-	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.4.0
@@ -246,7 +291,7 @@ class ClientSetupGuides {
 	/**
 	 * Visual Studio Code with GitHub Copilot.
 	 *
-	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.4.0
@@ -293,7 +338,7 @@ class ClientSetupGuides {
 	 * have moved more than once, so the steps name the setting rather than a
 	 * menu path that may be stale by the time somebody reads it.
 	 *
-	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.4.0
@@ -326,7 +371,7 @@ class ClientSetupGuides {
 	 * Every other app: the URL first, then the common ones by name, then the
 	 * Node.js bridge for apps that can only start a program.
 	 *
-	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.5.0
@@ -384,22 +429,15 @@ class ClientSetupGuides {
 	 * Pinned, so a new release of the bridge cannot change what runs on the
 	 * user's computer without Albert shipping it.
 	 *
-	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
 	 *
 	 * @return AlbertGuideSnippet The snippet.
 	 * @since 1.5.0
 	 */
 	private static function bridge( array $context ): array {
-		$args = [ '-y', 'mcp-remote@0.15.1', $context['endpoint'] ];
-
-		// The bridge refuses a plain http address that is not localhost.
-		if ( $context['http'] ) {
-			$args[] = '--allow-http';
-		}
-
 		$server = [
 			'command' => 'npx',
-			'args'    => $args,
+			'args'    => [ '-y', 'mcp-remote@' . ClaudeDesktopBundle::BRIDGE_VERSION, $context['endpoint'] ],
 		];
 
 		// A local https site's certificate is one Node does not trust by default.
@@ -410,43 +448,20 @@ class ClientSetupGuides {
 		return self::snippet(
 			'bridge',
 			__( 'For apps that can’t connect to a URL. Needs Node.js 22 or newer.', 'albert-ai-butler' ),
-			'',
+			$context['insecure'] ? __( 'Needs this site on a secure https address, or on localhost.', 'albert-ai-butler' ) : '',
 			self::json_snippet( [ 'mcpServers' => [ 'albert' => $server ] ] ),
 			true
 		);
 	}
 
 	/**
-	 * Where this computer keeps the root certificate its local sites are signed with.
+	 * The local root certificate's path, or a placeholder the person fills in.
 	 *
-	 * On a local site the site's PHP runs on the same computer as the app, so
-	 * the common tools' files can be looked for directly. Unknown tools get a
-	 * placeholder the person fills in, rather than a path that is wrong.
-	 *
-	 * @return string An absolute path, or a placeholder.
+	 * @return string
 	 * @since 1.5.0
 	 */
 	private static function local_root_certificate(): string {
-		$home = (string) getenv( 'HOME' );
-
-		if ( $home !== '' ) {
-			$candidates = [
-				// Laravel Herd and Valet.
-				$home . '/Library/Application Support/Herd/config/valet/CA/LaravelValetCASelfSigned.pem',
-				$home . '/.config/valet/CA/LaravelValetCASelfSigned.pem',
-				// mkcert, on macOS and Linux.
-				$home . '/Library/Application Support/mkcert/rootCA.pem',
-				$home . '/.local/share/mkcert/rootCA.pem',
-			];
-
-			foreach ( $candidates as $path ) {
-				if ( is_readable( $path ) ) {
-					return $path;
-				}
-			}
-		}
-
-		return __( '<path to your local root certificate>', 'albert-ai-butler' );
+		return LocalCertificate::path() ?? __( '<path to your local root certificate>', 'albert-ai-butler' );
 	}
 
 	/**
@@ -460,15 +475,15 @@ class ClientSetupGuides {
 	}
 
 	/**
-	 * The note for apps that may refuse a plain http address.
+	 * The note for apps that may refuse a plain http address other than localhost.
 	 *
-	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
 	 *
 	 * @return array<int, AlbertGuideNote> One note, or none on https.
 	 * @since 1.5.0
 	 */
 	private static function http_note( array $context ): array {
-		return $context['http'] ? [ self::note( __( 'This app may need a secure https address for your site.', 'albert-ai-butler' ) ) ] : [];
+		return $context['insecure'] ? [ self::note( __( 'This app may need a secure https address for your site.', 'albert-ai-butler' ) ) ] : [];
 	}
 
 	/**
@@ -497,6 +512,7 @@ class ClientSetupGuides {
 				'manual'       => null,
 				'more'         => [],
 				'unavailable'  => '',
+				'blocked'      => '',
 			],
 			$fields
 		);

@@ -63,6 +63,7 @@ use Albert\Admin\AbilitiesPage;
 use Albert\Admin\AdapterNudge;
 use Albert\Admin\Assets;
 use Albert\Admin\Connections;
+use Albert\Admin\Connections\ClaudeDesktopBundle;
 use Albert\Admin\ContextPage;
 use Albert\Admin\Menu;
 use Albert\Admin\Dashboard;
@@ -272,6 +273,7 @@ class Plugin {
 
 			// Connections page (allowed users + active sessions).
 			( new Connections() )->register_hooks();
+			( new ClaudeDesktopBundle() )->register_hooks();
 
 			// Safe-mode approvals queue (approve or reject held destructive calls).
 			( new Approvals( $safe_mode_repository, new SafeModeApprover( $safe_mode_repository ), null, new SafeModeApprovalPolicy() ) )->register_hooks();
