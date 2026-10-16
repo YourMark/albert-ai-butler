@@ -225,7 +225,7 @@ class AuthorizationPage implements Hookable {
 		$current_user = wp_get_current_user();
 
 		if ( ! AllowedUsers::is_allowed( $current_user->ID ) ) {
-			$this->render_access_denied_page( $current_user );
+			$this->render_access_denied_page( $current_user, $client->getName(), $redirect_uri, $state );
 			return;
 		}
 
@@ -542,27 +542,41 @@ class AuthorizationPage implements Hookable {
 	}
 
 	/**
-	 * Render an access denied page for users not in the allowed list.
+	 * Render the page that refuses someone not on the allowed list.
 	 *
-	 * Distinguishes two different denials: never invited at all, versus an
-	 * invitation that existed but expired unused. Someone who was told "you
-	 * can connect now" and then hits a plain "not authorized" wall a day
-	 * later has no way to know whether they were forgotten or timed out;
-	 * {@see \Albert\OAuth\AllowedUsers::has_expired_invitation()} already
-	 * knows which one it is.
+	 * It names who can fix it, because "access denied" alone sends people to
+	 * support. An administrator who is not listed can fix it themselves, so
+	 * they get the way there instead of being told to ask somebody. An
+	 * expired invitation reads differently from never being invited:
+	 * {@see \Albert\OAuth\AllowedUsers::has_expired_invitation()} knows which.
 	 *
-	 * @param \WP_User $user The current user.
+	 * @param \WP_User $user         The current user.
+	 * @param string   $client_name  The app asking to connect, as it registered itself.
+	 * @param string   $redirect_uri The validated redirect URI, for leaving without connecting.
+	 * @param string   $state        The OAuth state, returned with the refusal.
 	 *
 	 * @return void
 	 * @since 1.0.0
 	 */
-	private function render_access_denied_page( \WP_User $user ): void {
+	private function render_access_denied_page( \WP_User $user, string $client_name, string $redirect_uri, string $state ): void {
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
 		status_header( 403 );
 
-		$site_name = get_bloginfo( 'name' );
-		$expired   = AllowedUsers::has_expired_invitation( $user->ID );
+		$site_name   = get_bloginfo( 'name' );
+		$expired     = AllowedUsers::has_expired_invitation( $user->ID );
+		$is_admin    = user_can( $user, 'manage_options' );
+		$current_url = $this->get_current_url();
+		$leave_url   = add_query_arg(
+			array_filter(
+				[
+					'error'             => 'access_denied',
+					'error_description' => 'The user is not allowed to connect an assistant to this site.',
+					'state'             => $state,
+				]
+			),
+			$redirect_uri
+		);
 
 		$this->enqueue_oauth_styles();
 
@@ -572,41 +586,91 @@ class AuthorizationPage implements Hookable {
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title><?php esc_html_e( 'Access Denied', 'albert-ai-butler' ); ?> - <?php echo esc_html( $site_name ); ?></title>
+	<title><?php esc_html_e( 'This account can’t connect an assistant', 'albert-ai-butler' ); ?> - <?php echo esc_html( $site_name ); ?></title>
 		<?php wp_print_styles( 'albert-oauth-pages' ); ?>
 </head>
 <body>
-	<div class="access-denied-container">
-		<div class="icon">🚫</div>
-		<h1><?php esc_html_e( 'Access Not Authorized', 'albert-ai-butler' ); ?></h1>
-		<p>
-			<?php
-			echo esc_html(
-				$expired
-					? __( 'Your invitation to connect an AI assistant has expired. It was not used in time.', 'albert-ai-butler' )
-					: __( 'Your account has not been granted access to connect AI tools to this site.', 'albert-ai-butler' )
-			);
-			?>
-		</p>
-		<div class="user-info">
-			<?php
-			printf(
-				/* translators: %s: user display name */
-				esc_html__( 'Logged in as %s', 'albert-ai-butler' ),
-				'<strong>' . esc_html( $user->display_name ) . '</strong>'
-			);
-			?>
-			<br>
-			<small><?php echo esc_html( $user->user_email ); ?></small>
-		</div>
-		<p class="contact-admin">
-			<?php esc_html_e( 'Please contact your site administrator to request access.', 'albert-ai-butler' ); ?>
-		</p>
-	</div>
+	<main class="albert-oauth">
+		<p class="albert-oauth__site"><?php echo esc_html( $site_name ); ?></p>
+		<article class="albert-oauth__card">
+			<p class="albert-oauth__eyebrow">
+				<?php
+				/* translators: %s: the name the connecting app registered, e.g. "Claude". */
+				echo esc_html( sprintf( __( '%s asked to connect to this site', 'albert-ai-butler' ), $client_name ) );
+				?>
+			</p>
+			<h1 class="albert-oauth__title"><?php esc_html_e( 'This account can’t connect an assistant', 'albert-ai-butler' ); ?></h1>
+
+			<?php if ( ! $is_admin ) { ?>
+				<p class="albert-oauth__text">
+					<?php
+					echo esc_html(
+						$expired
+							/* translators: %s: the name of the connecting app. */
+							? sprintf( __( 'Your invitation to connect an assistant expired before it was used. Ask an administrator to add you again under Albert → Connections, then start connecting again from %s.', 'albert-ai-butler' ), $client_name )
+							/* translators: %s: the name of the connecting app. */
+							: sprintf( __( 'Your account isn’t on this site’s list of people who may connect an assistant. Ask an administrator to add you under Albert → Connections, then start connecting again from %s.', 'albert-ai-butler' ), $client_name )
+					);
+					?>
+				</p>
+			<?php } ?>
+
+			<p class="albert-oauth__meta">
+				<?php
+				printf(
+					/* translators: 1: the user's display name, 2: their role, e.g. "Editor". */
+					esc_html__( 'Signed in as %1$s (%2$s).', 'albert-ai-butler' ),
+					esc_html( $user->display_name ),
+					esc_html( $this->role_label( $user ) )
+				);
+				?>
+				<a href="<?php echo esc_url( wp_logout_url( $current_url ) ); ?>"><?php esc_html_e( 'Sign in as someone else', 'albert-ai-butler' ); ?></a>
+			</p>
+
+			<?php if ( $is_admin ) { ?>
+				<section class="albert-oauth__fix">
+					<h2 class="albert-oauth__subtitle"><?php esc_html_e( 'You can add yourself', 'albert-ai-butler' ); ?></h2>
+					<p class="albert-oauth__text"><?php esc_html_e( 'You are an administrator. Add yourself on the Connections page, then come back and try again.', 'albert-ai-butler' ); ?></p>
+					<p class="albert-oauth__actions">
+						<a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>" target="_blank" rel="noopener">
+							<?php esc_html_e( 'Open Albert → Connections', 'albert-ai-butler' ); ?>
+							<span class="screen-reader-text"><?php esc_html_e( '(opens in a new tab)', 'albert-ai-butler' ); ?></span>
+						</a>
+						<a class="button button-secondary" href="<?php echo esc_url( $current_url ); ?>"><?php esc_html_e( 'Try again', 'albert-ai-butler' ); ?></a>
+					</p>
+				</section>
+			<?php } ?>
+
+			<footer class="albert-oauth__footer">
+				<?php // Its own scheme allowed: a desktop app's redirect URI is often not http(s). ?>
+				<a href="<?php echo esc_url( $leave_url, [ (string) wp_parse_url( $redirect_uri, PHP_URL_SCHEME ) ] ); ?>">
+					<?php
+					/* translators: %s: the name of the connecting app. */
+					echo esc_html( sprintf( __( 'Return to %s without connecting', 'albert-ai-butler' ), $client_name ) );
+					?>
+				</a>
+			</footer>
+		</article>
+	</main>
 </body>
 </html>
 		<?php
 		exit;
+	}
+
+	/**
+	 * The user's role as WordPress shows it, translated.
+	 *
+	 * @param \WP_User $user The user.
+	 *
+	 * @return string The first role's name, or '' when they have none.
+	 * @since 1.5.0
+	 */
+	private function role_label( \WP_User $user ): string {
+		$role  = $user->roles[0] ?? '';
+		$names = wp_roles()->get_names();
+
+		return isset( $names[ $role ] ) ? translate_user_role( $names[ $role ] ) : '';
 	}
 
 	/**

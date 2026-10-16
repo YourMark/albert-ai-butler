@@ -1365,7 +1365,7 @@ class Connections implements Hookable {
 	 * exactly what the page would have rendered, rather than a second copy of
 	 * this markup living in JS.
 	 *
-	 * @param array<int, array{added_at: int|null, authorised_at: int|null, expires_at: int|null}> $allowed_users The allowed users, from {@see \Albert\OAuth\AllowedUsers::all()}.
+	 * @param array<int, array{added_at: int|null, authorised_at: int|null, expires_at: int|null, automatic: bool}> $allowed_users The allowed users, from {@see \Albert\OAuth\AllowedUsers::all()}.
 	 *
 	 * @return void
 	 * @since 1.4.0
@@ -1448,8 +1448,8 @@ class Connections implements Hookable {
 	/**
 	 * Render one allowed user.
 	 *
-	 * @param int                                                                      $user_id The user ID.
-	 * @param array{added_at: int|null, authorised_at: int|null, expires_at: int|null} $entry   Their entry from {@see \Albert\OAuth\AllowedUsers::all()}.
+	 * @param int                                                                                       $user_id The user ID.
+	 * @param array{added_at: int|null, authorised_at: int|null, expires_at: int|null, automatic: bool} $entry   Their entry from {@see \Albert\OAuth\AllowedUsers::all()}.
 	 *
 	 * @return void
 	 * @since 1.4.0
@@ -1819,7 +1819,7 @@ class Connections implements Hookable {
 	 * than "in 11 hours" is, and it does not go stale the way a relative
 	 * phrase would between page loads.
 	 *
-	 * @param array{added_at: int|null, authorised_at: int|null, expires_at: int|null} $entry The user's entry.
+	 * @param array{added_at: int|null, authorised_at: int|null, expires_at: int|null, automatic: bool} $entry The user's entry.
 	 *
 	 * @return string A translated phrase, or '' when there is no added_at to show.
 	 * @since 1.4.0
@@ -1829,6 +1829,10 @@ class Connections implements Hookable {
 
 		if ( $added_at === null ) {
 			return '';
+		}
+
+		if ( $entry['automatic'] ) {
+			return __( 'Added automatically by Albert', 'albert-ai-butler' );
 		}
 
 		if ( $entry['authorised_at'] !== null || $entry['expires_at'] === null ) {

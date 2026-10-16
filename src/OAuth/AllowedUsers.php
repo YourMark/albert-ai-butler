@@ -107,7 +107,7 @@ class AllowedUsers {
 	/**
 	 * Every allowed user, normalised.
 	 *
-	 * @return array<int, array{added_at: int|null, authorised_at: int|null, expires_at: int|null}>
+	 * @return array<int, array{added_at: int|null, authorised_at: int|null, expires_at: int|null, automatic: bool}>
 	 * @since 1.4.0
 	 */
 	public static function all(): array {
@@ -132,6 +132,7 @@ class AllowedUsers {
 				'added_at'      => self::to_timestamp( $entry['added_at'] ?? null ),
 				'authorised_at' => self::to_timestamp( $entry['authorised_at'] ?? null ),
 				'expires_at'    => self::to_timestamp( $entry['expires_at'] ?? null ),
+				'automatic'     => ! empty( $entry['automatic'] ),
 			];
 		}
 
@@ -202,7 +203,7 @@ class AllowedUsers {
 	 * ({@see self::is_allowed()}) and the sweep ({@see \Albert\Cron\AllowedUserExpiry})
 	 * apply, so the two can never disagree about who has expired.
 	 *
-	 * @param array{added_at: int|null, authorised_at: int|null, expires_at: int|null} $entry A normalised entry.
+	 * @param array{added_at: int|null, authorised_at: int|null, expires_at: int|null, automatic: bool} $entry A normalised entry.
 	 *
 	 * @return bool
 	 * @since 1.4.0
@@ -291,11 +292,54 @@ class AllowedUsers {
 			'added_at'      => $now,
 			'authorised_at' => null,
 			'expires_at'    => self::compute_expiry( $now ),
+			'automatic'     => false,
 		];
 
 		self::save( $all );
 
 		return true;
+	}
+
+	/**
+	 * Add the administrator Albert puts on the list by itself, if not already on it.
+	 *
+	 * Never expires: expiry exists for an invitation somebody could miss, and
+	 * nobody invited this person. Flagged `automatic` so the row can say so.
+	 *
+	 * @param int $user_id The user id.
+	 *
+	 * @return bool True if the user was newly added, false if already allowed.
+	 * @since 1.5.0
+	 */
+	public static function add_automatically( int $user_id ): bool {
+		$all = self::all();
+
+		if ( isset( $all[ $user_id ] ) ) {
+			return false;
+		}
+
+		$all[ $user_id ] = [
+			'added_at'      => time(),
+			'authorised_at' => null,
+			'expires_at'    => null,
+			'automatic'     => true,
+		];
+
+		self::save( $all );
+
+		return true;
+	}
+
+	/**
+	 * Whether Albert added this user by itself rather than an administrator.
+	 *
+	 * @param int $user_id The user id.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function was_added_automatically( int $user_id ): bool {
+		return self::all()[ $user_id ]['automatic'] ?? false;
 	}
 
 	/**
@@ -404,7 +448,7 @@ class AllowedUsers {
 	/**
 	 * Persist the normalised structure as MySQL-friendly datetime strings.
 	 *
-	 * @param array<int, array{added_at: int|null, authorised_at: int|null, expires_at: int|null}> $all Normalised entries.
+	 * @param array<int, array{added_at: int|null, authorised_at: int|null, expires_at: int|null, automatic: bool}> $all Normalised entries.
 	 *
 	 * @return void
 	 * @since 1.4.0
@@ -417,6 +461,7 @@ class AllowedUsers {
 				'added_at'      => $entry['added_at'] !== null ? gmdate( 'Y-m-d H:i:s', $entry['added_at'] ) : null,
 				'authorised_at' => $entry['authorised_at'] !== null ? gmdate( 'Y-m-d H:i:s', $entry['authorised_at'] ) : null,
 				'expires_at'    => $entry['expires_at'] !== null ? gmdate( 'Y-m-d H:i:s', $entry['expires_at'] ) : null,
+				'automatic'     => $entry['automatic'],
 			];
 		}
 
