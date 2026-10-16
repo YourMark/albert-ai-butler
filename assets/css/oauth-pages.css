@@ -230,6 +230,18 @@ body {
 	margin-block: 4px 16px;
 }
 
+.albert-oauth__title--done {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.albert-oauth__check {
+	inline-size: 22px;
+	block-size: 22px;
+	fill: #1d2327;
+}
+
 .albert-oauth__subtitle {
 	font-size: 15px;
 	font-weight: 600;
@@ -288,77 +300,4 @@ body {
 	overflow: hidden;
 	clip-path: inset(50%);
 	white-space: nowrap;
-}
-
-/* Success page */
-.success-container {
-	background: #fff;
-	border-radius: 8px;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13);
-	max-width: 400px;
-	width: 100%;
-	padding: 40px;
-	text-align: center;
-}
-
-.success-icon {
-	width: 64px;
-	height: 64px;
-	background: #00a32a;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	margin: 0 auto 20px;
-}
-
-.success-icon svg {
-	width: 32px;
-	height: 32px;
-	fill: #fff;
-}
-
-.success-container h1 {
-	font-size: 24px;
-	color: #1d2327;
-	margin-bottom: 15px;
-}
-
-.success-container p {
-	color: #50575e;
-	font-size: 14px;
-	line-height: 1.6;
-}
-
-.success-container .client-name {
-	font-weight: 600;
-	color: #1d2327;
-}
-
-.close-message {
-	margin-top: 20px;
-	font-size: 14px;
-	color: #1d2327;
-}
-
-.fallback-message {
-	margin-top: 10px;
-	font-size: 13px;
-	color: #646970;
-}
-
-.success-container .button {
-	display: inline-block;
-	margin-top: 20px;
-	padding: 10px 20px;
-	background: #2271b1;
-	color: #fff;
-	text-decoration: none;
-	border-radius: 4px;
-	font-size: 14px;
-	flex: none;
-}
-
-.success-container .button:hover {
-	background: #135e96;
 }

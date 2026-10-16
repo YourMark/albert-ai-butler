@@ -218,6 +218,7 @@ Adds safe mode, which holds destructive actions for your approval, and closes a 
 
 * You no longer have to add yourself before you can connect an assistant. The administrator who activates Albert is on the list of people who may connect one straight away, and on a site that is updating, the first administrator to open Albert is added if nobody is on the list and nothing is connected yet. If you remove yourself later, Albert leaves it that way.
 * When someone who isn't on that list tries to connect an assistant, the page now says who can fix it and how. An administrator who isn't on the list gets a button to add themselves.
+* After you approve an assistant, the page now says plainly that it is connected and that you can go back to your app.
 * The MCP Adapter, the part Albert uses to talk to AI assistants, is now its own plugin on WordPress.org. Albert uses that plugin when it is active, and asks you to install it with one click on its screens, on the Plugins screen and in Site Health. Albert still includes its own copy for now, but a coming update will rely on the plugin. Where plugin installs are switched off on your site, or you cannot install plugins yourself, Albert tells you who needs to act.
 
 **Fixes**

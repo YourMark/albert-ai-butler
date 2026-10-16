@@ -438,13 +438,24 @@ class Dashboard implements Hookable {
 							true,
 							false,
 							$listed ? __( 'You may connect an assistant', 'albert-ai-butler' ) : __( 'People may connect an assistant', 'albert-ai-butler' ),
-							$listed ? __( 'You are on the list of people who may connect an assistant.', 'albert-ai-butler' ) : __( 'You are not on the list of people who may connect an assistant yet.', 'albert-ai-butler' ),
+							'',
 							static function () use ( $listed ): void {
+								$link = '<a href="' . esc_url( admin_url( 'admin.php?page=albert-connections' ) ) . '">' . esc_html__( 'Connections', 'albert-ai-butler' ) . '</a>';
 								?>
-								<p class="albert-setup__aside-link">
-									<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>">
-										<?php echo esc_html( $listed ? __( 'Add others under Connections', 'albert-ai-butler' ) : __( 'Add yourself under Connections', 'albert-ai-butler' ) ); ?>
-									</a>
+								<p class="albert-setup__description">
+									<?php
+									echo wp_kses(
+										sprintf(
+											$listed
+												/* translators: %s: a link to the Connections screen. */
+												? __( 'You are on the list as administrator. Add others under %s', 'albert-ai-butler' )
+												/* translators: %s: a link to the Connections screen. */
+												: __( 'You are not on the list yet. Add yourself under %s', 'albert-ai-butler' ),
+											$link
+										),
+										[ 'a' => [ 'href' => [] ] ]
+									);
+									?>
 								</p>
 								<?php
 							}
@@ -580,7 +591,9 @@ class Dashboard implements Hookable {
 						?>
 					</span>
 				</p>
-				<p class="albert-setup__description"><?php echo esc_html( $description ); ?></p>
+				<?php if ( $description !== '' ) { ?>
+					<p class="albert-setup__description"><?php echo esc_html( $description ); ?></p>
+				<?php } ?>
 				<?php
 				if ( $extra !== null ) {
 					call_user_func( $extra );

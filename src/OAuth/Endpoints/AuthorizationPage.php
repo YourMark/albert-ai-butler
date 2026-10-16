@@ -674,9 +674,12 @@ class AuthorizationPage implements Hookable {
 	}
 
 	/**
-	 * Render the success page after authorization.
+	 * Render the page after someone approves, then send the app its code.
 	 *
-	 * Completes the OAuth callback and shows a success message.
+	 * Tells an open connect dialog in another tab first, over a same-origin
+	 * BroadcastChannel, so it can say "connected" now rather than at its
+	 * next check. The redirect is what completes OAuth, so it always runs;
+	 * the link is for a browser that blocks an app's own URL scheme.
 	 *
 	 * @param string $redirect_url The OAuth callback URL with authorization code.
 	 * @param string $client_name  The name of the authorized client.
@@ -689,13 +692,15 @@ class AuthorizationPage implements Hookable {
 		header( 'Content-Type: text/html; charset=utf-8' );
 
 		$site_name = get_bloginfo( 'name' );
+		$user      = wp_get_current_user();
 
 		$this->enqueue_oauth_styles();
 
 		wp_enqueue_script( 'albert-oauth-redirect' );
 		wp_add_inline_script(
 			'albert-oauth-redirect',
-			'setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url ) . ';},1500);'
+			'try{new BroadcastChannel("albert-connect").postMessage("connected");}catch(e){}'
+			. 'setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url ) . ';},1500);'
 		);
 
 		?>
@@ -704,34 +709,54 @@ class AuthorizationPage implements Hookable {
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title><?php esc_html_e( 'Authorization Successful', 'albert-ai-butler' ); ?> - <?php echo esc_html( $site_name ); ?></title>
+	<title><?php esc_html_e( 'Connected', 'albert-ai-butler' ); ?> - <?php echo esc_html( $site_name ); ?></title>
 		<?php wp_print_styles( 'albert-oauth-pages' ); ?>
 </head>
 <body>
-	<div class="success-container">
-		<div class="success-icon">
-			<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-				<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-			</svg>
-		</div>
-		<h1><?php esc_html_e( 'Authorization Successful', 'albert-ai-butler' ); ?></h1>
-		<p>
-			<?php
-			printf(
-				/* translators: %s: client/application name */
-				esc_html__( '%s has been authorized to access your site.', 'albert-ai-butler' ),
-				'<span class="client-name">' . esc_html( $client_name ) . '</span>'
-			);
-			?>
-		</p>
-		<p class="close-message">
-			<?php esc_html_e( 'Redirecting back to the application...', 'albert-ai-butler' ); ?>
-		</p>
-		<p class="fallback-message">
-			<?php esc_html_e( "If the application doesn't open automatically, please click the button below.", 'albert-ai-butler' ); ?>
-		</p>
-		<a href="<?php echo esc_url( $redirect_url ); ?>" class="button"><?php esc_html_e( 'Return to Application', 'albert-ai-butler' ); ?></a>
-	</div>
+	<main class="albert-oauth">
+		<p class="albert-oauth__site"><?php echo esc_html( $site_name ); ?></p>
+		<article class="albert-oauth__card">
+			<p class="albert-oauth__eyebrow">
+				<?php
+				/* translators: %s: the name the connecting app registered, e.g. "Cursor". */
+				echo esc_html( sprintf( __( '%s asked to connect to this site', 'albert-ai-butler' ), $client_name ) );
+				?>
+			</p>
+			<h1 class="albert-oauth__title albert-oauth__title--done">
+				<svg class="albert-oauth__check" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				<?php esc_html_e( 'Connected', 'albert-ai-butler' ); ?>
+			</h1>
+			<p class="albert-oauth__text">
+				<?php
+				/* translators: %s: the name of the connected app. */
+				echo esc_html( sprintf( __( 'You can go back to %s.', 'albert-ai-butler' ), $client_name ) );
+				?>
+			</p>
+			<p class="albert-oauth__meta">
+				<?php
+				printf(
+					/* translators: 1: the user's display name, 2: their role, e.g. "Administrator". */
+					esc_html__( 'Signed in as %1$s (%2$s).', 'albert-ai-butler' ),
+					esc_html( $user->display_name ),
+					esc_html( $this->role_label( $user ) )
+				);
+				if ( user_can( $user, 'manage_options' ) ) {
+					echo ' ';
+					esc_html_e( 'You can see or revoke this connection under Albert → Connections.', 'albert-ai-butler' );
+				}
+				?>
+			</p>
+			<footer class="albert-oauth__footer">
+				<?php // The app's own scheme allowed: a desktop app's callback is often not http(s). ?>
+				<a href="<?php echo esc_url( $redirect_url, [ 'https', 'http', (string) wp_parse_url( $redirect_url, PHP_URL_SCHEME ) ] ); ?>">
+					<?php
+					/* translators: %s: the name of the connected app. */
+					echo esc_html( sprintf( __( 'If nothing happens, return to %s', 'albert-ai-butler' ), $client_name ) );
+					?>
+				</a>
+			</footer>
+		</article>
+	</main>
 		<?php wp_print_scripts( 'albert-oauth-redirect' ); ?>
 </body>
 </html>
