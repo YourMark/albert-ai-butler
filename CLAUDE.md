@@ -630,6 +630,21 @@ but localhost, deliberately and with no override, so on such sites the guide
 withholds the download and says to turn on https rather than offering a file
 that can never connect. Do not patch that check out of the bundle.
 
+**One guided dialog, two entry points (1.5.0).** `Admin\Connections\ConnectDialog`
+asks where the site runs (saved site-wide through `ConnectController`, so it is
+asked once), which app, then shows that app's `GuidePanel` steps and waits. It
+says "connected" only when `GET albert/v1/connect/status?since=` reports a
+client whose *first* access token for this user is newer than the dialog's
+opening (`ClientRepository::firstConnectionSince()`), so an hourly refresh of an
+old connection never counts and nobody else's connection is ever reported. The
+approval page posts on a `BroadcastChannel('albert-connect')` so the dialog
+checks at once instead of at its next 3 s poll. The numbered steps happen in
+other apps and are never ticked off. The Dashboard's connect step is per user
+(an administrator whose agency connected still has their own to do), and once
+setup is complete a header button keeps the dialog reachable. The Connections
+layout is fixed in every state: connect card, then the two lists; the old
+per-app accordion is gone, the dialog holds that content.
+
 **Connections group by client, not by token.** A client refreshes hourly, so a
 token-keyed list shows one assistant several times and calls each a connection.
 Revoke has two depths behind one confirm dialog: access token only (the client

@@ -1255,43 +1255,12 @@
 		},
 	};
 
-	/**
-	 * "Show Claude Code" and friends on a guide that cannot work here: open
-	 * the guide they name and move focus to it.
-	 */
-	const GuideSwitch = {
-		init() {
-			document.addEventListener( 'click', ( event ) => {
-				const button = event.target.closest( '[data-albert-show-guide]' );
-				if ( ! button ) {
-					return;
-				}
-
-				const guide = document.querySelector(
-					`details[data-albert-guide="${ CSS.escape( button.dataset.albertShowGuide ) }"]`
-				);
-				if ( ! guide ) {
-					return;
-				}
-
-				guide.open = true;
-				const summary = guide.querySelector( 'summary' );
-				summary.focus();
-				summary.scrollIntoView( {
-					block: 'start',
-					behavior: window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches ? 'auto' : 'smooth',
-				} );
-			} );
-		},
-	};
-
 	function init() {
 		ConnectionList.init();
 		ConnectionNaming.init();
 		AllowedUserFilter.init();
 		AllowedUserRemoval.init();
 		UserPicker.init();
-		GuideSwitch.init();
 	}
 
 	if ( document.readyState === 'loading' ) {

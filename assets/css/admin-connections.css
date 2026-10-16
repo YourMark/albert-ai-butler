@@ -596,77 +596,6 @@ a.albert-badge:focus-visible {
 }
 
 /* ==========================================================================
-   Setup guides
-   ========================================================================== */
-
-.albert-guide {
-	border-block-end: 1px solid var(--albert-color-border-subtle);
-}
-
-.albert-guide:last-child {
-	border-block-end: 0;
-}
-
-.albert-guide__summary {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	gap: var(--albert-space-200);
-	padding: var(--albert-space-300) 18px;
-	cursor: pointer;
-	list-style: none;
-}
-
-/* The dashicon chevron below is the disclosure indicator; the browser's own
-   triangle marker would just be a second, inconsistent one beside it. */
-.albert-guide__summary::-webkit-details-marker {
-	display: none;
-}
-
-.albert-guide__summary:hover {
-	background: var(--albert-color-surface-sunken);
-}
-
-.albert-guide__summary:focus-visible {
-	outline: var(--albert-focus-width) solid var(--albert-focus-color);
-	outline-offset: calc(-1 * var(--albert-focus-width));
-}
-
-/* `<details>` is native, so its open state is CSS-only too: no JS toggles
-   this, `details[open]` already does. */
-.albert-guide__chevron {
-	flex-shrink: 0;
-	align-self: center;
-	color: var(--albert-color-text-faint);
-	transition: transform var(--albert-duration-fast) var(--albert-easing-fast);
-}
-
-.albert-guide[open] > .albert-guide__summary .albert-guide__chevron {
-	transform: rotate(90deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.albert-guide__chevron {
-		transition: none;
-	}
-}
-
-.albert-guide__label {
-	font-size: var(--albert-font-size-body);
-	font-weight: var(--albert-font-weight-semibold);
-	color: var(--albert-color-text);
-}
-
-.albert-guide__description {
-	font-size: var(--albert-font-size-sm);
-	color: var(--albert-color-text-muted);
-}
-
-.albert-guide__body {
-	padding: 0 18px var(--albert-space-400);
-}
-
-/* ==========================================================================
    Disconnect dialog options
    ========================================================================== */
 
@@ -718,4 +647,48 @@ a.albert-badge:focus-visible {
 .albert-dialog__option--destructive:focus {
 	border-color: var(--albert-color-danger);
 	background: var(--albert-color-danger-surface);
+}
+
+/* ==========================================================================
+   Connect card
+   ========================================================================== */
+
+.albert-connections__connect-body {
+	display: grid;
+	gap: var(--albert-space-400);
+}
+
+.albert-connections__connect-body > p {
+	margin: 0;
+}
+
+.albert-connections__url {
+	display: grid;
+	gap: var(--albert-space-200);
+	max-inline-size: 46rem;
+}
+
+.albert-connections__url-label {
+	font-size: var(--albert-font-size-body);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-text);
+}
+
+.albert-connections__apps {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-200);
+}
+
+.albert-connections__apps-label {
+	margin-inline-end: var(--albert-space-100);
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+/* The row the connect dialog just added, until the next visit. */
+.albert-conn--new {
+	background: var(--albert-color-accent-surface);
+	box-shadow: inset 3px 0 0 var(--albert-color-accent);
 }

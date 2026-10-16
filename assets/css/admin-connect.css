@@ -187,3 +187,231 @@
 	flex-wrap: wrap;
 	gap: var(--albert-space-200);
 }
+
+/* ==========================================================================
+   Connect dialog
+   ========================================================================== */
+
+.albert-dialog.albert-connect {
+	inline-size: min(640px, calc(100vw - 2 * var(--albert-space-400)));
+	max-block-size: min(88vh, 860px);
+}
+
+.albert-connect__progress {
+	margin: 0 0 var(--albert-space-100);
+	font-size: var(--albert-font-size-sm);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-connect .albert-dialog__title:focus {
+	outline: none;
+}
+
+.albert-connect__step {
+	display: grid;
+	gap: var(--albert-space-400);
+}
+
+.albert-connect__step[hidden],
+.albert-connect__panel[hidden],
+.albert-connect__apps[hidden] {
+	display: none;
+}
+
+.albert-connect__lead,
+.albert-connect__context {
+	margin: 0;
+	padding: 0;
+	font-size: var(--albert-font-size-body);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-connect__choices,
+.albert-connect__apps {
+	display: grid;
+	gap: var(--albert-space-300);
+	margin: 0;
+	padding: 0;
+	border: 0;
+	min-inline-size: 0;
+}
+
+.albert-connect__lead {
+	margin-block-end: var(--albert-space-100);
+}
+
+.albert-connect__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+	gap: var(--albert-space-300);
+}
+
+.albert-connect__group {
+	margin: var(--albert-space-200) 0 0;
+	font-size: var(--albert-font-size-sm);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-text-muted);
+}
+
+/* A choice card: the whole card is the label, so the target is large. */
+.albert-choice {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--albert-space-300);
+	min-block-size: 44px;
+	padding: var(--albert-space-300) var(--albert-space-400);
+	border: 1px solid var(--albert-color-border-input);
+	border-radius: var(--albert-radius-md);
+	background: var(--albert-color-surface);
+	cursor: pointer;
+}
+
+.albert-choice--app {
+	align-items: center;
+}
+
+.albert-choice input {
+	margin: 0.2em 0 0;
+	flex-shrink: 0;
+}
+
+.albert-choice--app input {
+	margin: 0;
+}
+
+.albert-choice:hover {
+	background: var(--albert-color-surface-sunken);
+}
+
+.albert-choice:has(input:checked) {
+	border-color: var(--albert-color-accent);
+	box-shadow: inset 0 0 0 1px var(--albert-color-accent);
+	background: var(--albert-color-accent-surface);
+}
+
+.albert-choice:has(input:focus-visible) {
+	outline: var(--albert-focus-width) solid var(--albert-focus-color);
+	outline-offset: 2px;
+}
+
+.albert-choice__text {
+	display: grid;
+	gap: var(--albert-space-100);
+}
+
+.albert-choice__label {
+	font-size: var(--albert-font-size-body);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-text);
+}
+
+.albert-choice__description {
+	font-size: var(--albert-font-size-sm);
+	line-height: var(--albert-line-height-snug);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-connect__wait {
+	display: grid;
+	gap: var(--albert-space-300);
+	padding: var(--albert-space-300) var(--albert-space-400);
+	border-radius: var(--albert-radius-md);
+	background: var(--albert-color-canvas);
+}
+
+.albert-connect__waiting {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-space-300);
+	margin: 0;
+}
+
+.albert-connect__spinner {
+	flex-shrink: 0;
+	inline-size: 1rem;
+	block-size: 1rem;
+	border: 2px solid var(--albert-color-border);
+	border-block-start-color: var(--albert-color-accent);
+	border-radius: 50%;
+	animation: albert-connect-spin 0.9s linear infinite;
+}
+
+@keyframes albert-connect-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.albert-connect__spinner {
+		animation: none;
+	}
+}
+
+.albert-connect__stuck {
+	display: grid;
+	gap: var(--albert-space-200);
+	font-size: var(--albert-font-size-sm);
+}
+
+.albert-connect__stuck-title {
+	margin: 0;
+	font-weight: var(--albert-font-weight-semibold);
+}
+
+.albert-connect__stuck ul {
+	margin: 0;
+	padding-inline-start: var(--albert-space-500);
+	list-style: disc;
+}
+
+.albert-connect__success {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-space-200);
+	margin: 0;
+	font-size: var(--albert-font-size-body);
+}
+
+.albert-connect__success .dashicons {
+	color: var(--albert-color-success);
+}
+
+.albert-connect__prompts {
+	display: grid;
+	gap: var(--albert-space-200);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.albert-connect__prompts li {
+	padding: var(--albert-space-200) var(--albert-space-300);
+	border-radius: var(--albert-radius-md);
+	background: var(--albert-color-canvas);
+}
+
+.albert-connect__footer {
+	justify-content: flex-end;
+}
+
+.albert-connect__back {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--albert-space-100);
+	margin-inline-end: auto;
+	min-block-size: 44px;
+}
+
+.albert-connect__back[hidden],
+.albert-connect__footer .button[hidden] {
+	display: none;
+}
+
+/* The one-line "where is this site" on Connections, with its Change link. */
+.albert-connect-location {
+	margin: 0;
+	font-size: var(--albert-font-size-body);
+	color: var(--albert-color-text-muted);
+}

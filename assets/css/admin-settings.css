@@ -188,6 +188,21 @@
 	margin-block-start: var(--albert-space-300);
 }
 
+/* A recommendation under a done step: quiet, so it never reads as a blocker. */
+.albert-setup__note {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-300);
+	margin-block-start: var(--albert-space-300);
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-setup__note p {
+	margin: 0;
+}
+
 .albert-setup__aside-link {
 	margin: var(--albert-space-100) 0 0;
 	font-size: var(--albert-font-size-sm);

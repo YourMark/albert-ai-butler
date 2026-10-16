@@ -86,6 +86,7 @@ use Albert\OAuth\Endpoints\ClientRegistration;
 use Albert\OAuth\Endpoints\OAuthController;
 use Albert\Admin\Rest\AbilitiesController;
 use Albert\Admin\Rest\ContextController;
+use Albert\Admin\Rest\ConnectController;
 use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
 use Albert\OAuth\DiscoveryHealth;
@@ -295,6 +296,7 @@ class Plugin {
 
 		// Register the context REST controller (data + instant save for the Context screen).
 		( new ContextController() )->register_hooks();
+		( new ConnectController() )->register_hooks();
 
 		// Register the skills REST controller (read-only data for the Skills screen).
 		( new SkillsController() )->register_hooks();
