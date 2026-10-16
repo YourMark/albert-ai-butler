@@ -1557,11 +1557,17 @@ class Connections implements Hookable {
 						<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
 					</button>
 				<?php } ?>
-				<?php // The only person on the list has nobody to hand the site to; keep them. ?>
-				<a href="<?php echo esc_url( $remove_url ); ?>"<?php echo count( AllowedUsers::ids() ) > 1 ? '' : ' hidden'; ?>
+				<?php
+				// Always offered: removing the last person is allowed, it just
+				// has to say what it leaves behind.
+				$confirm = count( AllowedUsers::ids() ) > 1
+					? __( 'Remove this user? Every assistant they have connected is signed out straight away.', 'albert-ai-butler' )
+					: __( 'This is the only person on the list. After this nobody can connect an assistant until someone is added again. Every assistant they have connected is signed out straight away.', 'albert-ai-butler' );
+				?>
+				<a href="<?php echo esc_url( $remove_url ); ?>"
 					class="button-link"
 					data-albert-remove-user
-					data-albert-confirm="<?php echo esc_attr__( 'Remove this user? Every assistant they have connected is signed out straight away.', 'albert-ai-butler' ); ?>">
+					data-albert-confirm="<?php echo esc_attr( $confirm ); ?>">
 					<?php esc_html_e( 'Remove', 'albert-ai-butler' ); ?>
 				</a>
 			</div>
