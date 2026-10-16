@@ -356,12 +356,6 @@
 	gap: var(--albert-space-200);
 }
 
-/* A quiet text action at the end of the row; red is for the confirmation.
-   Specific enough to beat core's `.wp-core-ui .button-link { margin: 0 }`. */
-.albert-conn__head .albert-conn__revoke.button-link {
-	margin-inline-start: auto;
-}
-
 /**
  * A label can be a sentence: "Bookkeeping assistant for the webshop, invoices
  * only" is a real thing somebody types. It truncates rather than wrapping, so
