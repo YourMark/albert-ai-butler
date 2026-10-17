@@ -563,9 +563,7 @@
 .albert-user-item__meta,
 .albert-user-item__expiry {
 	display: block;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	overflow-wrap: anywhere;
 }
 
 .albert-user-item__name {

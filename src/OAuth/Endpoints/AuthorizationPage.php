@@ -181,12 +181,7 @@ class AuthorizationPage implements Hookable {
 
 		// Validate redirect URI: must exactly match a registered URI. There is no
 		// wildcard: a client that did not register this exact URI is rejected.
-		$allowed_uris = $client->getRedirectUri();
-		if ( is_string( $allowed_uris ) ) {
-			$allowed_uris = [ $allowed_uris ];
-		}
-
-		if ( ! in_array( $redirect_uri, $allowed_uris, true ) ) {
+		if ( ! self::is_registered_redirect_uri( $client->getRedirectUri(), $redirect_uri ) ) {
 			$this->render_error_page(
 				__( 'Invalid Redirect', 'albert-ai-butler' ),
 				__( 'The redirect URI is not allowed for this application.', 'albert-ai-butler' )
@@ -225,7 +220,7 @@ class AuthorizationPage implements Hookable {
 		$current_user = wp_get_current_user();
 
 		if ( ! AllowedUsers::is_allowed( $current_user->ID ) ) {
-			$this->render_access_denied_page( $current_user );
+			$this->render_access_denied_page( $current_user, $client, $redirect_uri, $state );
 			return;
 		}
 
@@ -257,6 +252,59 @@ class AuthorizationPage implements Hookable {
 	}
 
 	/**
+	 * Whether a redirect URI is one the client registered, exactly.
+	 *
+	 * Exact string match, as RFC 6749 §3.1.2.3 asks: no normalising, so a
+	 * private-use scheme (cursor://) works and nothing near-identical does.
+	 *
+	 * @param string|string[] $registered The client's registered URIs.
+	 * @param string          $uri        The URI from the request.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function is_registered_redirect_uri( $registered, string $uri ): bool {
+		return $uri !== '' && in_array( $uri, (array) $registered, true );
+	}
+
+	/**
+	 * The schemes esc_url() may keep for a link back to an app.
+	 *
+	 * @param string $url The app's callback URL.
+	 *
+	 * @return array<int, string>
+	 * @since 1.5.0
+	 */
+	private static function link_protocols( string $url ): array {
+		$protocols = [ 'https', 'http' ];
+
+		if ( ! self::is_dangerous_scheme( $url ) ) {
+			$protocols[] = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
+		}
+
+		return array_values( array_unique( $protocols ) );
+	}
+
+	/**
+	 * Whether a URL's scheme may never reach a link or a redirect.
+	 *
+	 * Registration already refuses these; checking again where the URL is
+	 * printed keeps a client stored any other way from slipping through.
+	 *
+	 * @param string $url The URL.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function is_dangerous_scheme( string $url ): bool {
+		// Browsers drop control characters and spaces before reading a scheme,
+		// so "java\tscript:" runs as javascript: unless they are dropped here too.
+		$scheme = strtolower( (string) strstr( (string) preg_replace( '/[\x00-\x20\x7f]/', '', $url ), ':', true ) );
+
+		return $scheme === '' || in_array( $scheme, ClientRegistration::DANGEROUS_SCHEMES, true );
+	}
+
+	/**
 	 * Read an OAuth request parameter from the source appropriate to this request.
 	 *
 	 * GET on the initial authorize request, POST on the consent form's submission
@@ -264,22 +312,24 @@ class AuthorizationPage implements Hookable {
 	 *
 	 * @param string $key           The parameter name.
 	 * @param string $default_value The default when the parameter is absent.
-	 * @param bool   $is_url        Whether to sanitize as a URL rather than plain text.
+	 * @param bool   $verbatim      Keep as sent, trimmed only: for the redirect URI,
+	 *                              which must then exactly match a registered one.
 	 *
 	 * @return string The sanitized value.
 	 * @since 1.4.0
+	 * @since 1.5.0 `$is_url` became `$verbatim`.
 	 */
-	private function read_oauth_param( string $key, string $default_value = '', bool $is_url = false ): string {
+	private function read_oauth_param( string $key, string $default_value = '', bool $verbatim = false ): string {
 		$is_post = isset( $_SERVER['REQUEST_METHOD'] ) && $_SERVER['REQUEST_METHOD'] === 'POST';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended -- OAuth flow doesn't use WP nonces for GET; the POST branch's nonce is verified in handle_authorization() before any state changes.
 		$source = $is_post ? $_POST : $_GET;
 
-		if ( ! isset( $source[ $key ] ) ) {
+		if ( ! isset( $source[ $key ] ) || ! is_string( $source[ $key ] ) ) {
 			return $default_value;
 		}
 
-		return $is_url
-			? esc_url_raw( wp_unslash( $source[ $key ] ) )
+		return $verbatim
+			? trim( wp_unslash( $source[ $key ] ) )
 			: sanitize_text_field( wp_unslash( $source[ $key ] ) );
 	}
 
@@ -302,15 +352,8 @@ class AuthorizationPage implements Hookable {
 
 		if ( ! $approved ) {
 			// User denied - redirect with error.
-			$error_params = [
-				'error'             => 'access_denied',
-				'error_description' => 'The user denied the authorization request.',
-			];
-			if ( $state ) {
-				$error_params['state'] = $state;
-			}
 			// phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- OAuth requires external redirects.
-			wp_redirect( add_query_arg( $error_params, $redirect_uri ) );
+			wp_redirect( self::error_redirect_url( $redirect_uri, 'access_denied', 'The user denied the authorization request.', $state ) );
 			exit;
 		}
 
@@ -374,15 +417,8 @@ class AuthorizationPage implements Hookable {
 				return;
 			}
 		} catch ( OAuthServerException $e ) {
-			$error_params = [
-				'error'             => $e->getErrorType(),
-				'error_description' => $e->getMessage(),
-			];
-			if ( $state ) {
-				$error_params['state'] = $state;
-			}
 			// phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- OAuth requires external redirects.
-			wp_redirect( add_query_arg( $error_params, $redirect_uri ) );
+			wp_redirect( self::error_redirect_url( $redirect_uri, $e->getErrorType(), $e->getMessage(), $state ) );
 			exit;
 		} catch ( \Exception $e ) {
 			$this->render_error_page(
@@ -542,77 +578,199 @@ class AuthorizationPage implements Hookable {
 	}
 
 	/**
-	 * Render an access denied page for users not in the allowed list.
+	 * Refuse someone not on the allowed list, and say who can fix it.
 	 *
-	 * Distinguishes two different denials: never invited at all, versus an
-	 * invitation that existed but expired unused. Someone who was told "you
-	 * can connect now" and then hits a plain "not authorized" wall a day
-	 * later has no way to know whether they were forgotten or timed out;
-	 * {@see \Albert\OAuth\AllowedUsers::has_expired_invitation()} already
-	 * knows which one it is.
+	 * An unlisted administrator gets the way to add themselves; an expired
+	 * invitation reads differently from never being invited.
 	 *
-	 * @param \WP_User $user The current user.
+	 * @param \WP_User                            $user         The current user.
+	 * @param \Albert\OAuth\Entities\ClientEntity $client       The app asking to connect.
+	 * @param string                              $redirect_uri The validated redirect URI.
+	 * @param string                              $state        The OAuth state, returned with the refusal.
 	 *
 	 * @return void
 	 * @since 1.0.0
+	 * @since 1.5.0 Takes the client, names it, and offers a way back to it.
 	 */
-	private function render_access_denied_page( \WP_User $user ): void {
+	private function render_access_denied_page( \WP_User $user, $client, string $redirect_uri, string $state ): void {
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
 		status_header( 403 );
 
-		$site_name = get_bloginfo( 'name' );
-		$expired   = AllowedUsers::has_expired_invitation( $user->ID );
-
 		$this->enqueue_oauth_styles();
 
+		echo $this->access_denied_html( $user, $client, $redirect_uri, $state ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped as it is built.
+		exit;
+	}
+
+	/**
+	 * The refusal page's markup, separate from sending it so it can be tested.
+	 *
+	 * The way back to the app is a link to an address the app registered for
+	 * itself, so the page shows where it goes and how new the app is, the
+	 * same two signals the consent page gives: dynamic registration is open
+	 * to anyone, under any name.
+	 *
+	 * @param \WP_User                            $user         The current user.
+	 * @param \Albert\OAuth\Entities\ClientEntity $client       The app asking to connect.
+	 * @param string                              $redirect_uri The validated redirect URI.
+	 * @param string                              $state        The OAuth state, returned with the refusal.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	public function access_denied_html( \WP_User $user, $client, string $redirect_uri, string $state ): string {
+		$site_name   = get_bloginfo( 'name' );
+		$client_name = (string) $client->getName();
+		$expired     = AllowedUsers::has_expired_invitation( $user->ID );
+		$is_admin    = user_can( $user, 'manage_options' );
+		$current_url = $this->get_current_url();
+		$leave_url   = self::error_redirect_url( $redirect_uri, 'access_denied', 'The user is not allowed to connect an assistant to this site.', $state );
+		$age_notice  = $this->format_client_age_notice( $client );
+
+		ob_start();
 		?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title><?php esc_html_e( 'Access Denied', 'albert-ai-butler' ); ?> - <?php echo esc_html( $site_name ); ?></title>
+	<title><?php esc_html_e( 'This account can’t connect an assistant', 'albert-ai-butler' ); ?> - <?php echo esc_html( $site_name ); ?></title>
 		<?php wp_print_styles( 'albert-oauth-pages' ); ?>
 </head>
 <body>
-	<div class="access-denied-container">
-		<div class="icon">🚫</div>
-		<h1><?php esc_html_e( 'Access Not Authorized', 'albert-ai-butler' ); ?></h1>
-		<p>
-			<?php
-			echo esc_html(
-				$expired
-					? __( 'Your invitation to connect an AI assistant has expired. It was not used in time.', 'albert-ai-butler' )
-					: __( 'Your account has not been granted access to connect AI tools to this site.', 'albert-ai-butler' )
-			);
-			?>
-		</p>
-		<div class="user-info">
-			<?php
-			printf(
-				/* translators: %s: user display name */
-				esc_html__( 'Logged in as %s', 'albert-ai-butler' ),
-				'<strong>' . esc_html( $user->display_name ) . '</strong>'
-			);
-			?>
-			<br>
-			<small><?php echo esc_html( $user->user_email ); ?></small>
-		</div>
-		<p class="contact-admin">
-			<?php esc_html_e( 'Please contact your site administrator to request access.', 'albert-ai-butler' ); ?>
-		</p>
-	</div>
+	<main class="albert-oauth">
+		<p class="albert-oauth__site"><?php echo esc_html( $site_name ); ?></p>
+		<article class="albert-oauth__card">
+			<p class="albert-oauth__eyebrow">
+				<?php
+				/* translators: %s: the name the connecting app registered, e.g. "Claude". */
+				echo esc_html( sprintf( __( '%s asked to connect to this site', 'albert-ai-butler' ), $client_name ) );
+				?>
+			</p>
+			<h1 class="albert-oauth__title"><?php esc_html_e( 'This account can’t connect an assistant', 'albert-ai-butler' ); ?></h1>
+
+			<?php if ( ! $is_admin ) { ?>
+				<p class="albert-oauth__text">
+					<?php
+					if ( $expired ) {
+						/* translators: %s: the name of the connecting app. */
+						$refusal = __( 'Your invitation to connect an assistant expired before it was used. Ask an administrator to add you again on Albert’s Connections page, then start connecting again from %s.', 'albert-ai-butler' );
+					} else {
+						/* translators: %s: the name of the connecting app. */
+						$refusal = __( 'Your account isn’t on this site’s list of people who may connect an assistant. Ask an administrator to add you on Albert’s Connections page, then start connecting again from %s.', 'albert-ai-butler' );
+					}
+					echo esc_html( sprintf( $refusal, $client_name ) );
+					?>
+				</p>
+			<?php } ?>
+
+			<p class="albert-oauth__meta">
+				<?php
+				printf(
+					/* translators: 1: the user's display name, 2: their role, e.g. "Editor". */
+					esc_html__( 'Signed in as %1$s (%2$s).', 'albert-ai-butler' ),
+					esc_html( $user->display_name ),
+					esc_html( $this->role_label( $user ) )
+				);
+				?>
+				<a href="<?php echo esc_url( wp_logout_url( $current_url ) ); ?>"><?php esc_html_e( 'Sign in as someone else', 'albert-ai-butler' ); ?></a>
+			</p>
+
+			<?php if ( $is_admin ) { ?>
+				<section class="albert-oauth__fix">
+					<h2 class="albert-oauth__subtitle"><?php esc_html_e( 'You can add yourself', 'albert-ai-butler' ); ?></h2>
+					<p class="albert-oauth__text"><?php esc_html_e( 'You are an administrator. Add yourself on the Connections page, then come back and try again.', 'albert-ai-butler' ); ?></p>
+					<div class="albert-oauth__actions">
+						<a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>" target="_blank" rel="noopener">
+							<?php
+							printf(
+								/* translators: %s: an arrow between "Albert" and "Connections", hidden from screen readers. */
+								esc_html__( 'Open Albert %s Connections', 'albert-ai-butler' ),
+								'<span aria-hidden="true">→</span>'
+							);
+							?>
+							<svg class="albert-oauth__external" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M9 2h5v5M14 2 7 9M12 9.5V14H2V4h4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							<span class="screen-reader-text"><?php esc_html_e( '(opens in a new tab)', 'albert-ai-butler' ); ?></span>
+						</a>
+						<a class="button button-secondary" href="<?php echo esc_url( $current_url ); ?>"><?php esc_html_e( 'Try again', 'albert-ai-butler' ); ?></a>
+					</div>
+				</section>
+			<?php } ?>
+
+			<footer class="albert-oauth__footer">
+				<?php // An app may register its own callback scheme (cursor://), so that one is allowed for this link. ?>
+				<a href="<?php echo esc_url( $leave_url, self::link_protocols( $redirect_uri ) ); ?>">
+					<?php
+					/* translators: %s: the name of the connecting app. */
+					echo esc_html( sprintf( __( 'Return to %s without connecting', 'albert-ai-butler' ), $client_name ) );
+					?>
+				</a>
+				<p class="albert-oauth__destination">
+					<?php
+					/* translators: %s: the host the link goes to, e.g. "claude.ai". */
+					echo esc_html( sprintf( __( 'This link goes to %s.', 'albert-ai-butler' ), $this->format_redirect_destination( $redirect_uri ) ) );
+					if ( $age_notice !== '' ) {
+						echo ' ' . esc_html( $age_notice );
+					}
+					?>
+				</p>
+			</footer>
+		</article>
+	</main>
 </body>
 </html>
 		<?php
-		exit;
+		return (string) ob_get_clean();
 	}
 
 	/**
-	 * Render the success page after authorization.
+	 * The redirect URI with an OAuth error appended, every value encoded.
 	 *
-	 * Completes the OAuth callback and shows a success message.
+	 * `add_query_arg()` does not encode values, so a `state` holding `&` or
+	 * `#` would add parameters or a fragment of its own to the redirect. An
+	 * empty state is left out; a state of "0" is a state.
+	 *
+	 * @param string $redirect_uri The validated redirect URI.
+	 * @param string $error        The OAuth error code.
+	 * @param string $description  The error description.
+	 * @param string $state        The state the client sent, or ''.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	public static function error_redirect_url( string $redirect_uri, string $error, string $description, string $state ): string {
+		$params = [
+			'error'             => $error,
+			'error_description' => $description,
+		];
+
+		if ( $state !== '' ) {
+			$params['state'] = $state;
+		}
+
+		$query = http_build_query( $params, '', '&', PHP_QUERY_RFC3986 );
+
+		return $redirect_uri . ( str_contains( $redirect_uri, '?' ) ? '&' : '?' ) . $query;
+	}
+
+	/**
+	 * The user's role as WordPress shows it, translated.
+	 *
+	 * @param \WP_User $user The user.
+	 *
+	 * @return string The first role's name, or '' when they have none.
+	 * @since 1.5.0
+	 */
+	private function role_label( \WP_User $user ): string {
+		$role  = $user->roles[0] ?? '';
+		$names = wp_roles()->get_names();
+
+		return isset( $names[ $role ] ) ? translate_user_role( $names[ $role ] ) : '';
+	}
+
+	/**
+	 * After someone approves: say so, then hand the app its code.
 	 *
 	 * @param string $redirect_url The OAuth callback URL with authorization code.
 	 * @param string $client_name  The name of the authorized client.
@@ -624,55 +782,128 @@ class AuthorizationPage implements Hookable {
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
 
-		$site_name = get_bloginfo( 'name' );
-
 		$this->enqueue_oauth_styles();
 
 		wp_enqueue_script( 'albert-oauth-redirect' );
-		wp_add_inline_script(
-			'albert-oauth-redirect',
-			'setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url ) . ';},1500);'
-		);
+		wp_add_inline_script( 'albert-oauth-redirect', self::redirect_script( $redirect_url ) );
 
+		echo $this->success_html( $redirect_url, $client_name ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped as it is built.
+		exit;
+	}
+
+	/**
+	 * The approval page's script: tell an open connect dialog, then hand over.
+	 *
+	 * The redirect is what completes OAuth, so it runs on its own after three
+	 * seconds, and stops for good the moment someone interacts, leaving them
+	 * the link (WCAG 2.2.1). The broadcast is only a hint for the connect
+	 * dialog (admin-connect.js listens on the same channel name), which asks
+	 * the server rather than believing it.
+	 *
+	 * @param string $redirect_url The OAuth callback URL with authorization code.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	public static function redirect_script( string $redirect_url ): string {
+		$flags  = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+		$script = 'try{new BroadcastChannel("albert-connect").postMessage("approved");}catch(e){}';
+
+		if ( ! self::is_dangerous_scheme( $redirect_url ) ) {
+			$script .= 'var t=setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url, $flags ) . ';},3000);'
+				. 'var stop=function(){clearTimeout(t);var n=document.querySelector("[data-albert-redirect-note]");if(n){n.textContent=' . wp_json_encode( __( 'Stopped. Use the link below to go back.', 'albert-ai-butler' ), $flags ) . ';}};'
+				. '["keydown","pointerdown","focusin"].forEach(function(e){document.addEventListener(e,stop,{once:true});});';
+		}
+
+		return '(function(){' . $script . '})();';
+	}
+
+	/**
+	 * The approval page's markup, separate from sending it so it can be tested.
+	 *
+	 * Says "Approved" rather than "Connected": the app still has to exchange
+	 * the code it is about to receive, and the connect dialog only says
+	 * connected once that has happened.
+	 *
+	 * @param string $redirect_url The OAuth callback URL with authorization code.
+	 * @param string $client_name  The name of the authorized client.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	public function success_html( string $redirect_url, string $client_name ): string {
+		$site_name = get_bloginfo( 'name' );
+		$user      = wp_get_current_user();
+		// No link or redirect to a script scheme; registration refuses those,
+		// so this only shows for a client stored some other way.
+		$can_return = ! self::is_dangerous_scheme( $redirect_url );
+
+		ob_start();
 		?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title><?php esc_html_e( 'Authorization Successful', 'albert-ai-butler' ); ?> - <?php echo esc_html( $site_name ); ?></title>
+	<title><?php esc_html_e( 'Approved', 'albert-ai-butler' ); ?> - <?php echo esc_html( $site_name ); ?></title>
 		<?php wp_print_styles( 'albert-oauth-pages' ); ?>
 </head>
 <body>
-	<div class="success-container">
-		<div class="success-icon">
-			<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-				<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-			</svg>
-		</div>
-		<h1><?php esc_html_e( 'Authorization Successful', 'albert-ai-butler' ); ?></h1>
-		<p>
-			<?php
-			printf(
-				/* translators: %s: client/application name */
-				esc_html__( '%s has been authorized to access your site.', 'albert-ai-butler' ),
-				'<span class="client-name">' . esc_html( $client_name ) . '</span>'
-			);
-			?>
-		</p>
-		<p class="close-message">
-			<?php esc_html_e( 'Redirecting back to the application...', 'albert-ai-butler' ); ?>
-		</p>
-		<p class="fallback-message">
-			<?php esc_html_e( "If the application doesn't open automatically, please click the button below.", 'albert-ai-butler' ); ?>
-		</p>
-		<a href="<?php echo esc_url( $redirect_url ); ?>" class="button"><?php esc_html_e( 'Return to Application', 'albert-ai-butler' ); ?></a>
-	</div>
+	<main class="albert-oauth">
+		<p class="albert-oauth__site"><?php echo esc_html( $site_name ); ?></p>
+		<article class="albert-oauth__card">
+			<p class="albert-oauth__eyebrow">
+				<?php
+				/* translators: %s: the name the connecting app registered, e.g. "Cursor". */
+				echo esc_html( sprintf( __( '%s asked to connect to this site', 'albert-ai-butler' ), $client_name ) );
+				?>
+			</p>
+			<h1 class="albert-oauth__title albert-oauth__title--done">
+				<svg class="albert-oauth__check" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17 9"/></svg>
+				<?php esc_html_e( 'Approved', 'albert-ai-butler' ); ?>
+			</h1>
+			<p class="albert-oauth__text" data-albert-redirect-note aria-live="polite">
+				<?php
+				echo esc_html(
+					$can_return
+						/* translators: %s: the name of the connected app. */
+						? sprintf( __( 'Taking you back to %s…', 'albert-ai-butler' ), $client_name )
+						/* translators: %s: the name of the connected app. */
+						: sprintf( __( 'Go back to %s to finish connecting.', 'albert-ai-butler' ), $client_name )
+				);
+				?>
+			</p>
+			<p class="albert-oauth__meta">
+				<?php
+				printf(
+					/* translators: 1: the user's display name, 2: their role, e.g. "Administrator". */
+					esc_html__( 'Signed in as %1$s (%2$s).', 'albert-ai-butler' ),
+					esc_html( $user->display_name ),
+					esc_html( $this->role_label( $user ) )
+				);
+				if ( user_can( $user, 'manage_options' ) ) {
+					echo ' ';
+					esc_html_e( 'You can see or revoke this connection on Albert’s Connections page.', 'albert-ai-butler' );
+				}
+				?>
+			</p>
+			<?php if ( $can_return ) { ?>
+				<footer class="albert-oauth__footer">
+					<a href="<?php echo esc_url( $redirect_url, self::link_protocols( $redirect_url ) ); ?>">
+						<?php
+						/* translators: %s: the name of the connected app. */
+						echo esc_html( sprintf( __( 'If nothing happens, return to %s', 'albert-ai-butler' ), $client_name ) );
+						?>
+					</a>
+				</footer>
+			<?php } ?>
+		</article>
+	</main>
 		<?php wp_print_scripts( 'albert-oauth-redirect' ); ?>
 </body>
 </html>
 		<?php
-		exit;
+		return (string) ob_get_clean();
 	}
 
 	/**
