@@ -82,7 +82,9 @@ class DefaultAllowedUser implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function maybe_add_on_albert_screen(): void {
-		if ( get_option( self::DONE_OPTION ) || ! Menu::is_albert_screen() || ! current_user_can( 'manage_options' ) ) {
+		// Cheapest checks first: the option is not autoloaded, so reading it
+		// costs a query on every screen it is reached on.
+		if ( ! Menu::is_albert_screen() || ! current_user_can( 'manage_options' ) || get_option( self::DONE_OPTION ) ) {
 			return;
 		}
 

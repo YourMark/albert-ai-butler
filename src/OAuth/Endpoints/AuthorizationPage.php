@@ -783,8 +783,9 @@ class AuthorizationPage implements Hookable {
 	 *
 	 * The redirect is what completes OAuth, so it runs on its own after three
 	 * seconds, and stops for good the moment someone interacts, leaving them
-	 * the link (WCAG 2.2.1). The broadcast is only a hint: the dialog asks the
-	 * server rather than believing it.
+	 * the link (WCAG 2.2.1). The broadcast is only a hint for the connect
+	 * dialog (admin-connect.js listens on the same channel name), which asks
+	 * the server rather than believing it.
 	 *
 	 * @param string $redirect_url The OAuth callback URL with authorization code.
 	 *
@@ -820,6 +821,9 @@ class AuthorizationPage implements Hookable {
 	public function success_html( string $redirect_url, string $client_name ): string {
 		$site_name = get_bloginfo( 'name' );
 		$user      = wp_get_current_user();
+		// No link or redirect to a script scheme; registration refuses those,
+		// so this only shows for a client stored some other way.
+		$can_return = ! self::is_dangerous_scheme( $redirect_url );
 
 		ob_start();
 		?>
@@ -847,8 +851,13 @@ class AuthorizationPage implements Hookable {
 			</h1>
 			<p class="albert-oauth__text" data-albert-redirect-note aria-live="polite">
 				<?php
-				/* translators: %s: the name of the connected app. */
-				echo esc_html( sprintf( __( 'Taking you back to %s…', 'albert-ai-butler' ), $client_name ) );
+				echo esc_html(
+					$can_return
+						/* translators: %s: the name of the connected app. */
+						? sprintf( __( 'Taking you back to %s…', 'albert-ai-butler' ), $client_name )
+						/* translators: %s: the name of the connected app. */
+						: sprintf( __( 'Go back to %s to finish connecting.', 'albert-ai-butler' ), $client_name )
+				);
 				?>
 			</p>
 			<p class="albert-oauth__meta">
@@ -865,14 +874,16 @@ class AuthorizationPage implements Hookable {
 				}
 				?>
 			</p>
-			<footer class="albert-oauth__footer">
-				<a href="<?php echo esc_url( $redirect_url, self::link_protocols( $redirect_url ) ); ?>">
-					<?php
-					/* translators: %s: the name of the connected app. */
-					echo esc_html( sprintf( __( 'If nothing happens, return to %s', 'albert-ai-butler' ), $client_name ) );
-					?>
-				</a>
-			</footer>
+			<?php if ( $can_return ) { ?>
+				<footer class="albert-oauth__footer">
+					<a href="<?php echo esc_url( $redirect_url, self::link_protocols( $redirect_url ) ); ?>">
+						<?php
+						/* translators: %s: the name of the connected app. */
+						echo esc_html( sprintf( __( 'If nothing happens, return to %s', 'albert-ai-butler' ), $client_name ) );
+						?>
+					</a>
+				</footer>
+			<?php } ?>
 		</article>
 	</main>
 		<?php wp_print_scripts( 'albert-oauth-redirect' ); ?>

@@ -119,7 +119,9 @@ class AuthorizationPagesTest extends TestCase {
 		$this->assertStringContainsString( 'href="cursor://anysphere.cursor-mcp/oauth/callback?code=abc"', $page->success_html( 'cursor://anysphere.cursor-mcp/oauth/callback?code=abc', 'Cursor' ) );
 
 		foreach ( [ 'javascript:alert(1)', "java\tscript:alert(1)", ' JavaScript:alert(1)' ] as $url ) {
-			$this->assertStringNotContainsString( 'alert(1)', $page->success_html( $url, 'Evil' ), $url );
+			$html = $page->success_html( $url, 'Evil' );
+			$this->assertStringNotContainsString( 'alert(1)', $html, $url );
+			$this->assertStringNotContainsString( 'Taking you back', $html, $url );
 			$this->assertStringNotContainsString( 'location', AuthorizationPage::redirect_script( $url ), $url );
 		}
 	}
