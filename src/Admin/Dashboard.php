@@ -11,6 +11,7 @@ namespace Albert\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Admin\Connections\ConnectDialog;
 use Albert\Admin\Connections\UserPickerModal;
 use Albert\Admin\Dashboard\AddonState;
 use Albert\Admin\Dashboard\Attention;
@@ -21,6 +22,7 @@ use Albert\Core\AbilitiesRegistry;
 use Albert\Core\Plugin;
 use Albert\Logging\Outcome;
 use Albert\Logging\Repository as LoggingRepository;
+use Albert\MCP\AdapterPlugin;
 use Albert\MCP\Server as McpServer;
 use Albert\Database\Tables;
 use Albert\OAuth\AllowedUsers;
@@ -221,6 +223,7 @@ class Dashboard implements Hookable {
 		// screen's picker, so the dashboard loads the same script and the same
 		// localised data rather than a copy of either.
 		UserPickerModal::enqueue( 'dashboard' );
+		ConnectDialog::enqueue();
 	}
 
 	/**
@@ -261,7 +264,15 @@ class Dashboard implements Hookable {
 							<?php esc_html_e( 'Connect your WordPress site to AI assistants like Claude and ChatGPT.', 'albert-ai-butler' ); ?>
 						</p>
 					</div>
+					<?php
+					// Once setup is done the checklist is gone; this stays, so anyone
+					// who has not connected their own assistant still has a way in.
+					if ( $setup_complete ) {
+						ConnectDialog::render_button( 'button' );
+					}
+					?>
 				</div>
+				<hr class="wp-header-end">
 
 				<?php Notices::render( 'albert_connections' ); ?>
 
@@ -281,6 +292,7 @@ class Dashboard implements Hookable {
 		// The same picker the Connections screen opens, from the same markup and
 		// the same script. Two pickers answering one question drift.
 		UserPickerModal::render( 'dashboard' );
+		ConnectDialog::render();
 	}
 
 	/**
@@ -364,11 +376,14 @@ class Dashboard implements Hookable {
 	 * @since 1.4.0
 	 */
 	private function render_onboarding_state( bool $has_allowed_users, bool $has_connections, array $abilities, string $mcp_endpoint ): void {
-		// Step 1 (installed) is always done; 4 (review abilities) is optional and
-		// never blocks, so "left" counts the two that actually gate a connection.
-		$done      = 1 + ( $has_allowed_users ? 1 : 0 ) + ( $has_connections ? 1 : 0 );
-		$total     = 4;
-		$remaining = max( 0, 3 - $done );
+		// Three steps. Installing the MCP Adapter plugin is not one of them:
+		// Albert runs on its own copy, so it is a recommendation under the
+		// list. Step 2 is about the person looking, not whoever else
+		// connected; step 3 (review abilities) is optional and never ticks.
+		$adapter_ready = ! AdapterPlugin::needs_attention();
+		$mine          = $this->get_my_latest_connection();
+		$done          = ( $has_allowed_users ? 1 : 0 ) + ( $mine !== null ? 1 : 0 );
+		$total         = 3;
 		?>
 		<div class="albert-dashboard__split">
 			<section class="albert-card albert-setup">
@@ -378,9 +393,10 @@ class Dashboard implements Hookable {
 						<p class="albert-card__description">
 							<?php
 							printf(
-								/* translators: %d: number of setup steps still to do. */
-								esc_html( _n( '%d step left.', '%d steps left.', $remaining, 'albert-ai-butler' ) ),
-								(int) $remaining
+								/* translators: 1: steps done, 2: number of steps. */
+								esc_html__( '%1$d of %2$d done', 'albert-ai-butler' ),
+								(int) $done,
+								(int) $total
 							);
 							?>
 						</p>
@@ -403,16 +419,6 @@ class Dashboard implements Hookable {
 					<?php
 					$this->render_setup_step(
 						1,
-						true,
-						false,
-						__( 'Plugin installed', 'albert-ai-butler' ),
-						__( 'Done. The OAuth server and MCP endpoint are running.', 'albert-ai-butler' )
-					);
-					?>
-
-					<?php
-					$this->render_setup_step(
-						2,
 						$has_allowed_users,
 						! $has_allowed_users,
 						__( 'Add an allowed user', 'albert-ai-butler' ),
@@ -431,25 +437,27 @@ class Dashboard implements Hookable {
 
 					<?php
 					$this->render_setup_step(
-						3,
-						$has_connections,
-						$has_allowed_users && ! $has_connections,
+						2,
+						$mine !== null,
+						$has_allowed_users && $mine === null,
 						__( 'Connect an AI assistant', 'albert-ai-butler' ),
-						__( 'Paste this endpoint into Claude or ChatGPT as an MCP connector.', 'albert-ai-butler' ),
-						function () use ( $mcp_endpoint ): void {
+						'',
+						function () use ( $mine ): void {
+							if ( $mine !== null ) {
+								?>
+								<p class="albert-setup__description">
+									<?php
+									/* translators: 1: the assistant's name, 2: how long ago it connected, e.g. "2 minutes ago". */
+									echo esc_html( sprintf( __( '%1$s connected %2$s.', 'albert-ai-butler' ), $mine['name'], $this->ago( (int) $mine['created_ts'] ) ) );
+									?>
+									<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>"><?php esc_html_e( 'Manage connections', 'albert-ai-butler' ); ?></a>
+								</p>
+								<?php
+								return;
+							}
 							?>
-							<div class="albert-endpoint">
-								<label class="screen-reader-text" for="albert-mcp-endpoint"><?php esc_html_e( 'MCP endpoint address', 'albert-ai-butler' ); ?></label>
-								<input
-									type="text"
-									id="albert-mcp-endpoint"
-									class="albert-endpoint__field"
-									value="<?php echo esc_url( $mcp_endpoint ); ?>"
-									readonly
-								/>
-								<button type="button" class="button button-secondary albert-copy-button" data-copy-target="albert-mcp-endpoint">
-									<?php esc_html_e( 'Copy', 'albert-ai-butler' ); ?>
-								</button>
+							<div class="albert-setup__actions">
+								<?php ConnectDialog::render_button(); ?>
 							</div>
 							<?php
 						}
@@ -459,27 +467,38 @@ class Dashboard implements Hookable {
 					<?php
 					$review = sprintf(
 						/* translators: %d: number of abilities enabled by default. */
-						__( '%d abilities are enabled by default.', 'albert-ai-butler' ),
+						__( '%d abilities are on by default.', 'albert-ai-butler' ),
 						$abilities['enabled']
 					);
 					$this->render_setup_step(
-						4,
+						3,
 						false,
 						false,
 						__( 'Choose what Albert may do', 'albert-ai-butler' ),
-						$review,
-						function (): void {
+						'',
+						function () use ( $review ): void {
 							?>
-							<p class="albert-setup__aside-link">
-								<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-abilities' ) ); ?>">
-									<?php esc_html_e( 'Review them', 'albert-ai-butler' ); ?>
-								</a>
+							<p class="albert-setup__description">
+								<?php echo esc_html( $review ); ?>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-abilities' ) ); ?>"><?php esc_html_e( 'Review them', 'albert-ai-butler' ); ?></a>
 							</p>
 							<?php
 						}
 					);
 		?>
 				</ol>
+
+				<?php if ( ! $adapter_ready ) { ?>
+					<div class="albert-card__body albert-setup__note">
+						<p>
+							<?php
+							/* translators: %s: what the owner is asked to do, e.g. "Install the MCP Adapter plugin". */
+							echo esc_html( sprintf( __( 'Recommended: %s', 'albert-ai-butler' ), AdapterPlugin::title() ) );
+							?>
+						</p>
+						<?php AdapterNudge::render_action(); ?>
+					</div>
+				<?php } ?>
 			</section>
 
 			<div class="albert-dashboard__aside">
@@ -538,7 +557,9 @@ class Dashboard implements Hookable {
 						?>
 					</span>
 				</p>
-				<p class="albert-setup__description"><?php echo esc_html( $description ); ?></p>
+				<?php if ( $description !== '' ) { ?>
+					<p class="albert-setup__description"><?php echo esc_html( $description ); ?></p>
+				<?php } ?>
 				<?php
 				if ( $extra !== null && ! $is_done ) {
 					call_user_func( $extra );
@@ -995,7 +1016,7 @@ class Dashboard implements Hookable {
 			<?php if ( $action !== null || $dismissible ) { ?>
 				<span class="albert-attention__action">
 					<?php if ( $action !== null && ! empty( $action['url'] ) && ! empty( $action['label'] ) ) { ?>
-						<a class="button button-small" href="<?php echo esc_url( (string) $action['url'] ); ?>"><?php echo esc_html( (string) $action['label'] ); ?></a>
+						<a class="button button-small" href="<?php echo esc_url( (string) $action['url'] ); ?>"<?php $this->render_data_attributes( $action['attributes'] ?? [] ); ?>><?php echo esc_html( (string) $action['label'] ); ?></a>
 					<?php } ?>
 					<?php if ( $dismissible ) { ?>
 						<button
@@ -1008,6 +1029,28 @@ class Dashboard implements Hookable {
 			<?php } ?>
 		</li>
 		<?php
+	}
+
+	/**
+	 * Print an action's `data-*` attributes, ignoring anything else.
+	 *
+	 * @param mixed $attributes Attribute name => value.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function render_data_attributes( $attributes ): void {
+		if ( ! is_array( $attributes ) ) {
+			return;
+		}
+
+		foreach ( $attributes as $name => $value ) {
+			if ( ! is_string( $name ) || ! preg_match( '/^data-[a-z0-9-]+$/', $name ) || ! is_scalar( $value ) ) {
+				continue;
+			}
+
+			printf( ' %1$s="%2$s"', esc_attr( $name ), esc_attr( (string) $value ) );
+		}
 	}
 
 	/**
@@ -1329,6 +1372,51 @@ class Dashboard implements Hookable {
 			</div>
 		</section>
 		<?php
+	}
+
+	/**
+	 * The current user's most recently approved live connection, or null.
+	 *
+	 * The checklist's connect step is about the person looking at it: an
+	 * administrator whose agency already connected still has their own to do.
+	 *
+	 * @return array<string, mixed>|null
+	 * @since 1.5.0
+	 */
+	private function get_my_latest_connection(): ?array {
+		$user_id = get_current_user_id();
+		$mine    = array_filter(
+			$this->get_live_connections(),
+			static fn( array $connection ): bool => in_array( $user_id, (array) ( $connection['user_ids'] ?? [] ), true )
+		);
+
+		if ( $mine === [] ) {
+			return null;
+		}
+
+		usort( $mine, static fn( array $a, array $b ): int => (int) $b['created_ts'] <=> (int) $a['created_ts'] );
+
+		$latest         = $mine[0];
+		$latest['name'] = (string) ( $latest['label'] !== '' ? $latest['label'] : $latest['name'] );
+
+		return $latest;
+	}
+
+	/**
+	 * "2 minutes ago", or "just now" inside the first minute.
+	 *
+	 * @param int $timestamp A Unix timestamp.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	private function ago( int $timestamp ): string {
+		if ( time() - $timestamp < MINUTE_IN_SECONDS ) {
+			return __( 'just now', 'albert-ai-butler' );
+		}
+
+		/* translators: %s: a human-readable time difference, e.g. "2 minutes". */
+		return sprintf( __( '%s ago', 'albert-ai-butler' ), human_time_diff( $timestamp ) );
 	}
 
 	/**

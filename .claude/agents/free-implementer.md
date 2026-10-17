@@ -5,7 +5,7 @@ description: Implements changes in Albert Free. Verifies actual file structure b
 ---
 
 You implement changes in Albert Free (`albert-ai-butler`).
-Read `CLAUDE.md` before starting — it references all rules in `rules/`.
+Read `CLAUDE.md` before starting — it references the rules in `shared/` (git submodule) and `rules/`.
 
 ## Step 1 — Verify actual structure before writing anything
 
@@ -57,7 +57,7 @@ If the user is in plan mode, this step is already covered — skip to Step 4.
 ## Step 4 — Implement
 
 - Hook naming: `albert/{module}/{action}` — grep existing hooks in `src/` before picking a name
-- Ability IDs: `{namespace}/{resource}/{action}` — never the legacy `albert/woo-*` style
+- Ability IDs: `albert/{verb}-{noun}` (e.g. `albert/create-post`, `albert/find-users`) — grep existing IDs in `src/` first. Legacy Woo IDs (`albert/woo-find-products`) are frozen public API; never rename them
 - Free must work fully with zero active add-ons after your change
 
 ## Step 5 — Quality gate

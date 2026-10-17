@@ -164,6 +164,38 @@ to `core/button` (its `url` attribute) and to `<a href>` links inside text attri
 
 For pages, use the equivalent `albert/*-page` abilities.
 
+## Patterns
+
+A pattern is ready-made, valid block markup already on this site: a header, a hero,
+a call to action, a whole page section. Before composing a complex layout from
+scratch, look for a pattern and reuse it. It is also the reliable way to place
+blocks Albert cannot regenerate perfectly on its own (Cover, Media & Text): a
+pattern's markup is known-valid.
+
+- **Discover:** `albert/find-patterns` (filter by `search` or `category`) lists
+  summaries; `albert/view-pattern` returns one pattern's block markup by `name`.
+- **Reuse as a copy (default):** pass the returned `content` as your `blocks` or
+  `content`, or adapt it. The copy is independent; editing it never changes the
+  source. Works for any pattern.
+- **Reuse synced (shared):** only user patterns with `syncStatus: "synced"`.
+  Insert by reference with `<!-- wp:block {"ref":ID} /-->` using the pattern's
+  `id`. There is one source, so editing the pattern updates every place it is
+  used. Use it for a block repeated across the site, such as a CTA or a footer note.
+- **`source`:** `registered` patterns (theme or plugin) are always copies and
+  read-only; `user` patterns are the ones an owner can edit.
+
+**Prefer a pattern over building new** for a full page or section, an on-brand
+layout the site already ships, or any Cover / Media & Text layout where a pattern
+keeps the markup valid.
+
+**Saving, editing, deleting a pattern:** when a layout is worth reusing across
+pages, save it with `albert/create-pattern` (send the `blocks` the same way you
+build a post body). By default it is an unsynced copy-on-insert template; set
+`synced: true` for one source that updates everywhere it is used. Edit one with
+`albert/update-pattern` (blocks, title, sync status or categories) and remove one
+with `albert/delete-pattern`. Create, update and delete work on **user patterns
+only**: registered theme/plugin patterns are read-only and return an error.
+
 ## Granular block edits — change ONE block at a time
 
 `create-*` and `update-*` replace the **whole** post body. For a long post, or when

@@ -29,14 +29,17 @@ const ClipboardModule = {
 				return;
 			}
 
-			const target = document.getElementById( button.dataset.copyTarget );
-			if ( ! target ) {
-				return;
+			// Either the text itself, or the element holding it.
+			let text = button.dataset.copyText;
+			if ( text === undefined ) {
+				const target = document.getElementById( button.dataset.copyTarget );
+				if ( ! target ) {
+					return;
+				}
+				text = target.value !== undefined && null !== target.value
+					? target.value
+					: target.textContent.trim();
 			}
-
-			const text = target.value !== undefined && null !== target.value
-				? target.value
-				: target.textContent.trim();
 
 			const ok = await Albert.clipboard.copy( text );
 			if ( ok ) {
@@ -116,6 +119,14 @@ function init() {
 	Albert.liveRegion.ensure();
 	ClipboardModule.init();
 	DisconnectModule.init();
+
+	// A form that undoes something ("Revoke") asks first.
+	document.addEventListener( 'submit', ( event ) => {
+		const form = event.target.closest( 'form[data-albert-confirm]' );
+		if ( form && ! window.confirm( form.dataset.albertConfirm ) ) {
+			event.preventDefault();
+		}
+	} );
 }
 
 if ( document.readyState === 'loading' ) {

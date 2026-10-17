@@ -1,0 +1,144 @@
+<?php
+/**
+ * REST routes behind the connect dialog.
+ *
+ * @package Albert
+ * @subpackage Admin\Rest
+ * @since      1.5.0
+ */
+
+namespace Albert\Admin\Rest;
+
+defined( 'ABSPATH' ) || exit;
+
+use Albert\Admin\Connections\ConnectCapability;
+use Albert\Admin\Connections\SiteLocation;
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\Core\Plugin;
+use Albert\OAuth\Repositories\ClientRepository;
+use WP_REST_Request;
+use WP_REST_Response;
+
+/**
+ * Two routes: has my new connection arrived yet, and where is this site.
+ *
+ * Status reports the signed-in person's own connections, never anyone
+ * else's. Saving the location is for administrators only.
+ *
+ * @since 1.5.0
+ */
+class ConnectController implements Hookable {
+
+	/**
+	 * Register hooks.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function register_hooks(): void {
+		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
+	}
+
+	/**
+	 * Register the routes.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function register_routes(): void {
+		register_rest_route(
+			Plugin::rest_namespace(),
+			'/connect/status',
+			[
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_status' ],
+				'permission_callback' => [ $this, 'can_connect' ],
+				'args'                => [
+					'since' => [
+						'type'     => 'integer',
+						'required' => true,
+						'minimum'  => 0,
+					],
+				],
+			]
+		);
+
+		register_rest_route(
+			Plugin::rest_namespace(),
+			'/connect/location',
+			[
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'save_location' ],
+				'permission_callback' => [ $this, 'can_change_location' ],
+				'args'                => [
+					'location' => [
+						'type'     => 'string',
+						'required' => true,
+						'enum'     => [ SiteLocation::PUBLIC, SiteLocation::LOCAL ],
+					],
+				],
+			]
+		);
+	}
+
+	/**
+	 * Who may use the dialog.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public function can_connect(): bool {
+		return current_user_can( ConnectCapability::CAPABILITY );
+	}
+
+	/**
+	 * Who may say where the site runs: administrators. It is the site's answer,
+	 * and a wrong one would mislead everybody else who connects.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public function can_change_location(): bool {
+		return current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Whether the current user approved a new connection since the dialog opened.
+	 *
+	 * @param WP_REST_Request<array<string, mixed>> $request The request.
+	 *
+	 * @return WP_REST_Response
+	 * @since 1.5.0
+	 */
+	public function get_status( WP_REST_Request $request ): WP_REST_Response {
+		$user       = wp_get_current_user();
+		$connection = ( new ClientRepository() )->firstConnectionSince( $user->ID, (int) $request->get_param( 'since' ) );
+
+		if ( $connection === null ) {
+			return new WP_REST_Response( [ 'connected' => false ] );
+		}
+
+		return new WP_REST_Response(
+			[
+				'connected' => true,
+				'client'    => $connection['client_id'],
+				'name'      => $connection['label'] !== '' ? $connection['label'] : $connection['name'],
+				'user'      => $user->display_name,
+			]
+		);
+	}
+
+	/**
+	 * Save where this site runs.
+	 *
+	 * @param WP_REST_Request<array<string, mixed>> $request The request.
+	 *
+	 * @return WP_REST_Response
+	 * @since 1.5.0
+	 */
+	public function save_location( WP_REST_Request $request ): WP_REST_Response {
+		SiteLocation::save( (string) $request->get_param( 'location' ) );
+
+		return new WP_REST_Response( [ 'location' => SiteLocation::current() ] );
+	}
+}

@@ -9,6 +9,8 @@ on:
       - '**.php'
       - 'composer.json'
       - 'composer.lock'
+      - 'lib/mcp-adapter/composer.json'
+      - 'lib/mcp-adapter/composer.lock'
       - 'phpcs.xml.dist'
       - 'phpstan.neon'
 
