@@ -120,7 +120,7 @@ class GuidePanel {
 		?>
 		<div class="albert-guide-panel albert-guide-panel--unavailable" id="<?php echo esc_attr( $base ); ?>">
 			<p class="albert-guide-panel__intro"><?php echo esc_html( $guide['unavailable'] ); ?></p>
-			<p class="albert-guide-panel__intro"><?php esc_html_e( 'Use an app on this computer, like Claude Desktop or Cursor, or put the site online.', 'albert-ai-butler' ); ?></p>
+			<p class="albert-guide-panel__intro"><?php esc_html_e( 'Use an app on this computer, like Claude Desktop or Cursor. Or make the site reachable from the internet, for example with a tunnel such as Cloudflare Tunnel or ngrok, and mark it as public.', 'albert-ai-butler' ); ?></p>
 			<p class="albert-guide-panel__alternatives">
 				<button type="button" class="button button-secondary" data-albert-show-guide="claude-desktop"><?php esc_html_e( 'Show Claude Desktop', 'albert-ai-butler' ); ?></button>
 				<button type="button" class="button button-secondary" data-albert-show-guide="cursor"><?php esc_html_e( 'Show Cursor', 'albert-ai-butler' ); ?></button>
@@ -146,13 +146,16 @@ class GuidePanel {
 
 		?>
 		<span class="albert-guide-panel__action">
-			<a class="button button-primary" href="<?php echo esc_url( $action['value'], self::LINK_PROTOCOLS ); ?>"<?php echo $action['type'] === 'download' ? ' download' : ''; ?>>
+			<a class="button button-primary" href="<?php echo esc_url( $action['value'], self::LINK_PROTOCOLS ); ?>"<?php echo $action['type'] === 'download' ? ' download' : ''; ?><?php echo $action['missing'] !== '' ? ' data-albert-app-link' : ''; ?>>
 				<?php echo esc_html( $action['label'] ); ?>
 			</a>
 			<?php if ( $action['meta'] !== '' ) { ?>
 				<span class="albert-guide-panel__meta"><?php echo esc_html( $action['meta'] ); ?></span>
 			<?php } ?>
 		</span>
+		<?php if ( $action['missing'] !== '' ) { ?>
+			<span class="albert-guide-panel__missing" data-albert-link-missing hidden><?php echo esc_html( $action['missing'] ); ?></span>
+		<?php } ?>
 		<?php
 	}
 

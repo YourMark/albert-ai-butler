@@ -31,7 +31,7 @@ class AppIcon {
 	 * @since 1.5.0
 	 * @var array<int, string>
 	 */
-	private const ICONS = [ 'claude', 'claude-code', 'chatgpt', 'cursor', 'vscode', 'other' ];
+	private const ICONS = [ 'claude', 'claude-code', 'chatgpt', 'codex', 'cursor', 'vscode', 'other' ];
 
 	/**
 	 * Print a logo, or nothing for an unknown key.
