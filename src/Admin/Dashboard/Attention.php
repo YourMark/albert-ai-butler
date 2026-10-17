@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Context\SkillIndex;
 use Albert\Core\AbilitiesState;
 use Albert\MCP\Server as McpServer;
+use Albert\OAuth\Endpoints\ClientRegistration;
 use Albert\MCP\Skills\SkillRegistry;
 use Albert\SafeMode\Gate;
 use Albert\Support\WpCompat;
@@ -101,7 +102,8 @@ class Attention {
 			$this->plain_permalinks(),
 			$this->unreachable_skills(),
 			$this->broken_endpoint_override(),
-			$this->safe_mode_unenforceable()
+			$this->safe_mode_unenforceable(),
+			$this->client_limit_reached()
 		);
 
 		/**
@@ -313,6 +315,41 @@ class Attention {
 				'action'      => [
 					'label' => __( 'Update WordPress', 'albert-ai-butler' ),
 					'url'   => admin_url( 'update-core.php' ),
+				],
+				'dismissible' => false,
+			],
+		];
+	}
+
+	/**
+	 * New assistants are refused because the registration cap is reached.
+	 *
+	 * Registration fails before any screen is shown, so the person connecting
+	 * sees only their app's error and the owner sees nothing at all.
+	 *
+	 * @since 1.5.0
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function client_limit_reached(): array {
+		if ( ! ClientRegistration::limit_reached() ) {
+			return [];
+		}
+
+		return [
+			[
+				'id'          => 'client-limit-reached',
+				'tone'        => 'danger',
+				'tone_label'  => __( 'Can\'t connect', 'albert-ai-butler' ),
+				'title'       => __( 'New assistants can\'t connect: the connection limit is reached', 'albert-ai-butler' ),
+				'detail'      => sprintf(
+					/* translators: %d: the maximum number of connected apps. */
+					__( 'This site allows %d connected apps. Disconnect ones you no longer use to make room.', 'albert-ai-butler' ),
+					ClientRegistration::max_clients()
+				),
+				'action'      => [
+					'label' => __( 'Open Connections', 'albert-ai-butler' ),
+					'url'   => admin_url( 'admin.php?page=albert-connections' ),
 				],
 				'dismissible' => false,
 			],

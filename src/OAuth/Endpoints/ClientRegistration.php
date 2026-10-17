@@ -130,9 +130,10 @@ class ClientRegistration implements Hookable {
 
 		$client_repo = new ClientRepository();
 
-		// Per-site client cap — bounds the stored-client table against abuse.
-		$max_clients = (int) apply_filters( 'albert/oauth/max_clients', self::DEFAULT_MAX_CLIENTS );
-		if ( $max_clients > 0 && $client_repo->count_clients() >= $max_clients ) {
+		// Per-site client cap, against live clients only (see count_live_clients()).
+		if ( self::limit_reached( $client_repo ) ) {
+			$this->log_rejected_registration( 'client_limit_reached', '', '' );
+
 			return new WP_Error(
 				'client_limit_reached',
 				__( 'This site has reached its maximum number of registered clients.', 'albert-ai-butler' ),
@@ -554,6 +555,30 @@ class ClientRegistration implements Hookable {
 				)
 			);
 		}
+	}
+
+	/**
+	 * The registration cap, after the `albert/oauth/max_clients` filter. 0 means no cap.
+	 *
+	 * @return int
+	 * @since 1.5.0
+	 */
+	public static function max_clients(): int {
+		return (int) apply_filters( 'albert/oauth/max_clients', self::DEFAULT_MAX_CLIENTS );
+	}
+
+	/**
+	 * Whether the registration cap is reached, so a new client would be refused.
+	 *
+	 * @param ClientRepository|null $repository Repository to count with.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function limit_reached( ?ClientRepository $repository = null ): bool {
+		$max = self::max_clients();
+
+		return $max > 0 && ( $repository ?? new ClientRepository() )->count_live_clients() >= $max;
 	}
 
 	/**
