@@ -90,6 +90,27 @@ class WriteContentResolver {
 	}
 
 	/**
+	 * Resolve the content string a block pattern (a wp_block) should store.
+	 *
+	 * A pattern is always block content, so there is no classic-editor branch: it
+	 * is not tied to a post type and is not narrowed to a post's or page's allowed
+	 * block set. Enforcement runs against the site-wide allowed set (a block a site
+	 * removes globally is still rejected), and serialization and warning handling
+	 * are the same as the post/page block path.
+	 *
+	 * @param array<string, mixed> $args    Ability input. Reads `content` (string) and `blocks` (array of specs).
+	 * @param int|null             $post_id Target wp_block ID on Update, null on Create.
+	 *
+	 * @return array{content: string, block_issues: array<int, string>}|WP_Error Resolved content and warnings, or a WP_Error to return instead of saving.
+	 * @since 1.5.0
+	 */
+	public function resolve_pattern( array $args, ?int $post_id = null ): array|WP_Error {
+		$has_blocks_input = ! empty( $args['blocks'] ) && is_array( $args['blocks'] );
+
+		return $this->resolve_block( $args, null, $post_id, $has_blocks_input );
+	}
+
+	/**
 	 * Resolve content for a classic-editor target.
 	 *
 	 * Structured `blocks` do not apply to the classic editor, so a non-empty
@@ -141,14 +162,14 @@ class WriteContentResolver {
 	 * save; only warnings ride along.
 	 *
 	 * @param array<string, mixed> $args             Ability input.
-	 * @param string               $post_type        Post type slug.
+	 * @param string|null          $post_type        Post type slug for the editor context, or null for the site-wide (pattern) scope.
 	 * @param int|null             $post_id          Target post ID on Update, null on Create.
 	 * @param bool                 $has_blocks_input Whether a non-empty `blocks` field was sent.
 	 *
 	 * @return array{content: string, block_issues: array<int, string>}|WP_Error Resolved content, or a WP_Error.
 	 * @since 1.2.0
 	 */
-	private function resolve_block( array $args, string $post_type, ?int $post_id, bool $has_blocks_input ): array|WP_Error {
+	private function resolve_block( array $args, ?string $post_type, ?int $post_id, bool $has_blocks_input ): array|WP_Error {
 		$policy_issues = [];
 
 		if ( $has_blocks_input ) {

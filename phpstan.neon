@@ -5,11 +5,13 @@ parameters:
 		- src/
 	excludePaths:
 		- vendor/
+		- lib/
 		- tests/
 		- bin/
 	bootstrapFiles:
 		- phpstan-bootstrap.php
 		- vendor/autoload.php
+		- lib/mcp-adapter/vendor/autoload.php
 		- vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
 		- vendor/php-stubs/woocommerce-stubs/woocommerce-packages-stubs.php
 	scanDirectories:
@@ -22,17 +24,3 @@ parameters:
 	ignoreErrors:
 		# REST API response array offsets - PHPStan can't infer the full response structure
 		- '#Offset .+ does not exist on array\{_links: array, _embedded: array\}#'
-		# The bundled MCP adapter documents create_server()'s $prompts as list<string>,
-		# but McpComponentRegistry::register_prompts() also accepts McpPrompt instances
-		# directly (its register_single_prompt() handles McpPrompt objects). The narrow
-		# PHPDoc is a third-party imprecision in the generated vendor/wordpress/ tree,
-		# which is regenerated and cannot be patched.
-		- message: '#Parameter \#12 \$prompts of method WP\\MCP\\Core\\McpAdapter::create_server\(\) expects list<string>, array<int, WP\\MCP\\Domain\\Prompts\\McpPrompt> given\.#'
-		  path: src/MCP/Server.php
-		# The bundled MCP adapter documents create_server()'s $resources as list<string>,
-		# but McpComponentRegistry::register_resources() also accepts McpResource instances
-		# directly (its register_single_resource() handles McpResource objects). The narrow
-		# PHPDoc is a third-party imprecision in the generated vendor/wordpress/ tree,
-		# which is regenerated and cannot be patched.
-		- message: '#Parameter \#11 \$resources of method WP\\MCP\\Core\\McpAdapter::create_server\(\) expects list<string>, list<WP\\MCP\\Domain\\Resources\\McpResource> given\.#'
-		  path: src/MCP/Server.php

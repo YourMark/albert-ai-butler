@@ -1,0 +1,517 @@
+/**
+ * The connect guides: one app's numbered steps with their action inline,
+ * quiet requirement notes, copy blocks and manual setup.
+ *
+ * Its own stylesheet because two screens draw the same panel: Connections,
+ * and the connect dialog on the Dashboard. Tokens only.
+ *
+ * @package Albert
+ * @since 1.5.0
+ */
+
+/* An app's logo: decorative, the name beside it carries the meaning. */
+.albert-app-icon {
+	flex-shrink: 0;
+	inline-size: 1.125rem;
+	block-size: 1.125rem;
+	color: var(--albert-color-text);
+}
+
+.albert-guide-panel {
+	display: grid;
+	gap: var(--albert-space-300);
+	max-inline-size: 46rem;
+	font-size: var(--albert-font-size-body);
+	line-height: var(--albert-line-height-body);
+	color: var(--albert-color-text);
+}
+
+.albert-guide-panel p {
+	margin: 0;
+}
+
+.albert-guide-panel__steps {
+	display: grid;
+	gap: var(--albert-space-300);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	counter-reset: albert-step;
+}
+
+/* A numbered circle, so the order reads at a glance; the number is real text. */
+.albert-guide-panel__step {
+	display: grid;
+	grid-template-columns: 1.5rem 1fr;
+	column-gap: var(--albert-space-300);
+	row-gap: var(--albert-space-200);
+	counter-increment: albert-step;
+}
+
+.albert-guide-panel__step::before {
+	content: counter(albert-step);
+	grid-row: 1 / span 2;
+	display: grid;
+	place-items: center;
+	inline-size: 1.5rem;
+	block-size: 1.5rem;
+	border: 1px solid var(--albert-color-border-input);
+	border-radius: 50%;
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text);
+}
+
+.albert-guide-panel__text {
+	grid-column: 2;
+	align-self: center;
+}
+
+.albert-guide-panel__step > :not(.albert-guide-panel__text) {
+	grid-column: 2;
+}
+
+.albert-guide-panel__action {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-300);
+}
+
+.albert-guide-panel__meta {
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+/* A copy block: commands wrap only at spaces, never inside a word or URL. */
+.albert-guide-panel__code {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: start;
+	gap: var(--albert-space-200);
+}
+
+.albert-guide-panel__code-label {
+	grid-column: 1 / -1;
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-guide-panel__code pre {
+	margin: 0;
+	padding: var(--albert-space-200) var(--albert-space-300);
+	overflow-x: auto;
+	border-radius: var(--albert-radius-md);
+	background: var(--albert-color-canvas);
+	font-family: var(--albert-font-family-mono);
+	font-size: var(--albert-font-size-sm);
+	line-height: var(--albert-line-height-body);
+	white-space: pre-wrap;
+}
+
+.albert-guide-panel__code pre.albert-guide-panel__block {
+	white-space: pre;
+}
+
+.albert-guide-panel__token {
+	white-space: nowrap;
+}
+
+/* Quiet on purpose: a plan or https requirement must never read as an error. */
+.albert-guide-panel__note {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: var(--albert-space-200);
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-guide-panel__note .dashicons {
+	font-size: 1rem;
+	inline-size: 1rem;
+	block-size: 1rem;
+	margin-block-start: 0.15em;
+}
+
+.albert-guide-panel__note-body {
+	display: grid;
+	gap: var(--albert-space-200);
+}
+
+.albert-guide-panel__more {
+	display: grid;
+	gap: var(--albert-space-200);
+}
+
+.albert-guide-panel__more-title {
+	margin: var(--albert-space-200) 0 0;
+	font-size: var(--albert-font-size-body);
+	font-weight: var(--albert-font-weight-semibold);
+}
+
+.albert-guide-panel__fold,
+.albert-guide-panel__manual {
+	display: grid;
+	gap: var(--albert-space-200);
+}
+
+.albert-guide-panel__fold summary,
+.albert-guide-panel__manual summary {
+	cursor: pointer;
+	color: var(--albert-color-link);
+	inline-size: fit-content;
+	min-block-size: 24px;
+}
+
+.albert-guide-panel__fold summary:focus-visible,
+.albert-guide-panel__manual summary:focus-visible {
+	outline: var(--albert-focus-width) solid var(--albert-focus-color);
+	outline-offset: 2px;
+}
+
+.albert-guide-panel__fold[open],
+.albert-guide-panel__manual[open] {
+	padding-block-end: var(--albert-space-200);
+}
+
+/* The Node.js bridge: last and quietest of the options. */
+.albert-guide-panel__fold--quiet summary {
+	color: var(--albert-color-text-muted);
+	font-size: var(--albert-font-size-sm);
+}
+
+.albert-guide-panel__hint,
+.albert-guide-panel__path {
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-guide-panel__manual-steps {
+	margin: 0;
+	padding-inline-start: var(--albert-space-500);
+}
+
+.albert-guide-panel__alternatives {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--albert-space-200);
+}
+
+/* The connect dialog. */
+
+.albert-dialog.albert-connect {
+	inline-size: min(640px, calc(100vw - 2 * var(--albert-space-400)));
+	max-block-size: min(88vh, 860px);
+}
+
+.albert-connect__progress {
+	margin: 0 0 var(--albert-space-100);
+	font-size: var(--albert-font-size-sm);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-connect .albert-dialog__title:focus {
+	outline: none;
+}
+
+.albert-connect__step {
+	display: grid;
+	gap: var(--albert-space-400);
+}
+
+.albert-connect__lead,
+.albert-connect__context {
+	margin: 0;
+	padding: 0;
+	font-size: var(--albert-font-size-body);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-connect__choices,
+.albert-connect__apps,
+.albert-connect__subgroup {
+	display: grid;
+	gap: var(--albert-space-300);
+	margin: 0;
+	padding: 0;
+	border: 0;
+	min-inline-size: 0;
+}
+
+.albert-connect__lead {
+	margin-block-end: var(--albert-space-100);
+}
+
+.albert-connect__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+	gap: var(--albert-space-300);
+}
+
+.albert-connect__group {
+	margin: var(--albert-space-200) 0 0;
+	padding: 0;
+	font-size: var(--albert-font-size-sm);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-text-muted);
+}
+
+/* A choice card: the whole card is the label, so the target is large. */
+.albert-choice {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--albert-space-300);
+	min-block-size: 44px;
+	padding: var(--albert-space-300) var(--albert-space-400);
+	border: 1px solid var(--albert-color-border-input);
+	border-radius: var(--albert-radius-md);
+	background: var(--albert-color-surface);
+	cursor: pointer;
+}
+
+.albert-choice--app {
+	align-items: center;
+}
+
+.albert-choice input {
+	margin: 0.2em 0 0;
+	flex-shrink: 0;
+}
+
+.albert-choice--app input {
+	margin: 0;
+}
+
+.albert-choice:hover {
+	background: var(--albert-color-surface-sunken);
+}
+
+.albert-choice:has(input:checked) {
+	border-color: var(--albert-color-accent);
+	box-shadow: inset 0 0 0 1px var(--albert-color-accent);
+	background: var(--albert-color-accent-surface);
+}
+
+@media (forced-colors: active) {
+	.albert-choice:has(input:checked) {
+		outline: 2px solid Highlight;
+		outline-offset: -2px;
+	}
+
+	.albert-connect__spinner {
+		border-color: CanvasText;
+		border-block-start-color: Highlight;
+	}
+
+	.albert-guide-panel__step::before {
+		border-color: CanvasText;
+	}
+}
+
+.albert-choice:has(input:focus-visible) {
+	outline: var(--albert-focus-width) solid var(--albert-focus-color);
+	outline-offset: 2px;
+}
+
+.albert-choice__text {
+	display: grid;
+	gap: var(--albert-space-100);
+}
+
+.albert-choice__label {
+	font-size: var(--albert-font-size-body);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-text);
+}
+
+.albert-choice__description {
+	font-size: var(--albert-font-size-sm);
+	line-height: var(--albert-line-height-snug);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-connect__wait {
+	display: grid;
+	gap: var(--albert-space-300);
+	padding: var(--albert-space-300) var(--albert-space-400);
+	border-radius: var(--albert-radius-md);
+	background: var(--albert-color-canvas);
+}
+
+.albert-connect__waiting {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-space-300);
+	margin: 0;
+}
+
+.albert-connect__spinner {
+	flex-shrink: 0;
+	inline-size: 1rem;
+	block-size: 1rem;
+	border: 2px solid var(--albert-color-border);
+	border-block-start-color: var(--albert-color-accent);
+	border-radius: 50%;
+	animation: albert-connect-spin 0.9s linear infinite;
+}
+
+@keyframes albert-connect-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.albert-connect__spinner {
+		animation: none;
+	}
+}
+
+.albert-connect__stuck {
+	display: grid;
+	gap: var(--albert-space-200);
+	font-size: var(--albert-font-size-sm);
+}
+
+.albert-connect__stuck-title {
+	margin: 0;
+	font-size: var(--albert-font-size-sm);
+	font-weight: var(--albert-font-weight-semibold);
+}
+
+.albert-connect__error {
+	margin: 0;
+	font-size: var(--albert-font-size-sm);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-danger);
+}
+
+.albert-guide-panel__code pre:focus-visible {
+	outline: var(--albert-focus-width) solid var(--albert-focus-color);
+	outline-offset: 2px;
+}
+
+.albert-connect__stuck ul {
+	margin: 0;
+	padding-inline-start: var(--albert-space-500);
+	list-style: disc;
+}
+
+.albert-connect__success {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-space-200);
+	margin: 0;
+	font-size: var(--albert-font-size-body);
+}
+
+.albert-connect__success .dashicons {
+	color: var(--albert-color-success);
+}
+
+.albert-connect__prompts {
+	display: grid;
+	gap: var(--albert-space-200);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.albert-connect__prompts li {
+	padding: var(--albert-space-200) var(--albert-space-300);
+	border-radius: var(--albert-radius-md);
+	background: var(--albert-color-canvas);
+}
+
+.albert-connect__footer {
+	justify-content: flex-end;
+}
+
+.albert-connect__footer .albert-connect__back {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--albert-space-100);
+	margin-inline-end: auto;
+}
+
+/* Core nudges icons in buttons down with a top margin; this one sits on the text's line. */
+.albert-connect__footer .albert-connect__back .dashicons {
+	inline-size: 1rem;
+	block-size: 1rem;
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1;
+}
+
+/* Next and Done carry only core's classes, so the shared [hidden] rule misses them. */
+.albert-connect__footer .button[hidden] {
+	display: none;
+}
+
+/* The one-line "where is this site", with an icon and its Change link. */
+.albert-connect-location {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-200);
+	margin: 0;
+	font-size: var(--albert-font-size-body);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-connect-location .dashicons {
+	inline-size: 1.125rem;
+	block-size: 1.125rem;
+	font-size: 1.125rem;
+	color: var(--albert-color-text);
+}
+
+.albert-choice__icon {
+	flex-shrink: 0;
+	color: var(--albert-color-text);
+}
+
+.albert-connect__prompts li,
+.albert-connect__stuck li {
+	margin-block-end: 0;
+}
+
+/* Logos inside buttons and choice cards sit on the text's line. */
+.albert-app-button {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--albert-space-200);
+}
+
+.albert-app-button .albert-app-icon,
+.albert-choice--app .albert-app-icon {
+	inline-size: 1rem;
+	block-size: 1rem;
+	color: currentColor;
+}
+
+/* The "Instructions for" row reads as a set of choices, not a row of calls to action. */
+.albert-connections__apps .albert-app-button {
+	border-color: var(--albert-color-border-input);
+	background: var(--albert-color-surface);
+	color: var(--albert-color-text);
+}
+
+.albert-connections__apps .albert-app-button:hover {
+	background: var(--albert-color-surface-sunken);
+	color: var(--albert-color-text);
+}
+
+/* What to do when an app's own link opens nothing: shown only after a click
+   that did not leave the page. */
+.albert-guide-panel__missing {
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+/* WordPress gives every admin list item a bottom margin; these lists space
+   themselves. */
+.albert-guide-panel__step,
+.albert-guide-panel__manual-steps li {
+	margin-block-end: 0;
+}

@@ -130,19 +130,20 @@ class ClientRegistration implements Hookable {
 
 		$client_repo = new ClientRepository();
 
-		// Per-site client cap — bounds the stored-client table against abuse.
-		$max_clients = (int) apply_filters( 'albert/oauth/max_clients', self::DEFAULT_MAX_CLIENTS );
-		if ( $max_clients > 0 && $client_repo->count_clients() >= $max_clients ) {
+		$body = $request->get_json_params();
+
+		$client_name = isset( $body['client_name'] ) ? sanitize_text_field( $body['client_name'] ) : 'MCP Client';
+
+		// Per-site client cap, against live clients only (see count_live_clients()).
+		if ( self::limit_reached( $client_repo ) ) {
+			$this->log_rejected_registration( 'client_limit_reached', '', $client_name );
+
 			return new WP_Error(
 				'client_limit_reached',
 				__( 'This site has reached its maximum number of registered clients.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
 		}
-
-		$body = $request->get_json_params();
-
-		$client_name = isset( $body['client_name'] ) ? sanitize_text_field( $body['client_name'] ) : 'MCP Client';
 
 		// redirect_uris is REQUIRED (RFC 7591). Absence is rejected — no wildcard fallback.
 		$redirect_uris = isset( $body['redirect_uris'] ) ? $this->sanitize_redirect_uris( $body['redirect_uris'] ) : [];
@@ -314,6 +315,12 @@ class ClientRegistration implements Hookable {
 		// Fragments are forbidden in redirect URIs (RFC 6749 §3.1.2).
 		if ( str_contains( $uri, '#' ) ) {
 			return 'redirect_uri_has_fragment';
+		}
+
+		// Whitespace or a control character anywhere: no valid URI has one, and
+		// keeping them out means every later use can trust the stored string.
+		if ( preg_match( '/[\x00-\x20\x7f]/', $uri ) === 1 ) {
+			return 'redirect_uri_malformed';
 		}
 
 		$scheme = $this->extract_scheme( $uri );
@@ -526,14 +533,15 @@ class ClientRegistration implements Hookable {
 		$scheme = $this->extract_scheme( $uri );
 
 		/**
-		 * Fires when a client registration is rejected during validation.
+		 * Fires when a client registration is rejected.
 		 *
 		 * @since 1.3.1
+		 * @since 1.5.0 Also fires for `client_limit_reached`, with an empty scheme and URI.
 		 *
 		 * @param string $reason      The machine-readable rejection reason.
-		 * @param string $scheme      The rejected URI's scheme.
+		 * @param string $scheme      The rejected URI's scheme, or '' when no URI was at fault.
 		 * @param string $client_name The client name from the request.
-		 * @param string $uri         The full rejected URI.
+		 * @param string $uri         The full rejected URI, or ''.
 		 */
 		do_action( 'albert/oauth/registration_rejected', $reason, $scheme, $client_name, $uri );
 
@@ -548,6 +556,30 @@ class ClientRegistration implements Hookable {
 				)
 			);
 		}
+	}
+
+	/**
+	 * The registration cap, after the `albert/oauth/max_clients` filter. 0 means no cap.
+	 *
+	 * @return int
+	 * @since 1.5.0
+	 */
+	public static function max_clients(): int {
+		return (int) apply_filters( 'albert/oauth/max_clients', self::DEFAULT_MAX_CLIENTS );
+	}
+
+	/**
+	 * Whether the registration cap is reached, so a new client would be refused.
+	 *
+	 * @param ClientRepository|null $repository Repository to count with.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function limit_reached( ?ClientRepository $repository = null ): bool {
+		$max = self::max_clients();
+
+		return $max > 0 && ( $repository ?? new ClientRepository() )->count_live_clients() >= $max;
 	}
 
 	/**

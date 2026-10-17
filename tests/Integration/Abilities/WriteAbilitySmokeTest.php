@@ -190,7 +190,6 @@ class WriteAbilitySmokeTest extends TestCase {
 			[
 				'username' => 'smoker',
 				'email'    => 'smoker@albert.test',
-				'password' => 'strong-password-xyz-12345',
 			]
 		);
 

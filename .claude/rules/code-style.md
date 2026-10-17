@@ -1,1 +1,0 @@
-/Users/markjansen/Scripts/albert-claude-rules/rules/code-style.md

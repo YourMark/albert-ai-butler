@@ -15,6 +15,9 @@ use Albert\Context\SkillIndex;
 use Albert\Core\AbilitiesState;
 use Albert\MCP\Server as McpServer;
 use Albert\MCP\Skills\SkillRegistry;
+use Albert\OAuth\Endpoints\ClientRegistration;
+use Albert\SafeMode\Gate;
+use Albert\Support\WpCompat;
 
 /**
  * What on this site needs the owner to do something.
@@ -98,7 +101,9 @@ class Attention {
 		$items = array_merge(
 			$this->plain_permalinks(),
 			$this->unreachable_skills(),
-			$this->broken_endpoint_override()
+			$this->broken_endpoint_override(),
+			$this->safe_mode_unenforceable(),
+			$this->client_limit_reached()
 		);
 
 		/**
@@ -111,7 +116,8 @@ class Attention {
 		 *
 		 * Each item is `[ id, tone, tone_label, title, detail, action, dismissible ]`
 		 * where `tone` is danger|warning|info and `action` is
-		 * `[ 'label' => string, 'url' => string ]` or null.
+		 * `[ 'label' => string, 'url' => string ]` or null. An action may add
+		 * `'attributes' => [ 'data-…' => string ]` for a script to hook (1.5.0).
 		 *
 		 * @since 1.4.0
 		 *
@@ -268,6 +274,83 @@ class Attention {
 				'title'       => __( 'The endpoint address set in code was rejected', 'albert-ai-butler' ),
 				'detail'      => __( 'An albert/mcp/external_url filter returned an address Albert could not use, so assistants are being given this site\'s own address instead.', 'albert-ai-butler' ),
 				'action'      => null,
+				'dismissible' => false,
+			],
+		];
+	}
+
+	/**
+	 * Safe mode is switched on but this WordPress cannot enforce it.
+	 *
+	 * The gate is `wp_pre_execute_ability`, added in WordPress 7.1. Below that
+	 * the filter never fires, so every destructive call runs unattended while
+	 * the setting reads On. Believing you are covered when you are not is worse
+	 * than knowing you are not, which is the whole reason this is here and not
+	 * left to the Settings screen alone.
+	 *
+	 * Only when safe mode is switched on: an owner who turned it off holds no
+	 * false belief to correct, and this card does not nag about deliberate
+	 * choices.
+	 *
+	 * @since 1.5.0
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function safe_mode_unenforceable(): array {
+		if ( WpCompat::supports_execution_lifecycle() || ! ( new Gate() )->is_enabled() ) {
+			return [];
+		}
+
+		return [
+			[
+				'id'          => 'safe-mode-unenforceable',
+				'tone'        => 'danger',
+				'tone_label'  => __( 'Not active', 'albert-ai-butler' ),
+				'title'       => __( 'Safe mode is on but cannot hold anything', 'albert-ai-butler' ),
+				'detail'      => sprintf(
+					/* translators: %s: the WordPress version this site is running. */
+					__( 'Holding destructive actions for approval needs WordPress 7.1. This site runs %s, so deletions an assistant requests are carried out immediately and the Approvals screen stays empty.', 'albert-ai-butler' ),
+					get_bloginfo( 'version' )
+				),
+				'action'      => [
+					'label' => __( 'Update WordPress', 'albert-ai-butler' ),
+					'url'   => admin_url( 'update-core.php' ),
+				],
+				'dismissible' => false,
+			],
+		];
+	}
+
+	/**
+	 * New assistants are refused because the registration cap is reached.
+	 *
+	 * Registration fails before any screen is shown, so the person connecting
+	 * sees only their app's error and the owner sees nothing at all.
+	 *
+	 * @since 1.5.0
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function client_limit_reached(): array {
+		if ( ! ClientRegistration::limit_reached() ) {
+			return [];
+		}
+
+		return [
+			[
+				'id'          => 'client-limit-reached',
+				'tone'        => 'danger',
+				'tone_label'  => __( 'Can\'t connect', 'albert-ai-butler' ),
+				'title'       => __( 'New assistants can\'t connect: the connection limit is reached', 'albert-ai-butler' ),
+				'detail'      => sprintf(
+					/* translators: %d: the maximum number of registered apps. */
+					__( 'This site allows %d registered apps, counting connected ones and any that started connecting in the last day. Disconnect assistants you no longer use; unfinished attempts stop counting within a day.', 'albert-ai-butler' ),
+					ClientRegistration::max_clients()
+				),
+				'action'      => [
+					'label' => __( 'Open Connections', 'albert-ai-butler' ),
+					'url'   => admin_url( 'admin.php?page=albert-connections' ),
+				],
 				'dismissible' => false,
 			],
 		];

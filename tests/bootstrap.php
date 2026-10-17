@@ -8,6 +8,15 @@
 // Composer autoloader for the plugin.
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 
+// The bundled MCP adapter lives in its own Composer project. See Albert\MCP\AdapterSource.
+require_once dirname( __DIR__ ) . '/lib/mcp-adapter/vendor/autoload.php';
+
+// The suite runs on Albert's bundled copy, which reports a "load the MCP Adapter
+// plugin instead" deprecation the first time it starts. The test listener would
+// fail whichever test booted the adapter. The adapter skips the report once this
+// constant exists.
+define( 'WP_MCP_VERSION', '0.0.0-albert-tests' );
+
 // Define the path to the Yoast PHPUnit Polyfills.
 define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', dirname( __DIR__ ) . '/vendor/yoast/phpunit-polyfills/' );
 
