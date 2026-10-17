@@ -30,7 +30,7 @@ defined( 'ABSPATH' ) || exit;
  * a missing one, so an app only earns a one-click action when it publishes
  * one, and app-side button labels are kept to the few that are documented.
  *
- * @phpstan-type AlbertGuideAction array{type: string, label: string, value: string, meta: string}
+ * @phpstan-type AlbertGuideAction array{type: string, label: string, value: string, meta: string, missing: string}
  * @phpstan-type AlbertGuideStep array{text: string, action: AlbertGuideAction|null}
  * @phpstan-type AlbertGuideNote array{text: string, command: string, after: bool}
  * @phpstan-type AlbertGuideSnippet array{id: string, label: string, hint: string, snippet: string, quiet: bool}
@@ -74,6 +74,7 @@ class ClientSetupGuides {
 		if ( $context['local'] ) {
 			return [
 				self::claude_code( $context ),
+				self::codex( $context ),
 				self::cursor( $context ),
 				self::vs_code( $context ),
 				self::other_apps( $context ),
@@ -88,6 +89,7 @@ class ClientSetupGuides {
 			self::cursor( $context ),
 			self::vs_code( $context ),
 			self::claude_code( $context ),
+			self::codex( $context ),
 			self::other_apps( $context ),
 		];
 	}
@@ -200,6 +202,35 @@ class ClientSetupGuides {
 	}
 
 	/**
+	 * Codex: OpenAI's coding agent, in its app, its CLI and the IDE extension.
+	 *
+	 * The three share one setup, so the terminal commands cover all of them.
+	 *
+	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 *
+	 * @return AlbertClientGuide The guide entry.
+	 * @since 1.5.0
+	 */
+	private static function codex( array $context ): array {
+		return self::guide(
+			[
+				'id'    => 'codex',
+				'label' => 'Codex',
+				'icon'  => 'codex',
+				'steps' => [
+					self::step( __( 'Run this command in your terminal.', 'albert-ai-butler' ), self::copy( __( 'Copy', 'albert-ai-butler' ), sprintf( 'codex mcp add albert --url %s', $context['endpoint'] ) ) ),
+					self::step( __( 'Then run this one to sign in.', 'albert-ai-butler' ), self::copy( __( 'Copy', 'albert-ai-butler' ), 'codex mcp login albert' ) ),
+					self::approve_step(),
+				],
+				'notes' => array_merge(
+					self::http_note( $context ),
+					[ self::note( __( 'The Codex app, the command line and the IDE extension share this setup, so this connects all three.', 'albert-ai-butler' ), '', true ) ]
+				),
+			]
+		);
+	}
+
+	/**
 	 * Cursor.
 	 *
 	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
@@ -224,7 +255,7 @@ class ClientSetupGuides {
 				'label'  => __( 'Cursor', 'albert-ai-butler' ),
 				'icon'   => 'cursor',
 				'steps'  => [
-					self::step( __( 'Click Add to Cursor.', 'albert-ai-butler' ), self::link( __( 'Add to Cursor', 'albert-ai-butler' ), $deeplink ) ),
+					self::step( __( 'Click Add to Cursor.', 'albert-ai-butler' ), self::link( __( 'Add to Cursor', 'albert-ai-butler' ), $deeplink, __( 'Nothing happened? Cursor may not be installed. Get it from cursor.com, or follow “Set it up by hand” below.', 'albert-ai-butler' ) ) ),
 					self::step( __( 'Cursor asks to install the server: choose Install.', 'albert-ai-butler' ) ),
 					self::approve_step(),
 				],
@@ -267,7 +298,7 @@ class ClientSetupGuides {
 				'label'  => __( 'VS Code', 'albert-ai-butler' ),
 				'icon'   => 'vscode',
 				'steps'  => [
-					self::step( __( 'Click Add to VS Code.', 'albert-ai-butler' ), self::link( __( 'Add to VS Code', 'albert-ai-butler' ), $deeplink ) ),
+					self::step( __( 'Click Add to VS Code.', 'albert-ai-butler' ), self::link( __( 'Add to VS Code', 'albert-ai-butler' ), $deeplink, __( 'Nothing happened? VS Code may not be installed. Get it from code.visualstudio.com, or follow “Set it up by hand” below.', 'albert-ai-butler' ) ) ),
 					self::step( __( 'VS Code asks to install the server: choose Install.', 'albert-ai-butler' ) ),
 					self::approve_step(),
 				],
@@ -346,12 +377,6 @@ class ClientSetupGuides {
 				'notes' => self::http_note( $context ),
 				'more'  => [
 					self::snippet(
-						'codex',
-						'Codex',
-						__( 'Run in your terminal. The second command opens the sign-in.', 'albert-ai-butler' ),
-						sprintf( "codex mcp add albert --url %s\ncodex mcp login albert", $endpoint )
-					),
-					self::snippet(
 						'windsurf',
 						'Windsurf',
 						/* translators: %s: the Windsurf config file path. */
@@ -364,6 +389,27 @@ class ClientSetupGuides {
 						/* translators: %s: the Gemini CLI sign-in command. */
 						sprintf( __( 'Run in your terminal, then type %s in Gemini CLI to sign in.', 'albert-ai-butler' ), '/mcp auth albert' ),
 						sprintf( 'gemini mcp add --transport http albert %s', $endpoint )
+					),
+					self::snippet(
+						'opencode',
+						'opencode',
+						__( 'Add to opencode.json, then run opencode mcp auth albert to sign in.', 'albert-ai-butler' ),
+						self::json_snippet(
+							[
+								'mcp' => [
+									'albert' => [
+										'type' => 'remote',
+										'url'  => $endpoint,
+									],
+								],
+							]
+						)
+					),
+					self::snippet(
+						'zed',
+						'Zed',
+						__( 'Add to Zed’s settings.json. Zed asks you to sign in the first time.', 'albert-ai-butler' ),
+						self::json_snippet( [ 'context_servers' => [ 'albert' => [ 'url' => $endpoint ] ] ] )
 					),
 					self::snippet(
 						'cline',
@@ -522,18 +568,23 @@ class ClientSetupGuides {
 	/**
 	 * A link that opens an app.
 	 *
-	 * @param string $label The button label.
-	 * @param string $url   The URL, often an app's own scheme.
+	 * A link in an app's own scheme does nothing at all when the app is not
+	 * installed, so it carries what to say if nothing happens.
+	 *
+	 * @param string $label   The button label.
+	 * @param string $url     The URL, often an app's own scheme.
+	 * @param string $missing What to say when the app does not open, or ''.
 	 *
 	 * @return AlbertGuideAction The action.
 	 * @since 1.5.0
 	 */
-	private static function link( string $label, string $url ): array {
+	private static function link( string $label, string $url, string $missing = '' ): array {
 		return [
-			'type'  => 'link',
-			'label' => $label,
-			'value' => $url,
-			'meta'  => '',
+			'type'    => 'link',
+			'label'   => $label,
+			'value'   => $url,
+			'meta'    => '',
+			'missing' => $missing,
 		];
 	}
 
@@ -548,10 +599,11 @@ class ClientSetupGuides {
 	 */
 	private static function copy( string $label, string $text ): array {
 		return [
-			'type'  => 'copy',
-			'label' => $label,
-			'value' => $text,
-			'meta'  => '',
+			'type'    => 'copy',
+			'label'   => $label,
+			'value'   => $text,
+			'meta'    => '',
+			'missing' => '',
 		];
 	}
 
