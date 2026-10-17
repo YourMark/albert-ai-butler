@@ -88,6 +88,8 @@ class ApprovalsTest extends TestCase {
 	public function test_another_users_action_is_not_named(): void {
 		$owner  = self::factory()->user->create( [ 'role' => 'editor' ] );
 		$viewer = self::factory()->user->create( [ 'role' => 'editor' ] );
+		// Only people on the allowed list reach the screen at all.
+		\Albert\OAuth\AllowedUsers::add( $viewer );
 
 		$action = $this->stage_and_reject( $owner, $owner );
 
