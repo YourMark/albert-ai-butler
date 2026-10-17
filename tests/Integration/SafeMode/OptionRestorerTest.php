@@ -203,23 +203,23 @@ class OptionRestorerTest extends TestCase {
 	}
 
 	/**
-	 * Creating an options table, as creating a site on a network does, is let
-	 * through: the new table holds nothing to protect, and reading it first
-	 * would fail and drop the statement.
+	 * A plain CREATE TABLE, as creating a site on a network issues, is let
+	 * through unread: the new table holds nothing to protect, and reading it
+	 * first would fail and drop the statement.
+	 *
+	 * Passed to the restorer directly, because the test suite's own `query`
+	 * filter rewrites every CREATE TABLE as TEMPORARY.
 	 *
 	 * @return void
 	 */
-	public function test_creating_an_options_table_is_let_through(): void {
-		if ( ! is_multisite() ) {
-			$this->markTestSkipped( 'Another blog\'s options table is only watched on a network.' );
-		}
-
+	public function test_a_plain_create_table_is_let_through(): void {
 		global $wpdb;
-		$table = $wpdb->base_prefix . '99_options';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- The statement under test.
-		$created = $wpdb->query( $wpdb->prepare( 'CREATE TEMPORARY TABLE %i LIKE %i', $table, $wpdb->options ) );
-		$this->assertNotFalse( $created );
+		$new_site = 'CREATE TABLE ' . $wpdb->base_prefix . '99_options (option_id bigint(20) unsigned NOT NULL)';
+		$this->assertSame( $new_site, $this->restorer->note_unguarded_write( $new_site ) );
+
+		$sql = "CREATE TABLE {$wpdb->options} (option_id bigint(20) unsigned NOT NULL)";
+		$this->assertSame( $sql, $this->restorer->note_unguarded_write( $sql ) );
 
 		// Nothing was read first: a change made now is not undone.
 		ConnectionContext::reset();
@@ -228,6 +228,45 @@ class OptionRestorerTest extends TestCase {
 
 		$this->assertSame( 'off', $this->value( Gate::OPTION ) );
 		$this->assertSame( [], $this->restored );
+	}
+
+	/**
+	 * A CREATE that can shadow the options table or write rows into it is
+	 * read first, like any other write that skips the option API.
+	 *
+	 * @dataProvider watched_creates
+	 *
+	 * @param string $sql SQL with `{options}` for the table.
+	 *
+	 * @return void
+	 */
+	public function test_a_create_that_can_write_the_table_is_watched( string $sql ): void {
+		global $wpdb;
+
+		$sql = str_replace( '{options}', $wpdb->options, $sql );
+		$this->assertSame( $sql, $this->restorer->note_unguarded_write( $sql ) );
+
+		ConnectionContext::reset();
+		update_option( Gate::OPTION, 'off' );
+		$this->restorer->restore();
+
+		$this->assertSame( 'on', $this->value( Gate::OPTION ) );
+		$this->assertSame( [ Gate::OPTION => true ], $this->restored );
+	}
+
+	/**
+	 * CREATE statements that can reach an existing options table.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function watched_creates(): array {
+		return [
+			'temporary shadow'      => [ 'CREATE TEMPORARY TABLE {options} AS SELECT * FROM {options}' ],
+			'if not exists'         => [ 'CREATE TABLE IF NOT EXISTS {options} (option_id bigint(20) unsigned NOT NULL)' ],
+			'if not exists replace' => [ "CREATE TABLE IF NOT EXISTS {options} REPLACE SELECT 1 AS option_id, 'albert_safe_mode' AS option_name, 'off' AS option_value, 'on' AS autoload" ],
+			'select'                => [ 'CREATE TABLE {options}_copy SELECT * FROM {options}' ],
+			'trigger'               => [ "CREATE TRIGGER albert_off AFTER INSERT ON {options} FOR EACH ROW UPDATE {options} SET option_value = 'off'" ],
+		];
 	}
 
 	/**
