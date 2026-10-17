@@ -355,6 +355,88 @@ class ClientRepository implements ClientRepositoryInterface {
 	}
 
 	/**
+	 * Count the clients that hold a place under the registration cap.
+	 *
+	 * Live clients, by the same test as {@see self::getLiveConnections()}, plus
+	 * any registered in the last `$grace_hours`. Counting every row let clients
+	 * that never authorised, or were disconnected long ago, fill the cap until
+	 * no new assistant could connect. The grace window keeps a registration
+	 * nobody completes counting for a while, so the cap still bounds abuse: one
+	 * address can fill it within the registration rate limit, but only for a day.
+	 *
+	 * Client `created_at` is stamped in the database's own time zone, so it is
+	 * compared with NOW(); token expiry is written as UTC, so with UTC_TIMESTAMP().
+	 *
+	 * @param int $grace_hours How long a new client counts without a token.
+	 *
+	 * @return int
+	 * @since 1.5.0
+	 */
+	public function count_live_clients( int $grace_hours = 24 ): int {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, count for cap enforcement.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i c
+				WHERE c.created_at >= DATE_SUB( NOW(), INTERVAL %d HOUR )
+					OR EXISTS (
+						SELECT 1 FROM %i t
+						LEFT JOIN %i r
+							ON r.access_token_id = t.token_id
+							AND r.revoked = 0
+							AND r.expires_at > UTC_TIMESTAMP()
+						WHERE t.client_id = c.client_id
+							AND ( ( t.revoked = 0 AND t.expires_at > UTC_TIMESTAMP() ) OR r.id IS NOT NULL )
+					)',
+				$tables['clients'],
+				$grace_hours,
+				$tables['access_tokens'],
+				$tables['refresh_tokens']
+			)
+		);
+	}
+
+	/**
+	 * Delete clients older than `$days` that hold no token at all.
+	 *
+	 * No token row, revoked or not: the client never authorised, or every token
+	 * it had has expired and been cleaned up. A client holding an unexpired
+	 * authorization code is kept, since somebody is signing in with it right now.
+	 *
+	 * @param int $days Minimum age in days.
+	 *
+	 * @return int How many clients were deleted.
+	 * @since 1.5.0
+	 */
+	public function delete_stale_clients( int $days ): int {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, nightly cleanup.
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				'DELETE c FROM %i c
+				WHERE c.created_at < DATE_SUB( NOW(), INTERVAL %d DAY )
+					AND NOT EXISTS ( SELECT 1 FROM %i t WHERE t.client_id = c.client_id )
+					AND NOT EXISTS (
+						SELECT 1 FROM %i a
+						WHERE a.client_id = c.client_id AND a.revoked = 0 AND a.expires_at > UTC_TIMESTAMP()
+					)',
+				$tables['clients'],
+				$days,
+				$tables['access_tokens'],
+				$tables['auth_codes']
+			)
+		);
+
+		return (int) $result;
+	}
+
+	/**
 	 * Revoke one user's tokens for a client, access and refresh, leaving
 	 * anyone else who approved the same client connected.
 	 *
