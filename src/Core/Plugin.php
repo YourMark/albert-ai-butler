@@ -63,6 +63,7 @@ use Albert\Admin\AbilitiesPage;
 use Albert\Admin\AdapterNudge;
 use Albert\Admin\Assets;
 use Albert\Admin\Connections;
+use Albert\Admin\Connections\ClaudeDesktopBundle;
 use Albert\Admin\ContextPage;
 use Albert\Admin\Menu;
 use Albert\Admin\Dashboard;
@@ -85,6 +86,7 @@ use Albert\OAuth\Endpoints\ClientRegistration;
 use Albert\OAuth\Endpoints\OAuthController;
 use Albert\Admin\Rest\AbilitiesController;
 use Albert\Admin\Rest\ContextController;
+use Albert\Admin\Rest\ConnectController;
 use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
 use Albert\OAuth\DiscoveryHealth;
@@ -293,6 +295,10 @@ class Plugin {
 
 		// Register the context REST controller (data + instant save for the Context screen).
 		( new ContextController() )->register_hooks();
+		( new ConnectController() )->register_hooks();
+
+		// The download is admin-post; its after-sign-in page is a REST route.
+		( new ClaudeDesktopBundle() )->register_hooks();
 
 		// Register the skills REST controller (read-only data for the Skills screen).
 		( new SkillsController() )->register_hooks();

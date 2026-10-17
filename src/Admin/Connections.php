@@ -15,7 +15,10 @@ namespace Albert\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Admin\Connections\AppIcon;
 use Albert\Admin\Connections\ClientSetupGuides;
+use Albert\Admin\Connections\ConnectDialog;
+use Albert\Admin\Connections\SiteLocation;
 use Albert\Admin\Connections\UserPickerModal;
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Database\Tables;
@@ -788,7 +791,7 @@ class Connections implements Hookable {
 					<div class="albert-page__text">
 						<h1 class="albert-page__title"><?php esc_html_e( 'Connections', 'albert-ai-butler' ); ?></h1>
 						<p class="albert-page__description">
-							<?php esc_html_e( 'Choose who may connect an AI assistant, and review the assistants that are connected right now.', 'albert-ai-butler' ); ?>
+							<?php esc_html_e( 'Connect AI assistants and choose who may use them.', 'albert-ai-butler' ); ?>
 						</p>
 					</div>
 				</div>
@@ -797,14 +800,12 @@ class Connections implements Hookable {
 				<?php Notices::render( 'albert_connections' ); ?>
 
 				<div class="albert-page__body">
-					<?php $this->render_endpoint_card( $endpoint, $external_state ); ?>
+					<?php $this->render_connect_card( $endpoint, $external_state ); ?>
 
 					<div class="albert-connections__grid">
 						<?php $this->render_connections_card(); ?>
 						<?php $this->render_allowed_users_card(); ?>
 					</div>
-
-					<?php $this->render_setup_card( $endpoint ); ?>
 				</div>
 			</div>
 		</div>
@@ -812,67 +813,93 @@ class Connections implements Hookable {
 
 		$this->render_disconnect_dialog();
 		UserPickerModal::render( 'connections' );
+		ConnectDialog::render();
 	}
 
 	/**
-	 * The endpoint card: what this URL is, and whether it can be reached.
+	 * The connect card: where the site runs, the button that walks through
+	 * connecting, the MCP URL for people who know what to do with it, and a
+	 * shortcut to each app's steps.
 	 *
-	 * Reachability comes with the URL rather than after it. A `.test` site shows
-	 * a perfectly valid endpoint that no cloud assistant can ever open, and
-	 * finding that out an hour later is the single most expensive way to learn
-	 * it. At most one hint shows at a time: stacking two boxes under one field
-	 * is how a calm card turns into a wall.
+	 * The same in every state. Moving it below the lists once something is
+	 * connected made the screen rearrange itself between visits.
 	 *
 	 * @param string                              $endpoint       The MCP endpoint URL.
 	 * @param array{state: string, value: string} $external_state External-URL filter state.
 	 *
 	 * @return void
-	 * @since 1.4.0
+	 * @since 1.5.0
 	 */
-	private function render_endpoint_card( string $endpoint, array $external_state ): void {
+	private function render_connect_card( string $endpoint, array $external_state ): void {
+		$guides = ClientSetupGuides::for_location( $endpoint, SiteLocation::current() );
 		?>
-		<section class="albert-card albert-connections__endpoint">
+		<section class="albert-card albert-connections__connect">
 			<div class="albert-card__header">
 				<div class="albert-card__text">
-					<h2 class="albert-card__title"><?php esc_html_e( 'MCP endpoint', 'albert-ai-butler' ); ?></h2>
-					<p class="albert-card__description"><?php esc_html_e( 'Add this URL to your AI assistant as an MCP connector.', 'albert-ai-butler' ); ?></p>
+					<h2 class="albert-card__title"><?php esc_html_e( 'Connect an assistant', 'albert-ai-butler' ); ?></h2>
+					<?php ConnectDialog::render_location_line(); ?>
 				</div>
 			</div>
-			<div class="albert-card__body">
-				<div class="albert-endpoint">
-					<label class="screen-reader-text" for="albert-endpoint-url"><?php esc_html_e( 'MCP endpoint address', 'albert-ai-butler' ); ?></label>
-					<input
-						type="text"
-						id="albert-endpoint-url"
-						class="albert-endpoint__field"
-						value="<?php echo esc_url( $endpoint ); ?>"
-						readonly
-					/>
-					<button type="button" class="button button-secondary albert-copy-button" data-copy-target="albert-endpoint-url">
-						<?php esc_html_e( 'Copy', 'albert-ai-butler' ); ?>
-					</button>
+			<div class="albert-card__body albert-connections__connect-body">
+				<p><?php ConnectDialog::render_button(); ?></p>
+
+				<div class="albert-connections__url">
+					<label class="albert-connections__url-label" for="albert-endpoint-url"><?php esc_html_e( 'MCP URL', 'albert-ai-butler' ); ?></label>
+					<div class="albert-endpoint">
+						<input
+							type="text"
+							id="albert-endpoint-url"
+							class="albert-endpoint__field"
+							value="<?php echo esc_url( $endpoint ); ?>"
+							readonly
+						/>
+						<button type="button" class="button button-secondary albert-copy-button" data-copy-target="albert-endpoint-url">
+							<?php esc_html_e( 'Copy', 'albert-ai-butler' ); ?>
+						</button>
+					</div>
+					<?php $this->render_endpoint_hint( $external_state ); ?>
 				</div>
 
-				<?php $this->render_endpoint_hint( $external_state ); ?>
+				<?php $this->render_instruction_row( __( 'Instructions for', 'albert-ai-butler' ), array_filter( $guides, static fn( array $guide ): bool => ! $guide['needs_public'] ) ); ?>
+				<?php $this->render_instruction_row( __( 'Needs a public site:', 'albert-ai-butler' ), array_filter( $guides, static fn( array $guide ): bool => (bool) $guide['needs_public'] ) ); ?>
 			</div>
 		</section>
 		<?php
 	}
 
 	/**
+	 * A labelled row of buttons, each opening the dialog at one app's steps.
+	 *
+	 * @param string                           $label  The row's label.
+	 * @param array<int, array<string, mixed>> $guides The apps.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	private function render_instruction_row( string $label, array $guides ): void {
+		if ( $guides === [] ) {
+			return;
+		}
+		?>
+		<div class="albert-connections__apps" role="group" aria-label="<?php echo esc_attr( $label ); ?>">
+			<span class="albert-connections__apps-label" aria-hidden="true"><?php echo esc_html( $label ); ?></span>
+			<?php
+			foreach ( $guides as $guide ) {
+				ConnectDialog::render_button( 'button button-secondary', (string) $guide['id'], (string) $guide['label'], (string) $guide['icon'] );
+			}
+			?>
+		</div>
+		<?php
+	}
+
+	/**
 	 * The one hint under the endpoint field, if any.
 	 *
-	 * Reachability messaging (a warning when this site cannot be reached from
-	 * the internet) is deliberately not built yet: few sites are run this way,
-	 * a proper local-site story is coming separately (doc 60, `wp albert serve`,
-	 * over stdio rather than a web address at all), and a generic warning here
-	 * now would only need rewriting once that lands; worse, on the exact sites
-	 * doc 60 is for, it read as confusing rather than helpful.
-	 * {@see self::render_setup_card()} does not gate on reachability either, for
-	 * the same reason: a guide that silently disappears is more confusing than
-	 * one that fails against a site the internet cannot reach.
+	 * Whether the site looks public or local is not said here but by the
+	 * connect card ({@see SiteLocation}), which orders the apps rather than
+	 * warning: a guess about reachability reads as an error when it is wrong.
 	 *
-	 * The one thing still surfaced unconditionally is the external-URL override,
+	 * The one thing surfaced here is the external-URL override,
 	 * because it answers "why does the address above not match this site's own
 	 * web address" and nothing else on this screen does.
 	 *
@@ -992,7 +1019,7 @@ class Connections implements Hookable {
 			?>
 			<div class="albert-card__body">
 				<p class="albert-connections__empty">
-					<?php esc_html_e( 'Nothing is connected yet. Add someone under "Who may connect", then follow the steps for your assistant at the bottom of this page.', 'albert-ai-butler' ); ?>
+					<?php esc_html_e( 'Nothing is connected yet. Connect your app above.', 'albert-ai-butler' ); ?>
 				</p>
 			</div>
 			<?php
@@ -1032,9 +1059,11 @@ class Connections implements Hookable {
 			<div class="albert-card__header">
 				<div class="albert-card__text">
 					<h2 class="albert-card__title"><?php esc_html_e( 'Connected assistants', 'albert-ai-butler' ); ?></h2>
-					<p class="albert-card__description"><?php esc_html_e( 'Names come from the connecting app, so several may look alike. Give one a label to tell them apart.', 'albert-ai-butler' ); ?></p>
+					<?php if ( $count > 0 ) { ?>
+						<p class="albert-card__description"><?php esc_html_e( 'Names come from the connecting app, so several may look alike. Give one a label to tell them apart.', 'albert-ai-butler' ); ?></p>
+					<?php } ?>
 				</div>
-				<span class="albert-badge" data-albert-connections-count>
+				<span class="albert-badge" data-albert-connections-count<?php echo $count > 0 ? '' : ' hidden'; ?>>
 					<?php $this->render_connections_count_badge( $count ); ?>
 				</span>
 			</div>
@@ -1045,7 +1074,7 @@ class Connections implements Hookable {
 				<?php $this->render_connections_body( $connections ); ?>
 			</div>
 
-			<div class="albert-card__body albert-connections__footer">
+			<div class="albert-card__body albert-connections__footer"<?php echo $count > 0 ? '' : ' hidden'; ?>>
 				<?php
 				$revoke_all_url = wp_nonce_url(
 					add_query_arg(
@@ -1097,7 +1126,8 @@ class Connections implements Hookable {
 			<input type="hidden" name="action" value="albert_revoke_selected" />
 		</form>
 
-		<div class="albert-card__body albert-connlist__toolbar">
+		<?php // Nothing to filter or select while the list is empty; kept in the page for the script. ?>
+		<div class="albert-card__body albert-connlist__toolbar"<?php echo $count > 0 ? '' : ' hidden'; ?>>
 			<div class="albert-search albert-connlist__filter">
 				<span class="dashicons dashicons-search albert-search__icon" aria-hidden="true"></span>
 				<input
@@ -1202,6 +1232,12 @@ class Connections implements Hookable {
 		);
 
 		$classes = 'albert-conn' . ( $never_used ? ' albert-conn--quiet' : '' );
+
+		// Just connected through the dialog, which reloads with its id.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only highlight of one row.
+		if ( isset( $_GET['albert_new'] ) && sanitize_text_field( wp_unslash( $_GET['albert_new'] ) ) === $client_id ) {
+			$classes .= ' albert-conn--new';
+		}
 
 		$select_label = sprintf(
 			/* translators: 1: connection name, 2: the row's own meta line. */
@@ -1493,7 +1529,12 @@ class Connections implements Hookable {
 				<span class="dashicons dashicons-admin-users"></span>
 			</span>
 			<div class="albert-user-item__text">
-				<strong class="albert-user-item__name"><?php echo esc_html( $user->display_name ); ?></strong>
+				<strong class="albert-user-item__name">
+					<?php echo esc_html( $user->display_name ); ?>
+					<?php if ( $user_id === get_current_user_id() ) { ?>
+						<span class="albert-user-item__you"><?php esc_html_e( 'You', 'albert-ai-butler' ); ?></span>
+					<?php } ?>
+				</strong>
 				<span class="albert-user-item__meta"><?php echo esc_html( $meta ); ?></span>
 				<?php if ( $expiry !== '' ) { ?>
 					<span class="albert-user-item__expiry"><?php echo esc_html( $expiry ); ?></span>
@@ -1515,10 +1556,17 @@ class Connections implements Hookable {
 				<?php } ?>
 			</div>
 			<div class="albert-user-item__actions">
+				<?php
+				// Always offered: removing the last person is allowed, it just
+				// has to say what it leaves behind.
+				$confirm = count( AllowedUsers::ids() ) > 1
+					? __( 'Remove this user? Every assistant they have connected is signed out straight away.', 'albert-ai-butler' )
+					: __( 'This is the only person on the list. After this nobody can connect an assistant until someone is added again. Every assistant they have connected is signed out straight away.', 'albert-ai-butler' );
+				?>
 				<a href="<?php echo esc_url( $remove_url ); ?>"
 					class="albert-danger-link"
 					data-albert-remove-user
-					data-albert-confirm="<?php echo esc_attr__( 'Remove this user? Every assistant they have connected is signed out straight away.', 'albert-ai-butler' ); ?>">
+					data-albert-confirm="<?php echo esc_attr( $confirm ); ?>">
 					<?php esc_html_e( 'Remove', 'albert-ai-butler' ); ?>
 				</a>
 			</div>
@@ -1531,105 +1579,6 @@ class Connections implements Hookable {
 	 * Connect an assistant
 	 * ------------------------------------------------------------------
 	 */
-
-	/**
-	 * The per-client setup card.
-	 *
-	 * Every guide is shown regardless of whether this host is reachable from
-	 * the internet: {@see self::render_endpoint_hint()} explains why Albert does
-	 * not run that check.
-	 *
-	 * @param string $endpoint The MCP endpoint URL.
-	 *
-	 * @return void
-	 * @since 1.4.0
-	 */
-	private function render_setup_card( string $endpoint ): void {
-		?>
-		<section class="albert-card">
-			<div class="albert-card__header">
-				<div class="albert-card__text">
-					<h2 class="albert-card__title"><?php esc_html_e( 'Connect an assistant', 'albert-ai-butler' ); ?></h2>
-					<p class="albert-card__description"><?php esc_html_e( 'Steps for each assistant we have checked. Open the one you use.', 'albert-ai-butler' ); ?></p>
-				</div>
-			</div>
-			<div class="albert-card__body albert-card__body--flush">
-				<?php foreach ( ClientSetupGuides::all( $endpoint ) as $guide ) { ?>
-					<?php $this->render_setup_guide( $guide ); ?>
-				<?php } ?>
-			</div>
-		</section>
-		<?php
-	}
-
-	/**
-	 * Render one client's setup steps.
-	 *
-	 * A `<details>` rather than a scripted accordion: it opens with the keyboard,
-	 * it is announced correctly, and it works before any JavaScript loads.
-	 *
-	 * @param array<string, mixed> $guide One entry from {@see ClientSetupGuides}.
-	 *
-	 * @return void
-	 * @since 1.4.0
-	 */
-	private function render_setup_guide( array $guide ): void {
-		$id          = (string) $guide['id'];
-		$snippet_id  = 'albert-snippet-' . $id;
-		$config_path = (string) $guide['config_path'];
-		$deeplink    = (string) $guide['deeplink'];
-
-		?>
-		<details class="albert-guide" id="albert-guide-<?php echo esc_attr( $id ); ?>">
-			<summary class="albert-guide__summary">
-				<span class="dashicons dashicons-arrow-right-alt2 albert-guide__chevron" aria-hidden="true"></span>
-				<span class="albert-guide__label"><?php echo esc_html( (string) $guide['label'] ); ?></span>
-				<span class="albert-guide__description"><?php echo esc_html( (string) $guide['description'] ); ?></span>
-			</summary>
-			<div class="albert-guide__body">
-				<?php if ( $config_path !== '' ) { ?>
-					<p class="albert-guide__path">
-						<span class="albert-guide__path-label"><?php esc_html_e( 'File', 'albert-ai-butler' ); ?></span>
-						<code><?php echo esc_html( $config_path ); ?></code>
-					</p>
-				<?php } ?>
-
-				<ol class="albert-guide__steps">
-					<?php foreach ( (array) $guide['steps'] as $step ) { ?>
-						<li><?php echo esc_html( (string) $step ); ?></li>
-					<?php } ?>
-				</ol>
-
-				<?php if ( (string) $guide['snippet'] !== '' ) { ?>
-					<div class="albert-guide__snippet">
-						<div class="albert-guide__snippet-head">
-							<span class="albert-guide__snippet-label" id="<?php echo esc_attr( $snippet_id ); ?>-label">
-								<?php echo esc_html( (string) $guide['snippet_label'] ); ?>
-							</span>
-							<button
-								type="button"
-								class="button button-small albert-copy-button"
-								data-copy-target="<?php echo esc_attr( $snippet_id ); ?>"
-								aria-describedby="<?php echo esc_attr( $snippet_id ); ?>-label">
-								<?php esc_html_e( 'Copy', 'albert-ai-butler' ); ?>
-							</button>
-						</div>
-						<pre class="albert-guide__code" id="<?php echo esc_attr( $snippet_id ); ?>"><?php echo esc_html( (string) $guide['snippet'] ); ?></pre>
-					</div>
-				<?php } ?>
-
-				<?php if ( $deeplink !== '' ) { ?>
-					<p class="albert-guide__deeplink">
-						<a class="button button-secondary" href="<?php echo esc_url( $deeplink, [ 'http', 'https', 'cursor', 'vscode' ] ); ?>">
-							<?php echo esc_html( (string) $guide['deeplink_label'] ); ?>
-						</a>
-						<span class="albert-guide__deeplink-note"><?php esc_html_e( 'Opens the app and fills this in for you.', 'albert-ai-butler' ); ?></span>
-					</p>
-				<?php } ?>
-			</div>
-		</details>
-		<?php
-	}
 
 	/*
 	---------------------------------------------------------------------
@@ -2149,6 +2098,8 @@ class Connections implements Hookable {
 			[ Assets::PRIMITIVES_HANDLE ],
 			Assets::version( 'assets/css/admin-connections.css' )
 		);
+
+		ConnectDialog::enqueue();
 
 		wp_enqueue_script(
 			'albert-admin',

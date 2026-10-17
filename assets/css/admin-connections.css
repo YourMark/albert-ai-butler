@@ -574,6 +574,13 @@
 	color: var(--albert-color-text);
 }
 
+.albert-user-item__you {
+	margin-inline-start: var(--albert-space-200);
+	font-size: var(--albert-font-size-sm);
+	font-weight: normal;
+	color: var(--albert-color-text-muted);
+}
+
 .albert-user-item__meta,
 .albert-user-item__expiry {
 	font-size: var(--albert-font-size-sm);
@@ -593,151 +600,6 @@ a.albert-badge {
 a.albert-badge:focus-visible {
 	outline: var(--albert-focus-width) solid var(--albert-focus-color);
 	outline-offset: var(--albert-focus-offset);
-}
-
-/* ==========================================================================
-   Setup guides
-   ========================================================================== */
-
-.albert-guide {
-	border-block-end: 1px solid var(--albert-color-border-subtle);
-}
-
-.albert-guide:last-child {
-	border-block-end: 0;
-}
-
-.albert-guide__summary {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	gap: var(--albert-space-200);
-	padding: var(--albert-space-300) 18px;
-	cursor: pointer;
-	list-style: none;
-}
-
-/* The dashicon chevron below is the disclosure indicator; the browser's own
-   triangle marker would just be a second, inconsistent one beside it. */
-.albert-guide__summary::-webkit-details-marker {
-	display: none;
-}
-
-.albert-guide__summary:hover {
-	background: var(--albert-color-surface-sunken);
-}
-
-.albert-guide__summary:focus-visible {
-	outline: var(--albert-focus-width) solid var(--albert-focus-color);
-	outline-offset: calc(-1 * var(--albert-focus-width));
-}
-
-/* `<details>` is native, so its open state is CSS-only too: no JS toggles
-   this, `details[open]` already does. */
-.albert-guide__chevron {
-	flex-shrink: 0;
-	align-self: center;
-	color: var(--albert-color-text-faint);
-	transition: transform var(--albert-duration-fast) var(--albert-easing-fast);
-}
-
-.albert-guide[open] > .albert-guide__summary .albert-guide__chevron {
-	transform: rotate(90deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.albert-guide__chevron {
-		transition: none;
-	}
-}
-
-.albert-guide__label {
-	font-size: var(--albert-font-size-body);
-	font-weight: var(--albert-font-weight-semibold);
-	color: var(--albert-color-text);
-}
-
-.albert-guide__description {
-	font-size: var(--albert-font-size-sm);
-	color: var(--albert-color-text-muted);
-}
-
-.albert-guide__body {
-	padding: 0 18px var(--albert-space-400);
-}
-
-.albert-guide__path {
-	margin: 0 0 var(--albert-space-300);
-	font-size: var(--albert-font-size-sm);
-}
-
-.albert-guide__path-label {
-	margin-inline-end: var(--albert-space-200);
-	font-size: var(--albert-font-size-micro);
-	font-weight: var(--albert-font-weight-semibold);
-	letter-spacing: var(--albert-letter-spacing-micro);
-	text-transform: uppercase;
-	color: var(--albert-color-text-faint);
-}
-
-.albert-guide__steps {
-	margin: 0 0 var(--albert-space-300);
-	padding-inline-start: var(--albert-space-500);
-	font-size: var(--albert-font-size-body);
-	line-height: var(--albert-line-height-body);
-	color: var(--albert-color-text);
-}
-
-.albert-guide__snippet {
-	border: 1px solid var(--albert-color-border);
-	border-radius: var(--albert-radius-md);
-	overflow: hidden;
-}
-
-.albert-guide__snippet-head {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: var(--albert-space-200);
-	padding: var(--albert-space-200) var(--albert-space-300);
-	border-block-end: 1px solid var(--albert-color-border);
-	background: var(--albert-color-surface-sunken);
-}
-
-.albert-guide__snippet-label {
-	font-size: var(--albert-font-size-micro);
-	font-weight: var(--albert-font-weight-semibold);
-	letter-spacing: var(--albert-letter-spacing-micro);
-	text-transform: uppercase;
-	color: var(--albert-color-text-faint);
-}
-
-/**
- * A snippet is a config block or a command, and both break if they are
- * rewrapped. It scrolls in its own box rather than widening the page.
- */
-.albert-guide__code {
-	margin: 0;
-	padding: var(--albert-space-300);
-	overflow-x: auto;
-	background: var(--albert-color-surface);
-	font-family: var(--albert-font-family-mono);
-	font-size: var(--albert-font-size-mono-sm);
-	line-height: var(--albert-line-height-mono);
-	color: var(--albert-color-text);
-}
-
-.albert-guide__deeplink {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--albert-space-200);
-	margin: var(--albert-space-300) 0 0;
-}
-
-.albert-guide__deeplink-note {
-	font-size: var(--albert-font-size-sm);
-	color: var(--albert-color-text-muted);
 }
 
 /* ==========================================================================
@@ -793,3 +655,48 @@ a.albert-badge:focus-visible {
 	border-color: var(--albert-color-danger);
 	background: var(--albert-color-danger-surface);
 }
+
+/* ==========================================================================
+   Connect card
+   ========================================================================== */
+
+.albert-connections__connect-body {
+	display: grid;
+	gap: var(--albert-space-400);
+}
+
+.albert-connections__connect-body > p {
+	margin: 0;
+}
+
+.albert-connections__url {
+	display: grid;
+	gap: var(--albert-space-200);
+	max-inline-size: 46rem;
+}
+
+.albert-connections__url-label {
+	font-size: var(--albert-font-size-body);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-text);
+}
+
+.albert-connections__apps {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-200);
+}
+
+.albert-connections__apps-label {
+	margin-inline-end: var(--albert-space-100);
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+/* The row the connect dialog just added, until the next visit. */
+.albert-conn--new {
+	background: var(--albert-color-accent-surface);
+	box-shadow: inset 3px 0 0 var(--albert-color-accent);
+}
+

@@ -35,6 +35,8 @@ webpack.config.js
 assets/src/
 
 # Dev scripts and tests
+# The Claude Desktop bridge's build project; its output in assets/claude-desktop/ ships.
+tools/
 bin/
 scripts/
 tests/

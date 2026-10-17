@@ -595,23 +595,56 @@ developer writes and safe mode is Albert's first boolean-shaped setting.
 `Admin\Connections` is where an owner learns whether an assistant can reach this
 site, how to set one up, who may authorise one, and what is connected.
 
-**No reachability check, deliberately.** Albert does not classify whether the
-endpoint's host can be reached from the internet, warn about it, or hide any
-setup guide because of it. Few sites are run somewhere a cloud assistant cannot
-reach, a proper local-site story is coming separately (doc 60, `wp albert
-serve`, over stdio rather than a web address at all), and a guide that silently
-disappears is more confusing than one that simply fails to connect against a
-site the internet cannot reach. An earlier version of this screen did both
-(`Support\HostClassifier` classified the host, and `render_setup_card()` used
-it to drop guides); both were cut for the same reason.
+**Location orders, never hides (1.5.0).** `Admin\Connections\SiteLocation`
+guesses whether the MCP endpoint is public or only reachable on this computer
+(local suffixes such as `.test`, private and loopback IPs, single-label hosts,
+or `WP_ENVIRONMENT_TYPE` `local` while the endpoint is the site's own address).
+The guess reads as one ("Detected: …"), and an administrator can save the answer
+for the site (`albert_site_location`); everyone else sees it but cannot change
+it. It decides the
+order of the apps and marks Claude on the web and ChatGPT as needing a public
+site on a local one, with the reason and an alternative. It never removes an
+app: an earlier version (`Support\HostClassifier`) hid guides by host and that
+confused people more than a guide that fails.
 
 **Setup content is data, not markup.** `Admin\Connections\ClientSetupGuides`
-holds the curated list (Claude Desktop/claude.ai, Claude Code, Cursor, VS Code,
-ChatGPT, generic) with steps, config path, a copyable snippet built from the
-live endpoint, and a deeplink where the client publishes one. A future CLI docs
-page renders the same array. No credential-bundle export of any kind: a file
+holds the curated list (Claude, Claude Code, Cursor, VS Code, ChatGPT, Other
+apps with Codex, Windsurf, Gemini CLI, Cline and the pinned `mcp-remote` Node
+bridge) as numbered steps with their one action inline (an install link or a
+command to copy), quiet requirement notes, and manual setup, all built from the
+live endpoint. `Admin\Connections\GuidePanel` is the one renderer, so the
+Connections screen and the connect dialog cannot drift. No credential-bundle export of any kind: a file
 holding a permanent plaintext credential is a step back from tokens that are
 scoped, expiring and revocable.
+
+**Claude Desktop on a local site gets an install file (1.5.0).** Its connectors
+run on Anthropic's servers, so `Admin\Connections\ClaudeDesktopBundle` serves a
+`.mcpb` built per download: a manifest with this site's MCP URL and
+`NODE_USE_SYSTEM_CA=1` (plus `NODE_EXTRA_CA_CERTS` when
+`LocalCertificate` finds Herd, Valet or mkcert's root), and
+`assets/claude-desktop/bridge.mjs`, a minified esbuild bundle of mcp-remote
+pinned at `BRIDGE_VERSION`, built from `tools/claude-desktop/` (`npm run build`
+there). No secret is in the file; the bridge signs in with OAuth. The MCP SDK
+inside mcp-remote refuses to send the token request over plain http to anything
+but localhost, deliberately and with no override, so on such sites the guide
+withholds the download and says to turn on https rather than offering a file
+that can never connect. Do not patch that check out of the bundle.
+
+**One guided dialog, two entry points (1.5.0).** `Admin\Connections\ConnectDialog`
+asks where the site runs (saved site-wide through `ConnectController`, so it is
+asked once), which app, then shows that app's `GuidePanel` steps and waits. It
+says "connected" only when `GET albert/v1/connect/status?since=` reports a
+client this user approved after the dialog opened: an authorization code issued
+since then, redeemed for a live token (`ClientRepository::firstConnectionSince()`).
+A refresh issues no code, so an older connection refreshing never counts, and
+nobody else's connection is ever reported. The
+approval page posts on a `BroadcastChannel('albert-connect')` so the dialog
+checks at once instead of at its next 3 s poll. The numbered steps happen in
+other apps and are never ticked off. The Dashboard's connect step is per user
+(an administrator whose agency connected still has their own to do), and once
+setup is complete a header button keeps the dialog reachable. The Connections
+layout is fixed in every state: connect card, then the two lists; the old
+per-app accordion is gone, the dialog holds that content.
 
 **Connections group by client, not by token.** A client refreshes hourly, so a
 token-keyed list shows one assistant several times and calls each a connection.
