@@ -269,6 +269,7 @@ Adds safe mode, which holds destructive actions for your approval, and closes a 
 
 * [David Beentjes](https://github.com/unlocdavid) for helping fix the lost block contents.
 * [Rodolfo Melogli](https://profiles.wordpress.org/businessbloomer/) for reporting the Claude Code connection failure on SiteGround.
+* [Sébastien](https://profiles.wordpress.org/seb94100/) for reporting assistants seeing no tools when another plugin switched off the MCP adapter's built-in tools.
 
 = 1.4.2 =
 Fixes AI assistants that could not connect to some sites.
