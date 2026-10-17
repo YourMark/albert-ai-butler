@@ -116,8 +116,6 @@ Connections use OAuth 2.0 with short-lived, self-refreshing tokens. No password 
 
 [Albert Premium](https://albertwp.com) adds per-role and per-user permission rules, your own custom post types, and a full activity log with filters and retention.
 
-Read the setup guide at [albertwp.com/docs](https://albertwp.com/docs/).
-
 Every well-run site deserves a proper butler. Albert checks credentials at the door, and shows the guest only the rooms you opened.
 
 == Installation ==
@@ -186,7 +184,7 @@ No. Albert works with WordPress core out of the box. WooCommerce actions appear 
 
 = Can I add my own actions? =
 
-Yes. Register them with the WordPress Abilities API and they appear on the Abilities screen alongside Albert's own. See [albertwp.com/docs](https://albertwp.com/docs/).
+Yes. Register them with the WordPress Abilities API and they appear on the Abilities screen alongside Albert's own. See the [Abilities API documentation](https://developer.wordpress.org/apis/abilities-api/).
 
 = Does this work with multisite? =
 
@@ -198,7 +196,7 @@ WordPress 6.9 or higher, PHP 8.1 or higher (8.3+ recommended), MySQL 8.0+ or Mar
 
 = Where do I get support? =
 
-Documentation at [albertwp.com/docs](https://albertwp.com/docs/), or the [WordPress.org support forums](https://wordpress.org/support/plugin/albert/).
+On the [WordPress.org support forums](https://wordpress.org/support/plugin/albert-ai-butler/).
 
 == Screenshots ==
 
