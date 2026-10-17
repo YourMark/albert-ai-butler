@@ -123,24 +123,17 @@ class ConnectGuidesTest extends TestCase {
 	}
 
 	/**
-	 * A user's own answer beats the site's, which beats the guess.
+	 * The saved answer beats the guess; anything else is refused.
 	 *
 	 * @return void
 	 */
-	public function test_answers_resolve_user_then_site_then_guess(): void {
-		$user = self::factory()->user->create();
-
-		$guess = SiteLocation::detect();
-		$this->assertSame( $guess, SiteLocation::current( $user ) );
-		$this->assertTrue( SiteLocation::is_guess( $user ) );
+	public function test_the_saved_answer_beats_the_guess(): void {
+		$this->assertSame( SiteLocation::detect(), SiteLocation::current() );
+		$this->assertTrue( SiteLocation::is_guess() );
 
 		SiteLocation::save( SiteLocation::LOCAL );
-		$this->assertSame( SiteLocation::LOCAL, SiteLocation::current( $user ) );
-		$this->assertFalse( SiteLocation::is_guess() );
-
-		SiteLocation::save_for_user( $user, SiteLocation::PUBLIC );
-		$this->assertSame( SiteLocation::PUBLIC, SiteLocation::current( $user ) );
 		$this->assertSame( SiteLocation::LOCAL, SiteLocation::current() );
+		$this->assertFalse( SiteLocation::is_guess() );
 
 		$this->assertFalse( SiteLocation::save( 'somewhere' ) );
 	}
