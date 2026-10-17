@@ -71,8 +71,7 @@ class AuthorizationPagesTest extends TestCase {
 		$this->assertStringNotContainsString( 'You can add yourself', $html );
 		$this->assertStringContainsString( 'This link goes to app.example.com.', $html );
 		$this->assertStringContainsString( 'state=s%26t', $html );
-		$this->assertStringNotContainsString( 'registered 0', $html );
-		$this->assertStringNotContainsString( 'minute ago', $html );
+		$this->assertStringNotContainsString( 'registered', $html );
 	}
 
 	/**
@@ -106,5 +105,36 @@ class AuthorizationPagesTest extends TestCase {
 		$this->assertStringContainsString( 'Taking you back to Cursor', $html );
 		$this->assertStringContainsString( 'href="https://app.example.com/callback?code=abc&#038;state=xyz"', $html );
 		$this->assertStringNotContainsString( 'revoke this connection', $html );
+	}
+
+	/**
+	 * An app's own scheme survives on the way back; a script scheme never does.
+	 *
+	 * @return void
+	 */
+	public function test_links_back_keep_an_app_scheme_but_never_a_script_scheme(): void {
+		$page = new AuthorizationPage();
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'editor' ] ) );
+
+		$this->assertStringContainsString( 'href="cursor://anysphere.cursor-mcp/oauth/callback?code=abc"', $page->success_html( 'cursor://anysphere.cursor-mcp/oauth/callback?code=abc', 'Cursor' ) );
+
+		foreach ( [ 'javascript:alert(1)', "java\tscript:alert(1)", ' JavaScript:alert(1)' ] as $url ) {
+			$this->assertStringNotContainsString( 'alert(1)', $page->success_html( $url, 'Evil' ), $url );
+			$this->assertStringNotContainsString( 'location', AuthorizationPage::redirect_script( $url ), $url );
+		}
+	}
+
+	/**
+	 * The redirect script hands over after a delay that any interaction cancels.
+	 *
+	 * @return void
+	 */
+	public function test_redirect_script(): void {
+		$script = AuthorizationPage::redirect_script( 'https://app.example.com/cb?code=a&state=</script>' );
+
+		$this->assertStringContainsString( 'setTimeout', $script );
+		$this->assertStringContainsString( '"keydown","pointerdown","focusin"', $script );
+		$this->assertStringNotContainsString( '</script>', $script );
+		$this->assertStringContainsString( 'BroadcastChannel', $script );
 	}
 }

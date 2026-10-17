@@ -713,7 +713,32 @@ class AuthorizationPage implements Hookable {
 	 * @since 1.5.0
 	 */
 	private static function link_protocols( string $url ): array {
-		return array_values( array_unique( [ 'https', 'http', strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) ) ] ) );
+		$protocols = [ 'https', 'http' ];
+
+		if ( ! self::is_dangerous_scheme( $url ) ) {
+			$protocols[] = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
+		}
+
+		return array_values( array_unique( $protocols ) );
+	}
+
+	/**
+	 * Whether a URL's scheme may never reach a link or a redirect.
+	 *
+	 * Registration already refuses these; checking again where the URL is
+	 * printed keeps a client stored any other way from slipping through.
+	 *
+	 * @param string $url The URL.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	private static function is_dangerous_scheme( string $url ): bool {
+		// Browsers drop control characters and spaces before reading a scheme,
+		// so "java\tscript:" runs as javascript: unless they are dropped here too.
+		$scheme = strtolower( (string) strstr( (string) preg_replace( '/[\x00-\x20\x7f]/', '', $url ), ':', true ) );
+
+		return $scheme === '' || in_array( $scheme, ClientRegistration::DANGEROUS_SCHEMES, true );
 	}
 
 	/**
@@ -746,24 +771,37 @@ class AuthorizationPage implements Hookable {
 
 		$this->enqueue_oauth_styles();
 
-		// The redirect is what completes OAuth, so it runs on its own; it waits
-		// three seconds so the page can be read, and stops for good the moment
-		// someone interacts, leaving them the link (WCAG 2.2.1). The broadcast
-		// is only a hint for an open connect dialog, which then asks the server
-		// rather than believing the message.
 		wp_enqueue_script( 'albert-oauth-redirect' );
-		wp_add_inline_script(
-			'albert-oauth-redirect',
-			'(function(){'
-			. 'try{new BroadcastChannel("albert-connect").postMessage("approved");}catch(e){}'
-			. 'var t=setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url ) . ';},3000);'
-			. 'var stop=function(){clearTimeout(t);};'
-			. '["keydown","pointerdown","focusin"].forEach(function(e){document.addEventListener(e,stop,{once:true});});'
-			. '})();'
-		);
+		wp_add_inline_script( 'albert-oauth-redirect', self::redirect_script( $redirect_url ) );
 
 		echo $this->success_html( $redirect_url, $client_name ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped as it is built.
 		exit;
+	}
+
+	/**
+	 * The approval page's script: tell an open connect dialog, then hand over.
+	 *
+	 * The redirect is what completes OAuth, so it runs on its own after three
+	 * seconds, and stops for good the moment someone interacts, leaving them
+	 * the link (WCAG 2.2.1). The broadcast is only a hint: the dialog asks the
+	 * server rather than believing it.
+	 *
+	 * @param string $redirect_url The OAuth callback URL with authorization code.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	public static function redirect_script( string $redirect_url ): string {
+		$flags  = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+		$script = 'try{new BroadcastChannel("albert-connect").postMessage("approved");}catch(e){}';
+
+		if ( ! self::is_dangerous_scheme( $redirect_url ) ) {
+			$script .= 'var t=setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url, $flags ) . ';},3000);'
+				. 'var stop=function(){clearTimeout(t);var n=document.querySelector("[data-albert-redirect-note]");if(n){n.textContent=' . wp_json_encode( __( 'Stopped. Use the link below to go back.', 'albert-ai-butler' ), $flags ) . ';}};'
+				. '["keydown","pointerdown","focusin"].forEach(function(e){document.addEventListener(e,stop,{once:true});});';
+		}
+
+		return '(function(){' . $script . '})();';
 	}
 
 	/**
@@ -807,7 +845,7 @@ class AuthorizationPage implements Hookable {
 				<svg class="albert-oauth__check" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17 9"/></svg>
 				<?php esc_html_e( 'Approved', 'albert-ai-butler' ); ?>
 			</h1>
-			<p class="albert-oauth__text">
+			<p class="albert-oauth__text" data-albert-redirect-note aria-live="polite">
 				<?php
 				/* translators: %s: the name of the connected app. */
 				echo esc_html( sprintf( __( 'Taking you back to %s…', 'albert-ai-butler' ), $client_name ) );

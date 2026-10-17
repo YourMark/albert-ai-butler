@@ -444,7 +444,7 @@ class Dashboard implements Hookable {
 
 								if ( $listed ) {
 									/* translators: %s: a link to the Connections screen. */
-									$text = __( 'You are on the list as administrator. Add others under %s.', 'albert-ai-butler' );
+									$text = __( 'You are on the list. Add others under %s.', 'albert-ai-butler' );
 								} else {
 									/* translators: %s: a link to the Connections screen. */
 									$text = __( 'You are not on the list yet. Add yourself under %s.', 'albert-ai-butler' );
@@ -490,7 +490,7 @@ class Dashboard implements Hookable {
 						$adapter_ready && $has_allowed_users && ! $has_connections,
 						__( 'Connect an AI assistant', 'albert-ai-butler' ),
 						__( 'Paste this endpoint into Claude or ChatGPT as an MCP connector.', 'albert-ai-butler' ),
-						function () use ( $mcp_endpoint ): void {
+						$has_connections ? null : function () use ( $mcp_endpoint ): void {
 							?>
 							<div class="albert-endpoint">
 								<label class="screen-reader-text" for="albert-mcp-endpoint"><?php esc_html_e( 'MCP endpoint address', 'albert-ai-butler' ); ?></label>
