@@ -411,10 +411,13 @@
 	margin-inline-end: auto;
 }
 
-.albert-connect__back .dashicons {
+/* Core nudges icons in buttons down with a top margin; this one sits on the text's line. */
+.albert-connect__footer .albert-connect__back .dashicons {
 	inline-size: 1rem;
 	block-size: 1rem;
+	margin: 0;
 	font-size: 1rem;
+	line-height: 1;
 }
 
 .albert-connect__back[hidden],
