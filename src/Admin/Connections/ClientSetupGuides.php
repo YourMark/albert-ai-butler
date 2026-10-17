@@ -347,14 +347,15 @@ class ClientSetupGuides {
 		return self::guide(
 			[
 				'id'     => 'vscode',
-				'label'  => __( 'VS Code', 'albert-ai-butler' ),
+				// Named for Copilot, which is what people look for; VS Code is where it runs.
+				'label'  => __( 'GitHub Copilot in VS Code', 'albert-ai-butler' ),
 				'icon'   => 'vscode',
 				'steps'  => [
 					self::step( __( 'Click Add to VS Code.', 'albert-ai-butler' ), self::link( __( 'Add to VS Code', 'albert-ai-butler' ), $deeplink, __( 'Nothing happened? VS Code may not be installed. Get it from code.visualstudio.com, or follow “Set it up by hand” below.', 'albert-ai-butler' ) ) ),
 					self::step( __( 'VS Code asks to install the server: choose Install.', 'albert-ai-butler' ) ),
 					self::approve_step(),
 				],
-				'notes'  => array_merge( [ self::note( __( 'Needs GitHub Copilot in agent mode.', 'albert-ai-butler' ) ) ], self::http_note( $context ) ),
+				'notes'  => array_merge( [ self::note( __( 'Albert’s tools work in Copilot Chat’s Agent mode.', 'albert-ai-butler' ) ) ], self::http_note( $context ) ),
 				'manual' => self::manual(
 					[
 						__( 'Create the file named below in your project folder.', 'albert-ai-butler' ),
@@ -467,6 +468,14 @@ class ClientSetupGuides {
 						'cline',
 						'Cline',
 						__( 'In Cline, open MCP Servers, then Remote Servers, and paste this address.', 'albert-ai-butler' ),
+						$endpoint
+					),
+					self::snippet(
+						'microsoft-copilot',
+						'Microsoft 365 Copilot',
+						$context['local']
+							? __( 'Connects from Microsoft’s cloud, so it needs this site on the internet. An administrator adds it in Copilot Studio as an MCP connector with OAuth.', 'albert-ai-butler' )
+							: __( 'An administrator adds it in Copilot Studio as an MCP connector with OAuth, using this address.', 'albert-ai-butler' ),
 						$endpoint
 					),
 					self::bridge( $context ),
