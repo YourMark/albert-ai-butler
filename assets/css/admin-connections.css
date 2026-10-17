@@ -743,6 +743,11 @@ a.albert-badge:focus-visible {
 	font-size: inherit;
 }
 
+.albert-user-item__setup .button-link[aria-disabled="true"] {
+	color: var(--albert-color-text-muted);
+	cursor: default;
+}
+
 /* The add-people dialog's email option sits at the start of its footer. */
 .albert-picker__email {
 	display: inline-flex;

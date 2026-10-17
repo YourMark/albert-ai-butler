@@ -317,7 +317,8 @@ class ConnectPage implements Hookable {
 	 * Revoke one of your own connections: your tokens only.
 	 *
 	 * Anyone else who approved the same app stays connected, and the app
-	 * has to be approved again to come back.
+	 * has to be approved again to come back. Someone taken off the list can no
+	 * longer reach this, which is fine: removal already revoked their tokens.
 	 *
 	 * @return void
 	 * @since 1.5.0

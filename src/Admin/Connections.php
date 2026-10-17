@@ -1564,6 +1564,7 @@ class Connections implements Hookable {
 
 		?>
 		<div class="albert-card__body albert-card__body--flush albert-userlist">
+			<p class="screen-reader-text" id="albert-renew-hint"><?php esc_html_e( 'Copying the link restarts this person’s invitation.', 'albert-ai-butler' ); ?></p>
 			<ul class="albert-userlist__rows" aria-label="<?php esc_attr_e( 'Users who may approve an assistant', 'albert-ai-butler' ); ?>">
 				<?php foreach ( $allowed_users as $user_id => $entry ) { ?>
 					<?php $this->render_allowed_user_row( (int) $user_id, $entry ); ?>
@@ -1689,7 +1690,7 @@ class Connections implements Hookable {
 						type="button"
 						class="button-link albert-copy-button"
 						data-copy-text="<?php echo esc_url( ConnectPage::setup_url( $user ) ); ?>"
-						aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?>"
+						aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?><?php echo $entry['authorised_at'] === null && $entry['expires_at'] !== null ? ' albert-renew-hint' : ''; ?>"
 						<?php if ( $entry['authorised_at'] === null && $entry['expires_at'] !== null ) { ?>
 							data-albert-renew="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
 							data-nonce="<?php echo esc_attr( wp_create_nonce( self::RENEW_SETUP_ACTION . '_' . $user_id ) ); ?>"
