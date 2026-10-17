@@ -264,22 +264,26 @@ class AuthorizationPage implements Hookable {
 	 *
 	 * @param string $key           The parameter name.
 	 * @param string $default_value The default when the parameter is absent.
-	 * @param bool   $is_url        Whether to sanitize as a URL rather than plain text.
+	 * @param bool   $verbatim      Keep the value as sent, trimmed only. For the
+	 *                              redirect URI, which is safe because it must then
+	 *                              exactly match a registered one; esc_url_raw()
+	 *                              would empty an app's own scheme (cursor://).
 	 *
 	 * @return string The sanitized value.
 	 * @since 1.4.0
+	 * @since 1.5.0 `$is_url` became `$verbatim`.
 	 */
-	private function read_oauth_param( string $key, string $default_value = '', bool $is_url = false ): string {
+	private function read_oauth_param( string $key, string $default_value = '', bool $verbatim = false ): string {
 		$is_post = isset( $_SERVER['REQUEST_METHOD'] ) && $_SERVER['REQUEST_METHOD'] === 'POST';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended -- OAuth flow doesn't use WP nonces for GET; the POST branch's nonce is verified in handle_authorization() before any state changes.
 		$source = $is_post ? $_POST : $_GET;
 
-		if ( ! isset( $source[ $key ] ) ) {
+		if ( ! isset( $source[ $key ] ) || ! is_string( $source[ $key ] ) ) {
 			return $default_value;
 		}
 
-		return $is_url
-			? esc_url_raw( wp_unslash( $source[ $key ] ) )
+		return $verbatim
+			? trim( wp_unslash( $source[ $key ] ) )
 			: sanitize_text_field( wp_unslash( $source[ $key ] ) );
 	}
 
@@ -666,7 +670,7 @@ class AuthorizationPage implements Hookable {
 		<p class="fallback-message">
 			<?php esc_html_e( "If the application doesn't open automatically, please click the button below.", 'albert-ai-butler' ); ?>
 		</p>
-		<a href="<?php echo esc_url( $redirect_url ); ?>" class="button"><?php esc_html_e( 'Return to Application', 'albert-ai-butler' ); ?></a>
+		<a href="<?php echo esc_url( $redirect_url, [ 'https', 'http', strtolower( (string) wp_parse_url( $redirect_url, PHP_URL_SCHEME ) ) ] ); ?>" class="button"><?php esc_html_e( 'Return to Application', 'albert-ai-butler' ); ?></a>
 	</div>
 		<?php wp_print_scripts( 'albert-oauth-redirect' ); ?>
 </body>

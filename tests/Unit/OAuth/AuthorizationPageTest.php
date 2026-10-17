@@ -56,15 +56,15 @@ class AuthorizationPageTest extends TestCase {
 	 *
 	 * @param string $key           Parameter name.
 	 * @param string $default_value Default value.
-	 * @param bool   $is_url        Whether to sanitize as a URL.
+	 * @param bool   $verbatim      Whether to keep the value as sent.
 	 *
 	 * @return string
 	 */
-	private function read( string $key, string $default_value = '', bool $is_url = false ): string {
+	private function read( string $key, string $default_value = '', bool $verbatim = false ): string {
 		$method = new ReflectionMethod( AuthorizationPage::class, 'read_oauth_param' );
 		$method->setAccessible( true );
 
-		return $method->invoke( new AuthorizationPage(), $key, $default_value, $is_url );
+		return $method->invoke( new AuthorizationPage(), $key, $default_value, $verbatim );
 	}
 
 	/**
@@ -110,15 +110,26 @@ class AuthorizationPageTest extends TestCase {
 	}
 
 	/**
-	 * The URL branch sanitizes with esc_url_raw() rather than
-	 * sanitize_text_field(), matching redirect_uri's original handling.
+	 * An app's own callback scheme survives, so it can match what it registered.
 	 *
 	 * @return void
 	 */
-	public function test_url_flag_uses_url_sanitization(): void {
+	public function test_verbatim_keeps_a_private_use_scheme(): void {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$_GET['redirect_uri']      = 'https://example.test/cb';
+		$_GET['redirect_uri']      = ' cursor://anysphere.cursor-mcp/oauth/callback ';
 
-		$this->assertSame( 'https://example.test/cb', $this->read( 'redirect_uri', '', true ) );
+		$this->assertSame( 'cursor://anysphere.cursor-mcp/oauth/callback', $this->read( 'redirect_uri', '', true ) );
+	}
+
+	/**
+	 * An array where a string belongs falls back to the default.
+	 *
+	 * @return void
+	 */
+	public function test_a_non_string_value_reads_as_absent(): void {
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_GET['redirect_uri']      = [ 'https://example.test/cb' ];
+
+		$this->assertSame( '', $this->read( 'redirect_uri', '', true ) );
 	}
 }
