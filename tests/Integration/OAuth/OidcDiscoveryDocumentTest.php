@@ -38,16 +38,14 @@ class OidcDiscoveryDocumentTest extends TestCase {
 	];
 
 	/**
-	 * Boot the REST server so the routes are registered.
+	 * Register the REST routes.
 	 *
 	 * @return void
 	 */
 	public function set_up(): void {
 		parent::set_up();
 
-		global $wp_rest_server;
-		$wp_rest_server = new \WP_REST_Server();
-		do_action( 'rest_api_init', $wp_rest_server );
+		do_action( 'rest_api_init' );
 	}
 
 	/**
@@ -87,6 +85,8 @@ class OidcDiscoveryDocumentTest extends TestCase {
 	public function test_signing_algorithm_matches_the_published_key(): void {
 		$document = $this->fetch( 'openid-configuration' );
 		$jwks     = rest_do_request( new WP_REST_Request( 'GET', '/albert/v1/oauth/jwks' ) )->get_data();
+
+		$this->assertNotEmpty( $jwks['keys'], 'No signing key is published, so there is nothing to compare.' );
 
 		foreach ( $jwks['keys'] as $key ) {
 			$this->assertContains( $key['alg'], $document['id_token_signing_alg_values_supported'] );

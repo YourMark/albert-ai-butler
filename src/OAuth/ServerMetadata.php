@@ -88,12 +88,10 @@ class ServerMetadata {
 			'scopes_supported'                      => [ 'default' ],
 
 			/*
-			 * Required by OpenID Connect Discovery, not by RFC 8414. A host that
-			 * answers the root `/.well-known/` itself (SiteGround) sends Claude
-			 * Code to the `openid-configuration` copy of this document, and its
-			 * SDK validates that as OIDC metadata and refuses it without these.
-			 * Albert issues no ID tokens and does not claim OIDC support, which is
-			 * why `scopes_supported` has no `openid`.
+			 * Required by OIDC Discovery, not RFC 8414: where a host answers the root
+			 * `/.well-known/` (SiteGround), Claude Code validates the
+			 * `openid-configuration` copy as OIDC metadata. No ID tokens are issued,
+			 * hence no `openid` scope.
 			 */
 			'subject_types_supported'               => [ 'public' ],
 			'id_token_signing_alg_values_supported' => [ Jwks::ALGORITHM ],
