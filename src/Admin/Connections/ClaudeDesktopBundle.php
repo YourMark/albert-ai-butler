@@ -248,7 +248,9 @@ class ClaudeDesktopBundle implements Hookable {
 			$env['ALBERT_AUTH_SUCCESS_URL'] = self::done_url();
 		}
 
-		if ( wp_parse_url( $endpoint, PHP_URL_SCHEME ) === 'https' && LocalCertificate::path() !== null ) {
+		// Only a local site's certificate needs it, and a public site's file
+		// should never carry a path from the server's own disk.
+		if ( SiteLocation::current() === SiteLocation::LOCAL && wp_parse_url( $endpoint, PHP_URL_SCHEME ) === 'https' && LocalCertificate::path() !== null ) {
 			$env['NODE_EXTRA_CA_CERTS'] = (string) LocalCertificate::path();
 		}
 

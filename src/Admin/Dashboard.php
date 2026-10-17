@@ -416,24 +416,23 @@ class Dashboard implements Hookable {
 				</div>
 
 				<ol class="albert-setup__steps">
-										<?php
-										$this->render_setup_step(
-											1,
-											$has_allowed_users,
-											! $has_allowed_users,
-											__( 'Add an allowed user', 'albert-ai-butler' ),
-											__( 'Only the users you pick here can authorise an AI assistant to act on this site.', 'albert-ai-butler' ),
-											function (): void {
-												$button_class = 'button button-primary';
-												?>
+					<?php
+					$this->render_setup_step(
+						1,
+						$has_allowed_users,
+						! $has_allowed_users,
+						__( 'Add an allowed user', 'albert-ai-butler' ),
+						__( 'Only the users you pick here can authorise an AI assistant to act on this site.', 'albert-ai-butler' ),
+						function (): void {
+							?>
 							<div class="albert-setup__actions">
-									<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>" class="<?php echo esc_attr( $button_class ); ?>" data-albert-open-userpicker>
-												<?php esc_html_e( 'Choose users', 'albert-ai-butler' ); ?>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>" class="button button-primary" data-albert-open-userpicker>
+									<?php esc_html_e( 'Choose users', 'albert-ai-butler' ); ?>
 								</a>
 							</div>
-												<?php
-											}
-										);
+							<?php
+						}
+					);
 		?>
 
 					<?php

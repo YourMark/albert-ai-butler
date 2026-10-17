@@ -716,11 +716,6 @@ a.albert-badge:focus-visible {
 	margin: 0;
 }
 
-.albert-connlist__toolbar[hidden],
-.albert-connections__footer[hidden] {
-	display: none;
-}
-
 /* Under the name, so the row's actions keep their width for Remove. */
 .albert-user-item__setup {
 	display: flex;
