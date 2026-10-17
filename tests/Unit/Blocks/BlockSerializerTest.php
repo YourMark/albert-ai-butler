@@ -105,6 +105,74 @@ class BlockSerializerTest extends TestCase {
 
 	// Per-block round-trips
 
+	public function test_only_sourced_attributes_core_cannot_validate_leave_the_comment_json(): void {
+		albert_test_register_block_type(
+			'core/button',
+			false,
+			[
+				'text'  => [
+					'type'   => 'rich-text',
+					'source' => 'rich-text',
+				],
+				'url'   => [
+					'type'      => 'string',
+					'source'    => 'attribute',
+					'attribute' => 'href',
+				],
+				'width' => [ 'type' => 'number' ],
+			]
+		);
+
+		$markup = $this->serializer->serialize(
+			[
+				[
+					'name'       => 'core/button',
+					'attributes' => [
+						'text'  => 'Go',
+						'url'   => 'https://example.com/',
+						'width' => 50,
+					],
+				],
+			]
+		);
+
+		$this->assertStringStartsWith( '<!-- wp:button {"url":"https://example.com/","width":50} -->', $markup );
+		$this->assertStringContainsString( '>Go</a>', $markup );
+	}
+
+	public function test_untemplated_block_keeps_every_text_sourced_attribute_in_markup(): void {
+		albert_test_register_block_type(
+			'core/file',
+			false,
+			[
+				'fileName'           => [
+					'type'   => 'rich-text',
+					'source' => 'rich-text',
+				],
+				'downloadButtonText' => [
+					'type'   => 'rich-text',
+					'source' => 'rich-text',
+				],
+			]
+		);
+
+		$markup = $this->serializer->serialize(
+			[
+				[
+					'name'       => 'core/file',
+					'attributes' => [
+						'fileName'           => 'contract.pdf',
+						'downloadButtonText' => 'Download now',
+					],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( 'contract.pdf', $markup );
+		$this->assertStringContainsString( 'Download now', $markup );
+		$this->assertStringNotContainsString( 'fileName', $markup );
+	}
+
 	public function test_paragraph_round_trip(): void {
 		$markup = $this->serializer->serialize(
 			[

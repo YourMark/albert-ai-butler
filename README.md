@@ -114,6 +114,7 @@ Adds safe mode, which holds destructive actions for your approval, and closes a 
 
 - Asking your assistant to build a page with a layout block that holds other content (such as a Cover block wrapped around a heading and text) could silently save the block empty, losing everything inside it. These blocks now keep their contents.
 - In the rare case where a block's content genuinely can't be reproduced, the assistant is now told clearly, instead of the block being saved empty as if it had worked.
+- Pages your assistant builds with blocks no longer raise a WordPress debug notice each time they are shown. Pages built before this update stop once they are saved again in the editor.
 - Asking your assistant to change a layout block's settings, such as a group's background, could remove everything inside it. The contents now stay, unless the assistant explicitly replaces them.
 
 **Security**
