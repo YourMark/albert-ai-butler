@@ -122,6 +122,49 @@ class AuthorizationPageTest extends TestCase {
 	}
 
 	/**
+	 * Only the exact registered string matches.
+	 *
+	 * @return void
+	 */
+	public function test_redirect_uri_must_match_exactly(): void {
+		$registered = [ 'cursor://anysphere.cursor-mcp/oauth/callback', 'https://app.example/cb' ];
+
+		$this->assertTrue( AuthorizationPage::is_registered_redirect_uri( $registered, 'cursor://anysphere.cursor-mcp/oauth/callback' ) );
+		$this->assertTrue( AuthorizationPage::is_registered_redirect_uri( 'https://app.example/cb', 'https://app.example/cb' ) );
+
+		foreach ( [ 'CURSOR://anysphere.cursor-mcp/oauth/callback', 'https://app.example/cb/', 'https://app.example/cb?x=1', 'https://evil.example/cb', '' ] as $uri ) {
+			$this->assertFalse( AuthorizationPage::is_registered_redirect_uri( $registered, $uri ), $uri );
+		}
+	}
+
+	/**
+	 * Script schemes are caught however a browser would still read them.
+	 *
+	 * @return void
+	 */
+	public function test_dangerous_schemes(): void {
+		foreach ( [ 'javascript:alert(1)', 'JaVaScRiPt:alert(1)', "java\tscript:alert(1)", "\x01javascript:alert(1)", ' data:text/html,x', 'no-scheme' ] as $url ) {
+			$this->assertTrue( AuthorizationPage::is_dangerous_scheme( $url ), $url );
+		}
+
+		foreach ( [ 'https://app.example/cb', 'cursor://anysphere.cursor-mcp/oauth/callback', 'com.example.app:/cb' ] as $url ) {
+			$this->assertFalse( AuthorizationPage::is_dangerous_scheme( $url ), $url );
+		}
+	}
+
+	/**
+	 * Other parameters are still sanitised as text.
+	 *
+	 * @return void
+	 */
+	public function test_other_parameters_are_sanitised_as_text(): void {
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_GET['scope']             = ' <b>default</b> ';
+
+		$this->assertSame( 'default', $this->read( 'scope' ) );
+	}
+
+	/**
 	 * An array where a string belongs falls back to the default.
 	 *
 	 * @return void

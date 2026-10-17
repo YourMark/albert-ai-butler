@@ -181,12 +181,7 @@ class AuthorizationPage implements Hookable {
 
 		// Validate redirect URI: must exactly match a registered URI. There is no
 		// wildcard: a client that did not register this exact URI is rejected.
-		$allowed_uris = $client->getRedirectUri();
-		if ( is_string( $allowed_uris ) ) {
-			$allowed_uris = [ $allowed_uris ];
-		}
-
-		if ( ! in_array( $redirect_uri, $allowed_uris, true ) ) {
+		if ( ! self::is_registered_redirect_uri( $client->getRedirectUri(), $redirect_uri ) ) {
 			$this->render_error_page(
 				__( 'Invalid Redirect', 'albert-ai-butler' ),
 				__( 'The redirect URI is not allowed for this application.', 'albert-ai-butler' )
@@ -257,6 +252,59 @@ class AuthorizationPage implements Hookable {
 	}
 
 	/**
+	 * Whether a redirect URI is one the client registered, exactly.
+	 *
+	 * Exact string match, as RFC 6749 §3.1.2.3 asks: no normalising, so a
+	 * private-use scheme (cursor://) works and nothing near-identical does.
+	 *
+	 * @param string|string[] $registered The client's registered URIs.
+	 * @param string          $uri        The URI from the request.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function is_registered_redirect_uri( $registered, string $uri ): bool {
+		return $uri !== '' && in_array( $uri, (array) $registered, true );
+	}
+
+	/**
+	 * The schemes esc_url() may keep for a link back to an app.
+	 *
+	 * @param string $url The app's callback URL.
+	 *
+	 * @return array<int, string>
+	 * @since 1.5.0
+	 */
+	private static function link_protocols( string $url ): array {
+		$protocols = [ 'https', 'http' ];
+
+		if ( ! self::is_dangerous_scheme( $url ) ) {
+			$protocols[] = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
+		}
+
+		return array_values( array_unique( $protocols ) );
+	}
+
+	/**
+	 * Whether a URL's scheme may never reach a link or a redirect.
+	 *
+	 * Registration already refuses these; checking again where the URL is
+	 * printed keeps a client stored any other way from slipping through.
+	 *
+	 * @param string $url The URL.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public static function is_dangerous_scheme( string $url ): bool {
+		// Browsers drop control characters and spaces before reading a scheme,
+		// so "java\tscript:" runs as javascript: unless they are dropped here too.
+		$scheme = strtolower( (string) strstr( (string) preg_replace( '/[\x00-\x20\x7f]/', '', $url ), ':', true ) );
+
+		return $scheme === '' || in_array( $scheme, ClientRegistration::DANGEROUS_SCHEMES, true );
+	}
+
+	/**
 	 * Read an OAuth request parameter from the source appropriate to this request.
 	 *
 	 * GET on the initial authorize request, POST on the consent form's submission
@@ -264,10 +312,8 @@ class AuthorizationPage implements Hookable {
 	 *
 	 * @param string $key           The parameter name.
 	 * @param string $default_value The default when the parameter is absent.
-	 * @param bool   $verbatim      Keep the value as sent, trimmed only. For the
-	 *                              redirect URI, which is safe because it must then
-	 *                              exactly match a registered one; esc_url_raw()
-	 *                              would empty an app's own scheme (cursor://).
+	 * @param bool   $verbatim      Keep as sent, trimmed only: for the redirect URI,
+	 *                              which must then exactly match a registered one.
 	 *
 	 * @return string The sanitized value.
 	 * @since 1.4.0
@@ -635,7 +681,7 @@ class AuthorizationPage implements Hookable {
 		wp_enqueue_script( 'albert-oauth-redirect' );
 		wp_add_inline_script(
 			'albert-oauth-redirect',
-			'setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url ) . ';},1500);'
+			self::is_dangerous_scheme( $redirect_url ) ? '' : 'setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';},1500);'
 		);
 
 		?>
@@ -670,7 +716,7 @@ class AuthorizationPage implements Hookable {
 		<p class="fallback-message">
 			<?php esc_html_e( "If the application doesn't open automatically, please click the button below.", 'albert-ai-butler' ); ?>
 		</p>
-		<a href="<?php echo esc_url( $redirect_url, [ 'https', 'http', strtolower( (string) wp_parse_url( $redirect_url, PHP_URL_SCHEME ) ) ] ); ?>" class="button"><?php esc_html_e( 'Return to Application', 'albert-ai-butler' ); ?></a>
+		<a href="<?php echo esc_url( $redirect_url, self::link_protocols( $redirect_url ) ); ?>" class="button"><?php esc_html_e( 'Return to Application', 'albert-ai-butler' ); ?></a>
 	</div>
 		<?php wp_print_scripts( 'albert-oauth-redirect' ); ?>
 </body>
