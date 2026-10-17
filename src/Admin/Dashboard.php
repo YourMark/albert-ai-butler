@@ -433,7 +433,7 @@ class Dashboard implements Hookable {
 							<?php
 						}
 					);
-					?>
+		?>
 
 					<?php
 					$this->render_setup_step(
