@@ -671,7 +671,12 @@ class Connections implements Hookable {
 		}
 
 		if ( $failed > 0 ) {
-			return __( 'Some setup emails could not be sent. Use Copy setup link instead.', 'albert-ai-butler' );
+			return sprintf(
+				/* translators: 1: number of emails sent, 2: number that failed. */
+				__( 'Setup emails sent: %1$d. Not sent: %2$d; use Copy setup link for those.', 'albert-ai-butler' ),
+				$sent,
+				$failed
+			);
 		}
 
 		if ( $sent === 0 ) {

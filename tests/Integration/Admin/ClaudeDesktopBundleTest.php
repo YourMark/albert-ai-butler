@@ -69,4 +69,34 @@ class ClaudeDesktopBundleTest extends TestCase {
 
 		$this->assertSame( 'albert-' . sanitize_title( str_replace( '.', '-', $host ) ) . '.mcpb', ClaudeDesktopBundle::filename() );
 	}
+
+	/**
+	 * A public site's file never carries a certificate path from the server.
+	 *
+	 * @return void
+	 */
+	public function test_a_public_site_gets_no_certificate_path(): void {
+		\Albert\Admin\Connections\SiteLocation::save( \Albert\Admin\Connections\SiteLocation::PUBLIC );
+
+		$env = ClaudeDesktopBundle::manifest()['server']['mcp_config']['env'];
+
+		delete_option( \Albert\Admin\Connections\SiteLocation::OPTION );
+		$this->assertArrayNotHasKey( 'NODE_EXTRA_CA_CERTS', $env );
+	}
+
+	/**
+	 * With plain permalinks the bridge keeps its own page: it refuses an
+	 * address with a query string.
+	 *
+	 * @return void
+	 */
+	public function test_done_url_is_empty_on_plain_permalinks(): void {
+		$this->set_permalink_structure( '' );
+		$plain = ClaudeDesktopBundle::done_url();
+		$this->set_permalink_structure( '/%postname%/' );
+
+		$this->assertSame( '', $plain );
+		$this->assertStringEndsWith( '/connect/done', ClaudeDesktopBundle::done_url() );
+	}
+
 }

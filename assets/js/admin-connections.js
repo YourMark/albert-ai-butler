@@ -1269,9 +1269,14 @@
 
 				event.preventDefault();
 				const button = form.querySelector( 'button' );
+				// aria-disabled, not disabled: disabling the focused button would
+				// drop focus to the page and lose the person's place in the list.
+				if ( button.getAttribute( 'aria-disabled' ) === 'true' ) {
+					return;
+				}
 				const label = button.dataset.label || button.textContent.trim();
 				button.dataset.label = label;
-				button.disabled = true;
+				button.setAttribute( 'aria-disabled', 'true' );
 				const row = form.closest( '[data-albert-user-row]' );
 
 				let message = '';
@@ -1294,7 +1299,7 @@
 				// The result stays readable for a moment, then it can be sent again.
 				window.setTimeout( () => {
 					button.textContent = label;
-					button.disabled = false;
+					button.removeAttribute( 'aria-disabled' );
 				}, 4000 );
 
 				if ( message && window.Albert && window.Albert.liveRegion ) {

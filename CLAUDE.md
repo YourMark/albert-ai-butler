@@ -634,9 +634,10 @@ that can never connect. Do not patch that check out of the bundle.
 asks where the site runs (saved site-wide through `ConnectController`, so it is
 asked once), which app, then shows that app's `GuidePanel` steps and waits. It
 says "connected" only when `GET albert/v1/connect/status?since=` reports a
-client whose *first* access token for this user is newer than the dialog's
-opening (`ClientRepository::firstConnectionSince()`), so an hourly refresh of an
-old connection never counts and nobody else's connection is ever reported. The
+client this user approved after the dialog opened: an authorization code issued
+since then, redeemed for a live token (`ClientRepository::firstConnectionSince()`).
+A refresh issues no code, so an older connection refreshing never counts, and
+nobody else's connection is ever reported. The
 approval page posts on a `BroadcastChannel('albert-connect')` so the dialog
 checks at once instead of at its next 3 s poll. The numbered steps happen in
 other apps and are never ticked off. The Dashboard's connect step is per user

@@ -386,7 +386,7 @@
 	color: var(--albert-color-danger);
 }
 
-.albert-guide-panel__block:focus-visible {
+.albert-guide-panel__code pre:focus-visible {
 	outline: var(--albert-focus-width) solid var(--albert-focus-color);
 	outline-offset: 2px;
 }

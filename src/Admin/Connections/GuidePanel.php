@@ -14,9 +14,8 @@ defined( 'ABSPATH' ) || exit;
 /**
  * The one place a guide from {@see ClientSetupGuides} becomes markup.
  *
- * The Connections screen and the connect dialog both draw a guide, and the
- * steps, notes and copy blocks must read the same in both. Everything is
- * escaped here, once.
+ * The connect dialog draws every guide through here, wherever it opens, so
+ * steps, notes and copy blocks read the same everywhere and are escaped once.
  *
  * @phpstan-import-type AlbertClientGuide from ClientSetupGuides
  * @phpstan-import-type AlbertGuideAction from ClientSetupGuides
@@ -232,8 +231,7 @@ class GuidePanel {
 	 * A code block with its Copy button.
 	 *
 	 * A panel holds several Copy buttons, so each is described by the text it
-	 * belongs to; a block that scrolls sideways takes focus so a keyboard can
-	 * scroll it.
+	 * belongs to; the code takes focus so a keyboard can scroll it sideways.
 	 *
 	 * @param string $code         What to show and copy.
 	 * @param string $id           Element id.
@@ -245,6 +243,8 @@ class GuidePanel {
 	 */
 	private static function render_code( string $code, string $id, string $label = '', string $described_by = '' ): void {
 		$name_id = $label !== '' ? $id . '-label' : $described_by;
+		// Both kinds can scroll sideways (a long URL never breaks), so both take focus.
+		$region = 'tabindex="0" role="region" ' . ( $name_id !== '' ? 'aria-labelledby="' . esc_attr( $name_id ) . '"' : 'aria-label="' . esc_attr__( 'Code', 'albert-ai-butler' ) . '"' );
 		?>
 		<div class="albert-guide-panel__code">
 			<?php if ( $label !== '' ) { ?>
@@ -252,9 +252,9 @@ class GuidePanel {
 			<?php } ?>
 			<?php if ( str_contains( $code, "\n" ) ) { ?>
 				<?php // A config block keeps its indentation and scrolls rather than rewrapping. ?>
-				<pre class="albert-guide-panel__block" id="<?php echo esc_attr( $id ); ?>" tabindex="0" role="region"<?php echo $name_id !== '' ? ' aria-labelledby="' . esc_attr( $name_id ) . '"' : ' aria-label="' . esc_attr__( 'Code', 'albert-ai-butler' ) . '"'; ?>><?php echo esc_html( $code ); ?></pre>
+				<pre class="albert-guide-panel__block" id="<?php echo esc_attr( $id ); ?>" <?php echo $region; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts above. ?>><?php echo esc_html( $code ); ?></pre>
 			<?php } else { ?>
-				<pre id="<?php echo esc_attr( $id ); ?>"><?php echo self::wrap_at_spaces( $code ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every token is escaped inside. ?></pre>
+				<pre id="<?php echo esc_attr( $id ); ?>" <?php echo $region; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts above. ?>><?php echo self::wrap_at_spaces( $code ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every token is escaped inside. ?></pre>
 			<?php } ?>
 			<button type="button" class="button button-secondary albert-copy-button" data-copy-target="<?php echo esc_attr( $id ); ?>"<?php echo $name_id !== '' ? ' aria-describedby="' . esc_attr( $name_id ) . '"' : ''; ?>>
 				<?php esc_html_e( 'Copy', 'albert-ai-butler' ); ?>

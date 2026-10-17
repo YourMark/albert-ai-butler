@@ -46,9 +46,14 @@ class AppIcon {
 			return;
 		}
 
-		$svg = (string) file_get_contents( ALBERT_PLUGIN_DIR . 'assets/images/apps/' . $icon . '.svg' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- A bundled file.
+		// The dialog prints most icons more than once per page; read each file once.
+		static $cache = [];
 
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Albert's own SVG, paths only.
-		echo str_replace( '<svg ', '<svg class="albert-app-icon" aria-hidden="true" focusable="false" ', trim( $svg ) );
+		if ( ! isset( $cache[ $icon ] ) ) {
+			$svg            = (string) file_get_contents( ALBERT_PLUGIN_DIR . 'assets/images/apps/' . $icon . '.svg' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- A bundled file.
+			$cache[ $icon ] = str_replace( '<svg ', '<svg class="albert-app-icon" aria-hidden="true" focusable="false" ', trim( $svg ) );
+		}
+
+		echo $cache[ $icon ]; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Albert's own SVG, paths only.
 	}
 }

@@ -83,6 +83,9 @@ class ConnectControllerTest extends TestCase {
 				'expires_at' => gmdate( 'Y-m-d H:i:s', $issued + 10 * MINUTE_IN_SECONDS ),
 			]
 		);
+		// The table stamps created_at in the database's own zone, as it does live.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture.
+		$wpdb->query( $wpdb->prepare( 'UPDATE %i SET created_at = FROM_UNIXTIME( %d ) WHERE client_id = %s', Tables::oauth()['auth_codes'], $issued, $created['client_id'] ) );
 		$this->issue_token( (string) $created['client_id'], $user_id, $issued );
 
 		return (string) $created['client_id'];
@@ -211,5 +214,18 @@ class ConnectControllerTest extends TestCase {
 		$request->set_param( 'since', 0 );
 
 		$this->assertSame( 403, rest_do_request( $request )->get_status() );
+	}
+
+	/**
+	 * Approved minutes before the dialog opened, then signing in again while it
+	 * is open, is not a new connection.
+	 *
+	 * @return void
+	 */
+	public function test_a_connection_approved_just_before_opening_does_not_count(): void {
+		$client = $this->connect( 'Claude', $this->admin_id, time() - 5 * MINUTE_IN_SECONDS );
+		$this->issue_token( $client, $this->admin_id, time() );
+
+		$this->assertSame( [ 'connected' => false ], $this->status( time() - 60 ) );
 	}
 }

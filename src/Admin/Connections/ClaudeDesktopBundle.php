@@ -113,6 +113,7 @@ class ClaudeDesktopBundle implements Hookable {
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="robots" content="noindex">
 	<title><?php esc_html_e( 'Connected', 'albert-ai-butler' ); ?> - <?php echo esc_html( $site_name ); ?></title>
 		<?php wp_print_styles( 'albert-oauth-pages' ); ?>
 </head>
