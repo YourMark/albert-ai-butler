@@ -104,14 +104,14 @@ class AdapterNudge implements Hookable {
 	/**
 	 * The notice on every Albert screen except the Dashboard, which has its card.
 	 *
-	 * Shown to everyone who reaches those screens: someone who cannot install
-	 * it is told who can.
+	 * Administrators only: anyone else reaching Albert has only the Connect
+	 * page, and a warning they cannot act on reads as a fault in their setup.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
 	public function render_screen_notice(): void {
-		if ( ! Menu::is_albert_screen() ) {
+		if ( ! Menu::is_albert_screen() || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 

@@ -82,6 +82,14 @@ class Connections implements Hookable {
 	public const EMAIL_SETUP_ACTION = 'albert_email_setup_link';
 
 	/**
+	 * The admin-post action that restarts an invitation when its link is copied.
+	 *
+	 * @since 1.5.0
+	 * @var string
+	 */
+	public const RENEW_SETUP_ACTION = 'albert_renew_setup_link';
+
+	/**
 	 * Register WordPress hooks.
 	 *
 	 * @return void
@@ -93,6 +101,7 @@ class Connections implements Hookable {
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 		add_action( 'admin_post_' . UserPickerModal::ACTION, [ $this, 'handle_add_allowed_users' ] );
 		add_action( 'admin_post_' . self::EMAIL_SETUP_ACTION, [ $this, 'handle_email_setup_link' ] );
+		add_action( 'admin_post_' . self::RENEW_SETUP_ACTION, [ $this, 'handle_renew_setup_link' ] );
 		add_action( 'admin_post_albert_set_connection_label', [ $this, 'handle_set_connection_label' ] );
 		add_action( 'admin_post_albert_revoke_selected', [ $this, 'handle_revoke_selected' ] );
 	}
@@ -697,7 +706,10 @@ class Connections implements Hookable {
 		$this->require_capability( __( 'You do not have permission to manage MCP access.', 'albert-ai-butler' ), $is_ajax );
 
 		$user = get_user_by( 'id', $user_id );
-		$sent = $user instanceof \WP_User && SetupInvite::send( $user, wp_get_current_user() );
+
+		// Renewed first, so the email states the new expiry.
+		$renewed = $user instanceof \WP_User && AllowedUsers::renew_invitation( $user_id );
+		$sent    = $user instanceof \WP_User && SetupInvite::send( $user, wp_get_current_user() );
 
 		$message = $sent
 			/* translators: %s: the person's name. */
@@ -705,15 +717,45 @@ class Connections implements Hookable {
 			: __( 'The email could not be sent. Use Copy setup link and send it yourself.', 'albert-ai-butler' );
 
 		if ( $is_ajax ) {
+			$data = [
+				'message' => $message,
+				'expiry'  => $renewed ? $this->format_allowed_user_expiry( AllowedUsers::all()[ $user_id ] ) : '',
+			];
+
 			if ( $sent ) {
-				wp_send_json_success( [ 'message' => $message ] );
+				wp_send_json_success( $data );
 			}
 
-			wp_send_json_error( [ 'message' => $message ] );
+			wp_send_json_error( $data );
 		}
 
 		$this->notify( $sent ? 'setup_emailed' : 'setup_email_failed', $message, $sent ? 'success' : 'error' );
 		$this->redirect_to_page();
+	}
+
+	/**
+	 * Restart someone's invitation because their setup link was just copied.
+	 *
+	 * Copying happens in the browser; this runs beside it, so a link sent
+	 * on the last day of the window, or after it, still works when opened.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function handle_renew_setup_link(): void {
+		$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
+
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), self::RENEW_SETUP_ACTION . '_' . $user_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'Security check failed.', 'albert-ai-butler' ) ], 403 );
+		}
+
+		$this->require_capability( __( 'You do not have permission to manage MCP access.', 'albert-ai-butler' ), true );
+
+		if ( ! AllowedUsers::renew_invitation( $user_id ) ) {
+			wp_send_json_success( [ 'expiry' => '' ] );
+		}
+
+		wp_send_json_success( [ 'expiry' => $this->format_allowed_user_expiry( AllowedUsers::all()[ $user_id ] ) ] );
 	}
 
 	/**
@@ -1639,7 +1681,15 @@ class Connections implements Hookable {
 				<?php // A link that opens the connect dialog on arrival: what an agency sends a client. ?>
 					<span class="screen-reader-text" id="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>"><?php echo esc_html( ConnectPage::setup_url( $user ) ); ?></span>
 					<span class="albert-user-item__setup">
-						<button type="button" class="button-link albert-copy-button" data-copy-target="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>">
+						<button
+							type="button"
+							class="button-link albert-copy-button"
+							data-copy-target="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>"
+							<?php if ( $entry['authorised_at'] === null && $entry['expires_at'] !== null ) { ?>
+								data-albert-renew="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+								data-nonce="<?php echo esc_attr( wp_create_nonce( self::RENEW_SETUP_ACTION . '_' . $user_id ) ); ?>"
+							<?php } ?>
+						>
 							<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
 						</button>
 						<?php if ( $user_id !== get_current_user_id() && SetupInvite::can_send_to( $user ) ) { ?>

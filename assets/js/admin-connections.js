@@ -1270,6 +1270,7 @@
 				event.preventDefault();
 				const button = form.querySelector( 'button' );
 				button.disabled = true;
+				const row = form.closest( '[data-albert-user-row]' );
 
 				let message = '';
 				try {
@@ -1281,6 +1282,7 @@
 					} );
 					const payload = await response.json();
 					message = ( payload.data && payload.data.message ) || '';
+					SetupEmail.showExpiry( row, payload.data && payload.data.expiry );
 					button.textContent = payload.success ? ( config.i18n.emailSent || message ) : ( config.i18n.emailFailed || message );
 					button.disabled = payload.success;
 				} catch ( error ) {
@@ -1292,6 +1294,32 @@
 					window.Albert.liveRegion.announce( message );
 				}
 			} );
+
+			// Copying a pending invitation's link restarts its window too. The
+			// copy itself is admin-settings.js's; this only tells the server.
+			document.addEventListener( 'click', ( event ) => {
+				const button = event.target.closest( '[data-albert-renew]' );
+				if ( ! button ) {
+					return;
+				}
+
+				const body = new FormData();
+				body.append( 'action', 'albert_renew_setup_link' );
+				body.append( 'user_id', button.closest( '[data-albert-user-row]' ).dataset.userId );
+				body.append( '_wpnonce', button.dataset.nonce );
+
+				fetch( button.dataset.albertRenew, { method: 'POST', credentials: 'same-origin', body } )
+					.then( ( response ) => response.json() )
+					.then( ( payload ) => SetupEmail.showExpiry( button.closest( '[data-albert-user-row]' ), payload.data && payload.data.expiry ) )
+					.catch( () => {} );
+			} );
+		},
+
+		showExpiry( row, text ) {
+			const expiry = row && row.querySelector( '.albert-user-item__expiry' );
+			if ( expiry && text ) {
+				expiry.textContent = text;
+			}
 		},
 	};
 
