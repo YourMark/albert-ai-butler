@@ -59,6 +59,12 @@
 				}
 			} );
 
+			// A click on the backdrop closes, as people expect of a dialog. It
+			// must start there too, or selecting text and releasing outside
+			// would close it. `closedby="any"` does this natively, not yet in Safari.
+			this.dialog.addEventListener( 'pointerdown', ( event ) => {
+				this.downOnBackdrop = this.isBackdrop( event );
+			} );
 			this.dialog.addEventListener( 'click', ( event ) => this.onClick( event ) );
 			this.dialog.addEventListener( 'change', ( event ) => this.onChange( event ) );
 			this.dialog.addEventListener( 'close', () => this.onClose() );
@@ -109,8 +115,24 @@
 			}
 		},
 
+		isBackdrop( event ) {
+			if ( event.target !== this.dialog ) {
+				return false;
+			}
+
+			const rect = this.dialog.getBoundingClientRect();
+
+			return event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+		},
+
 		onClick( event ) {
 			const target = event.target;
+
+			if ( this.downOnBackdrop && this.isBackdrop( event ) ) {
+				this.downOnBackdrop = false;
+				this.dialog.close();
+				return;
+			}
 
 			if ( target.closest( '[data-albert-connect-close]' ) || target.closest( '[data-albert-connect-done]' ) ) {
 				this.dialog.close();
