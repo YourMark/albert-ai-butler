@@ -17,6 +17,7 @@ require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 
 use Albert\OAuth\Endpoints\OAuthController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
+use Albert\OAuth\Jwks;
 use Albert\OAuth\ServerMetadata;
 use PHPUnit\Framework\TestCase;
 
@@ -130,6 +131,35 @@ class ServerMetadataTest extends TestCase {
 		$this->assertIsString( $metadata['jwks_uri'] );
 		$this->assertNotEmpty( $metadata['jwks_uri'] );
 		$this->assertStringStartsWith( ServerMetadata::base_url() . '/wp-json/', $metadata['jwks_uri'] );
+	}
+
+	/**
+	 * The two fields OpenID Connect Discovery requires are present.
+	 *
+	 * On hosts that answer the root `/.well-known/` themselves, Claude Code reads
+	 * the `openid-configuration` copy of this document and validates it as OIDC
+	 * metadata, so without these it stops with "Dynamic Client Registration
+	 * rejected" before the approval screen.
+	 *
+	 * @return void
+	 */
+	public function test_declares_the_fields_oidc_discovery_requires(): void {
+		$metadata = ServerMetadata::authorization_server();
+
+		$this->assertSame( [ 'public' ], $metadata['subject_types_supported'] );
+		$this->assertSame( [ Jwks::ALGORITHM ], $metadata['id_token_signing_alg_values_supported'] );
+	}
+
+	/**
+	 * The metadata does not claim OpenID Connect support.
+	 *
+	 * Albert issues no ID tokens. Advertising the `openid` scope would invite a
+	 * client to ask for one.
+	 *
+	 * @return void
+	 */
+	public function test_does_not_offer_the_openid_scope(): void {
+		$this->assertNotContains( 'openid', ServerMetadata::authorization_server()['scopes_supported'] );
 	}
 
 	/**
