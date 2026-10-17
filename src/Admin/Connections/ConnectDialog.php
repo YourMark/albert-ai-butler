@@ -130,7 +130,13 @@ class ConnectDialog {
 			</div>
 
 			<div class="albert-dialog__body">
-				<?php self::render_location_step(); ?>
+				<?php
+				// Where the site runs is the site's answer: the question is not
+				// even in the page for someone who may not change it.
+				if ( current_user_can( 'manage_options' ) ) {
+					self::render_location_step();
+				}
+				?>
 				<?php self::render_app_step( $guides ); ?>
 				<?php self::render_steps_step( $guides ); ?>
 				<?php self::render_done_step(); ?>
