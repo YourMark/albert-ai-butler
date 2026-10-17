@@ -400,7 +400,7 @@ class ClientSetupGuides {
 					self::approve_step(),
 				],
 				'notes'        => $notes,
-				'unavailable'  => __( 'ChatGPT connects from OpenAI’s servers, which cannot reach a site on your computer.', 'albert-ai-butler' ),
+				'unavailable'  => __( 'ChatGPT connects from OpenAI’s servers, which cannot reach a site on your computer. Give the site a public address with a tunnel, such as Cloudflare Tunnel or ngrok, or use Codex, OpenAI’s app that connects from your computer.', 'albert-ai-butler' ),
 			]
 		);
 	}
