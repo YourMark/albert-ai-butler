@@ -130,9 +130,13 @@ class ClientRegistration implements Hookable {
 
 		$client_repo = new ClientRepository();
 
+		$body = $request->get_json_params();
+
+		$client_name = isset( $body['client_name'] ) ? sanitize_text_field( $body['client_name'] ) : 'MCP Client';
+
 		// Per-site client cap, against live clients only (see count_live_clients()).
 		if ( self::limit_reached( $client_repo ) ) {
-			$this->log_rejected_registration( 'client_limit_reached', '', '' );
+			$this->log_rejected_registration( 'client_limit_reached', '', $client_name );
 
 			return new WP_Error(
 				'client_limit_reached',
@@ -140,10 +144,6 @@ class ClientRegistration implements Hookable {
 				[ 'status' => 400 ]
 			);
 		}
-
-		$body = $request->get_json_params();
-
-		$client_name = isset( $body['client_name'] ) ? sanitize_text_field( $body['client_name'] ) : 'MCP Client';
 
 		// redirect_uris is REQUIRED (RFC 7591). Absence is rejected — no wildcard fallback.
 		$redirect_uris = isset( $body['redirect_uris'] ) ? $this->sanitize_redirect_uris( $body['redirect_uris'] ) : [];
@@ -533,14 +533,15 @@ class ClientRegistration implements Hookable {
 		$scheme = $this->extract_scheme( $uri );
 
 		/**
-		 * Fires when a client registration is rejected during validation.
+		 * Fires when a client registration is rejected.
 		 *
 		 * @since 1.3.1
+		 * @since 1.5.0 Also fires for `client_limit_reached`, with an empty scheme and URI.
 		 *
 		 * @param string $reason      The machine-readable rejection reason.
-		 * @param string $scheme      The rejected URI's scheme.
+		 * @param string $scheme      The rejected URI's scheme, or '' when no URI was at fault.
 		 * @param string $client_name The client name from the request.
-		 * @param string $uri         The full rejected URI.
+		 * @param string $uri         The full rejected URI, or ''.
 		 */
 		do_action( 'albert/oauth/registration_rejected', $reason, $scheme, $client_name, $uri );
 

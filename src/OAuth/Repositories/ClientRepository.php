@@ -361,7 +361,8 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * any registered in the last `$grace_hours`. Counting every row let clients
 	 * that never authorised, or were disconnected long ago, fill the cap until
 	 * no new assistant could connect. The grace window keeps a registration
-	 * nobody completes counting for a while, so the cap still bounds abuse.
+	 * nobody completes counting for a while, so the cap still bounds abuse: one
+	 * address can fill it within the registration rate limit, but only for a day.
 	 *
 	 * Client `created_at` is stamped in the database's own time zone, so it is
 	 * compared with NOW(); token expiry is written as UTC, so with UTC_TIMESTAMP().
@@ -402,8 +403,8 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * Delete clients older than `$days` that hold no token at all.
 	 *
 	 * No token row, revoked or not: the client never authorised, or every token
-	 * it had has expired and been cleaned up. Nothing can sign in with it any
-	 * more, and it would otherwise sit in the table for good.
+	 * it had has expired and been cleaned up. A client holding an unexpired
+	 * authorization code is kept, since somebody is signing in with it right now.
 	 *
 	 * @param int $days Minimum age in days.
 	 *
@@ -420,10 +421,15 @@ class ClientRepository implements ClientRepositoryInterface {
 			$wpdb->prepare(
 				'DELETE c FROM %i c
 				WHERE c.created_at < DATE_SUB( NOW(), INTERVAL %d DAY )
-					AND NOT EXISTS ( SELECT 1 FROM %i t WHERE t.client_id = c.client_id )',
+					AND NOT EXISTS ( SELECT 1 FROM %i t WHERE t.client_id = c.client_id )
+					AND NOT EXISTS (
+						SELECT 1 FROM %i a
+						WHERE a.client_id = c.client_id AND a.revoked = 0 AND a.expires_at > UTC_TIMESTAMP()
+					)',
 				$tables['clients'],
 				$days,
-				$tables['access_tokens']
+				$tables['access_tokens'],
+				$tables['auth_codes']
 			)
 		);
 

@@ -314,12 +314,7 @@ class Connections implements Hookable {
 		 * caught it in only one of them.
 		 */
 		if ( $include_refresh ) {
-			$clients = new ClientRepository();
-			$clients->revokeAllTokens( $client_id );
-
-			// Nothing can sign in with it now; the row would only hold a place
-			// under the registration cap.
-			$clients->deleteClient( $client_id );
+			( new ClientRepository() )->revokeAllTokens( $client_id );
 
 			return;
 		}

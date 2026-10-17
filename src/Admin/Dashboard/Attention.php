@@ -14,8 +14,8 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Context\SkillIndex;
 use Albert\Core\AbilitiesState;
 use Albert\MCP\Server as McpServer;
-use Albert\OAuth\Endpoints\ClientRegistration;
 use Albert\MCP\Skills\SkillRegistry;
+use Albert\OAuth\Endpoints\ClientRegistration;
 use Albert\SafeMode\Gate;
 use Albert\Support\WpCompat;
 
@@ -343,8 +343,8 @@ class Attention {
 				'tone_label'  => __( 'Can\'t connect', 'albert-ai-butler' ),
 				'title'       => __( 'New assistants can\'t connect: the connection limit is reached', 'albert-ai-butler' ),
 				'detail'      => sprintf(
-					/* translators: %d: the maximum number of connected apps. */
-					__( 'This site allows %d connected apps. Disconnect ones you no longer use to make room.', 'albert-ai-butler' ),
+					/* translators: %d: the maximum number of registered apps. */
+					__( 'This site allows %d registered apps, counting connected ones and any that started connecting in the last day. Disconnect assistants you no longer use; unfinished attempts stop counting within a day.', 'albert-ai-butler' ),
 					ClientRegistration::max_clients()
 				),
 				'action'      => [

@@ -11,7 +11,6 @@
 
 namespace Albert\Tests\Integration\OAuth;
 
-use Albert\Admin\Connections;
 use Albert\Admin\Dashboard\Attention;
 use Albert\Cron\TokenCleanup;
 use Albert\Database\Tables;
@@ -31,6 +30,13 @@ use WP_REST_Request;
 class ClientCapTest extends TestCase {
 
 	/**
+	 * REMOTE_ADDR before the test, null when unset.
+	 *
+	 * @var string|null
+	 */
+	private ?string $remote_addr = null;
+
+	/**
 	 * Empty the OAuth tables and set a small cap.
 	 *
 	 * @return void
@@ -46,29 +52,48 @@ class ClientCapTest extends TestCase {
 		}
 
 		add_filter( 'albert/oauth/max_clients', fn(): int => 3 );
+
+		$this->remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : null;
 	}
 
 	/**
-	 * Insert a client registered `$days_ago` days ago.
+	 * Put back what register() changed.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		delete_transient( 'albert_dcr_' . md5( '127.0.0.1' ) );
+
+		if ( $this->remote_addr === null ) {
+			unset( $_SERVER['REMOTE_ADDR'] );
+		} else {
+			$_SERVER['REMOTE_ADDR'] = $this->remote_addr;
+		}
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Insert a client registered `$hours_ago` hours ago.
 	 *
 	 * @param string $client_id Client id.
-	 * @param int    $days_ago  Age in days.
+	 * @param int    $hours_ago Age in hours.
 	 *
 	 * @return string
 	 */
-	private function client( string $client_id, int $days_ago ): string {
+	private function client( string $client_id, int $hours_ago ): string {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture; created_at in the database's own time zone, as the column default writes it.
 		$wpdb->query(
 			$wpdb->prepare(
 				'INSERT INTO %i ( client_id, name, redirect_uri, is_confidential, created_at )
-				VALUES ( %s, %s, %s, 0, DATE_SUB( NOW(), INTERVAL %d DAY ) )',
+				VALUES ( %s, %s, %s, 0, DATE_SUB( NOW(), INTERVAL %d HOUR ) )',
 				Tables::oauth()['clients'],
 				$client_id,
 				'Client ' . $client_id,
 				'http://localhost:5000/callback',
-				$days_ago
+				$hours_ago
 			)
 		);
 
@@ -78,17 +103,21 @@ class ClientCapTest extends TestCase {
 	/**
 	 * Give a client an access token, and optionally a refresh token.
 	 *
-	 * @param string    $client_id      Client id.
-	 * @param bool      $access_live    Whether the access token is unrevoked and unexpired.
-	 * @param bool|null $refresh_live   Live refresh token, dead one, or none (null).
+	 * Each token is 'live', 'revoked' (unexpired but revoked) or 'expired'
+	 * (unrevoked but past its expiry).
+	 *
+	 * @param string      $client_id Client id.
+	 * @param string      $access    State of the access token.
+	 * @param string|null $refresh   State of the refresh token, or null for none.
 	 *
 	 * @return void
 	 */
-	private function token( string $client_id, bool $access_live, ?bool $refresh_live = null ): void {
+	private function token( string $client_id, string $access, ?string $refresh = null ): void {
 		global $wpdb;
 
 		$tables   = Tables::oauth();
 		$token_id = 'tok_' . $client_id;
+		$expires  = static fn( string $state ): string => gmdate( 'Y-m-d H:i:s', $state === 'expired' ? time() - HOUR_IN_SECONDS : time() + HOUR_IN_SECONDS );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Test fixture.
 		$wpdb->insert(
@@ -97,13 +126,13 @@ class ClientCapTest extends TestCase {
 				'token_id'   => $token_id,
 				'client_id'  => $client_id,
 				'user_id'    => 1,
-				'revoked'    => $access_live ? 0 : 1,
-				'expires_at' => gmdate( 'Y-m-d H:i:s', $access_live ? time() + HOUR_IN_SECONDS : time() - HOUR_IN_SECONDS ),
+				'revoked'    => $access === 'revoked' ? 1 : 0,
+				'expires_at' => $expires( $access ),
 				'created_at' => gmdate( 'Y-m-d H:i:s' ),
 			]
 		);
 
-		if ( $refresh_live === null ) {
+		if ( $refresh === null ) {
 			return;
 		}
 
@@ -113,9 +142,32 @@ class ClientCapTest extends TestCase {
 			[
 				'token_id'        => 'ref_' . $client_id,
 				'access_token_id' => $token_id,
-				'revoked'         => $refresh_live ? 0 : 1,
-				'expires_at'      => gmdate( 'Y-m-d H:i:s', time() + MONTH_IN_SECONDS ),
+				'revoked'         => $refresh === 'revoked' ? 1 : 0,
+				'expires_at'      => $expires( $refresh ),
 				'created_at'      => gmdate( 'Y-m-d H:i:s' ),
+			]
+		);
+	}
+
+	/**
+	 * Give a client an unexpired authorization code, as during sign-in.
+	 *
+	 * @param string $client_id Client id.
+	 *
+	 * @return void
+	 */
+	private function auth_code( string $client_id ): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Test fixture.
+		$wpdb->insert(
+			Tables::oauth()['auth_codes'],
+			[
+				'code_id'    => 'code_' . $client_id,
+				'client_id'  => $client_id,
+				'user_id'    => 1,
+				'revoked'    => 0,
+				'expires_at' => gmdate( 'Y-m-d H:i:s', time() + 10 * MINUTE_IN_SECONDS ),
 			]
 		);
 	}
@@ -160,9 +212,9 @@ class ClientCapTest extends TestCase {
 	 * @return void
 	 */
 	public function test_dead_clients_do_not_count_against_the_cap(): void {
-		$this->client( 'never-authorised', 10 );
-		$this->token( $this->client( 'expired', 10 ), false );
-		$this->token( $this->client( 'disconnected', 10 ), false, false );
+		$this->client( 'never-authorised', 240 );
+		$this->token( $this->client( 'expired', 240 ), 'expired' );
+		$this->token( $this->client( 'disconnected', 240 ), 'revoked', 'revoked' );
 
 		$this->assertSame( 0, ( new ClientRepository() )->count_live_clients() );
 		$this->assertNotInstanceOf( WP_Error::class, $this->register() );
@@ -174,8 +226,8 @@ class ClientCapTest extends TestCase {
 	 * @return void
 	 */
 	public function test_live_clients_count_against_the_cap(): void {
-		$this->token( $this->client( 'live-access', 10 ), true );
-		$this->token( $this->client( 'signed-out', 10 ), false, true );
+		$this->token( $this->client( 'live-access', 240 ), 'live' );
+		$this->token( $this->client( 'signed-out', 240 ), 'revoked', 'live' );
 
 		$this->assertSame( 2, ( new ClientRepository() )->count_live_clients() );
 	}
@@ -202,10 +254,10 @@ class ClientCapTest extends TestCase {
 	 * @return void
 	 */
 	public function test_cleanup_deletes_only_old_tokenless_clients(): void {
-		$this->client( 'old-tokenless', 10 );
-		$this->client( 'new-tokenless', 2 );
-		$this->token( $this->client( 'old-signed-out', 10 ), false, true );
-		$this->token( $this->client( 'old-live', 10 ), true );
+		$this->client( 'old-tokenless', 240 );
+		$this->client( 'new-tokenless', 48 );
+		$this->token( $this->client( 'old-signed-out', 240 ), 'revoked', 'live' );
+		$this->token( $this->client( 'old-live', 240 ), 'live' );
 
 		( new TokenCleanup() )->run();
 
@@ -221,7 +273,7 @@ class ClientCapTest extends TestCase {
 	 * @return void
 	 */
 	public function test_cleanup_can_be_switched_off(): void {
-		$this->client( 'old-tokenless', 30 );
+		$this->client( 'old-tokenless', 720 );
 		add_filter( 'albert/oauth/stale_client_days', '__return_zero' );
 
 		( new TokenCleanup() )->run();
@@ -230,21 +282,95 @@ class ClientCapTest extends TestCase {
 	}
 
 	/**
-	 * A full disconnect on the Connections screen deletes the client row.
+	 * A disconnected client keeps its row, so the app can be approved again, but stops counting.
 	 *
 	 * @return void
 	 */
-	public function test_full_revoke_deletes_the_client(): void {
-		$this->token( $this->client( 'to-disconnect', 10 ), true, true );
-		$this->token( $this->client( 'to-sign-out', 10 ), true, true );
+	public function test_a_disconnected_client_is_kept_but_stops_counting(): void {
+		$this->token( $this->client( 'disconnected', 48 ), 'live', 'live' );
 
-		$revoke = new \ReflectionMethod( Connections::class, 'revoke_client_tokens' );
-		$revoke->setAccessible( true );
-		$revoke->invoke( new Connections(), 'to-disconnect', true );
-		$revoke->invoke( new Connections(), 'to-sign-out', false );
+		( new ClientRepository() )->revokeAllTokens( 'disconnected' );
+		( new TokenCleanup() )->run();
 
-		$this->assertFalse( $this->exists( 'to-disconnect' ) );
-		$this->assertTrue( $this->exists( 'to-sign-out' ), 'Signing out keeps the client: it reconnects on its own.' );
+		$this->assertTrue( $this->exists( 'disconnected' ) );
+		$this->assertSame( 0, ( new ClientRepository() )->count_live_clients() );
+	}
+
+	/**
+	 * Expired tokens are as dead as revoked ones, for access and refresh alike.
+	 *
+	 * @return void
+	 */
+	public function test_expired_tokens_do_not_count(): void {
+		$this->token( $this->client( 'expired-access', 48 ), 'expired' );
+		$this->token( $this->client( 'expired-refresh', 48 ), 'revoked', 'expired' );
+
+		$this->assertSame( 0, ( new ClientRepository() )->count_live_clients() );
+	}
+
+	/**
+	 * The grace window is 24 hours.
+	 *
+	 * @return void
+	 */
+	public function test_the_grace_window_ends_after_a_day(): void {
+		$this->client( 'just-inside', 23 );
+		$this->client( 'just-outside', 25 );
+
+		$this->assertSame( 1, ( new ClientRepository() )->count_live_clients() );
+	}
+
+	/**
+	 * A client somebody is signing in with right now is not cleaned up.
+	 *
+	 * @return void
+	 */
+	public function test_cleanup_keeps_a_client_mid_sign_in(): void {
+		$this->auth_code( $this->client( 'signing-in', 240 ) );
+
+		( new TokenCleanup() )->run();
+
+		$this->assertTrue( $this->exists( 'signing-in' ) );
+	}
+
+	/**
+	 * A refused registration is reported, with the client's name.
+	 *
+	 * @return void
+	 */
+	public function test_a_refusal_fires_registration_rejected(): void {
+		$this->client( 'fresh-1', 0 );
+		$this->client( 'fresh-2', 0 );
+		$this->client( 'fresh-3', 0 );
+
+		$seen = [];
+		add_action(
+			'albert/oauth/registration_rejected',
+			static function ( string $reason, string $scheme, string $client_name ) use ( &$seen ): void {
+				$seen[] = [ $reason, $client_name ];
+			},
+			10,
+			3
+		);
+
+		$this->register();
+
+		$this->assertSame( [ [ 'client_limit_reached', 'New assistant' ] ], $seen );
+	}
+
+	/**
+	 * With the cap switched off, nothing is refused and nothing is shown.
+	 *
+	 * @return void
+	 */
+	public function test_no_cap_means_no_refusal_and_no_item(): void {
+		add_filter( 'albert/oauth/max_clients', '__return_zero', 20 );
+		$this->client( 'fresh-1', 0 );
+		$this->client( 'fresh-2', 0 );
+		$this->client( 'fresh-3', 0 );
+
+		$this->assertNotInstanceOf( WP_Error::class, $this->register() );
+		$this->assertNotContains( 'client-limit-reached', array_column( ( new Attention() )->items( 1 ), 'id' ) );
 	}
 
 	/**
@@ -255,11 +381,11 @@ class ClientCapTest extends TestCase {
 	public function test_attention_item_shows_only_while_the_cap_is_reached(): void {
 		$ids = static fn(): array => array_column( ( new Attention() )->items( 1 ), 'id' );
 
-		$this->token( $this->client( 'a', 10 ), true );
-		$this->token( $this->client( 'b', 10 ), true );
+		$this->token( $this->client( 'a', 240 ), 'live' );
+		$this->token( $this->client( 'b', 240 ), 'live' );
 		$this->assertNotContains( 'client-limit-reached', $ids() );
 
-		$this->token( $this->client( 'c', 10 ), true );
+		$this->token( $this->client( 'c', 240 ), 'live' );
 		$this->assertContains( 'client-limit-reached', $ids() );
 	}
 }
