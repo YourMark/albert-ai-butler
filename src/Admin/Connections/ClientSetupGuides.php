@@ -470,6 +470,14 @@ class ClientSetupGuides {
 						__( 'In Cline, open MCP Servers, then Remote Servers, and paste this address.', 'albert-ai-butler' ),
 						$endpoint
 					),
+					self::snippet(
+						'microsoft-copilot',
+						'Microsoft 365 Copilot',
+						$context['local']
+							? __( 'Connects from Microsoft’s cloud, so it needs this site on the internet. An administrator adds it in Copilot Studio as an MCP connector with OAuth.', 'albert-ai-butler' )
+							: __( 'An administrator adds it in Copilot Studio as an MCP connector with OAuth, using this address.', 'albert-ai-butler' ),
+						$endpoint
+					),
 					self::bridge( $context ),
 				],
 			]
