@@ -4,7 +4,7 @@ Tags: ai assistant, chatgpt, claude, ai, mcp
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.4.2
+Stable tag: 1.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -313,6 +313,9 @@ Fixes AI assistants failing to connect, including on managed hosts (such as Site
 Releases before 1.4.1 are listed in `changelog.txt`, bundled with the plugin.
 
 == Upgrade Notice ==
+
+= 1.5.0 =
+Adds safe mode, which holds destructive actions for your approval, and closes a way an assistant with an application password could reach your site's tools without Albert's sign-in. Recommended for everyone.
 
 = 1.4.2 =
 Fixes Claude Code and other AI assistants that could not connect, including on sites whose page addresses include /index.php/. Recommended if an assistant could not connect.
