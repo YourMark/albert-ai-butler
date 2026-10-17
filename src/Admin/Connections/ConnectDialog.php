@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Admin\Assets;
 use Albert\Admin\Dashboard\Suggestions;
+use Albert\Admin\InfoTip;
 use Albert\Core\Plugin;
 use Albert\MCP\Server as McpServer;
 
@@ -81,6 +82,12 @@ class ConnectDialog {
 			<span class="dashicons <?php echo esc_attr( self::location_icon( SiteLocation::current() ) ); ?>" aria-hidden="true" data-albert-location-icon></span>
 			<span data-albert-location-text><?php echo esc_html( self::location_sentence( SiteLocation::current(), SiteLocation::is_guess() ) ); ?></span>
 			<button type="button" class="button-link" data-albert-open-connect data-step="location"><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
+			<?php
+			InfoTip::render(
+				__( 'A local site runs only on your computer, for example in Local, Herd, Studio or Docker, and the internet cannot reach it. Apps on your computer, like Claude Desktop, Claude Code, Codex and Cursor, can still connect. Apps that connect from the cloud, like Claude on the web and ChatGPT, need a public site: one anyone can open at its address. Albert detects this from the site’s address, so change it if it is wrong.', 'albert-ai-butler' ),
+				__( 'local and public sites', 'albert-ai-butler' )
+			);
+			?>
 		</p>
 		<?php
 	}
