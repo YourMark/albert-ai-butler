@@ -12,6 +12,7 @@ namespace Albert\Admin\Connections;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\Core\Plugin;
 use Albert\MCP\Server as McpServer;
 
 /**
@@ -56,6 +57,77 @@ class ClaudeDesktopBundle implements Hookable {
 	 */
 	public function register_hooks(): void {
 		add_action( 'admin_post_' . self::ACTION, [ $this, 'download' ] );
+		add_action( 'rest_api_init', [ $this, 'register_done_route' ] );
+	}
+
+	/**
+	 * Register the page the bridge sends the browser to after sign-in.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function register_done_route(): void {
+		register_rest_route(
+			Plugin::rest_namespace(),
+			'/connect/done',
+			[
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'render_done_page' ],
+				// Says only "you can go back to Claude Desktop": nothing to protect.
+				'permission_callback' => '__return_true',
+			]
+		);
+	}
+
+	/**
+	 * Where the bridge sends the browser once the sign-in has finished.
+	 *
+	 * Without it the bridge shows its own page, written for its command line
+	 * ("return to the CLI"), which reads as an error to somebody who never
+	 * opened one. The bridge accepts only an address without a query string,
+	 * so a site on plain permalinks keeps the bridge's page.
+	 *
+	 * @return string The address, or '' when the bridge would refuse it.
+	 * @since 1.5.0
+	 */
+	public static function done_url(): string {
+		$url = rest_url( Plugin::rest_namespace() . '/connect/done' );
+
+		return str_contains( $url, '?' ) ? '' : $url;
+	}
+
+	/**
+	 * Print the page and stop: it is HTML, not a REST response.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function render_done_page(): void {
+		nocache_headers();
+		header( 'Content-Type: text/html; charset=utf-8' );
+
+		$site_name = get_bloginfo( 'name' );
+		?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+	<meta charset="<?php bloginfo( 'charset' ); ?>">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title><?php esc_html_e( 'Connected', 'albert-ai-butler' ); ?> - <?php echo esc_html( $site_name ); ?></title>
+		<?php wp_print_styles( 'albert-oauth-pages' ); ?>
+</head>
+<body>
+	<main class="albert-oauth">
+		<p class="albert-oauth__site"><?php echo esc_html( $site_name ); ?></p>
+		<article class="albert-oauth__card">
+			<h1 class="albert-oauth__title"><?php esc_html_e( 'Claude Desktop is connected', 'albert-ai-butler' ); ?></h1>
+			<p class="albert-oauth__text"><?php esc_html_e( 'You can close this tab and go back to Claude Desktop.', 'albert-ai-butler' ); ?></p>
+		</article>
+	</main>
+</body>
+</html>
+		<?php
+		exit;
 	}
 
 	/**
@@ -171,6 +243,10 @@ class ClaudeDesktopBundle implements Hookable {
 			// tool's certificate is usually only in there.
 			'NODE_USE_SYSTEM_CA' => '1',
 		];
+
+		if ( self::done_url() !== '' ) {
+			$env['ALBERT_AUTH_SUCCESS_URL'] = self::done_url();
+		}
 
 		if ( wp_parse_url( $endpoint, PHP_URL_SCHEME ) === 'https' && LocalCertificate::path() !== null ) {
 			$env['NODE_EXTRA_CA_CERTS'] = (string) LocalCertificate::path();

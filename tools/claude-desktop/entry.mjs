@@ -14,6 +14,12 @@ if ( ! url ) {
 
 const args = [ url, '--header', `User-Agent:${ process.env.ALBERT_USER_AGENT || 'Albert-ClaudeDesktop' }` ];
 
+// Albert's own "you're connected" page instead of the bridge's, which tells
+// people to return to a command line they never opened.
+if ( process.env.ALBERT_AUTH_SUCCESS_URL ) {
+	args.push( '--auth-success-url', process.env.ALBERT_AUTH_SUCCESS_URL );
+}
+
 process.argv = [ process.argv[ 0 ], fileURLToPath( import.meta.url ), ...args ];
 
 await import( 'mcp-remote/dist/proxy.js' );

@@ -69,14 +69,14 @@ class ConnectGuidesTest extends TestCase {
 	public function test_a_local_site_lists_apps_that_need_a_public_site_last(): void {
 		$guides = ClientSetupGuides::for_location( self::HTTP, SiteLocation::LOCAL );
 
-		$this->assertSame( [ 'claude-desktop', 'claude-code', 'cursor', 'vscode', 'other', 'claude', 'chatgpt' ], $this->ids( $guides ) );
+		$this->assertSame( [ 'claude-desktop', 'claude-code', 'codex', 'cursor', 'vscode', 'other', 'claude', 'chatgpt' ], $this->ids( $guides ) );
 
-		foreach ( array_slice( $guides, 5 ) as $guide ) {
+		foreach ( array_slice( $guides, 6 ) as $guide ) {
 			$this->assertTrue( $guide['needs_public'] );
 			$this->assertNotSame( '', $guide['unavailable'] );
 		}
 
-		$this->assertSame( 'Claude on the web and phone', $guides[5]['label'] );
+		$this->assertSame( 'Claude on the web and phone', $guides[6]['label'] );
 	}
 
 	/**
@@ -87,7 +87,7 @@ class ConnectGuidesTest extends TestCase {
 	public function test_a_public_site_needs_nothing_more(): void {
 		$guides = ClientSetupGuides::for_location( self::HTTPS, SiteLocation::PUBLIC );
 
-		$this->assertSame( [ 'claude', 'chatgpt', 'cursor', 'vscode', 'claude-code', 'other' ], $this->ids( $guides ) );
+		$this->assertSame( [ 'claude', 'chatgpt', 'cursor', 'vscode', 'claude-code', 'codex', 'other' ], $this->ids( $guides ) );
 		$this->assertSame( [], array_filter( array_column( $guides, 'needs_public' ) ) );
 	}
 

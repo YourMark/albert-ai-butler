@@ -144,6 +144,12 @@
 				return;
 			}
 
+			const appLink = target.closest( '[data-albert-app-link]' );
+			if ( appLink ) {
+				this.watchAppLink( appLink );
+				return;
+			}
+
 			const markPublic = target.closest( '[data-albert-mark-public]' );
 			if ( markPublic ) {
 				this.location = 'public';
@@ -223,6 +229,7 @@
 			this.dialog.querySelectorAll( '[data-albert-connect-where]' ).forEach( ( line ) => {
 				line.textContent = this.location === 'local' ? i18n.local : i18n.public;
 			} );
+			this.updateIcons();
 
 			let title = '';
 			let panel = null;
@@ -261,6 +268,44 @@
 				wait.hidden = true;
 				this.stopPolling();
 			}
+		},
+
+		/**
+		 * A computer for a local site, a globe for a public one, wherever the
+		 * location is shown.
+		 */
+		updateIcons() {
+			document.querySelectorAll( '[data-albert-location-icon]' ).forEach( ( icon ) => {
+				icon.classList.remove( 'dashicons-desktop', 'dashicons-admin-site-alt3' );
+				icon.classList.add( this.location === 'local' ? 'dashicons-desktop' : 'dashicons-admin-site-alt3' );
+			} );
+		},
+
+		/**
+		 * An app's own link (cursor:, vscode:) does nothing at all when the
+		 * app is missing. If the page still has focus a moment later, nothing
+		 * opened, so say what to do.
+		 *
+		 * @param {HTMLElement} link The link that was clicked.
+		 */
+		watchAppLink( link ) {
+			const step = link.closest( '.albert-guide-panel__step' );
+			const hint = step ? step.querySelector( '[data-albert-link-missing]' ) : null;
+			if ( ! hint ) {
+				return;
+			}
+
+			let left = false;
+			const onBlur = () => {
+				left = true;
+			};
+			window.addEventListener( 'blur', onBlur, { once: true } );
+			window.setTimeout( () => {
+				window.removeEventListener( 'blur', onBlur );
+				if ( ! left && document.hasFocus() ) {
+					hint.hidden = false;
+				}
+			}, 1500 );
 		},
 
 		focusTitle() {
@@ -327,6 +372,7 @@
 			if ( line ) {
 				line.textContent = this.location === 'local' ? i18n.local : i18n.public;
 			}
+			this.updateIcons();
 
 			try {
 				const response = await window.fetch( config.locationUrl, {
