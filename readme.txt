@@ -237,11 +237,19 @@ Adds safe mode, which holds destructive actions for your approval, and closes a 
 * In the rare case where a block's content genuinely can't be reproduced, the assistant is now told clearly, instead of the block being saved empty as if it had worked.
 * Pages your assistant builds with blocks no longer raise a WordPress debug notice each time they are shown. Pages built before this update stop once they are saved again in the editor.
 * Asking your assistant to change a layout block's settings, such as a group's background, could remove everything inside it. The contents now stay, unless the assistant explicitly replaces them.
+* Apps that sign in with their own kind of link, such as Cursor, could not connect: every attempt ended in "Invalid Request". They now connect.
+* Long text in the list of people who may connect an assistant now wraps instead of being cut off.
+* The Dashboard's Albert for WooCommerce recommendation now opens the add-on's own page.
+* When another plugin switched off the MCP adapter's built-in tools (AI Workflow Automation does this), assistants could sign in but saw no tools at all. Albert now adds the three tools it needs when they are missing, without replacing anyone else's.
+* Claude Code could not connect on hosts such as SiteGround that answer part of the sign-in discovery themselves: it stopped with "Dynamic Client Registration rejected" before the approval screen. It now connects.
+* After about twenty connection attempts, including ones never finished and apps you had disconnected, no new assistant could connect at all and nothing said why. Only connections that still work count towards the limit now, old unused ones are cleaned up, and the Dashboard tells you if the limit is ever reached.
 
 **Security**
 
 * Albert now closes an unused extra way in. An AI assistant that held a WordPress application password could previously reach your site's tools without going through Albert's sign-in, the list of people you allow to connect, or the approval screen — and it left no record under Connections. That entry point is switched off, so assistants must connect the approved way.
 * Your assistant can no longer pick or change a WordPress password. Creating a user previously meant the assistant invented a password and sent it to your site, which also left it sitting in the AI provider's record of the conversation. Now your site generates the password itself and hands back a one-time link for the new person to set their own. Changing an existing user's password is refused outright: that account's owner can reset it from the login screen, and nobody else needs to.
+* When you deny an app, or its sign-in fails, Albert now sends the app's own reference back to it safely encoded, so a crafted value can no longer add extra parameters to the address the app is sent back to.
+* Albert now refuses to register an app whose return address contains spaces or hidden control characters.
 
 **Developer**
 
@@ -253,10 +261,14 @@ Adds safe mode, which holds destructive actions for your approval, and closes a 
 * New read-only pattern abilities `albert/find-patterns` and `albert/view-pattern`. They expose theme- and plugin-registered patterns (`WP_Block_Patterns_Registry`) and user `wp_block` patterns: find returns summaries filterable by search term and category, view returns one pattern's block markup by name. Backed by `Albert\Blocks\PatternCatalog`; each pattern carries a `source` of `registered` or `user`, plus a `syncStatus` and, for user patterns, an `id`, so a synced pattern can be reused by reference (`core/block`) rather than copied. `albert/create-pattern` composes blocks through the serializer and stores them as a wp_block pattern, synced or unsynced. `albert/update-pattern` and `albert/delete-pattern` edit and remove user patterns (registered patterns are read-only).
 * Adds `BlockSchema::markup_sourced_attributes()` and `BlockSchema::text_sourced_attributes()`, which report which of a block's attributes are stored in its saved markup, read from the block registry.
 * New `albert_connect` capability, granted to administrators and to everyone on the allowed list for as long as they are on it (`Admin\Connections\ConnectCapability`). It gates the Connect page, the connect dialog's REST routes (`albert/v1/connect/status`, `albert/v1/connect/location`) and the Claude Desktop download.
+* The authorize endpoint no longer runs `redirect_uri` through `esc_url_raw()`, which emptied schemes WordPress does not know, such as `cursor://anysphere.cursor-mcp/oauth/callback`. The URI is kept as sent and must exactly match a registered one. Dynamic client registration refuses a redirect URI containing whitespace or a control character, and denials and OAuth errors return `state` URL-encoded.
+* The server metadata now declares `subject_types_supported` and `id_token_signing_alg_values_supported` (from `Jwks::ALGORITHM`), which clients validating the `openid-configuration` document as OpenID Connect metadata require. Albert still issues no ID tokens and offers no `openid` scope.
+* The client registration cap counts live clients plus those registered in the last 24 hours (`ClientRepository::count_live_clients()`). The nightly token cleanup deletes clients older than 7 days with no tokens and no sign-in in progress; new filter `albert/oauth/stale_client_days`, 0 keeps them. A refusal at the cap fires `albert/oauth/registration_rejected` with `client_limit_reached`.
 
 **Credits**
 
 * [David Beentjes](https://github.com/unlocdavid) for helping fix the lost block contents.
+* [Rodolfo Melogli](https://profiles.wordpress.org/businessbloomer/) for reporting the Claude Code connection failure on SiteGround.
 
 = 1.4.2 =
 Fixes AI assistants that could not connect to some sites.
