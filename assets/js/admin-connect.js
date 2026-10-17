@@ -40,6 +40,7 @@
 		clockOffset: 0,
 		channel: null,
 		connection: null,
+		downOnBackdrop: false,
 
 		init() {
 			this.dialog = document.querySelector( '[data-albert-connect]' );
@@ -128,8 +129,10 @@
 		onClick( event ) {
 			const target = event.target;
 
-			if ( this.downOnBackdrop && this.isBackdrop( event ) ) {
-				this.downOnBackdrop = false;
+			const fromBackdrop = this.downOnBackdrop;
+			this.downOnBackdrop = false;
+
+			if ( fromBackdrop && this.isBackdrop( event ) ) {
 				this.dialog.close();
 				return;
 			}
