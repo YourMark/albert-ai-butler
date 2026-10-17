@@ -63,7 +63,7 @@ class SetupInviteTest extends TestCase {
 
 		$mail = tests_retrieve_phpmailer_instance()->get_sent();
 		$this->assertSame( 'jan@example.test', $mail->to[0][0] );
-		$this->assertStringContainsString( ConnectPage::setup_url(), $mail->body );
+		$this->assertStringContainsString( esc_url( ConnectPage::setup_url( $editor ) ), $mail->body );
 		$this->assertStringContainsString( 'Mark Jansen', $mail->body );
 	}
 
