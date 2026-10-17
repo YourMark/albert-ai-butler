@@ -22,11 +22,8 @@ use WP_REST_Response;
 /**
  * Two routes: has my new connection arrived yet, and where is this site.
  *
- * Both act on the signed-in person only. Status reports their own
- * connections, never anyone else's. Saving the location writes the site's
- * answer for someone who may manage options, and only the person's own answer
- * for anyone else on the allowed list: a wrong site-wide answer would mislead
- * everybody else.
+ * Status reports the signed-in person's own connections, never anyone
+ * else's. Saving the location is for administrators only.
  *
  * @since 1.5.0
  */
@@ -72,7 +69,7 @@ class ConnectController implements Hookable {
 			[
 				'methods'             => 'POST',
 				'callback'            => [ $this, 'save_location' ],
-				'permission_callback' => [ $this, 'can_connect' ],
+				'permission_callback' => [ $this, 'can_change_location' ],
 				'args'                => [
 					'location' => [
 						'type'     => 'string',
@@ -92,6 +89,17 @@ class ConnectController implements Hookable {
 	 */
 	public function can_connect(): bool {
 		return current_user_can( ConnectCapability::CAPABILITY );
+	}
+
+	/**
+	 * Who may say where the site runs: administrators. It is the site's answer,
+	 * and a wrong one would mislead everybody else who connects.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public function can_change_location(): bool {
+		return current_user_can( 'manage_options' );
 	}
 
 	/**
@@ -129,15 +137,8 @@ class ConnectController implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function save_location( WP_REST_Request $request ): WP_REST_Response {
-		$location = (string) $request->get_param( 'location' );
-		$user_id  = get_current_user_id();
+		SiteLocation::save( (string) $request->get_param( 'location' ) );
 
-		if ( current_user_can( 'manage_options' ) ) {
-			SiteLocation::save( $location );
-		} else {
-			SiteLocation::save_for_user( $user_id, $location );
-		}
-
-		return new WP_REST_Response( [ 'location' => SiteLocation::current( $user_id ) ] );
+		return new WP_REST_Response( [ 'location' => SiteLocation::current() ] );
 	}
 }

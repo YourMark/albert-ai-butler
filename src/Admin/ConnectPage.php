@@ -160,7 +160,7 @@ class ConnectPage implements Hookable {
 
 		$endpoint = McpServer::get_endpoint_url();
 		$user_id  = get_current_user_id();
-		$guides   = ClientSetupGuides::for_location( $endpoint, SiteLocation::current( $user_id ) );
+		$guides   = ClientSetupGuides::for_location( $endpoint, SiteLocation::current() );
 
 		?>
 		<div class="wrap albert-connections albert-connect-page">

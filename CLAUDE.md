@@ -599,9 +599,9 @@ site, how to set one up, who may authorise one, and what is connected.
 guesses whether the MCP endpoint is public or only reachable on this computer
 (local suffixes such as `.test`, private and loopback IPs, single-label hosts,
 or `WP_ENVIRONMENT_TYPE` `local` while the endpoint is the site's own address).
-The guess reads as one ("Albert thinks…"), an administrator can save the answer
-for the site (`albert_site_location`), and a user who may not change site
-settings picks for themselves only (user meta of the same name). It decides the
+The guess reads as one ("Detected: …"), and only an administrator can save the
+answer for the site (`albert_site_location`): it is the site's answer, and a
+wrong one would mislead everybody else who connects. It decides the
 order of the apps and marks Claude on the web and ChatGPT as needing a public
 site on a local one, with the reason and an alternative. It never removes an
 app: an earlier version (`Support\HostClassifier`) hid guides by host and that
@@ -653,8 +653,8 @@ It gates `Admin\ConnectPage` (the dialog, the MCP URL and the person's own
 connections with a Revoke that drops only their tokens,
 `ClientRepository::revokeUserTokens()`), the dialog's REST routes and the Claude
 Desktop download. Nothing else: logs, settings, abilities and other people's
-connections stay `manage_options`. A non-administrator's location answer is
-saved for them only. Administrators keep Connections; the Connect page is out of
+connections stay `manage_options`, and so does saying where the site runs: a
+non-administrator sees it but cannot change it. Administrators keep Connections; the Connect page is out of
 their menu but reachable, and "Copy setup link" in Who may connect hands a
 non-administrator a link that opens the dialog on arrival.
 

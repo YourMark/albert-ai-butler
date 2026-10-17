@@ -48,6 +48,9 @@
 			}
 
 			this.location = this.dialog.dataset.location || 'public';
+			// Only an administrator says where the site runs; everyone else
+			// starts at the app question, and the dialog has two steps.
+			this.canChange = this.dialog.dataset.canChange === '1';
 			// Server seconds minus browser seconds, so "since" is the server's clock.
 			this.clockOffset = parseInt( this.dialog.dataset.serverTime, 10 ) - Math.floor( Date.now() / 1000 );
 
@@ -90,7 +93,7 @@
 			const app = opener.dataset.app || '';
 			const guess = this.dialog.dataset.guess === '1';
 
-			if ( opener.dataset.step === 'location' || ( guess && ! app ) ) {
+			if ( this.canChange && ( opener.dataset.step === 'location' || ( guess && ! app ) ) ) {
 				this.show( 'location' );
 			} else if ( app ) {
 				this.chooseApp( app );
@@ -251,10 +254,11 @@
 				this.dialog.querySelector( '[data-albert-connect-title]' ).textContent = title;
 			}
 
+			const offset = this.canChange ? 0 : 1;
 			const number = { location: 1, app: 2, steps: 3 }[ step ];
-			this.dialog.querySelector( '[data-albert-connect-progress]' ).textContent = number ? format( i18n.progress, number, 3 ) : '';
+			this.dialog.querySelector( '[data-albert-connect-progress]' ).textContent = number ? format( i18n.progress, number - offset, 3 - offset ) : '';
 
-			this.dialog.querySelector( '[data-albert-connect-back]' ).hidden = step === 'location' || step === 'done';
+			this.dialog.querySelector( '[data-albert-connect-back]' ).hidden = step === 'location' || step === 'done' || ( step === 'app' && ! this.canChange );
 			this.dialog.querySelector( '[data-albert-connect-next]' ).hidden = step === 'steps' || step === 'done';
 			this.dialog.querySelector( '[data-albert-connect-done]' ).hidden = step !== 'done';
 

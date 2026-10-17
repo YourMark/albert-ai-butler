@@ -119,19 +119,18 @@ class ConnectForAllowedUsersTest extends TestCase {
 	}
 
 	/**
-	 * Someone who is not an administrator saves the location for themselves only.
+	 * Only an administrator says where the site runs.
 	 *
 	 * @return void
 	 */
-	public function test_a_non_administrator_saves_the_location_for_themselves(): void {
+	public function test_only_an_administrator_changes_the_location(): void {
 		AllowedUsers::add( $this->editor );
 		wp_set_current_user( $this->editor );
 
 		$request = new WP_REST_Request( 'POST', '/albert/v1/connect/location' );
 		$request->set_param( 'location', SiteLocation::LOCAL );
 
-		$this->assertSame( 200, rest_do_request( $request )->get_status() );
+		$this->assertSame( 403, rest_do_request( $request )->get_status() );
 		$this->assertSame( '', SiteLocation::saved() );
-		$this->assertSame( SiteLocation::LOCAL, SiteLocation::current( $this->editor ) );
 	}
 }

@@ -79,9 +79,11 @@ class ConnectDialog {
 	public static function render_location_line(): void {
 		?>
 		<p class="albert-connect-location" data-albert-location-line>
-			<span class="dashicons <?php echo esc_attr( self::location_icon( SiteLocation::current( get_current_user_id() ) ) ); ?>" aria-hidden="true" data-albert-location-icon></span>
-			<span data-albert-location-text><?php echo esc_html( self::location_sentence( SiteLocation::current( get_current_user_id() ), SiteLocation::is_guess( get_current_user_id() ) ) ); ?></span>
-			<button type="button" class="button-link" data-albert-open-connect data-step="location"><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
+			<span class="dashicons <?php echo esc_attr( self::location_icon( SiteLocation::current() ) ); ?>" aria-hidden="true" data-albert-location-icon></span>
+			<span data-albert-location-text><?php echo esc_html( self::location_sentence( SiteLocation::current(), SiteLocation::is_guess() ) ); ?></span>
+			<?php if ( current_user_can( 'manage_options' ) ) { ?>
+				<button type="button" class="button-link" data-albert-open-connect data-step="location"><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
+			<?php } ?>
 			<?php
 			InfoTip::render(
 				__( 'A local site runs only on your computer, for example in Local, Herd, Studio or Docker, and the internet cannot reach it. Apps on your computer, like Claude Desktop, Claude Code, Codex and Cursor, can still connect. Apps that connect from the cloud, like Claude on the web and ChatGPT, need a public site: one anyone can open at its address. Albert detects this from the site’s address, so change it if it is wrong.', 'albert-ai-butler' ),
@@ -101,7 +103,7 @@ class ConnectDialog {
 	public static function render(): void {
 		$endpoint = McpServer::get_endpoint_url();
 		$user_id  = get_current_user_id();
-		$location = SiteLocation::current( $user_id );
+		$location = SiteLocation::current();
 		$guides   = [
 			SiteLocation::PUBLIC => ClientSetupGuides::for_location( $endpoint, SiteLocation::PUBLIC ),
 			SiteLocation::LOCAL  => ClientSetupGuides::for_location( $endpoint, SiteLocation::LOCAL ),
@@ -114,7 +116,8 @@ class ConnectDialog {
 			aria-labelledby="albert-connect-title"
 			data-albert-connect
 			data-location="<?php echo esc_attr( $location ); ?>"
-			data-guess="<?php echo SiteLocation::is_guess( $user_id ) ? '1' : '0'; ?>"
+			data-guess="<?php echo SiteLocation::is_guess() ? '1' : '0'; ?>"
+			data-can-change="<?php echo current_user_can( 'manage_options' ) ? '1' : '0'; ?>"
 			data-server-time="<?php echo esc_attr( (string) time() ); ?>">
 			<div class="albert-dialog__header">
 				<div class="albert-dialog__heading">
@@ -171,7 +174,7 @@ class ConnectDialog {
 				</legend>
 				<?php foreach ( $options as $value => [ $label, $description ] ) { ?>
 					<label class="albert-choice">
-						<input type="radio" name="albert-connect-location" value="<?php echo esc_attr( $value ); ?>" <?php checked( SiteLocation::current( get_current_user_id() ), $value ); ?> aria-describedby="albert-connect-location-<?php echo esc_attr( $value ); ?>">
+						<input type="radio" name="albert-connect-location" value="<?php echo esc_attr( $value ); ?>" <?php checked( SiteLocation::current(), $value ); ?> aria-describedby="albert-connect-location-<?php echo esc_attr( $value ); ?>">
 						<span class="dashicons <?php echo esc_attr( self::location_icon( $value ) ); ?> albert-choice__icon" aria-hidden="true"></span>
 						<span class="albert-choice__text">
 							<span class="albert-choice__label"><?php echo esc_html( $label ); ?></span>
@@ -180,9 +183,6 @@ class ConnectDialog {
 					</label>
 				<?php } ?>
 			</fieldset>
-			<?php if ( ! current_user_can( 'manage_options' ) ) { ?>
-				<p class="albert-connect__context"><?php esc_html_e( 'This changes it for you only. An administrator can change it for the site.', 'albert-ai-butler' ); ?></p>
-			<?php } ?>
 		</section>
 		<?php
 	}
@@ -334,7 +334,9 @@ class ConnectDialog {
 		<p class="albert-connect__context albert-connect-location">
 			<span class="dashicons" aria-hidden="true" data-albert-location-icon></span>
 			<span data-albert-connect-where></span>
-			<button type="button" class="button-link" data-albert-connect-change><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
+			<?php if ( current_user_can( 'manage_options' ) ) { ?>
+				<button type="button" class="button-link" data-albert-connect-change><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
+			<?php } ?>
 		</p>
 		<?php
 	}
