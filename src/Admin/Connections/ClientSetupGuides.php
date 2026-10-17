@@ -226,13 +226,13 @@ class ClientSetupGuides {
 	 * @since 1.4.0
 	 */
 	private static function claude_code( array $context ): array {
-		$command = sprintf( 'claude mcp add --transport http --scope user albert %s', $context['endpoint'] );
+		$command = sprintf( 'claude mcp add --transport http --scope user albert %s', self::shell_arg( $context['endpoint'] ) );
 
 		$notes = self::http_note( $context );
 		if ( $context['local'] && ! $context['http'] ) {
 			$notes[] = self::note(
 				__( 'If Claude Code says it can’t verify the site’s certificate, start it with this command instead:', 'albert-ai-butler' ),
-				sprintf( 'NODE_EXTRA_CA_CERTS="%s" claude', self::local_root_certificate() ),
+				sprintf( 'NODE_EXTRA_CA_CERTS=%s claude', self::shell_arg( self::local_root_certificate() ) ),
 				true
 			);
 		}
@@ -270,7 +270,7 @@ class ClientSetupGuides {
 				'label' => 'Codex',
 				'icon'  => 'codex',
 				'steps' => [
-					self::step( __( 'Run this command in your terminal.', 'albert-ai-butler' ), self::copy( __( 'Copy', 'albert-ai-butler' ), sprintf( 'codex mcp add albert --url %s', $context['endpoint'] ) ) ),
+					self::step( __( 'Run this command in your terminal.', 'albert-ai-butler' ), self::copy( __( 'Copy', 'albert-ai-butler' ), sprintf( 'codex mcp add albert --url %s', self::shell_arg( $context['endpoint'] ) ) ) ),
 					self::step( __( 'Then run this one to sign in.', 'albert-ai-butler' ), self::copy( __( 'Copy', 'albert-ai-butler' ), 'codex mcp login albert' ) ),
 					self::approve_step(),
 				],
@@ -441,7 +441,7 @@ class ClientSetupGuides {
 						'Gemini CLI',
 						/* translators: %s: the Gemini CLI sign-in command. */
 						sprintf( __( 'Run in your terminal, then type %s in Gemini CLI to sign in.', 'albert-ai-butler' ), '/mcp auth albert' ),
-						sprintf( 'gemini mcp add --transport http albert %s', $endpoint )
+						sprintf( 'gemini mcp add --transport http albert %s', self::shell_arg( $endpoint ) )
 					),
 					self::snippet(
 						'opencode',
@@ -513,6 +513,24 @@ class ClientSetupGuides {
 			self::json_snippet( [ 'mcpServers' => [ 'albert' => $server ] ] ),
 			true
 		);
+	}
+
+	/**
+	 * A value for a pasted terminal command, quoted only when the shell would
+	 * read it differently: a plain-permalink `?rest_route=` URL or a path
+	 * with spaces.
+	 *
+	 * @param string $value The value.
+	 *
+	 * @return string
+	 * @since 1.5.0
+	 */
+	private static function shell_arg( string $value ): string {
+		if ( preg_match( '#^[A-Za-z0-9_./:@%+=,~-]+$#', $value ) === 1 ) {
+			return $value;
+		}
+
+		return "'" . str_replace( "'", "'\\''", $value ) . "'";
 	}
 
 	/**

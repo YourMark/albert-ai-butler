@@ -71,10 +71,10 @@ class GuidePanel {
 			<ol class="albert-guide-panel__steps">
 				<?php foreach ( $guide['steps'] as $index => $step ) { ?>
 					<li class="albert-guide-panel__step">
-						<span class="albert-guide-panel__text"><?php echo esc_html( $step['text'] ); ?></span>
+						<span class="albert-guide-panel__text" id="<?php echo esc_attr( $base . '-step-' . $index . '-text' ); ?>"><?php echo esc_html( $step['text'] ); ?></span>
 						<?php
 						if ( $step['action'] !== null ) {
-							self::render_action( $step['action'], $base . '-step-' . $index );
+							self::render_action( $step['action'], $base . '-step-' . $index, $base . '-step-' . $index . '-text' );
 						}
 						?>
 					</li>
@@ -136,15 +136,16 @@ class GuidePanel {
 	/**
 	 * A step's one action: a link that opens an app, or something to copy.
 	 *
-	 * @param AlbertGuideAction $action The action.
-	 * @param string            $id     Element id for a copy block.
+	 * @param AlbertGuideAction $action       The action.
+	 * @param string            $id           Element id for a copy block.
+	 * @param string            $described_by The step text's id, naming what a Copy button copies.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	private static function render_action( array $action, string $id ): void {
+	private static function render_action( array $action, string $id, string $described_by ): void {
 		if ( $action['type'] === 'copy' ) {
-			self::render_code( $action['value'], $id );
+			self::render_code( $action['value'], $id, '', $described_by );
 			return;
 		}
 
@@ -178,10 +179,10 @@ class GuidePanel {
 			<div class="albert-guide-panel__note">
 				<span class="dashicons dashicons-info-outline" aria-hidden="true"></span>
 				<div class="albert-guide-panel__note-body">
-					<p><?php echo esc_html( $note['text'] ); ?></p>
+					<p id="<?php echo esc_attr( $base . '-note-' . $index . '-text' ); ?>"><?php echo esc_html( $note['text'] ); ?></p>
 					<?php
 					if ( $note['command'] !== '' ) {
-						self::render_code( $note['command'], $base . '-note-' . $index );
+						self::render_code( $note['command'], $base . '-note-' . $index, '', $base . '-note-' . $index . '-text' );
 					}
 					?>
 				</div>
@@ -209,11 +210,11 @@ class GuidePanel {
 			<h3 class="albert-guide-panel__more-title"><?php esc_html_e( 'Steps for a specific app', 'albert-ai-butler' ); ?></h3>
 			<?php foreach ( $more as $item ) { ?>
 				<details class="albert-guide-panel__fold<?php echo $item['quiet'] ? ' albert-guide-panel__fold--quiet' : ''; ?>">
-					<summary><?php echo esc_html( $item['label'] ); ?></summary>
+					<summary id="<?php echo esc_attr( $base . '-' . $item['id'] . '-name' ); ?>"><?php echo esc_html( $item['label'] ); ?></summary>
 					<?php if ( $item['hint'] !== '' ) { ?>
 						<p class="albert-guide-panel__hint"><?php echo esc_html( $item['hint'] ); ?></p>
 					<?php } ?>
-					<?php self::render_code( $item['snippet'], $base . '-' . $item['id'] ); ?>
+					<?php self::render_code( $item['snippet'], $base . '-' . $item['id'], '', $base . '-' . $item['id'] . '-name' ); ?>
 				</details>
 			<?php } ?>
 		</div>
@@ -223,14 +224,20 @@ class GuidePanel {
 	/**
 	 * A code block with its Copy button.
 	 *
-	 * @param string $code  What to show and copy.
-	 * @param string $id    Element id.
-	 * @param string $label A visible label above the block, or ''.
+	 * A panel holds several Copy buttons, so each is described by the text it
+	 * belongs to; a block that scrolls sideways takes focus so a keyboard can
+	 * scroll it.
+	 *
+	 * @param string $code         What to show and copy.
+	 * @param string $id           Element id.
+	 * @param string $label        A visible label above the block, or ''.
+	 * @param string $described_by The id of the text the block belongs to, when there is no label.
 	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
-	private static function render_code( string $code, string $id, string $label = '' ): void {
+	private static function render_code( string $code, string $id, string $label = '', string $described_by = '' ): void {
+		$name_id = $label !== '' ? $id . '-label' : $described_by;
 		?>
 		<div class="albert-guide-panel__code">
 			<?php if ( $label !== '' ) { ?>
@@ -238,11 +245,11 @@ class GuidePanel {
 			<?php } ?>
 			<?php if ( str_contains( $code, "\n" ) ) { ?>
 				<?php // A config block keeps its indentation and scrolls rather than rewrapping. ?>
-				<pre class="albert-guide-panel__block" id="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $code ); ?></pre>
+				<pre class="albert-guide-panel__block" id="<?php echo esc_attr( $id ); ?>" tabindex="0" role="region"<?php echo $name_id !== '' ? ' aria-labelledby="' . esc_attr( $name_id ) . '"' : ' aria-label="' . esc_attr__( 'Code', 'albert-ai-butler' ) . '"'; ?>><?php echo esc_html( $code ); ?></pre>
 			<?php } else { ?>
 				<pre id="<?php echo esc_attr( $id ); ?>"><?php echo self::wrap_at_spaces( $code ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every token is escaped inside. ?></pre>
 			<?php } ?>
-			<button type="button" class="button button-secondary albert-copy-button" data-copy-target="<?php echo esc_attr( $id ); ?>"<?php echo $label !== '' ? ' aria-describedby="' . esc_attr( $id ) . '-label"' : ''; ?>>
+			<button type="button" class="button button-secondary albert-copy-button" data-copy-target="<?php echo esc_attr( $id ); ?>"<?php echo $name_id !== '' ? ' aria-describedby="' . esc_attr( $name_id ) . '"' : ''; ?>>
 				<?php esc_html_e( 'Copy', 'albert-ai-butler' ); ?>
 			</button>
 		</div>

@@ -16,9 +16,12 @@
 	const config = window.albertConnect || {};
 	const i18n = config.i18n || {};
 
-	// How often to ask, and when to offer "Not connected yet?".
+	// Ask every 3 seconds, slowing to 10; offer "Not connected yet?" after two
+	// minutes and stop asking after ten, so a forgotten tab goes quiet.
 	const POLL_MS = 3000;
+	const POLL_MAX_MS = 10000;
 	const STUCK_MS = 120000;
+	const GIVE_UP_MS = 600000;
 
 	const format = ( text, ...values ) => {
 		let index = 0;
@@ -36,6 +39,11 @@
 		opener: null,
 		pollTimer: 0,
 		stuckTimer: 0,
+		polling: false,
+		inFlight: false,
+		pollDelay: POLL_MS,
+		pollStarted: 0,
+		waitingFor: '',
 		since: 0,
 		clockOffset: 0,
 		channel: null,
@@ -76,7 +84,13 @@
 				this.channel.addEventListener( 'message', () => this.poll() );
 			}
 
+			// Coming back from the app is the likeliest moment it just connected.
 			window.addEventListener( 'focus', () => this.poll() );
+			document.addEventListener( 'visibilitychange', () => {
+				if ( document.visibilityState === 'visible' ) {
+					this.poll();
+				}
+			} );
 		},
 
 		open( opener ) {
@@ -194,6 +208,10 @@
 			if ( event.target.name === 'albert-connect-location' ) {
 				this.location = event.target.value;
 			}
+
+			if ( event.target.name.startsWith( 'albert-connect-app-' ) ) {
+				this.showAppError( false );
+			}
 		},
 
 		next() {
@@ -205,7 +223,7 @@
 			} else if ( this.step === 'app' ) {
 				const chosen = this.dialog.querySelector( `input[name="albert-connect-app-${ this.location }"]:checked` );
 				if ( ! chosen ) {
-					chosenFallback( this.dialog, this.location );
+					this.showAppError( true );
 					return;
 				}
 				this.chooseApp( chosen.value );
@@ -229,8 +247,36 @@
 			this.show( 'steps' );
 		},
 
+		/**
+		 * Say why Continue did nothing, and move to the choices.
+		 *
+		 * @param {boolean} visible Whether to show the message.
+		 */
+		showAppError( visible ) {
+			const message = this.dialog.querySelector( '[data-albert-connect-app-error]' );
+			const list = this.dialog.querySelector( `[data-albert-connect-apps="${ CSS.escape( this.location ) }"]` );
+
+			message.hidden = ! visible;
+			if ( list ) {
+				if ( visible ) {
+					list.setAttribute( 'aria-describedby', 'albert-connect-app-error' );
+				} else {
+					list.removeAttribute( 'aria-describedby' );
+				}
+			}
+
+			if ( visible ) {
+				announce( i18n.chooseApp );
+				const first = list ? list.querySelector( 'input' ) : null;
+				if ( first ) {
+					first.focus();
+				}
+			}
+		},
+
 		show( step ) {
 			this.step = step;
+			this.showAppError( false );
 
 			this.dialog.querySelectorAll( '[data-albert-connect-step]' ).forEach( ( section ) => {
 				section.hidden = section.dataset.albertConnectStep !== step;
@@ -276,7 +322,10 @@
 			if ( step === 'steps' && panel && panel.dataset.waits === '1' ) {
 				wait.hidden = false;
 				this.dialog.querySelector( '[data-albert-connect-stuck]' ).hidden = true;
-				this.dialog.querySelector( '[data-albert-connect-wait-text]' ).textContent = format( i18n.waiting, panel.dataset.appName );
+				const waiting = format( i18n.waiting, panel.dataset.appName );
+				this.dialog.querySelector( '[data-albert-connect-wait-text]' ).textContent = waiting;
+				// A status region that appears already filled is often not read.
+				announce( waiting );
 				this.startPolling( panel.dataset.appName );
 			} else {
 				wait.hidden = true;
@@ -328,24 +377,56 @@
 
 		startPolling( appName ) {
 			this.stopPolling();
-			this.pollTimer = window.setInterval( () => this.poll(), POLL_MS );
+			this.polling = true;
+			this.waitingFor = appName;
+			this.pollDelay = POLL_MS;
+			this.pollStarted = Date.now();
+			this.schedulePoll();
 			this.stuckTimer = window.setTimeout( () => {
 				this.dialog.querySelector( '[data-albert-connect-stuck]' ).hidden = false;
-				this.dialog.querySelector( '[data-albert-connect-wait-text]' ).textContent = format( i18n.stillWait, appName );
+				this.setWaitText( format( i18n.stillWait, appName ) );
 			}, STUCK_MS );
 		},
 
+		schedulePoll() {
+			window.clearTimeout( this.pollTimer );
+			this.pollTimer = window.setTimeout( () => this.poll(), this.pollDelay );
+			this.pollDelay = Math.min( POLL_MAX_MS, Math.round( this.pollDelay * 1.25 ) );
+		},
+
 		stopPolling() {
-			window.clearInterval( this.pollTimer );
+			window.clearTimeout( this.pollTimer );
 			window.clearTimeout( this.stuckTimer );
 			this.pollTimer = 0;
+			this.polling = false;
+		},
+
+		/**
+		 * Stop waiting and say why, leaving the dialog open.
+		 *
+		 * @param {string} message What to show.
+		 */
+		giveUp( message ) {
+			this.stopPolling();
+			this.dialog.querySelector( '[data-albert-connect-stuck]' ).hidden = false;
+			this.setWaitText( message );
+		},
+
+		setWaitText( text ) {
+			this.dialog.querySelector( '[data-albert-connect-wait-text]' ).textContent = text;
 		},
 
 		async poll() {
-			if ( ! this.dialog || ! this.dialog.open || this.step !== 'steps' || ! this.pollTimer ) {
+			if ( ! this.polling || this.inFlight || ! this.dialog.open || this.step !== 'steps' ) {
 				return;
 			}
 
+			if ( Date.now() - this.pollStarted > GIVE_UP_MS ) {
+				this.giveUp( format( i18n.gaveUp, this.waitingFor ) );
+				return;
+			}
+
+			this.inFlight = true;
 			try {
 				const url = new URL( config.statusUrl );
 				url.searchParams.set( 'since', String( this.since ) );
@@ -353,13 +434,26 @@
 					credentials: 'same-origin',
 					headers: { 'X-WP-Nonce': config.nonce },
 				} );
-				const data = await response.json();
 
-				if ( response.ok && data.connected ) {
+				// An expired login or nonce never recovers by asking again.
+				if ( response.status === 401 || response.status === 403 ) {
+					this.giveUp( i18n.expired );
+					return;
+				}
+
+				const data = response.ok ? await response.json() : null;
+				if ( data && data.connected && this.polling ) {
 					this.succeed( data );
+					return;
 				}
 			} catch ( error ) {
-				// A missed poll is retried on the next tick.
+				// A network blip: the next tick asks again.
+			} finally {
+				this.inFlight = false;
+			}
+
+			if ( this.polling ) {
+				this.schedulePoll();
 			}
 		},
 
@@ -372,9 +466,7 @@
 			title.textContent = format( i18n.connected, data.name );
 			this.dialog.querySelector( '[data-albert-connect-signed-in]' ).textContent = format( i18n.signedIn, data.user );
 
-			if ( window.Albert && window.Albert.liveRegion ) {
-				window.Albert.liveRegion.announce( `${ title.textContent }. ${ format( i18n.signedIn, data.user ) }` );
-			}
+			announce( `${ title.textContent }. ${ format( i18n.signedIn, data.user ) }` );
 
 			this.dialog.querySelector( '[data-albert-connect-done]' ).focus();
 		},
@@ -399,23 +491,19 @@
 					throw new Error( String( response.status ) );
 				}
 			} catch ( error ) {
-				if ( window.Albert && window.Albert.liveRegion ) {
-					window.Albert.liveRegion.announce( i18n.saveError );
-				}
+				announce( i18n.saveError );
 			}
 		},
 	};
 
 	/**
-	 * Nothing chosen yet: move focus to the first choice instead of moving on.
+	 * Read a message out through the shared live region.
 	 *
-	 * @param {HTMLElement} dialog   The dialog.
-	 * @param {string}      location The location whose list is showing.
+	 * @param {string} message The message.
 	 */
-	function chosenFallback( dialog, location ) {
-		const first = dialog.querySelector( `input[name="albert-connect-app-${ location }"]` );
-		if ( first ) {
-			first.focus();
+	function announce( message ) {
+		if ( message && window.Albert && window.Albert.liveRegion ) {
+			window.Albert.liveRegion.announce( message );
 		}
 	}
 

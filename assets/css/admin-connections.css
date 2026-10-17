@@ -700,7 +700,3 @@ a.albert-badge:focus-visible {
 	box-shadow: inset 3px 0 0 var(--albert-color-accent);
 }
 
-.albert-connlist__toolbar[hidden],
-.albert-connections__footer[hidden] {
-	display: none;
-}

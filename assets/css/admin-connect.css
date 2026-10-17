@@ -196,9 +196,7 @@
 	gap: var(--albert-space-200);
 }
 
-/* ==========================================================================
-   Connect dialog
-   ========================================================================== */
+/* The connect dialog. */
 
 .albert-dialog.albert-connect {
 	inline-size: min(640px, calc(100vw - 2 * var(--albert-space-400)));
@@ -221,12 +219,6 @@
 	gap: var(--albert-space-400);
 }
 
-.albert-connect__step[hidden],
-.albert-connect__panel[hidden],
-.albert-connect__apps[hidden] {
-	display: none;
-}
-
 .albert-connect__lead,
 .albert-connect__context {
 	margin: 0;
@@ -236,7 +228,8 @@
 }
 
 .albert-connect__choices,
-.albert-connect__apps {
+.albert-connect__apps,
+.albert-connect__subgroup {
 	display: grid;
 	gap: var(--albert-space-300);
 	margin: 0;
@@ -257,6 +250,7 @@
 
 .albert-connect__group {
 	margin: var(--albert-space-200) 0 0;
+	padding: 0;
 	font-size: var(--albert-font-size-sm);
 	font-weight: var(--albert-font-weight-semibold);
 	color: var(--albert-color-text-muted);
@@ -296,6 +290,22 @@
 	border-color: var(--albert-color-accent);
 	box-shadow: inset 0 0 0 1px var(--albert-color-accent);
 	background: var(--albert-color-accent-surface);
+}
+
+@media (forced-colors: active) {
+	.albert-choice:has(input:checked) {
+		outline: 2px solid Highlight;
+		outline-offset: -2px;
+	}
+
+	.albert-connect__spinner {
+		border-color: CanvasText;
+		border-block-start-color: Highlight;
+	}
+
+	.albert-guide-panel__step::before {
+		border-color: CanvasText;
+	}
 }
 
 .albert-choice:has(input:focus-visible) {
@@ -365,7 +375,20 @@
 
 .albert-connect__stuck-title {
 	margin: 0;
+	font-size: var(--albert-font-size-sm);
 	font-weight: var(--albert-font-weight-semibold);
+}
+
+.albert-connect__error {
+	margin: 0;
+	font-size: var(--albert-font-size-sm);
+	font-weight: var(--albert-font-weight-semibold);
+	color: var(--albert-color-danger);
+}
+
+.albert-guide-panel__block:focus-visible {
+	outline: var(--albert-focus-width) solid var(--albert-focus-color);
+	outline-offset: 2px;
 }
 
 .albert-connect__stuck ul {
@@ -420,7 +443,7 @@
 	line-height: 1;
 }
 
-.albert-connect__back[hidden],
+/* Next and Done carry only core's classes, so the shared [hidden] rule misses them. */
 .albert-connect__footer .button[hidden] {
 	display: none;
 }

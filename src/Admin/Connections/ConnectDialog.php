@@ -81,7 +81,7 @@ class ConnectDialog {
 		<p class="albert-connect-location" data-albert-location-line>
 			<span class="dashicons <?php echo esc_attr( self::location_icon( SiteLocation::current() ) ); ?>" aria-hidden="true" data-albert-location-icon></span>
 			<span data-albert-location-text><?php echo esc_html( self::location_sentence( SiteLocation::current(), SiteLocation::is_guess() ) ); ?></span>
-			<button type="button" class="button-link" data-albert-open-connect data-step="location"><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
+			<button type="button" class="button-link" data-albert-open-connect data-step="location" aria-haspopup="dialog"><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
 			<?php
 			InfoTip::render(
 				__( 'A local site runs only on your computer, for example in Local, Herd, Studio or Docker, and the internet cannot reach it. Apps on your computer, like Claude Desktop, Claude Code, Codex and Cursor, can still connect. Apps that connect from the cloud, like Claude on the web and ChatGPT, need a public site: one anyone can open at its address. Albert detects this from the site’s address, so change it if it is wrong.', 'albert-ai-butler' ),
@@ -204,13 +204,16 @@ class ConnectDialog {
 					$needs_public = array_filter( $list, static fn( array $guide ): bool => (bool) $guide['needs_public'] );
 					if ( $needs_public !== [] ) {
 						?>
-						<p class="albert-connect__group"><?php esc_html_e( 'Needs a public site', 'albert-ai-butler' ); ?></p>
+						<fieldset class="albert-connect__subgroup">
+							<legend class="albert-connect__group"><?php esc_html_e( 'Needs a public site', 'albert-ai-butler' ); ?></legend>
+							<?php self::render_app_choices( $location, $needs_public ); ?>
+						</fieldset>
 						<?php
-						self::render_app_choices( $location, $needs_public );
 					}
 					?>
 				</fieldset>
 			<?php } ?>
+			<p class="albert-connect__error" id="albert-connect-app-error" data-albert-connect-app-error hidden><?php esc_html_e( 'Choose the app you use to continue.', 'albert-ai-butler' ); ?></p>
 		</section>
 		<?php
 	}
@@ -280,8 +283,8 @@ class ConnectDialog {
 					<span data-albert-connect-wait-text></span>
 				</p>
 				<div class="albert-connect__stuck" data-albert-connect-stuck hidden>
-					<p class="albert-connect__stuck-title"><?php esc_html_e( 'Not connected yet?', 'albert-ai-butler' ); ?></p>
-					<ul>
+					<h3 class="albert-connect__stuck-title" id="albert-connect-stuck-title"><?php esc_html_e( 'Not connected yet?', 'albert-ai-butler' ); ?></h3>
+					<ul aria-labelledby="albert-connect-stuck-title">
 						<li><?php esc_html_e( 'You signed in as someone who isn’t listed under Who may connect.', 'albert-ai-butler' ); ?></li>
 						<li><?php esc_html_e( 'The app couldn’t reach this site. Check that the address it uses matches the MCP URL.', 'albert-ai-butler' ); ?></li>
 						<li><?php esc_html_e( 'On a site that only runs on this computer, apps that need a public site can’t connect.', 'albert-ai-butler' ); ?></li>
@@ -308,10 +311,15 @@ class ConnectDialog {
 				<span data-albert-connect-signed-in></span>
 			</p>
 			<?php if ( $prompts !== [] ) { ?>
-				<p class="albert-connect__group"><?php esc_html_e( 'Try asking', 'albert-ai-butler' ); ?></p>
-				<ul class="albert-connect__prompts">
+				<h3 class="albert-connect__group" id="albert-connect-prompts-title"><?php esc_html_e( 'Try asking', 'albert-ai-butler' ); ?></h3>
+				<ul class="albert-connect__prompts" aria-labelledby="albert-connect-prompts-title">
 					<?php foreach ( $prompts as $prompt ) { ?>
-						<li>&ldquo;<?php echo esc_html( (string) $prompt['text'] ); ?>&rdquo;</li>
+						<li>
+							<?php
+							/* translators: %s: an example prompt, shown in quotes. */
+							echo esc_html( sprintf( __( '“%s”', 'albert-ai-butler' ), (string) $prompt['text'] ) );
+							?>
+						</li>
 					<?php } ?>
 				</ul>
 			<?php } ?>
@@ -437,6 +445,10 @@ class ConnectDialog {
 					/* translators: %s: the person who approved it. */
 					'signedIn'  => __( 'It signed in as %s.', 'albert-ai-butler' ),
 					'saveError' => __( 'Could not save where this site runs. It is used for now; reload the page to try saving again.', 'albert-ai-butler' ),
+					'chooseApp' => __( 'Choose the app you use to continue.', 'albert-ai-butler' ),
+					/* translators: %s: an app's name. */
+					'gaveUp'    => __( 'Stopped checking for %s. Close this and open it again to keep waiting.', 'albert-ai-butler' ),
+					'expired'   => __( 'Your session on this site ended. Reload the page, then try again.', 'albert-ai-butler' ),
 				],
 			]
 		);

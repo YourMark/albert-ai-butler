@@ -357,10 +357,11 @@ class ClientRepository implements ClientRepositoryInterface {
 	/**
 	 * The newest connection a user approved at or after a moment, or null.
 	 *
-	 * "Approved" is the client's first access token for that user, so an
-	 * hourly refresh of an older connection never counts as a new one. This
-	 * is what lets the connect dialog say "connected" only once it has seen
-	 * the connection, rather than when somebody clicked a button.
+	 * Approved means an authorization code this user issued to the client from
+	 * then on, redeemed for a live access token. A refresh issues tokens but
+	 * never a code, so an older connection refreshing while the dialog is
+	 * open does not count. The code's expiry stands in for its creation time,
+	 * which the table stamps in the database's own time zone.
 	 *
 	 * @param int $user_id The user who approved it.
 	 * @param int $since   Unix timestamp; only connections first approved from here on count.
@@ -378,14 +379,20 @@ class ClientRepository implements ClientRepositoryInterface {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, polled by the connect dialog.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT client_id, MIN( created_at ) AS first_at
-				FROM %i
-				WHERE user_id = %d AND revoked = 0
-				GROUP BY client_id
-				HAVING MIN( created_at ) >= %s
+				'SELECT t.client_id, MIN( t.created_at ) AS first_at
+				FROM %i t
+				WHERE t.user_id = %d AND t.revoked = 0 AND t.created_at >= %s
+					AND EXISTS (
+						SELECT 1 FROM %i c
+						WHERE c.client_id = t.client_id AND c.user_id = %d AND c.expires_at >= %s
+					)
+				GROUP BY t.client_id
 				ORDER BY first_at DESC
 				LIMIT 1',
 				$tables['access_tokens'],
+				$user_id,
+				gmdate( 'Y-m-d H:i:s', $since ),
+				$tables['auth_codes'],
 				$user_id,
 				gmdate( 'Y-m-d H:i:s', $since )
 			),
