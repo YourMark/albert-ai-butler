@@ -188,6 +188,9 @@ class SetupInvite {
 	 * properties. The accent is Albert's default, and the text greys are the
 	 * ones the admin uses, so the email reads as the same product.
 	 *
+	 * The logo is albertwp.com's, face and name in one image drawn at three
+	 * times its size: mail clients cannot load the Solway font it is set in.
+	 *
 	 * @param array<string, string> $content The email's content.
 	 *
 	 * @return string
@@ -217,14 +220,7 @@ class SetupInvite {
 			<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;">
 				<tr>
 					<td style="padding:0 0 16px;">
-						<table role="presentation" cellpadding="0" cellspacing="0" border="0">
-							<tr>
-								<td style="padding:0 10px 0 0;vertical-align:middle;">
-									<img src="cid:<?php echo esc_attr( self::LOGO_CID ); ?>" width="32" height="32" alt="" style="display:block;border:0;outline:none;text-decoration:none;">
-								</td>
-								<td style="<?php echo esc_attr( $font ); ?>font-size:17px;font-weight:600;color:#1d2327;vertical-align:middle;">Albert</td>
-							</tr>
-						</table>
+						<img src="cid:<?php echo esc_attr( self::LOGO_CID ); ?>" width="103" height="32" alt="Albert" style="display:block;border:0;outline:none;text-decoration:none;">
 					</td>
 				</tr>
 				<tr>
