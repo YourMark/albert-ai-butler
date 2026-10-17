@@ -53,8 +53,6 @@ class Installer {
 		'albert_installed_version',
 		'albert_allowed_users',
 		'albert_allowed_user_expiry_days',
-		// Whether the first administrator was put on the allowed list (1.5.0).
-		'albert_default_allowed_user_done',
 		// Legacy: backed a Settings checkbox removed before 1.4.0 shipped. Kept
 		// in the sweep so a site that ran the pre-release does not keep the row.
 		'albert_allowed_user_apply_expiry_to_existing',

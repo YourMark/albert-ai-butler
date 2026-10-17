@@ -431,57 +431,25 @@ class Dashboard implements Hookable {
 					?>
 
 					<?php
-					if ( $has_allowed_users ) {
-						$listed = AllowedUsers::is_allowed( get_current_user_id() );
-						$this->render_setup_step(
-							2,
-							true,
-							false,
-							$listed ? __( 'You may connect an assistant', 'albert-ai-butler' ) : __( 'People may connect an assistant', 'albert-ai-butler' ),
-							'',
-							static function () use ( $listed ): void {
-								$link = '<a href="' . esc_url( admin_url( 'admin.php?page=albert-connections' ) ) . '">' . esc_html__( 'Connections', 'albert-ai-butler' ) . '</a>';
-
-								if ( $listed ) {
-									/* translators: %s: a link to the Connections screen. */
-									$text = __( 'You are on the list. Add others under %s.', 'albert-ai-butler' );
-								} else {
-									/* translators: %s: a link to the Connections screen. */
-									$text = __( 'You are not on the list yet. Add yourself under %s.', 'albert-ai-butler' );
-								}
-								?>
-								<p class="albert-setup__description">
-									<?php
-									echo wp_kses(
-										sprintf( $text, $link ),
-										[ 'a' => [ 'href' => [] ] ]
-									);
-									?>
-								</p>
-								<?php
-							}
-						);
-					} else {
-						$this->render_setup_step(
-							2,
-							false,
-							$adapter_ready,
-							__( 'Add an allowed user', 'albert-ai-butler' ),
-							__( 'Only the users you pick here can authorise an AI assistant to act on this site.', 'albert-ai-butler' ),
-							function () use ( $adapter_ready ): void {
-								// One filled button per screen: the current step's.
-								$button_class = $adapter_ready ? 'button button-primary' : 'button';
-								?>
-								<div class="albert-setup__actions">
-									<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>" class="<?php echo esc_attr( $button_class ); ?>" data-albert-open-userpicker>
-										<?php esc_html_e( 'Choose users', 'albert-ai-butler' ); ?>
-									</a>
-								</div>
-								<?php
-							}
-						);
-					}
-					?>
+					$this->render_setup_step(
+						2,
+						$has_allowed_users,
+						$adapter_ready && ! $has_allowed_users,
+						__( 'Add an allowed user', 'albert-ai-butler' ),
+						__( 'Only the users you pick here can authorise an AI assistant to act on this site.', 'albert-ai-butler' ),
+						function () use ( $adapter_ready ): void {
+							// One filled button per screen: the current step's.
+							$button_class = $adapter_ready ? 'button button-primary' : 'button';
+							?>
+							<div class="albert-setup__actions">
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=albert-connections' ) ); ?>" class="<?php echo esc_attr( $button_class ); ?>" data-albert-open-userpicker>
+									<?php esc_html_e( 'Choose users', 'albert-ai-butler' ); ?>
+								</a>
+							</div>
+							<?php
+						}
+					);
+		?>
 
 					<?php
 					$this->render_setup_step(
@@ -490,7 +458,7 @@ class Dashboard implements Hookable {
 						$adapter_ready && $has_allowed_users && ! $has_connections,
 						__( 'Connect an AI assistant', 'albert-ai-butler' ),
 						__( 'Paste this endpoint into Claude or ChatGPT as an MCP connector.', 'albert-ai-butler' ),
-						$has_connections ? null : function () use ( $mcp_endpoint ): void {
+						function () use ( $mcp_endpoint ): void {
 							?>
 							<div class="albert-endpoint">
 								<label class="screen-reader-text" for="albert-mcp-endpoint"><?php esc_html_e( 'MCP endpoint address', 'albert-ai-butler' ); ?></label>
@@ -592,11 +560,9 @@ class Dashboard implements Hookable {
 						?>
 					</span>
 				</p>
-				<?php if ( $description !== '' ) { ?>
-					<p class="albert-setup__description"><?php echo esc_html( $description ); ?></p>
-				<?php } ?>
+				<p class="albert-setup__description"><?php echo esc_html( $description ); ?></p>
 				<?php
-				if ( $extra !== null ) {
+				if ( $extra !== null && ! $is_done ) {
 					call_user_func( $extra );
 				}
 				?>

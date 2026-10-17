@@ -696,16 +696,6 @@ ever has to toggle it, never create or remove it: the count can only fall
 through this action, never rise, so that is the only direction it needs to
 handle.
 
-**The first administrator is allowed by default (1.5.0).** An empty list refused
-everyone, the installing admin included. `Admin\Connections\DefaultAllowedUser`
-decides once per site (`albert_default_allowed_user_done`, claimed with
-`add_option()` so two requests cannot both add), at activation by an
-administrator or the first Albert screen one opens (WP-CLI activation,
-upgrades), adding them when the list is empty and nothing is connected. Once
-decided it stays decided, reactivation included, so removing yourself sticks.
-Never from cron or REST. The entry never expires and is
-flagged `automatic`, so the row says Albert added it.
-
 **The allowed-users picker never enumerates the user table.** It searches core's
 `/wp/v2/users` with explicit `search_columns[]` (`name`, `username`, `email`,
 `id`; left alone `WP_User_Query` switches columns based on what the term
