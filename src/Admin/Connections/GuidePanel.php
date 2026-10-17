@@ -119,15 +119,22 @@ class GuidePanel {
 		?>
 		<div class="albert-guide-panel albert-guide-panel--unavailable" id="<?php echo esc_attr( $base ); ?>">
 			<p class="albert-guide-panel__intro"><?php echo esc_html( $guide['unavailable'] ); ?></p>
-			<p class="albert-guide-panel__intro"><?php esc_html_e( 'Use an app on this computer, like Claude Desktop or Cursor. Or make the site reachable from the internet, for example with a tunnel such as Cloudflare Tunnel or ngrok, and mark it as public.', 'albert-ai-butler' ); ?></p>
+			<?php if ( current_user_can( 'manage_options' ) ) { ?>
+				<p class="albert-guide-panel__intro"><?php esc_html_e( 'Use an app on this computer, like Claude Desktop or Cursor. Or make the site reachable from the internet, for example with a tunnel such as Cloudflare Tunnel or ngrok, and mark it as public.', 'albert-ai-butler' ); ?></p>
+			<?php } else { ?>
+				<p class="albert-guide-panel__intro"><?php esc_html_e( 'Use an app on this computer, like Claude Desktop or Cursor. If this site is on the internet after all, ask an administrator to mark it as public.', 'albert-ai-butler' ); ?></p>
+			<?php } ?>
 			<p class="albert-guide-panel__alternatives">
 				<button type="button" class="button button-secondary" data-albert-show-guide="claude-desktop"><?php esc_html_e( 'Show Claude Desktop', 'albert-ai-butler' ); ?></button>
 				<button type="button" class="button button-secondary" data-albert-show-guide="cursor"><?php esc_html_e( 'Show Cursor', 'albert-ai-butler' ); ?></button>
 			</p>
-			<p class="albert-guide-panel__hint">
-				<?php esc_html_e( 'Is this site public after all?', 'albert-ai-butler' ); ?>
-				<button type="button" class="button-link" data-albert-mark-public data-app="<?php echo esc_attr( $guide['id'] ); ?>"><?php esc_html_e( 'Mark it as public', 'albert-ai-butler' ); ?></button>
-			</p>
+			<?php // Where the site runs is the site's answer, so only an administrator changes it. ?>
+			<?php if ( current_user_can( 'manage_options' ) ) { ?>
+				<p class="albert-guide-panel__hint">
+					<?php esc_html_e( 'Is this site public after all?', 'albert-ai-butler' ); ?>
+					<button type="button" class="button-link" data-albert-mark-public data-app="<?php echo esc_attr( $guide['id'] ); ?>"><?php esc_html_e( 'Mark it as public', 'albert-ai-butler' ); ?></button>
+				</p>
+			<?php } ?>
 		</div>
 		<?php
 	}

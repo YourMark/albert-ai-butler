@@ -355,6 +355,52 @@ class ClientRepository implements ClientRepositoryInterface {
 	}
 
 	/**
+	 * Revoke one user's tokens for a client, access and refresh, leaving
+	 * anyone else who approved the same client connected.
+	 *
+	 * @param string $client_id The client.
+	 * @param int    $user_id   The user whose tokens go.
+	 *
+	 * @return int How many access tokens were revoked; 0 when the user held no live one.
+	 * @since 1.5.0
+	 */
+	public function revokeUserTokens( string $client_id, int $user_id ): int {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
+		$token_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT token_id FROM %i WHERE client_id = %s AND user_id = %d AND revoked = 0',
+				$tables['access_tokens'],
+				$client_id,
+				$user_id
+			)
+		);
+
+		if ( empty( $token_ids ) ) {
+			return 0;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
+		$wpdb->update(
+			$tables['access_tokens'],
+			[ 'revoked' => 1 ],
+			[
+				'client_id' => $client_id,
+				'user_id'   => $user_id,
+			],
+			[ '%d' ],
+			[ '%s', '%d' ]
+		);
+
+		( new RefreshTokenRepository() )->revokeForAccessTokens( (array) $token_ids );
+
+		return count( $token_ids );
+	}
+
+	/**
 	 * The newest connection a user approved at or after a moment, or null.
 	 *
 	 * Approved means an authorization code this user issued to the client from

@@ -277,15 +277,17 @@ class ApprovalPolicyTest extends TestCase {
 	}
 
 	/**
-	 * A subscriber cannot reach the screen; an editor can.
+	 * Only the people on the list reach the screen, whatever their role.
 	 *
 	 * @return void
 	 */
-	public function test_the_view_gate_keeps_subscribers_out(): void {
-		$subscriber = self::factory()->user->create( [ 'role' => 'subscriber' ] );
-		$editor     = self::factory()->user->create( [ 'role' => 'editor' ] );
+	public function test_the_view_gate_follows_the_allowed_list(): void {
+		delete_option( \Albert\OAuth\AllowedUsers::OPTION );
+		$editor = self::factory()->user->create( [ 'role' => 'editor' ] );
 
-		$this->assertFalse( $this->policy->can_view( $subscriber ) );
+		$this->assertFalse( $this->policy->can_view( $editor ) );
+
+		\Albert\OAuth\AllowedUsers::add( $editor );
 		$this->assertTrue( $this->policy->can_view( $editor ) );
 	}
 

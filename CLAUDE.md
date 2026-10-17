@@ -599,9 +599,9 @@ site, how to set one up, who may authorise one, and what is connected.
 guesses whether the MCP endpoint is public or only reachable on this computer
 (local suffixes such as `.test`, private and loopback IPs, single-label hosts,
 or `WP_ENVIRONMENT_TYPE` `local` while the endpoint is the site's own address).
-The guess reads as one ("Detected: …"), and an administrator can save the answer
-for the site (`albert_site_location`); everyone else sees it but cannot change
-it. It decides the
+The guess reads as one ("Detected: …"), and only an administrator can save the
+answer for the site (`albert_site_location`): it is the site's answer, and a
+wrong one would mislead everybody else who connects. It decides the
 order of the apps and marks Claude on the web and ChatGPT as needing a public
 site on a local one, with the reason and an alternative. It never removes an
 app: an earlier version (`Support\HostClassifier`) hid guides by host and that
@@ -645,6 +645,20 @@ other apps and are never ticked off. The Dashboard's connect step is per user
 setup is complete a header button keeps the dialog reachable. The Connections
 layout is fixed in every state: connect card, then the two lists; the old
 per-app accordion is gone, the dialog holds that content.
+
+**Anyone on the list can see how to connect (1.5.0).** `albert_connect`
+(`Admin\Connections\ConnectCapability`, a `user_has_cap` grant) is held by
+administrators and by everyone `AllowedUsers::is_allowed()` says yes to, whatever
+their role, so it follows the list live and an expired invitation grants nothing.
+It gates `Admin\ConnectPage` (the dialog, the MCP URL and the person's own
+connections with a Revoke that drops only their tokens,
+`ClientRepository::revokeUserTokens()`), the dialog's REST routes and the Claude
+Desktop download. Nothing else: logs, settings, abilities and other people's
+connections stay `manage_options`, and so does saying where the site runs: a
+non-administrator sees it but cannot change it. Administrators keep Connections; for them the Connect page has no
+menu item and forwards to Connections (removing the menu item instead makes
+WordPress refuse the page), and "Copy setup link" in Who may connect hands a
+non-administrator a link that opens the dialog on arrival.
 
 **Connections group by client, not by token.** A client refreshes hourly, so a
 token-keyed list shows one assistant several times and calls each a connection.

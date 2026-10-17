@@ -11,6 +11,7 @@ namespace Albert\Admin\Rest;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Admin\Connections\ConnectCapability;
 use Albert\Admin\Connections\SiteLocation;
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\Plugin;
@@ -21,9 +22,8 @@ use WP_REST_Response;
 /**
  * Two routes: has my new connection arrived yet, and where is this site.
  *
- * Both act on the signed-in person only. Status reports their own
- * connections, never anyone else's, and saving the location writes the
- * site's answer only for someone who may manage options.
+ * Status reports the signed-in person's own connections, never anyone
+ * else's. Saving the location is for administrators only.
  *
  * @since 1.5.0
  */
@@ -69,7 +69,7 @@ class ConnectController implements Hookable {
 			[
 				'methods'             => 'POST',
 				'callback'            => [ $this, 'save_location' ],
-				'permission_callback' => [ $this, 'can_connect' ],
+				'permission_callback' => [ $this, 'can_change_location' ],
 				'args'                => [
 					'location' => [
 						'type'     => 'string',
@@ -88,6 +88,17 @@ class ConnectController implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function can_connect(): bool {
+		return current_user_can( ConnectCapability::CAPABILITY );
+	}
+
+	/**
+	 * Who may say where the site runs: administrators. It is the site's answer,
+	 * and a wrong one would mislead everybody else who connects.
+	 *
+	 * @return bool
+	 * @since 1.5.0
+	 */
+	public function can_change_location(): bool {
 		return current_user_can( 'manage_options' );
 	}
 

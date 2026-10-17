@@ -169,18 +169,15 @@ class AdapterNudgeTest extends TestCase {
 	}
 
 	/**
-	 * Someone who cannot install it still sees the notice, telling them who can.
+	 * Someone who is not an administrator sees no notice they cannot act on.
 	 *
 	 * @return void
 	 */
-	public function test_screen_notice_tells_others_who_can_install(): void {
+	public function test_screen_notice_is_for_administrators_only(): void {
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'editor' ] ) );
-		set_current_screen( 'albert_page_albert-approvals' );
+		set_current_screen( 'albert_page_albert-connect' );
 
-		$notice = get_echo( [ new AdapterNudge(), 'render_screen_notice' ] );
-
-		$this->assertStringContainsString( 'Only a site administrator can install it, so please let them know.', $notice );
-		$this->assertStringNotContainsString( 'data-albert-adapter-install', $notice );
+		$this->assertSame( '', get_echo( [ new AdapterNudge(), 'render_screen_notice' ] ) );
 	}
 
 	/**

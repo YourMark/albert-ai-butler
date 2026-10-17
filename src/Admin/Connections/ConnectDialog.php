@@ -81,10 +81,16 @@ class ConnectDialog {
 		<p class="albert-connect-location" data-albert-location-line>
 			<span class="dashicons <?php echo esc_attr( self::location_icon( SiteLocation::current() ) ); ?>" aria-hidden="true" data-albert-location-icon></span>
 			<span data-albert-location-text><?php echo esc_html( self::location_sentence( SiteLocation::current(), SiteLocation::is_guess() ) ); ?></span>
-			<button type="button" class="button-link" data-albert-open-connect data-step="location" aria-haspopup="dialog"><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
+			<?php if ( current_user_can( 'manage_options' ) ) { ?>
+				<button type="button" class="button-link" data-albert-open-connect data-step="location" aria-haspopup="dialog"><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
+			<?php } ?>
 			<?php
 			InfoTip::render(
-				__( 'A local site runs only on your computer, for example in Local, Herd, Studio or Docker, and the internet cannot reach it. Apps on your computer, like Claude Desktop, Claude Code, Codex and Cursor, can still connect. Apps that connect from the cloud, like Claude on the web and ChatGPT, need a public site: one anyone can open at its address. Albert detects this from the site’s address, so change it if it is wrong.', 'albert-ai-butler' ),
+				__( 'A local site runs only on your computer, for example in Local, Herd, Studio or Docker, and the internet cannot reach it. Apps on your computer, like Claude Desktop, Claude Code, Codex and Cursor, can still connect. Apps that connect from the cloud, like Claude on the web and ChatGPT, need a public site: one anyone can open at its address.', 'albert-ai-butler' )
+				. ' '
+				. ( current_user_can( 'manage_options' )
+					? __( 'Albert detects this from the site’s address, so change it if it is wrong.', 'albert-ai-butler' )
+					: __( 'If it is wrong, ask an administrator to change it.', 'albert-ai-butler' ) ),
 				__( 'local and public sites', 'albert-ai-butler' )
 			);
 			?>
@@ -100,6 +106,7 @@ class ConnectDialog {
 	 */
 	public static function render(): void {
 		$endpoint = McpServer::get_endpoint_url();
+		$user_id  = get_current_user_id();
 		$location = SiteLocation::current();
 		$guides   = [
 			SiteLocation::PUBLIC => ClientSetupGuides::for_location( $endpoint, SiteLocation::PUBLIC ),
@@ -114,6 +121,7 @@ class ConnectDialog {
 			data-albert-connect
 			data-location="<?php echo esc_attr( $location ); ?>"
 			data-guess="<?php echo SiteLocation::is_guess() ? '1' : '0'; ?>"
+			data-can-change="<?php echo current_user_can( 'manage_options' ) ? '1' : '0'; ?>"
 			data-server-time="<?php echo esc_attr( (string) time() ); ?>">
 			<div class="albert-dialog__header">
 				<div class="albert-dialog__heading">
@@ -126,7 +134,13 @@ class ConnectDialog {
 			</div>
 
 			<div class="albert-dialog__body">
-				<?php self::render_location_step(); ?>
+				<?php
+				// Where the site runs is the site's answer: the question is not
+				// even in the page for someone who may not change it.
+				if ( current_user_can( 'manage_options' ) ) {
+					self::render_location_step();
+				}
+				?>
 				<?php self::render_app_step( $guides ); ?>
 				<?php self::render_steps_step( $guides ); ?>
 				<?php self::render_done_step(); ?>
@@ -338,7 +352,9 @@ class ConnectDialog {
 		<p class="albert-connect__context albert-connect-location">
 			<span class="dashicons" aria-hidden="true" data-albert-location-icon></span>
 			<span data-albert-connect-where></span>
-			<button type="button" class="button-link" data-albert-connect-change><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
+			<?php if ( current_user_can( 'manage_options' ) ) { ?>
+				<button type="button" class="button-link" data-albert-connect-change><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
+			<?php } ?>
 		</p>
 		<?php
 	}

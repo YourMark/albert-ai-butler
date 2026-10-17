@@ -57,6 +57,9 @@
 			}
 
 			this.location = this.dialog.dataset.location || 'public';
+			// Only an administrator says where the site runs; everyone else
+			// starts at the app question, and the dialog has two steps.
+			this.canChange = this.dialog.dataset.canChange === '1';
 			// Server seconds minus browser seconds, so "since" is the server's clock.
 			this.clockOffset = parseInt( this.dialog.dataset.serverTime, 10 ) - Math.floor( Date.now() / 1000 );
 
@@ -91,17 +94,27 @@
 					this.poll();
 				}
 			} );
+
+			// A setup link an administrator sent opens straight into the dialog.
+			const url = new URL( window.location.href );
+			if ( url.searchParams.get( 'albert_connect' ) === '1' ) {
+				url.searchParams.delete( 'albert_connect' );
+				window.history.replaceState( null, '', url.toString() );
+				this.open( this.dialog );
+			}
 		},
 
 		open( opener ) {
-			this.opener = opener;
+			// Opened from a setup link, the dialog itself is the "opener": there
+			// is no button to return focus to.
+			this.opener = opener === this.dialog ? null : opener;
 			this.connection = null;
 			this.since = Math.floor( Date.now() / 1000 ) + this.clockOffset - 5;
 
 			const app = opener.dataset.app || '';
 			const guess = this.dialog.dataset.guess === '1';
 
-			if ( opener.dataset.step === 'location' || ( guess && ! app ) ) {
+			if ( this.canChange && ( opener.dataset.step === 'location' || ( guess && ! app ) ) ) {
 				this.show( 'location' );
 			} else if ( app ) {
 				this.chooseApp( app );
@@ -121,6 +134,7 @@
 				// them as they are now, with the new row marked.
 				const url = new URL( window.location.href );
 				url.searchParams.set( 'albert_new', this.connection.client );
+				url.searchParams.delete( 'albert_connect' );
 				window.location.assign( url.toString() );
 				return;
 			}
@@ -311,10 +325,11 @@
 				this.dialog.querySelector( '[data-albert-connect-title]' ).textContent = title;
 			}
 
+			const offset = this.canChange ? 0 : 1;
 			const number = { location: 1, app: 2, steps: 3 }[ step ];
-			this.dialog.querySelector( '[data-albert-connect-progress]' ).textContent = number ? format( i18n.progress, number, 3 ) : '';
+			this.dialog.querySelector( '[data-albert-connect-progress]' ).textContent = number ? format( i18n.progress, number - offset, 3 - offset ) : '';
 
-			this.dialog.querySelector( '[data-albert-connect-back]' ).hidden = step === 'location' || step === 'done';
+			this.dialog.querySelector( '[data-albert-connect-back]' ).hidden = step === 'location' || step === 'done' || ( step === 'app' && ! this.canChange );
 			this.dialog.querySelector( '[data-albert-connect-next]' ).hidden = step === 'steps' || step === 'done';
 			this.dialog.querySelector( '[data-albert-connect-done]' ).hidden = step !== 'done';
 

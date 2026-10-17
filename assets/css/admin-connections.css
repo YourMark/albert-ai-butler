@@ -590,6 +590,10 @@
 .albert-user-item__sessions,
 .albert-user-item__actions {
 	flex-shrink: 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-300);
 }
 
 /* The session count is a link wearing a badge; keep the badge's own colours. */
@@ -700,3 +704,55 @@ a.albert-badge:focus-visible {
 	box-shadow: inset 3px 0 0 var(--albert-color-accent);
 }
 
+/* Your own assistants on the Connect page: name and age, then Revoke. */
+.albert-conn--own {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--albert-space-300);
+}
+
+.albert-conn__actions {
+	margin: 0;
+}
+
+/* Under the name, so the row's actions keep their width for Remove. */
+.albert-user-item__setup {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-100) var(--albert-space-300);
+	margin-block-start: var(--albert-space-100);
+	font-size: var(--albert-font-size-sm);
+}
+
+.albert-user-item__setup form {
+	display: inline;
+	margin: 0;
+}
+
+/* Text-sized links still get a 24px target (WCAG 2.5.8). */
+.albert-user-item__setup .button-link,
+.albert-conn__actions .button-link {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 24px;
+}
+
+.albert-user-item__setup .button-link {
+	font-size: inherit;
+}
+
+.albert-user-item__setup .button-link[aria-disabled="true"] {
+	color: var(--albert-color-text-muted);
+	cursor: default;
+}
+
+/* The add-people dialog's email option sits at the start of its footer. */
+.albert-picker__email {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--albert-space-200);
+	margin-inline-end: auto;
+	font-size: var(--albert-font-size-sm);
+}
