@@ -20,15 +20,12 @@ use Albert\OAuth\Repositories\ClientRepository;
  * An empty allowed list refuses everyone, the administrator who installed
  * Albert included, and that was the first wall a new owner hit.
  *
- * Two moments add them: activation, for the person who clicked Activate, and
- * the first Albert screen an administrator opens, for sites that were
- * activated without one (WP-CLI, a host's installer) or upgraded from a
- * version that started empty. Activating is a deliberate act, so it adds
- * whenever the list is empty; the screen check runs once per site, so
- * somebody who removed themselves on purpose is not put back.
- *
- * Never from cron or REST. Adding a person is something an administrator
- * should have been present for.
+ * Decided once per site, at whichever comes first: activation by an
+ * administrator, or the first Albert screen one opens (WP-CLI activation,
+ * a host's installer, an upgrade). Once decided it stays decided, so
+ * somebody who removed themselves is not put back, not even by
+ * reactivating. Never from cron or REST: adding a person is something an
+ * administrator should have been present for.
  *
  * @since 1.5.0
  */
@@ -53,10 +50,10 @@ class DefaultAllowedUser implements Hookable {
 	}
 
 	/**
-	 * Add the administrator who is activating Albert.
+	 * Add the administrator activating Albert, unless already decided.
 	 *
-	 * Activation from WP-CLI has no current user; the decision is then left
-	 * to the first Albert screen an administrator opens.
+	 * WP-CLI activation has no current user, so it leaves the decision to
+	 * the first Albert screen.
 	 *
 	 * @return void
 	 * @since 1.5.0
@@ -65,6 +62,10 @@ class DefaultAllowedUser implements Hookable {
 		$user_id = get_current_user_id();
 
 		if ( $user_id <= 0 ) {
+			return;
+		}
+
+		if ( get_option( self::DONE_OPTION ) ) {
 			return;
 		}
 
@@ -86,7 +87,7 @@ class DefaultAllowedUser implements Hookable {
 		}
 
 		if ( ( new ClientRepository() )->getLiveConnections() !== [] ) {
-			update_option( self::DONE_OPTION, true, false );
+			add_option( self::DONE_OPTION, true, '', false );
 			return;
 		}
 
@@ -95,6 +96,9 @@ class DefaultAllowedUser implements Hookable {
 
 	/**
 	 * Add the user when the list is empty and they are an administrator.
+	 *
+	 * Claiming the decision with add_option() first, which fails when the
+	 * row already exists, keeps two first requests from both adding.
 	 *
 	 * @param int $user_id The user id.
 	 *
@@ -106,10 +110,12 @@ class DefaultAllowedUser implements Hookable {
 			return;
 		}
 
+		if ( ! add_option( self::DONE_OPTION, true, '', false ) ) {
+			return;
+		}
+
 		if ( ! AllowedUsers::has_any() ) {
 			AllowedUsers::add_automatically( $user_id );
 		}
-
-		update_option( self::DONE_OPTION, true, false );
 	}
 }

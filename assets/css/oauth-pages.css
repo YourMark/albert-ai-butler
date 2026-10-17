@@ -199,6 +199,9 @@ body {
 .albert-oauth {
 	inline-size: 100%;
 	max-inline-size: 440px;
+	min-inline-size: 0;
+	/* App names and hosts are the app's own and can be one long word. */
+	overflow-wrap: anywhere;
 }
 
 .albert-oauth__site {
@@ -237,9 +240,25 @@ body {
 }
 
 .albert-oauth__check {
+	flex: none;
 	inline-size: 22px;
 	block-size: 22px;
 	fill: #1d2327;
+	stroke: #fff;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.albert-oauth__check path {
+	fill: none;
+}
+
+@media (forced-colors: active) {
+	.albert-oauth__check {
+		fill: CanvasText;
+		stroke: Canvas;
+	}
 }
 
 .albert-oauth__subtitle {
@@ -271,17 +290,48 @@ body {
 }
 
 .albert-oauth__actions .button {
-	flex: 0 0 auto;
+	flex: 0 1 auto;
 	display: inline-flex;
 	align-items: center;
+	justify-content: center;
+	gap: 6px;
 	min-block-size: 44px;
+	white-space: normal;
+	text-align: center;
 	text-decoration: none;
+}
+
+.albert-oauth .button-secondary {
+	border: 1px solid #8c8f94;
+}
+
+.albert-oauth .button:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: 2px;
+}
+
+.albert-oauth__external {
+	flex: none;
+	inline-size: 14px;
+	block-size: 14px;
 }
 
 .albert-oauth__footer {
 	border-block-start: 1px solid #f0f0f1;
 	padding-block-start: 16px;
 	font-size: 14px;
+}
+
+.albert-oauth__footer a {
+	display: inline-block;
+	padding-block: 6px;
+}
+
+.albert-oauth__destination {
+	font-size: 13px;
+	line-height: 1.5;
+	color: #646970;
+	margin-block-start: 4px;
 }
 
 .albert-oauth a:not(.button) {

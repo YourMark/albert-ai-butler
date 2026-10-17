@@ -86,7 +86,36 @@ class DefaultAllowedUserTest extends TestCase {
 
 		$this->assertTrue( AllowedUsers::is_allowed( $this->admin_id ) );
 		$this->assertNull( AllowedUsers::expires_at( $this->admin_id ) );
-		$this->assertTrue( AllowedUsers::was_added_automatically( $this->admin_id ) );
+		$this->assertTrue( get_option( AllowedUsers::OPTION )[ $this->admin_id ]['automatic'] );
+	}
+
+	/**
+	 * Removing yourself survives deactivating and reactivating.
+	 *
+	 * @return void
+	 */
+	public function test_reactivation_does_not_put_a_removed_administrator_back(): void {
+		wp_set_current_user( $this->admin_id );
+		DefaultAllowedUser::on_activation();
+		AllowedUsers::remove( $this->admin_id );
+
+		DefaultAllowedUser::on_activation();
+
+		$this->assertFalse( AllowedUsers::has_any() );
+	}
+
+	/**
+	 * A request that finds the decision already claimed adds nobody.
+	 *
+	 * @return void
+	 */
+	public function test_a_claimed_decision_adds_nobody(): void {
+		add_option( DefaultAllowedUser::DONE_OPTION, true, '', false );
+		wp_set_current_user( $this->admin_id );
+
+		$this->open_screen( 'toplevel_page_albert' );
+
+		$this->assertFalse( AllowedUsers::has_any() );
 	}
 
 	/**

@@ -441,18 +441,19 @@ class Dashboard implements Hookable {
 							'',
 							static function () use ( $listed ): void {
 								$link = '<a href="' . esc_url( admin_url( 'admin.php?page=albert-connections' ) ) . '">' . esc_html__( 'Connections', 'albert-ai-butler' ) . '</a>';
+
+								if ( $listed ) {
+									/* translators: %s: a link to the Connections screen. */
+									$text = __( 'You are on the list as administrator. Add others under %s.', 'albert-ai-butler' );
+								} else {
+									/* translators: %s: a link to the Connections screen. */
+									$text = __( 'You are not on the list yet. Add yourself under %s.', 'albert-ai-butler' );
+								}
 								?>
 								<p class="albert-setup__description">
 									<?php
 									echo wp_kses(
-										sprintf(
-											$listed
-												/* translators: %s: a link to the Connections screen. */
-												? __( 'You are on the list as administrator. Add others under %s', 'albert-ai-butler' )
-												/* translators: %s: a link to the Connections screen. */
-												: __( 'You are not on the list yet. Add yourself under %s', 'albert-ai-butler' ),
-											$link
-										),
+										sprintf( $text, $link ),
 										[ 'a' => [ 'href' => [] ] ]
 									);
 									?>

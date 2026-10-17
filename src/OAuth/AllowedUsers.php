@@ -331,18 +331,6 @@ class AllowedUsers {
 	}
 
 	/**
-	 * Whether Albert added this user by itself rather than an administrator.
-	 *
-	 * @param int $user_id The user id.
-	 *
-	 * @return bool
-	 * @since 1.5.0
-	 */
-	public static function was_added_automatically( int $user_id ): bool {
-		return self::all()[ $user_id ]['automatic'] ?? false;
-	}
-
-	/**
 	 * Remove a user from the allowed list.
 	 *
 	 * Does not touch their tokens; callers that mean "and disconnect them"
