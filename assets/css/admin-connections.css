@@ -722,8 +722,29 @@ a.albert-badge:focus-visible {
 }
 
 /* Under the name, so the row's actions keep their width for Remove. */
-.albert-user-item__text .albert-copy-button {
-	display: block;
+.albert-user-item__setup {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-100) var(--albert-space-300);
 	margin-block-start: var(--albert-space-100);
+	font-size: var(--albert-font-size-sm);
+}
+
+.albert-user-item__setup form {
+	display: inline;
+	margin: 0;
+}
+
+.albert-user-item__setup .button-link {
+	font-size: inherit;
+}
+
+/* The add-people dialog's email option sits at the start of its footer. */
+.albert-picker__email {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--albert-space-200);
+	margin-inline-end: auto;
 	font-size: var(--albert-font-size-sm);
 }

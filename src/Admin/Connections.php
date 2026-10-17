@@ -19,6 +19,7 @@ use Albert\Admin\Connections\AppIcon;
 use Albert\Admin\Connections\ClientSetupGuides;
 use Albert\Admin\Connections\ConnectDialog;
 use Albert\Admin\ConnectPage;
+use Albert\Admin\Connections\SetupInvite;
 use Albert\Admin\Connections\SiteLocation;
 use Albert\Admin\Connections\UserPickerModal;
 use Albert\Contracts\Interfaces\Hookable;
@@ -73,6 +74,14 @@ class Connections implements Hookable {
 	private const BULK_FORM_ID = 'albert-bulk-revoke';
 
 	/**
+	 * The admin-post action that emails someone their setup link.
+	 *
+	 * @since 1.5.0
+	 * @var string
+	 */
+	public const EMAIL_SETUP_ACTION = 'albert_email_setup_link';
+
+	/**
 	 * Register WordPress hooks.
 	 *
 	 * @return void
@@ -83,6 +92,7 @@ class Connections implements Hookable {
 		add_action( 'admin_init', [ $this, 'handle_actions' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 		add_action( 'admin_post_' . UserPickerModal::ACTION, [ $this, 'handle_add_allowed_users' ] );
+		add_action( 'admin_post_' . self::EMAIL_SETUP_ACTION, [ $this, 'handle_email_setup_link' ] );
 		add_action( 'admin_post_albert_set_connection_label', [ $this, 'handle_set_connection_label' ] );
 		add_action( 'admin_post_albert_revoke_selected', [ $this, 'handle_revoke_selected' ] );
 	}
@@ -384,6 +394,10 @@ class Connections implements Hookable {
 				$added
 			);
 
+		if ( $added > 0 && ! empty( $_POST['albert_email_setup'] ) ) {
+			$message .= ' ' . $this->email_setup_links( $added_ids );
+		}
+
 		if ( $is_ajax ) {
 			if ( $added === 0 ) {
 				wp_send_json_error( [ 'message' => $message ] );
@@ -617,6 +631,88 @@ class Connections implements Hookable {
 				: __( 'Label saved.', 'albert-ai-butler' )
 		);
 
+		$this->redirect_to_page();
+	}
+
+	/**
+	 * Email the people just added their setup link, and say how that went.
+	 *
+	 * @param array<int, int> $user_ids The people added.
+	 *
+	 * @return string A sentence to add to the confirmation.
+	 * @since 1.5.0
+	 */
+	private function email_setup_links( array $user_ids ): string {
+		$from   = wp_get_current_user();
+		$sent   = 0;
+		$failed = 0;
+
+		foreach ( $user_ids as $user_id ) {
+			$user = get_user_by( 'id', $user_id );
+
+			if ( ! $user || ! SetupInvite::can_send_to( $user ) ) {
+				continue;
+			}
+
+			if ( SetupInvite::send( $user, $from ) ) {
+				++$sent;
+			} else {
+				++$failed;
+			}
+		}
+
+		if ( $failed > 0 ) {
+			return __( 'Some setup emails could not be sent. Use Copy setup link instead.', 'albert-ai-butler' );
+		}
+
+		if ( $sent === 0 ) {
+			return __( 'No setup email was needed: administrators connect from this screen.', 'albert-ai-butler' );
+		}
+
+		return sprintf(
+			/* translators: %d: number of emails sent. */
+			_n( 'A setup email went to %d person.', 'Setup emails went to %d people.', $sent, 'albert-ai-butler' ),
+			$sent
+		);
+	}
+
+	/**
+	 * Email one person on the list their setup link.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function handle_email_setup_link(): void {
+		$is_ajax = $this->is_ajax_request();
+		$user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
+
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), self::EMAIL_SETUP_ACTION . '_' . $user_id ) ) {
+			if ( $is_ajax ) {
+				wp_send_json_error( [ 'message' => __( 'Security check failed.', 'albert-ai-butler' ) ], 403 );
+			}
+
+			wp_die( esc_html__( 'Security check failed.', 'albert-ai-butler' ) );
+		}
+
+		$this->require_capability( __( 'You do not have permission to manage MCP access.', 'albert-ai-butler' ), $is_ajax );
+
+		$user = get_user_by( 'id', $user_id );
+		$sent = $user instanceof \WP_User && SetupInvite::send( $user, wp_get_current_user() );
+
+		$message = $sent
+			/* translators: %s: the person's name. */
+			? sprintf( __( 'Setup link emailed to %s.', 'albert-ai-butler' ), $user->display_name )
+			: __( 'The email could not be sent. Use Copy setup link and send it yourself.', 'albert-ai-butler' );
+
+		if ( $is_ajax ) {
+			if ( $sent ) {
+				wp_send_json_success( [ 'message' => $message ] );
+			}
+
+			wp_send_json_error( [ 'message' => $message ] );
+		}
+
+		$this->notify( $sent ? 'setup_emailed' : 'setup_email_failed', $message, $sent ? 'success' : 'error' );
 		$this->redirect_to_page();
 	}
 
@@ -1543,9 +1639,19 @@ class Connections implements Hookable {
 				<?php if ( ! user_can( $user, 'manage_options' ) ) { ?>
 					<?php // Their Connect page, which opens the dialog on arrival: what an agency sends a client. ?>
 					<span class="screen-reader-text" id="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>"><?php echo esc_html( ConnectPage::setup_url() ); ?></span>
-					<button type="button" class="button-link albert-copy-button" data-copy-target="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>">
-						<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
-					</button>
+					<span class="albert-user-item__setup">
+						<button type="button" class="button-link albert-copy-button" data-copy-target="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>">
+							<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
+						</button>
+						<?php if ( SetupInvite::can_send_to( $user ) ) { ?>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-albert-email-setup>
+								<input type="hidden" name="action" value="<?php echo esc_attr( self::EMAIL_SETUP_ACTION ); ?>" />
+								<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>" />
+								<?php wp_nonce_field( self::EMAIL_SETUP_ACTION . '_' . $user_id, '_wpnonce', false ); ?>
+								<button type="submit" class="button-link"><?php esc_html_e( 'Email setup link', 'albert-ai-butler' ); ?></button>
+							</form>
+						<?php } ?>
+					</span>
 				<?php } ?>
 			</div>
 			<div class="albert-user-item__sessions">

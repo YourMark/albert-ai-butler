@@ -1255,12 +1255,53 @@
 		},
 	};
 
+	/**
+	 * "Email setup link" in Who may connect: send it without leaving the
+	 * screen, and say on the button that it went.
+	 */
+	const SetupEmail = {
+		init() {
+			document.addEventListener( 'submit', async ( event ) => {
+				const form = event.target.closest( '[data-albert-email-setup]' );
+				if ( ! form ) {
+					return;
+				}
+
+				event.preventDefault();
+				const button = form.querySelector( 'button' );
+				button.disabled = true;
+
+				let message = '';
+				try {
+					const response = await fetch( form.getAttribute( 'action' ), {
+						method: 'POST',
+						credentials: 'same-origin',
+						headers: { 'X-Requested-With': 'XMLHttpRequest' },
+						body: new FormData( form ),
+					} );
+					const payload = await response.json();
+					message = ( payload.data && payload.data.message ) || '';
+					button.textContent = payload.success ? ( config.i18n.emailSent || message ) : ( config.i18n.emailFailed || message );
+					button.disabled = payload.success;
+				} catch ( error ) {
+					button.disabled = false;
+					message = config.i18n.emailFailed || '';
+				}
+
+				if ( message && window.Albert && window.Albert.liveRegion ) {
+					window.Albert.liveRegion.announce( message );
+				}
+			} );
+		},
+	};
+
 	function init() {
 		ConnectionList.init();
 		ConnectionNaming.init();
 		AllowedUserFilter.init();
 		AllowedUserRemoval.init();
 		UserPicker.init();
+		SetupEmail.init();
 	}
 
 	if ( document.readyState === 'loading' ) {
