@@ -18,6 +18,12 @@ You already ask ChatGPT or Claude to plan posts, rewrite copy and answer questio
 
 Albert removes that step. Connect your AI assistant to your site once, and it writes, edits and files your content directly, in real WordPress blocks, inside limits you set. No copy and paste, no plugin-specific chat window, no code.
 
+* **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request. Needs WordPress 7.1.
+* **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
+* **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
+* **No tracking.** Albert sends nothing about your site or your usage anywhere.
+* **Personal data hidden by default.** Names, email addresses, phone numbers and postal addresses are masked before an assistant sees them. New sites start on Strict.
+
 <!-- TODO: add social proof once you have it. Active installs, star rating, or a named site. One line near the top converts better than anything else on this page. -->
 
 ---
@@ -349,7 +355,18 @@ Initial release. Connect Claude Desktop, ChatGPT, and other MCP-compatible AI as
 
 == Privacy Policy ==
 
-Albert does not collect, store, or transmit any user data to external servers. All authentication tokens are stored locally in your WordPress database. When you authorize an AI assistant, that assistant will have access to perform actions on your WordPress site according to the permissions you grant. You control which abilities are enabled and can revoke any session at any time.
+Albert runs entirely on your own site. It has no servers of its own and sends no data about your site or your usage anywhere. The only request it makes is Site Health checking your site's own sign-in address.
+
+**What reaches your assistant.** Only the site context you choose to send, and the results of the actions you have switched on, for the person who approved the connection, within their WordPress permissions. Before a result leaves your site, Albert masks visitors' and customers' personal details according to your privacy mode: Strict, Balanced or Off. New sites start on Strict. What your assistant's provider then does with that text is covered by their own privacy policy.
+
+**What Albert keeps, in your own database:**
+
+* **Connections**: the apps you approved and their tokens. Access tokens last an hour and refresh tokens 30 days; expired tokens are deleted daily, and apps that never finish connecting are removed after a week. Revoke any connection at any time.
+* **Activity**: for each action, the two most recent results of each kind, with who ran it and any error message. No inputs or outputs are stored. Albert Premium keeps a fuller log, including what was sent and returned, for 90 days by default.
+* **Safe mode requests**: a held request, with the input the assistant sent, until you decide or it expires (after an hour by default). Decided requests are deleted after 30 days.
+* **Your settings and instructions**: what you choose on Albert's screens.
+
+Uninstalling Albert removes its tables and settings. On a multisite network this currently covers the main site only.
 
 == Credits ==
 
