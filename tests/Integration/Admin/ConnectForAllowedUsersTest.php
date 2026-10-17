@@ -133,4 +133,22 @@ class ConnectForAllowedUsersTest extends TestCase {
 		$this->assertSame( 403, rest_do_request( $request )->get_status() );
 		$this->assertSame( '', SiteLocation::saved() );
 	}
+
+	/**
+	 * An administrator has no Connect menu item, but its link still opens:
+	 * WordPress refuses a page whose menu item was removed.
+	 *
+	 * @return void
+	 */
+	public function test_the_connect_page_stays_reachable_for_an_administrator(): void {
+		global $_registered_pages;
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'administrator' ] ) );
+		( new \Albert\Admin\ConnectPage() )->add_menu_page();
+
+		$hook = get_plugin_page_hookname( \Albert\Admin\ConnectPage::PAGE_SLUG, '' );
+
+		$this->assertArrayHasKey( $hook, $_registered_pages );
+		$this->assertNotFalse( has_action( 'load-' . $hook ) );
+	}
 }

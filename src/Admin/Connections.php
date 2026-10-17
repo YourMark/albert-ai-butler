@@ -1668,7 +1668,7 @@ class Connections implements Hookable {
 				<span class="dashicons dashicons-admin-users"></span>
 			</span>
 			<div class="albert-user-item__text">
-				<strong class="albert-user-item__name">
+				<strong class="albert-user-item__name" id="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?>">
 					<?php echo esc_html( $user->display_name ); ?>
 					<?php if ( $user_id === get_current_user_id() ) { ?>
 						<span class="albert-user-item__you"><?php esc_html_e( 'You', 'albert-ai-butler' ); ?></span>
@@ -1678,29 +1678,30 @@ class Connections implements Hookable {
 				<?php if ( $expiry !== '' ) { ?>
 					<span class="albert-user-item__expiry"><?php echo esc_html( $expiry ); ?></span>
 				<?php } ?>
-				<?php // A link that opens the connect dialog on arrival: what an agency sends a client. ?>
-					<span class="screen-reader-text" id="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>"><?php echo esc_html( ConnectPage::setup_url( $user ) ); ?></span>
-					<span class="albert-user-item__setup">
-						<button
-							type="button"
-							class="button-link albert-copy-button"
-							data-copy-target="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>"
-							<?php if ( $entry['authorised_at'] === null && $entry['expires_at'] !== null ) { ?>
-								data-albert-renew="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
-								data-nonce="<?php echo esc_attr( wp_create_nonce( self::RENEW_SETUP_ACTION . '_' . $user_id ) ); ?>"
-							<?php } ?>
-						>
-							<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
-						</button>
-						<?php if ( $user_id !== get_current_user_id() && SetupInvite::can_send_to( $user ) ) { ?>
-							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-albert-email-setup>
-								<input type="hidden" name="action" value="<?php echo esc_attr( self::EMAIL_SETUP_ACTION ); ?>" />
-								<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>" />
-								<?php wp_nonce_field( self::EMAIL_SETUP_ACTION . '_' . $user_id, '_wpnonce', false ); ?>
-								<button type="submit" class="button-link"><?php esc_html_e( 'Email setup link', 'albert-ai-butler' ); ?></button>
-							</form>
+				<?php // What an agency sends a client: a link that opens the connect dialog on arrival. ?>
+				<div class="albert-user-item__setup">
+					<button
+						type="button"
+						class="button-link albert-copy-button"
+						data-copy-text="<?php echo esc_url( ConnectPage::setup_url( $user ) ); ?>"
+						aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?>"
+						<?php if ( $entry['authorised_at'] === null && $entry['expires_at'] !== null ) { ?>
+							data-albert-renew="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+							data-nonce="<?php echo esc_attr( wp_create_nonce( self::RENEW_SETUP_ACTION . '_' . $user_id ) ); ?>"
+							title="<?php esc_attr_e( 'Copying the link restarts this person’s invitation.', 'albert-ai-butler' ); ?>"
 						<?php } ?>
-					</span>
+					>
+						<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
+					</button>
+					<?php if ( $user_id !== get_current_user_id() && SetupInvite::can_send_to( $user ) ) { ?>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-albert-email-setup>
+							<input type="hidden" name="action" value="<?php echo esc_attr( self::EMAIL_SETUP_ACTION ); ?>" />
+							<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>" />
+							<?php wp_nonce_field( self::EMAIL_SETUP_ACTION . '_' . $user_id, '_wpnonce', false ); ?>
+							<button type="submit" class="button-link" aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?>"><?php esc_html_e( 'Email setup link', 'albert-ai-butler' ); ?></button>
+						</form>
+					<?php } ?>
+				</div>
 			</div>
 			<div class="albert-user-item__sessions">
 				<?php if ( $session_count > 0 ) { ?>

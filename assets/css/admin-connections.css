@@ -731,6 +731,14 @@ a.albert-badge:focus-visible {
 	margin: 0;
 }
 
+/* Text-sized links still get a 24px target (WCAG 2.5.8). */
+.albert-user-item__setup .button-link,
+.albert-conn__actions .button-link {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 24px;
+}
+
 .albert-user-item__setup .button-link {
 	font-size: inherit;
 }

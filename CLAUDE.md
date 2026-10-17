@@ -654,8 +654,9 @@ connections with a Revoke that drops only their tokens,
 `ClientRepository::revokeUserTokens()`), the dialog's REST routes and the Claude
 Desktop download. Nothing else: logs, settings, abilities and other people's
 connections stay `manage_options`, and so does saying where the site runs: a
-non-administrator sees it but cannot change it. Administrators keep Connections; the Connect page is out of
-their menu but reachable, and "Copy setup link" in Who may connect hands a
+non-administrator sees it but cannot change it. Administrators keep Connections; for them the Connect page has no
+menu item and forwards to Connections (removing the menu item instead makes
+WordPress refuse the page), and "Copy setup link" in Who may connect hands a
 non-administrator a link that opens the dialog on arrival.
 
 **Connections group by client, not by token.** A client refreshes hourly, so a

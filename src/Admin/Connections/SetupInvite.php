@@ -71,9 +71,20 @@ class SetupInvite {
 			return false;
 		}
 
-		$content = self::content( $user, $from );
-		$text    = self::text( $content );
-		$logo    = ALBERT_PLUGIN_DIR . 'assets/images/albert-email-logo.png';
+		// In the recipient's language, not the sending administrator's.
+		$switched = switch_to_user_locale( $user->ID );
+
+		try {
+			$content         = self::content( $user, $from );
+			$content['lang'] = str_replace( '_', '-', determine_locale() );
+		} finally {
+			if ( $switched ) {
+				restore_previous_locale();
+			}
+		}
+
+		$text = self::text( $content );
+		$logo = ALBERT_PLUGIN_DIR . 'assets/images/albert-email-logo.png';
 
 		// The plain-text part and the logo go on through PHPMailer, which
 		// wp_mail() hands to this hook, for this one email only.
@@ -87,16 +98,16 @@ class SetupInvite {
 
 		add_action( 'phpmailer_init', $attach );
 
-		$sent = wp_mail(
-			$user->user_email,
-			$content['subject'],
-			self::html( $content ),
-			[ 'Content-Type: text/html; charset=UTF-8' ]
-		);
-
-		remove_action( 'phpmailer_init', $attach );
-
-		return $sent;
+		try {
+			return wp_mail(
+				$user->user_email,
+				$content['subject'],
+				self::html( $content ),
+				[ 'Content-Type: text/html; charset=UTF-8' ]
+			);
+		} finally {
+			remove_action( 'phpmailer_init', $attach );
+		}
 	}
 
 	/**
@@ -190,7 +201,7 @@ class SetupInvite {
 		ob_start();
 		?>
 <!DOCTYPE html>
-<html lang="<?php echo esc_attr( get_bloginfo( 'language' ) ); ?>">
+<html lang="<?php echo esc_attr( $content['lang'] ?? get_bloginfo( 'language' ) ); ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -209,7 +220,7 @@ class SetupInvite {
 						<table role="presentation" cellpadding="0" cellspacing="0" border="0">
 							<tr>
 								<td style="padding:0 10px 0 0;vertical-align:middle;">
-									<img src="cid:<?php echo esc_attr( self::LOGO_CID ); ?>" width="32" height="32" alt="Albert" style="display:block;border:0;outline:none;text-decoration:none;">
+									<img src="cid:<?php echo esc_attr( self::LOGO_CID ); ?>" width="32" height="32" alt="" style="display:block;border:0;outline:none;text-decoration:none;">
 								</td>
 								<td style="<?php echo esc_attr( $font ); ?>font-size:17px;font-weight:600;color:#1d2327;vertical-align:middle;">Albert</td>
 							</tr>

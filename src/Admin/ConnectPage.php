@@ -86,10 +86,23 @@ class ConnectPage implements Hookable {
 	/**
 	 * Add the page; administrators keep using Connections.
 	 *
+	 * For an administrator the page is registered without a menu item and
+	 * forwards to Connections, so a Connect link still lands somewhere
+	 * useful. Removing the menu item instead would make WordPress refuse
+	 * the page outright.
+	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
 	public function add_menu_page(): void {
+		if ( current_user_can( 'manage_options' ) ) {
+			$hook = add_submenu_page( '', __( 'Connect', 'albert-ai-butler' ), '', 'manage_options', self::PAGE_SLUG, '__return_null' );
+			if ( $hook !== false ) {
+				add_action( 'load-' . $hook, [ $this, 'forward_administrator' ] );
+			}
+			return;
+		}
+
 		add_submenu_page(
 			Menu::PARENT_SLUG,
 			__( 'Connect', 'albert-ai-butler' ),
@@ -98,11 +111,20 @@ class ConnectPage implements Hookable {
 			self::PAGE_SLUG,
 			[ $this, 'render_page' ]
 		);
+	}
 
-		// Out of an administrator's menu, still reachable by its link.
-		if ( current_user_can( 'manage_options' ) ) {
-			remove_submenu_page( Menu::PARENT_SLUG, self::PAGE_SLUG );
-		}
+	/**
+	 * Send an administrator to Connections, keeping a request to open the dialog.
+	 *
+	 * @return void
+	 * @since 1.5.0
+	 */
+	public function forward_administrator(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only forwards a flag that opens a dialog.
+		$open = isset( $_GET['albert_connect'] );
+
+		wp_safe_redirect( $open ? self::setup_url( wp_get_current_user() ) : admin_url( 'admin.php?page=albert-connections' ) );
+		exit;
 	}
 
 	/**
@@ -274,7 +296,7 @@ class ConnectPage implements Hookable {
 									?>
 								</p>
 							</div>
-							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="albert-conn__actions">
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="albert-conn__actions" data-albert-confirm="<?php echo esc_attr( sprintf( /* translators: %s: the assistant's name. */ __( 'Revoke %s? It is signed out straight away and has to be approved again to come back.', 'albert-ai-butler' ), $name ) ); ?>">
 								<input type="hidden" name="action" value="<?php echo esc_attr( self::REVOKE_ACTION ); ?>" />
 								<input type="hidden" name="client_id" value="<?php echo esc_attr( $connection['client_id'] ); ?>" />
 								<?php wp_nonce_field( self::REVOKE_ACTION . '_' . $connection['client_id'] ); ?>

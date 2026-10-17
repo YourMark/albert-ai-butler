@@ -1269,6 +1269,8 @@
 
 				event.preventDefault();
 				const button = form.querySelector( 'button' );
+				const label = button.dataset.label || button.textContent.trim();
+				button.dataset.label = label;
 				button.disabled = true;
 				const row = form.closest( '[data-albert-user-row]' );
 
@@ -1284,11 +1286,16 @@
 					message = ( payload.data && payload.data.message ) || '';
 					SetupEmail.showExpiry( row, payload.data && payload.data.expiry );
 					button.textContent = payload.success ? ( config.i18n.emailSent || message ) : ( config.i18n.emailFailed || message );
-					button.disabled = payload.success;
 				} catch ( error ) {
-					button.disabled = false;
+					button.textContent = config.i18n.emailFailed || label;
 					message = config.i18n.emailFailed || '';
 				}
+
+				// The result stays readable for a moment, then it can be sent again.
+				window.setTimeout( () => {
+					button.textContent = label;
+					button.disabled = false;
+				}, 4000 );
 
 				if ( message && window.Albert && window.Albert.liveRegion ) {
 					window.Albert.liveRegion.announce( message );
@@ -1309,10 +1316,23 @@
 				body.append( '_wpnonce', button.dataset.nonce );
 
 				fetch( button.dataset.albertRenew, { method: 'POST', credentials: 'same-origin', body } )
-					.then( ( response ) => response.json() )
-					.then( ( payload ) => SetupEmail.showExpiry( button.closest( '[data-albert-user-row]' ), payload.data && payload.data.expiry ) )
-					.catch( () => {} );
+					.then( ( response ) => ( response.ok ? response.json() : Promise.reject( response.status ) ) )
+					.then( ( payload ) => {
+						const expiry = payload.success && payload.data ? payload.data.expiry : '';
+						SetupEmail.showExpiry( button.closest( '[data-albert-user-row]' ), expiry );
+						// After the copy's own "Copied!", so this is what is heard last.
+						if ( expiry ) {
+							window.setTimeout( () => SetupEmail.announce( ( config.i18n.renewed || '%s' ).replace( '%s', expiry ) ), 600 );
+						}
+					} )
+					.catch( () => window.setTimeout( () => SetupEmail.announce( config.i18n.renewFailed ), 600 ) );
 			} );
+		},
+
+		announce( message ) {
+			if ( message && window.Albert && window.Albert.liveRegion ) {
+				window.Albert.liveRegion.announce( message );
+			}
 		},
 
 		showExpiry( row, text ) {
