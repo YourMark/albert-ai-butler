@@ -86,7 +86,11 @@ class ConnectDialog {
 			<?php } ?>
 			<?php
 			InfoTip::render(
-				__( 'A local site runs only on your computer, for example in Local, Herd, Studio or Docker, and the internet cannot reach it. Apps on your computer, like Claude Desktop, Claude Code, Codex and Cursor, can still connect. Apps that connect from the cloud, like Claude on the web and ChatGPT, need a public site: one anyone can open at its address. Albert detects this from the site’s address, so change it if it is wrong.', 'albert-ai-butler' ),
+				__( 'A local site runs only on your computer, for example in Local, Herd, Studio or Docker, and the internet cannot reach it. Apps on your computer, like Claude Desktop, Claude Code, Codex and Cursor, can still connect. Apps that connect from the cloud, like Claude on the web and ChatGPT, need a public site: one anyone can open at its address.', 'albert-ai-butler' )
+				. ' '
+				. ( current_user_can( 'manage_options' )
+					? __( 'Albert detects this from the site’s address, so change it if it is wrong.', 'albert-ai-butler' )
+					: __( 'If it is wrong, ask an administrator to change it.', 'albert-ai-butler' ) ),
 				__( 'local and public sites', 'albert-ai-butler' )
 			);
 			?>
