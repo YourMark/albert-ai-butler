@@ -679,10 +679,12 @@ class AuthorizationPage implements Hookable {
 		$this->enqueue_oauth_styles();
 
 		wp_enqueue_script( 'albert-oauth-redirect' );
-		wp_add_inline_script(
-			'albert-oauth-redirect',
-			self::is_dangerous_scheme( $redirect_url ) ? '' : 'setTimeout(function(){window.location.href=' . wp_json_encode( $redirect_url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';},1500);'
-		);
+		$script = '';
+		if ( ! self::is_dangerous_scheme( $redirect_url ) ) {
+			$target = wp_json_encode( $redirect_url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
+			$script = 'setTimeout(function(){window.location.href=' . $target . ';},1500);';
+		}
+		wp_add_inline_script( 'albert-oauth-redirect', $script );
 
 		?>
 <!DOCTYPE html>

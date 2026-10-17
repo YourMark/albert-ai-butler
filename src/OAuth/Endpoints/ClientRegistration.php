@@ -316,6 +316,12 @@ class ClientRegistration implements Hookable {
 			return 'redirect_uri_has_fragment';
 		}
 
+		// Whitespace or a control character anywhere: no valid URI has one, and
+		// keeping them out means every later use can trust the stored string.
+		if ( preg_match( '/[\x00-\x20\x7f]/', $uri ) === 1 ) {
+			return 'redirect_uri_malformed';
+		}
+
 		$scheme = $this->extract_scheme( $uri );
 		if ( $scheme === '' ) {
 			return 'redirect_uri_malformed';

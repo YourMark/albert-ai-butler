@@ -152,6 +152,8 @@ class ClientRegistrationValidationTest extends TestCase {
 			'javascript'          => [ 'javascript://alert(1)', 'redirect_scheme_not_permitted' ],
 			'javascript any case' => [ 'JaVaScRiPt://alert(1)', 'redirect_scheme_not_permitted' ],
 			'control character'   => [ "\x01javascript://alert(1)", 'redirect_uri_malformed' ],
+			'line break inside'   => [ "cursor://a\r\nb/cb", 'redirect_uri_malformed' ],
+			'space inside'        => [ 'https://app.example/c b', 'redirect_uri_malformed' ],
 			'data'                => [ 'data:text/html,x', 'redirect_scheme_not_permitted' ],
 			'vbscript'            => [ 'vbscript:msgbox', 'redirect_scheme_not_permitted' ],
 			'file'                => [ 'file:///etc/passwd', 'redirect_scheme_not_permitted' ],
