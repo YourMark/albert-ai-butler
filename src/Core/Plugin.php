@@ -274,7 +274,6 @@ class Plugin {
 
 			// Connections page (allowed users + active sessions).
 			( new Connections() )->register_hooks();
-			( new ClaudeDesktopBundle() )->register_hooks();
 
 			// Safe-mode approvals queue (approve or reject held destructive calls).
 			( new Approvals( $safe_mode_repository, new SafeModeApprover( $safe_mode_repository ), null, new SafeModeApprovalPolicy() ) )->register_hooks();
@@ -297,6 +296,9 @@ class Plugin {
 		// Register the context REST controller (data + instant save for the Context screen).
 		( new ContextController() )->register_hooks();
 		( new ConnectController() )->register_hooks();
+
+		// The download is admin-post; its after-sign-in page is a REST route.
+		( new ClaudeDesktopBundle() )->register_hooks();
 
 		// Register the skills REST controller (read-only data for the Skills screen).
 		( new SkillsController() )->register_hooks();

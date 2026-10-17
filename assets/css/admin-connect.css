@@ -449,3 +449,17 @@
 	background: var(--albert-color-surface-sunken);
 	color: var(--albert-color-text);
 }
+
+/* What to do when an app's own link opens nothing: shown only after a click
+   that did not leave the page. */
+.albert-guide-panel__missing {
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+/* WordPress gives every admin list item a bottom margin; these lists space
+   themselves. */
+.albert-guide-panel__step,
+.albert-guide-panel__manual-steps li {
+	margin-block-end: 0;
+}
