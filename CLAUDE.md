@@ -599,9 +599,9 @@ site, how to set one up, who may authorise one, and what is connected.
 guesses whether the MCP endpoint is public or only reachable on this computer
 (local suffixes such as `.test`, private and loopback IPs, single-label hosts,
 or `WP_ENVIRONMENT_TYPE` `local` while the endpoint is the site's own address).
-The guess reads as one ("Albert thinks…"), an administrator can save the answer
-for the site (`albert_site_location`), and a user who may not change site
-settings picks for themselves only (user meta of the same name). It decides the
+The guess reads as one ("Detected: …"), and an administrator can save the answer
+for the site (`albert_site_location`); everyone else sees it but cannot change
+it. It decides the
 order of the apps and marks Claude on the web and ChatGPT as needing a public
 site on a local one, with the reason and an alternative. It never removes an
 app: an earlier version (`Support\HostClassifier`) hid guides by host and that
@@ -634,9 +634,10 @@ that can never connect. Do not patch that check out of the bundle.
 asks where the site runs (saved site-wide through `ConnectController`, so it is
 asked once), which app, then shows that app's `GuidePanel` steps and waits. It
 says "connected" only when `GET albert/v1/connect/status?since=` reports a
-client whose *first* access token for this user is newer than the dialog's
-opening (`ClientRepository::firstConnectionSince()`), so an hourly refresh of an
-old connection never counts and nobody else's connection is ever reported. The
+client this user approved after the dialog opened: an authorization code issued
+since then, redeemed for a live token (`ClientRepository::firstConnectionSince()`).
+A refresh issues no code, so an older connection refreshing never counts, and
+nobody else's connection is ever reported. The
 approval page posts on a `BroadcastChannel('albert-connect')` so the dialog
 checks at once instead of at its next 3 s poll. The numbered steps happen in
 other apps and are never ticked off. The Dashboard's connect step is per user

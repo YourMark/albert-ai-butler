@@ -360,8 +360,9 @@ class ClientRepository implements ClientRepositoryInterface {
 	 * Approved means an authorization code this user issued to the client from
 	 * then on, redeemed for a live access token. A refresh issues tokens but
 	 * never a code, so an older connection refreshing while the dialog is
-	 * open does not count. The code's expiry stands in for its creation time,
-	 * which the table stamps in the database's own time zone.
+	 * open does not count. The code table stamps `created_at` in the
+	 * database's own time zone, so UNIX_TIMESTAMP() reads it back in that
+	 * same zone.
 	 *
 	 * @param int $user_id The user who approved it.
 	 * @param int $since   Unix timestamp; only connections first approved from here on count.
@@ -374,8 +375,7 @@ class ClientRepository implements ClientRepositoryInterface {
 
 		$tables = Tables::oauth();
 
-		// Compared as UTC datetime strings, the way created_at is written,
-		// so the database session's time zone cannot shift the window.
+		// Tokens are compared as UTC strings, the way their created_at is written.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, polled by the connect dialog.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
@@ -384,7 +384,7 @@ class ClientRepository implements ClientRepositoryInterface {
 				WHERE t.user_id = %d AND t.revoked = 0 AND t.created_at >= %s
 					AND EXISTS (
 						SELECT 1 FROM %i c
-						WHERE c.client_id = t.client_id AND c.user_id = %d AND c.expires_at >= %s
+						WHERE c.client_id = t.client_id AND c.user_id = %d AND UNIX_TIMESTAMP( c.created_at ) >= %d
 					)
 				GROUP BY t.client_id
 				ORDER BY first_at DESC
@@ -394,7 +394,7 @@ class ClientRepository implements ClientRepositoryInterface {
 				gmdate( 'Y-m-d H:i:s', $since ),
 				$tables['auth_codes'],
 				$user_id,
-				gmdate( 'Y-m-d H:i:s', $since )
+				$since
 			),
 			ARRAY_A
 		);

@@ -502,14 +502,20 @@ class ClientSetupGuides {
 		];
 
 		// A local https site's certificate is one Node does not trust by default.
+		// Without a known path the config stays valid and the hint says what to add.
+		$hint = $context['insecure'] ? __( 'Needs this site on a secure https address, or on localhost.', 'albert-ai-butler' ) : '';
 		if ( $context['local'] && ! $context['http'] ) {
-			$server['env'] = [ 'NODE_EXTRA_CA_CERTS' => self::local_root_certificate() ];
+			if ( LocalCertificate::path() !== null ) {
+				$server['env'] = [ 'NODE_EXTRA_CA_CERTS' => (string) LocalCertificate::path() ];
+			} else {
+				$hint = __( 'If the app can’t verify this site’s certificate, add an env entry NODE_EXTRA_CA_CERTS with the path to your local root certificate.', 'albert-ai-butler' );
+			}
 		}
 
 		return self::snippet(
 			'bridge',
 			__( 'For apps that can’t connect to a URL. Needs Node.js 22 or newer.', 'albert-ai-butler' ),
-			$context['insecure'] ? __( 'Needs this site on a secure https address, or on localhost.', 'albert-ai-butler' ) : '',
+			$hint,
 			self::json_snippet( [ 'mcpServers' => [ 'albert' => $server ] ] ),
 			true
 		);

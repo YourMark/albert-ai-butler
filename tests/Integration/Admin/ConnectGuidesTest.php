@@ -153,4 +153,18 @@ class ConnectGuidesTest extends TestCase {
 
 		$this->assertFalse( SiteLocation::save( 'somewhere' ) );
 	}
+
+	/**
+	 * A plain-permalink address is quoted for the shell; a plain one is not.
+	 *
+	 * @return void
+	 */
+	public function test_terminal_commands_quote_the_address_when_needed(): void {
+		$plain  = ClientSetupGuides::get( 'claude-code', 'https://example.com/?rest_route=/albert/v1/mcp', SiteLocation::PUBLIC );
+		$pretty = ClientSetupGuides::get( 'claude-code', self::HTTPS, SiteLocation::PUBLIC );
+
+		$this->assertStringEndsWith( " 'https://example.com/?rest_route=/albert/v1/mcp'", $plain['steps'][0]['action']['value'] );
+		$this->assertStringEndsWith( ' ' . self::HTTPS, $pretty['steps'][0]['action']['value'] );
+	}
+
 }

@@ -322,10 +322,15 @@
 			if ( step === 'steps' && panel && panel.dataset.waits === '1' ) {
 				wait.hidden = false;
 				this.dialog.querySelector( '[data-albert-connect-stuck]' ).hidden = true;
-				const waiting = format( i18n.waiting, panel.dataset.appName );
-				this.dialog.querySelector( '[data-albert-connect-wait-text]' ).textContent = waiting;
-				// A status region that appears already filled is often not read.
-				announce( waiting );
+				// Filled after it is shown: a status region that appears already
+				// filled is often not read.
+				const text = this.dialog.querySelector( '[data-albert-connect-wait-text]' );
+				text.textContent = '';
+				window.requestAnimationFrame( () => {
+					text.textContent = format( i18n.waiting, panel.dataset.appName );
+				} );
+				// Only where the panel has a by-hand route to point at.
+				this.dialog.querySelector( '[data-albert-connect-manual]' ).hidden = ! panel.querySelector( 'details.albert-guide-panel__manual, details.albert-guide-panel__fold' );
 				this.startPolling( panel.dataset.appName );
 			} else {
 				wait.hidden = true;

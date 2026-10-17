@@ -33,6 +33,12 @@ class LocalCertificate {
 	public static function path(): ?string {
 		$home = (string) getenv( 'HOME' );
 
+		// PHP-FPM often runs without HOME; the account's own record still has it.
+		if ( $home === '' && function_exists( 'posix_getpwuid' ) && function_exists( 'posix_geteuid' ) ) {
+			$account = posix_getpwuid( posix_geteuid() );
+			$home    = is_array( $account ) ? (string) $account['dir'] : '';
+		}
+
 		if ( $home === '' ) {
 			return null;
 		}
