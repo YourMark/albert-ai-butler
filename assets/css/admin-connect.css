@@ -404,12 +404,17 @@
 	justify-content: flex-end;
 }
 
-.albert-connect__back {
+.albert-connect__footer .albert-connect__back {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--albert-space-100);
 	margin-inline-end: auto;
-	min-block-size: 44px;
+}
+
+.albert-connect__back .dashicons {
+	inline-size: 1rem;
+	block-size: 1rem;
+	font-size: 1rem;
 }
 
 .albert-connect__back[hidden],
@@ -417,11 +422,32 @@
 	display: none;
 }
 
-/* The one-line "where is this site" on Connections, with its Change link. */
+/* The one-line "where is this site", with an icon and its Change link. */
 .albert-connect-location {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-200);
 	margin: 0;
 	font-size: var(--albert-font-size-body);
 	color: var(--albert-color-text-muted);
+}
+
+.albert-connect-location .dashicons {
+	inline-size: 1.125rem;
+	block-size: 1.125rem;
+	font-size: 1.125rem;
+	color: var(--albert-color-text);
+}
+
+.albert-choice__icon {
+	flex-shrink: 0;
+	color: var(--albert-color-text);
+}
+
+.albert-connect__prompts li,
+.albert-connect__stuck li {
+	margin-block-end: 0;
 }
 
 /* Logos inside buttons and choice cards sit on the text's line. */

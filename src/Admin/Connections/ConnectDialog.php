@@ -78,6 +78,7 @@ class ConnectDialog {
 	public static function render_location_line(): void {
 		?>
 		<p class="albert-connect-location" data-albert-location-line>
+			<span class="dashicons <?php echo esc_attr( self::location_icon( SiteLocation::current() ) ); ?>" aria-hidden="true" data-albert-location-icon></span>
 			<span data-albert-location-text><?php echo esc_html( self::location_sentence( SiteLocation::current(), SiteLocation::is_guess() ) ); ?></span>
 			<button type="button" class="button-link" data-albert-open-connect data-step="location"><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
 		</p>
@@ -125,9 +126,9 @@ class ConnectDialog {
 			</div>
 
 			<div class="albert-dialog__footer albert-connect__footer">
-				<button type="button" class="button-link albert-connect__back" data-albert-connect-back hidden>
+				<button type="button" class="button albert-connect__back" data-albert-connect-back hidden>
 					<span class="dashicons dashicons-arrow-left-alt2" aria-hidden="true"></span>
-					<?php esc_html_e( 'Back', 'albert-ai-butler' ); ?>
+					<span><?php esc_html_e( 'Back', 'albert-ai-butler' ); ?></span>
 				</button>
 				<button type="button" class="button button-primary" data-albert-connect-next><?php esc_html_e( 'Continue', 'albert-ai-butler' ); ?></button>
 				<button type="button" class="button button-primary" data-albert-connect-done hidden><?php esc_html_e( 'Done', 'albert-ai-butler' ); ?></button>
@@ -163,6 +164,7 @@ class ConnectDialog {
 				<?php foreach ( $options as $value => [ $label, $description ] ) { ?>
 					<label class="albert-choice">
 						<input type="radio" name="albert-connect-location" value="<?php echo esc_attr( $value ); ?>" <?php checked( SiteLocation::current(), $value ); ?> aria-describedby="albert-connect-location-<?php echo esc_attr( $value ); ?>">
+						<span class="dashicons <?php echo esc_attr( self::location_icon( $value ) ); ?> albert-choice__icon" aria-hidden="true"></span>
 						<span class="albert-choice__text">
 							<span class="albert-choice__label"><?php echo esc_html( $label ); ?></span>
 							<span class="albert-choice__description" id="albert-connect-location-<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $description ); ?></span>
@@ -318,7 +320,8 @@ class ConnectDialog {
 	 */
 	private static function render_context_line(): void {
 		?>
-		<p class="albert-connect__context">
+		<p class="albert-connect__context albert-connect-location">
+			<span class="dashicons" aria-hidden="true" data-albert-location-icon></span>
 			<span data-albert-connect-where></span>
 			<button type="button" class="button-link" data-albert-connect-change><?php esc_html_e( 'Change', 'albert-ai-butler' ); ?></button>
 		</p>
@@ -328,34 +331,52 @@ class ConnectDialog {
 	/**
 	 * The sentence for the location line.
 	 *
+	 * Says plainly when it is Albert's detection rather than somebody's
+	 * choice, because detection can be wrong and then the Change link is
+	 * what the reader needs.
+	 *
 	 * @param string $location The location.
-	 * @param bool   $is_guess Whether it is still Albert's guess.
+	 * @param bool   $is_guess Whether it is still detected rather than chosen.
 	 *
 	 * @return string
 	 * @since 1.5.0
 	 */
 	private static function location_sentence( string $location, bool $is_guess ): string {
 		if ( $is_guess ) {
-			return self::guess_sentence( $location );
+			return $location === SiteLocation::LOCAL
+				? __( 'Detected: a local site, only on this computer.', 'albert-ai-butler' )
+				: __( 'Detected: a public site, on the internet.', 'albert-ai-butler' );
 		}
 
 		return $location === SiteLocation::LOCAL
-			? __( 'This site: only on this computer.', 'albert-ai-butler' )
-			: __( 'This site: on the internet.', 'albert-ai-butler' );
+			? __( 'Local site, only on this computer.', 'albert-ai-butler' )
+			: __( 'Public site, on the internet.', 'albert-ai-butler' );
 	}
 
 	/**
-	 * Albert's guess, said as one.
+	 * Albert's detection, said as one, above the first question.
 	 *
-	 * @param string $location The guessed location.
+	 * @param string $location The detected location.
 	 *
 	 * @return string
 	 * @since 1.5.0
 	 */
 	private static function guess_sentence( string $location ): string {
 		return $location === SiteLocation::LOCAL
-			? __( 'Albert thinks this site only runs on this computer. Change it if that’s wrong.', 'albert-ai-butler' )
-			: __( 'Albert thinks this site is on the internet. Change it if that’s wrong.', 'albert-ai-butler' );
+			? __( 'Albert detected a local site, only on this computer. Change it if that’s wrong.', 'albert-ai-butler' )
+			: __( 'Albert detected a public site, on the internet. Change it if that’s wrong.', 'albert-ai-butler' );
+	}
+
+	/**
+	 * The icon for a location: a computer or a globe.
+	 *
+	 * @param string $location The location.
+	 *
+	 * @return string A dashicons class.
+	 * @since 1.5.0
+	 */
+	public static function location_icon( string $location ): string {
+		return $location === SiteLocation::LOCAL ? 'dashicons-desktop' : 'dashicons-admin-site-alt3';
 	}
 
 	/**
@@ -398,8 +419,8 @@ class ConnectDialog {
 				'i18n'        => [
 					/* translators: 1: current step number, 2: number of steps. */
 					'progress'  => __( 'Step %1$d of %2$d', 'albert-ai-butler' ),
-					'public'    => __( 'This site: on the internet.', 'albert-ai-butler' ),
-					'local'     => __( 'This site: only on this computer.', 'albert-ai-butler' ),
+					'public'    => __( 'Public site, on the internet.', 'albert-ai-butler' ),
+					'local'     => __( 'Local site, only on this computer.', 'albert-ai-butler' ),
 					/* translators: %s: an app's name. */
 					'waiting'   => __( 'Waiting for %s to connect. Keep this window open.', 'albert-ai-butler' ),
 					/* translators: %s: an app's name. */

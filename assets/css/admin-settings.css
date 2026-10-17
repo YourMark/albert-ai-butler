@@ -109,6 +109,9 @@
 .albert-setup__step {
 	display: flex;
 	gap: 14px;
+	/* WordPress gives every admin list item a bottom margin, which left a
+	   white strip under the tinted current step. */
+	margin: 0;
 	padding: var(--albert-space-400) var(--albert-card-padding);
 }
 
