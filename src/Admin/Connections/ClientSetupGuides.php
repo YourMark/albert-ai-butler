@@ -188,10 +188,11 @@ class ClientSetupGuides {
 	 */
 	private static function claude_desktop( array $context ): array {
 		$download = [
-			'type'  => 'download',
-			'label' => __( 'Download for Claude Desktop', 'albert-ai-butler' ),
-			'value' => ClaudeDesktopBundle::url(),
-			'meta'  => ClaudeDesktopBundle::filename(),
+			'type'    => 'download',
+			'label'   => __( 'Download the extension', 'albert-ai-butler' ),
+			'value'   => ClaudeDesktopBundle::url(),
+			'meta'    => ClaudeDesktopBundle::filename(),
+			'missing' => '',
 		];
 
 		return self::guide(
@@ -200,12 +201,18 @@ class ClientSetupGuides {
 				'label'   => __( 'Claude Desktop', 'albert-ai-butler' ),
 				'icon'    => 'claude',
 				'steps'   => [
-					self::step( __( 'Download the install file for this site.', 'albert-ai-butler' ), $download ),
-					self::step( __( 'Open the file. Claude Desktop shows what it adds: choose Install.', 'albert-ai-butler' ) ),
+					self::step( __( 'Download Albert’s Claude Desktop extension, made for this site.', 'albert-ai-butler' ), $download ),
+					self::step( __( 'Open the file. Claude Desktop shows the extension: choose Install.', 'albert-ai-butler' ) ),
 					self::step( __( 'The first time Claude uses Albert, your browser opens this site: sign in as someone listed under Who may connect, and choose Authorize.', 'albert-ai-butler' ) ),
 				],
-				'notes'   => ClaudeDesktopBundle::is_available() ? [] : [ self::note( __( 'This server is missing PHP’s Zip extension, so it cannot build the file. Use Claude Code, Cursor or another app on this computer instead.', 'albert-ai-butler' ) ) ],
-				'blocked' => $context['insecure'] ? __( 'Claude Desktop needs this site on a secure https address, or on localhost. Turn on https for the site in the tool that runs it (for example Secure in Herd, or SSL in Local), then come back for the file.', 'albert-ai-butler' ) : '',
+				'notes'   => array_merge(
+					ClaudeDesktopBundle::is_available() ? [] : [ self::note( __( 'This server is missing PHP’s Zip extension, so it cannot build the file. Use Claude Code, Cursor or another app on this computer instead.', 'albert-ai-butler' ) ) ],
+					// Cowork and Code sessions run the extension in Claude's sandbox,
+					// which cannot reach a site on this computer: seen as "Couldn't
+					// start for Cowork and Code sessions" in Claude's log.
+					[ self::note( __( 'It works in your Claude Desktop chats. Cowork and Code sessions run in a separate sandbox that can’t reach a site on your computer, so Claude may say the extension couldn’t start there.', 'albert-ai-butler' ), '', true ) ]
+				),
+				'blocked' => $context['insecure'] ? __( 'Claude Desktop needs this site on a secure https address, or on localhost. Turn on https for the site in the tool that runs it (for example Secure in Herd, or SSL in Local), then come back for the extension.', 'albert-ai-butler' ) : '',
 			]
 		);
 	}
@@ -251,7 +258,7 @@ class ClientSetupGuides {
 	 *
 	 * The three share one setup, so the terminal commands cover all of them.
 	 *
-	 * @param array{endpoint: string, local: bool, http: bool} $context The site.
+	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
 	 *
 	 * @return AlbertClientGuide The guide entry.
 	 * @since 1.5.0
