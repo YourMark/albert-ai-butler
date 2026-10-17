@@ -18,10 +18,9 @@ use Albert\MCP\Server as McpServer;
  * needing a public site.
  *
  * Detection is a guess from the site's address and environment type, and is
- * shown as one ("Albert thinks…"). It recommends and orders, never hides: a
- * tunnel, a staging host or a LAN address can all fool it, so the owner can
- * set the answer for the site. A user who may not change site settings can
- * pick for themselves only; that choice lives in their user meta.
+ * shown as one. It recommends and orders, never hides: a tunnel, a staging
+ * host or a LAN address can all fool it, so an administrator can set the
+ * answer for the site.
  *
  * @since 1.5.0
  */
@@ -52,14 +51,6 @@ class SiteLocation {
 	public const OPTION = 'albert_site_location';
 
 	/**
-	 * A user's own answer, when they may not change the site's.
-	 *
-	 * @since 1.5.0
-	 * @var string
-	 */
-	public const USER_META = 'albert_site_location';
-
-	/**
 	 * Host suffixes local development tools hand out. Never resolvable from
 	 * the internet, so a site on one is local whatever else is true.
 	 *
@@ -78,22 +69,12 @@ class SiteLocation {
 	];
 
 	/**
-	 * The answer in force for a user: their own, then the site's, then detection.
-	 *
-	 * @param int $user_id The user, or 0 for the site's answer alone.
+	 * The answer in force: the one an administrator saved, else the guess.
 	 *
 	 * @return string self::PUBLIC or self::LOCAL.
 	 * @since 1.5.0
 	 */
-	public static function current( int $user_id = 0 ): string {
-		if ( $user_id > 0 ) {
-			$own = (string) get_user_meta( $user_id, self::USER_META, true );
-
-			if ( self::is_valid( $own ) ) {
-				return $own;
-			}
-		}
-
+	public static function current(): string {
 		$saved = self::saved();
 
 		return $saved !== '' ? $saved : self::detect();
@@ -102,16 +83,10 @@ class SiteLocation {
 	/**
 	 * Whether the answer in force is still Albert's guess rather than a choice.
 	 *
-	 * @param int $user_id The user, or 0 for the site's answer alone.
-	 *
 	 * @return bool
 	 * @since 1.5.0
 	 */
-	public static function is_guess( int $user_id = 0 ): bool {
-		if ( $user_id > 0 && self::is_valid( (string) get_user_meta( $user_id, self::USER_META, true ) ) ) {
-			return false;
-		}
-
+	public static function is_guess(): bool {
 		return self::saved() === '';
 	}
 
@@ -141,25 +116,6 @@ class SiteLocation {
 		}
 
 		update_option( self::OPTION, $location, false );
-
-		return true;
-	}
-
-	/**
-	 * Save a user's own answer, for them only.
-	 *
-	 * @param int    $user_id  The user.
-	 * @param string $location self::PUBLIC or self::LOCAL.
-	 *
-	 * @return bool False when the value is not one of the two.
-	 * @since 1.5.0
-	 */
-	public static function save_for_user( int $user_id, string $location ): bool {
-		if ( $user_id <= 0 || ! self::is_valid( $location ) ) {
-			return false;
-		}
-
-		update_user_meta( $user_id, self::USER_META, $location );
 
 		return true;
 	}
