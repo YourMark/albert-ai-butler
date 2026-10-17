@@ -22,9 +22,8 @@ use Albert\OAuth\AllowedUsers;
  * they pick, today. The email only says who sent it, where it goes, and
  * when an unused invitation runs out.
  *
- * Only for someone on the list who is not an administrator: administrators
- * connect from Connections, and an email to somebody who cannot open the
- * page is a dead end.
+ * Only for someone on the list: being on it is what lets them open the page
+ * the link goes to. An administrator's link goes to Connections.
  *
  * @since 1.5.0
  */
@@ -39,9 +38,7 @@ class SetupInvite {
 	 * @since 1.5.0
 	 */
 	public static function can_send_to( \WP_User $user ): bool {
-		return $user->user_email !== ''
-			&& ! user_can( $user, 'manage_options' )
-			&& AllowedUsers::is_allowed( $user->ID );
+		return $user->user_email !== '' && AllowedUsers::is_allowed( $user->ID );
 	}
 
 	/**
@@ -71,7 +68,7 @@ class SetupInvite {
 			sprintf( __( '%1$s has given you access to connect an AI assistant, like Claude, Codex or Cursor, to %2$s.', 'albert-ai-butler' ), $from->display_name, $site ),
 			'',
 			__( 'Open this link and pick the app you use. Albert shows you the steps for it, one at a time:', 'albert-ai-butler' ),
-			ConnectPage::setup_url(),
+			ConnectPage::setup_url( $user ),
 			'',
 			__( 'You sign in to the site first if you are not signed in already.', 'albert-ai-butler' ),
 		];

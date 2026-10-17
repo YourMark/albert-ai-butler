@@ -68,17 +68,27 @@ class SetupInviteTest extends TestCase {
 	}
 
 	/**
-	 * Nobody off the list, and no administrator, is emailed.
+	 * Nobody off the list is emailed.
 	 *
 	 * @return void
 	 */
-	public function test_nobody_else_is_emailed(): void {
+	public function test_nobody_off_the_list_is_emailed(): void {
 		$stranger = self::factory()->user->create_and_get( [ 'role' => 'editor' ] );
-		$other    = self::factory()->user->create_and_get( [ 'role' => 'administrator' ] );
-		AllowedUsers::add( $other->ID );
 
 		$this->assertFalse( SetupInvite::send( $stranger, $this->admin ) );
-		$this->assertFalse( SetupInvite::send( $other, $this->admin ) );
 		$this->assertFalse( tests_retrieve_phpmailer_instance()->get_sent() );
+	}
+
+	/**
+	 * An administrator's link goes to Connections, where they connect.
+	 *
+	 * @return void
+	 */
+	public function test_an_administrators_link_goes_to_connections(): void {
+		$other = self::factory()->user->create_and_get( [ 'role' => 'administrator' ] );
+		AllowedUsers::add( $other->ID );
+
+		$this->assertTrue( SetupInvite::send( $other, $this->admin ) );
+		$this->assertStringContainsString( 'page=albert-connections', tests_retrieve_phpmailer_instance()->get_sent()->body );
 	}
 }

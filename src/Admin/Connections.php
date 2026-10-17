@@ -666,7 +666,7 @@ class Connections implements Hookable {
 		}
 
 		if ( $sent === 0 ) {
-			return __( 'No setup email was needed: administrators connect from this screen.', 'albert-ai-butler' );
+			return __( 'No setup email was sent: nobody you added has an email address.', 'albert-ai-butler' );
 		}
 
 		return sprintf(
@@ -1636,14 +1636,13 @@ class Connections implements Hookable {
 				<?php if ( $expiry !== '' ) { ?>
 					<span class="albert-user-item__expiry"><?php echo esc_html( $expiry ); ?></span>
 				<?php } ?>
-				<?php if ( ! user_can( $user, 'manage_options' ) ) { ?>
-					<?php // Their Connect page, which opens the dialog on arrival: what an agency sends a client. ?>
-					<span class="screen-reader-text" id="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>"><?php echo esc_html( ConnectPage::setup_url() ); ?></span>
+				<?php // A link that opens the connect dialog on arrival: what an agency sends a client. ?>
+					<span class="screen-reader-text" id="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>"><?php echo esc_html( ConnectPage::setup_url( $user ) ); ?></span>
 					<span class="albert-user-item__setup">
 						<button type="button" class="button-link albert-copy-button" data-copy-target="albert-setup-link-<?php echo esc_attr( (string) $user_id ); ?>">
 							<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
 						</button>
-						<?php if ( SetupInvite::can_send_to( $user ) ) { ?>
+						<?php if ( $user_id !== get_current_user_id() && SetupInvite::can_send_to( $user ) ) { ?>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-albert-email-setup>
 								<input type="hidden" name="action" value="<?php echo esc_attr( self::EMAIL_SETUP_ACTION ); ?>" />
 								<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>" />
@@ -1652,7 +1651,6 @@ class Connections implements Hookable {
 							</form>
 						<?php } ?>
 					</span>
-				<?php } ?>
 			</div>
 			<div class="albert-user-item__sessions">
 				<?php if ( $session_count > 0 ) { ?>

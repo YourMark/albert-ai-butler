@@ -60,17 +60,23 @@ class ConnectPage implements Hookable {
 	}
 
 	/**
-	 * The link an administrator sends someone to start connecting.
+	 * The link that takes someone straight into the connect dialog.
 	 *
-	 * Opens the dialog on arrival; after login if they were signed out.
+	 * An administrator connects from Connections and everyone else from
+	 * this page; both open the dialog when the link carries
+	 * `albert_connect`. After a login if they were signed out.
+	 *
+	 * @param \WP_User|null $user Who the link is for, or null for this page.
 	 *
 	 * @return string
 	 * @since 1.5.0
 	 */
-	public static function setup_url(): string {
+	public static function setup_url( ?\WP_User $user = null ): string {
+		$page = $user !== null && user_can( $user, 'manage_options' ) ? 'albert-connections' : self::PAGE_SLUG;
+
 		return add_query_arg(
 			[
-				'page'           => self::PAGE_SLUG,
+				'page'           => $page,
 				'albert_connect' => '1',
 			],
 			admin_url( 'admin.php' )
