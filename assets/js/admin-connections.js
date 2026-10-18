@@ -1309,9 +1309,9 @@
 
 			this.open = menu;
 			menu.querySelector( '.albert-setup-menu__popover' ).showPopover();
-			this.place( menu );
+			this.place( menu, true );
 			menu.querySelector( '.albert-setup-menu__toggle' ).setAttribute( 'aria-expanded', 'true' );
-			this.items( menu )[ 0 ].focus();
+			this.items( menu )[ 0 ].focus( { preventScroll: true } );
 			this.renew( menu );
 		},
 
@@ -1322,12 +1322,10 @@
 			}
 
 			this.open = null;
-			window.clearTimeout( menu.albertCopyTimer );
-			const copyLabel = menu.querySelector( '[data-albert-setup-copy-label]' );
-			if ( copyLabel && copyLabel.dataset.label ) {
-				copyLabel.textContent = copyLabel.dataset.label;
-			}
+			window.clearTimeout( menu.albertResultTimer );
+			this.items( menu ).forEach( ( item ) => this.result( item, null ) );
 			menu.querySelector( '.albert-setup-menu__popover' ).hidePopover();
+			document.body.style.paddingBlockEnd = '';
 			const toggle = menu.querySelector( '.albert-setup-menu__toggle' );
 			toggle.setAttribute( 'aria-expanded', 'false' );
 			if ( restoreFocus ) {
@@ -1335,23 +1333,29 @@
 			}
 		},
 
-		// Below the button, left edges aligned; kept inside the card, and
-		// above the button when there is no room below.
-		place( menu ) {
+		// Below the button, left edges aligned, kept inside the card. When the
+		// window is too short the page scrolls to make room, growing for as
+		// long as the menu is open if it ends too soon.
+		place( menu, scroll = false ) {
 			const popover = menu.querySelector( '.albert-setup-menu__popover' );
 			const button = menu.querySelector( '.albert-setup-menu__toggle' ).getBoundingClientRect();
 			const card = ( menu.closest( '.albert-card' ) || document.body ).getBoundingClientRect();
-			const gap = 4;
 
 			popover.style.inlineSize = Math.min( 280, card.width - 16 ) + 'px';
 			const { width, height } = popover.getBoundingClientRect();
-			const left = Math.max( card.left + 8, Math.min( button.left, card.right - 8 - width ) );
-			const below = button.bottom + gap;
-			const top = below + height > window.innerHeight && button.top - gap - height > 0
-				? button.top - gap - height
-				: below;
+			const top = button.bottom + 4;
+			const overflow = top + height + 16 - window.innerHeight;
 
-			popover.style.left = left + 'px';
+			if ( scroll && overflow > 0 ) {
+				const room = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+				if ( room < overflow ) {
+					document.body.style.paddingBlockEnd = ( overflow - room ) + 'px';
+				}
+				window.scrollBy( 0, overflow );
+				return this.place( menu );
+			}
+
+			popover.style.left = Math.max( card.left + 8, Math.min( button.left, card.right - 8 - width ) ) + 'px';
 			popover.style.top = top + 'px';
 		},
 
@@ -1418,17 +1422,9 @@
 				return;
 			}
 
-			const label = item.querySelector( '[data-albert-setup-copy-label]' );
-			label.dataset.label = label.dataset.label || label.textContent.trim();
-			label.textContent = config.i18n.copied;
+			this.result( item, 'success', config.i18n.copied );
 			this.announce( config.i18n.copiedAnnounce );
-
-			window.clearTimeout( menu.albertCopyTimer );
-			menu.albertCopyTimer = window.setTimeout( () => {
-				if ( this.open === menu ) {
-					this.close( true );
-				}
-			}, 2000 );
+			this.closeAfter( menu, 2000 );
 		},
 
 		async email( item ) {
@@ -1444,7 +1440,7 @@
 			body.append( '_wpnonce', item.dataset.nonce );
 
 			item.setAttribute( 'aria-disabled', 'true' );
-			this.close( true );
+			this.result( item, 'busy', config.i18n.emailSending );
 
 			let success = false;
 			let message = config.i18n.emailFailed;
@@ -1464,18 +1460,41 @@
 			}
 
 			item.removeAttribute( 'aria-disabled' );
-			this.notice( menu, message, success );
+			if ( this.open !== menu ) {
+				this.announce( message );
+				return;
+			}
+
+			this.result( item, success ? 'success' : 'error', success ? config.i18n.emailSent : config.i18n.emailFailedShort );
+			this.announce( message );
+			this.closeAfter( menu, success ? 2000 : 4000 );
 		},
 
-		notice( menu, message, success ) {
-			const holder = menu.querySelector( '[data-albert-setup-notice]' );
-			const notice = document.createElement( 'div' );
-			notice.className = 'notice inline ' + ( success ? 'notice-success' : 'notice-error' );
-			const text = document.createElement( 'p' );
-			text.textContent = message;
-			notice.append( text );
-			holder.replaceChildren( notice );
-			this.announce( message );
+		// The item itself says how it went: its icon and label change, and
+		// close() puts both back. State null restores the original.
+		result( item, state, text ) {
+			const label = item.querySelector( '[data-albert-setup-label]' );
+			const icon = item.querySelector( '.dashicons' );
+			label.dataset.label = label.dataset.label || label.textContent.trim();
+			icon.dataset.icon = icon.dataset.icon || icon.className;
+
+			const icons = { success: 'dashicons-yes', error: 'dashicons-warning', busy: 'dashicons-update' };
+			label.textContent = state ? text : label.dataset.label;
+			icon.className = state ? 'dashicons ' + icons[ state ] : icon.dataset.icon;
+			if ( state ) {
+				item.dataset.state = state;
+			} else {
+				delete item.dataset.state;
+			}
+		},
+
+		closeAfter( menu, delay ) {
+			window.clearTimeout( menu.albertResultTimer );
+			menu.albertResultTimer = window.setTimeout( () => {
+				if ( this.open === menu ) {
+					this.close( menu.contains( document.activeElement ) );
+				}
+			}, delay );
 		},
 
 		announce( message ) {

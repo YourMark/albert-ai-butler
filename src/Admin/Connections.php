@@ -1700,18 +1700,19 @@ class Connections implements Hookable {
 							<?php if ( SetupInvite::can_send_to( $user ) ) { ?>
 								<button type="button" class="albert-setup-menu__item" role="menuitem" tabindex="-1" data-albert-setup-email data-nonce="<?php echo esc_attr( wp_create_nonce( self::EMAIL_SETUP_ACTION . '_' . $user_id ) ); ?>">
 									<span class="dashicons dashicons-email-alt" aria-hidden="true"></span>
-									<?php
-									/* translators: %s: the person's display name. */
-									echo esc_html( sprintf( __( 'Email to %s', 'albert-ai-butler' ), $user->display_name ) );
-									?>
+									<span data-albert-setup-label>
+										<?php
+										/* translators: %s: the person's display name. */
+										echo esc_html( sprintf( __( 'Email to %s', 'albert-ai-butler' ), $user->display_name ) );
+										?>
+									</span>
 								</button>
 							<?php } ?>
 							<button type="button" class="albert-setup-menu__item" role="menuitem" tabindex="-1" data-albert-setup-copy>
 								<span class="dashicons dashicons-admin-links" aria-hidden="true"></span>
-								<span data-albert-setup-copy-label><?php esc_html_e( 'Copy link', 'albert-ai-butler' ); ?></span>
+								<span data-albert-setup-label><?php esc_html_e( 'Copy link', 'albert-ai-butler' ); ?></span>
 							</button>
 						</div>
-						<div class="albert-setup-menu__notice" data-albert-setup-notice></div>
 					</div>
 				<?php } ?>
 			</div>

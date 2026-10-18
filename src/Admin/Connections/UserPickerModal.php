@@ -151,7 +151,10 @@ final class UserPickerModal {
 					/* translators: %d: number of selected people. */
 					'addMany'                 => __( 'Add %d users', 'albert-ai-butler' ),
 					'addFailed'               => __( 'Could not add the selected people. Reload the page and try again.', 'albert-ai-butler' ),
+					'emailSending'            => __( 'Sending…', 'albert-ai-butler' ),
+					'emailSent'               => __( 'Email sent', 'albert-ai-butler' ),
 					'emailFailed'             => __( 'The email couldn’t be sent. Copy the link and send it another way.', 'albert-ai-butler' ),
+					'emailFailedShort'        => __( 'Couldn’t send, copy the link instead', 'albert-ai-butler' ),
 					'copied'                  => __( 'Copied', 'albert-ai-butler' ),
 					'copiedAnnounce'          => __( 'Setup link copied', 'albert-ai-butler' ),
 					'noRole'                  => __( 'No role on this site', 'albert-ai-butler' ),

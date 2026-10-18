@@ -789,12 +789,18 @@ a.albert-badge:focus-visible {
 	color: var(--albert-color-text-muted);
 }
 
-.albert-setup-menu__notice:empty {
-	display: none;
+.albert-setup-menu__item[data-state="success"],
+.albert-setup-menu__item[data-state="success"] .dashicons {
+	color: var(--albert-color-success);
 }
 
-.albert-setup-menu__notice .notice {
-	margin: var(--albert-space-300) 0 0;
+.albert-setup-menu__item[data-state="error"],
+.albert-setup-menu__item[data-state="error"] .dashicons {
+	color: var(--albert-color-danger);
+}
+
+.albert-setup-menu__item[aria-disabled="true"] {
+	cursor: default;
 }
 
 @media (max-width: 782px) {
