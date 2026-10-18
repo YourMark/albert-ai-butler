@@ -157,6 +157,7 @@ final class UserPickerModal {
 					'emailFailedShort'        => __( 'Couldn’t send, copy the link instead', 'albert-ai-butler' ),
 					'copied'                  => __( 'Copied', 'albert-ai-butler' ),
 					'copiedAnnounce'          => __( 'Setup link copied', 'albert-ai-butler' ),
+					'copyFailed'              => __( 'Couldn’t copy the link, try again', 'albert-ai-butler' ),
 					'noRole'                  => __( 'No role on this site', 'albert-ai-butler' ),
 					/* translators: %s: the person's name. */
 					'chosen'                  => __( '%s added to the selection.', 'albert-ai-butler' ),

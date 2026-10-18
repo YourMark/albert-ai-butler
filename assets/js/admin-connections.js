@@ -1256,125 +1256,88 @@
 	};
 
 	/**
-	 * "Send setup link" in Who may connect: a menu button (APG pattern) with
-	 * Email and Copy. One menu open at a time. The menu is a popover, in the
-	 * top layer, because the list scrolls and would clip it.
+	 * "Send setup link" in Who may connect: an APG menu button on a native
+	 * popover. The browser opens and closes it, light-dismisses it, closes it
+	 * on Escape, keeps one open at a time and returns focus to the button.
+	 * This adds what it cannot: focus into the menu, arrow keys, Tab out, the
+	 * two actions, and placement where CSS anchor positioning is missing.
 	 */
 	const SetupMenu = {
-		open: null,
+		anchored: window.CSS && CSS.supports( 'position-area', 'block-end' ),
 
 		init() {
+			// `toggle` does not bubble; capture catches it for every menu.
+			document.addEventListener( 'toggle', ( event ) => {
+				if ( event.target.matches( '.albert-setup-menu__popover' ) ) {
+					this.toggled( event.target, event.newState === 'open' );
+				}
+			}, true );
+
 			document.addEventListener( 'click', ( event ) => {
-				const toggle = event.target.closest( '.albert-setup-menu__toggle' );
-				if ( toggle ) {
-					const menu = toggle.closest( '[data-albert-setup-menu]' );
-					if ( this.open === menu ) {
-						this.close( true );
-					} else {
-						this.show( menu );
-					}
-					return;
-				}
-
-				const item = event.target.closest( '[data-albert-setup-menu] [role="menuitem"]' );
-				if ( item ) {
-					if ( item.hasAttribute( 'data-albert-setup-copy' ) ) {
-						this.copy( item );
-					} else {
-						this.email( item );
-					}
-					return;
-				}
-
-				if ( this.open && ! this.open.contains( event.target ) ) {
-					this.close( false );
+				const item = event.target.closest( '.albert-setup-menu__item' );
+				if ( item?.hasAttribute( 'data-albert-setup-email' ) ) {
+					this.email( item );
+				} else if ( item?.hasAttribute( 'data-albert-setup-copy' ) ) {
+					this.copy( item );
 				}
 			} );
 
 			document.addEventListener( 'keydown', ( event ) => this.keydown( event ) );
 
-			const follow = () => this.open && this.place( this.open );
-			window.addEventListener( 'resize', follow );
-			document.addEventListener( 'scroll', follow, true );
+			if ( ! this.anchored ) {
+				const follow = () => {
+					const popover = document.querySelector( '.albert-setup-menu__popover:popover-open' );
+					if ( popover ) {
+						this.place( popover );
+					}
+				};
+				window.addEventListener( 'resize', follow );
+				document.addEventListener( 'scroll', follow, true );
+			}
+		},
+
+		toggled( popover, open ) {
+			const menu = popover.closest( '[data-albert-setup-menu]' );
+			menu.querySelector( '.albert-setup-menu__toggle' ).setAttribute( 'aria-expanded', String( open ) );
+
+			if ( ! open ) {
+				window.clearTimeout( menu.albertCloseTimer );
+				this.items( menu ).filter( ( item ) => item.dataset.state !== 'busy' ).forEach( ( item ) => this.result( item, null ) );
+				return;
+			}
+
+			if ( ! this.anchored ) {
+				this.place( popover );
+			}
+			this.items( menu )[ 0 ].focus();
+			this.renew( menu );
 		},
 
 		items( menu ) {
 			return [ ...menu.querySelectorAll( '[role="menuitem"]' ) ];
 		},
 
-		show( menu ) {
-			if ( this.open ) {
-				this.close( false );
-			}
-
-			this.open = menu;
-			menu.querySelector( '.albert-setup-menu__popover' ).showPopover();
-			this.place( menu );
-			menu.querySelector( '.albert-setup-menu__toggle' ).setAttribute( 'aria-expanded', 'true' );
-			this.items( menu )[ 0 ].focus( { preventScroll: true } );
-			this.renew( menu );
-		},
-
-		close( restoreFocus ) {
-			const menu = this.open;
-			if ( ! menu ) {
-				return;
-			}
-
-			this.open = null;
-			window.clearTimeout( menu.albertResultTimer );
-			this.items( menu ).forEach( ( item ) => this.result( item, null ) );
-			menu.querySelector( '.albert-setup-menu__popover' ).hidePopover();
-			const toggle = menu.querySelector( '.albert-setup-menu__toggle' );
-			toggle.setAttribute( 'aria-expanded', 'false' );
-			if ( restoreFocus ) {
-				toggle.focus();
-			}
-		},
-
-		// Browsers with CSS anchor positioning place the menu themselves (see
-		// the stylesheet). Elsewhere, the same rule by hand: below the button,
-		// above it only when it does not fit below, inside the window.
-		place( menu ) {
-			if ( window.CSS && CSS.supports( 'position-area', 'block-end' ) ) {
-				return;
-			}
-
-			const popover = menu.querySelector( '.albert-setup-menu__popover' );
-			const button = menu.querySelector( '.albert-setup-menu__toggle' ).getBoundingClientRect();
-			const { width, height } = popover.getBoundingClientRect();
-			const below = button.bottom + 4;
-			const above = button.top - 4 - height;
-			const fitsBelow = below + height <= window.innerHeight;
-
-			popover.style.top = ( fitsBelow || above < 0 ? below : above ) + 'px';
-			popover.style.left = Math.max( 8, Math.min( button.left, window.innerWidth - 8 - width ) ) + 'px';
-		},
-
 		keydown( event ) {
-			const menu = this.open;
-			if ( ! menu || ! menu.contains( event.target ) ) {
+			const list = event.target.closest( '.albert-setup-menu [role="menu"]' );
+			if ( ! list ) {
 				return;
 			}
 
-			if ( event.key === 'Escape' ) {
-				event.preventDefault();
-				this.close( true );
-				return;
-			}
-
-			// Tab leaves the menu and carries on to the next focusable element.
+			// Tab leaves the menu: close it after the browser has moved focus, so
+			// focus lands where Tab was going. Not on focusout, which Safari also
+			// fires when a click lands on a button it does not focus.
 			if ( event.key === 'Tab' ) {
-				this.close( false );
+				const popover = list.closest( '.albert-setup-menu__popover' );
+				window.setTimeout( () => {
+					if ( ! popover.contains( document.activeElement ) ) {
+						popover.hidePopover();
+					}
+				} );
 				return;
 			}
 
-			const items = this.items( menu );
-			const index = items.indexOf( document.activeElement );
-			if ( index === -1 ) {
-				return;
-			}
-
+			const items = this.items( list );
+			const index = items.indexOf( event.target );
 			const next = {
 				ArrowDown: ( index + 1 ) % items.length,
 				ArrowUp: ( index - 1 + items.length ) % items.length,
@@ -1388,8 +1351,20 @@
 			}
 		},
 
-		// A pending invitation restarts as soon as the menu opens, so whichever
-		// way the link goes, it still works when the person opens it.
+		// Fallback for browsers without CSS anchor positioning, same rule as the
+		// stylesheet: below the button, above it only when it does not fit.
+		place( popover ) {
+			const button = popover.closest( '[data-albert-setup-menu]' ).querySelector( '.albert-setup-menu__toggle' ).getBoundingClientRect();
+			const { width, height } = popover.getBoundingClientRect();
+			const below = button.bottom + 4;
+			const above = button.top - 4 - height;
+
+			popover.style.top = ( below + height <= window.innerHeight || above < 0 ? below : above ) + 'px';
+			popover.style.left = Math.max( 8, Math.min( button.left, window.innerWidth - 8 - width ) ) + 'px';
+		},
+
+		// A pending invitation restarts as the menu opens, so whichever way the
+		// link goes, it still works when the person opens it.
 		renew( menu ) {
 			const nonce = menu.dataset.renewNonce;
 			if ( ! nonce ) {
@@ -1404,23 +1379,19 @@
 
 			fetch( menu.dataset.actionUrl, { method: 'POST', credentials: 'same-origin', body } )
 				.then( ( response ) => ( response.ok ? response.json() : null ) )
-				.then( ( payload ) => this.showExpiry( row, payload && payload.success && payload.data ? payload.data.expiry : '' ) )
+				.then( ( payload ) => this.showExpiry( row, payload?.success ? payload.data?.expiry : '' ) )
 				.catch( () => {} );
 		},
 
 		async copy( item ) {
 			const menu = item.closest( '[data-albert-setup-menu]' );
-			if ( ! window.Albert || ! ( await window.Albert.clipboard.copy( menu.dataset.url ) ) ) {
-				return;
-			}
+			const copied = await window.Albert?.clipboard?.copy( menu.dataset.url );
 
-			this.result( item, 'success', config.i18n.copied );
-			this.announce( config.i18n.copiedAnnounce );
-			this.closeAfter( menu, 2000 );
+			this.finish( item, !! copied, copied ? config.i18n.copied : config.i18n.copyFailed, copied ? config.i18n.copiedAnnounce : config.i18n.copyFailed );
 		},
 
 		async email( item ) {
-			if ( item.getAttribute( 'aria-disabled' ) === 'true' ) {
+			if ( item.dataset.state === 'busy' ) {
 				return;
 			}
 
@@ -1431,7 +1402,8 @@
 			body.append( 'user_id', row.dataset.userId );
 			body.append( '_wpnonce', item.dataset.nonce );
 
-			item.setAttribute( 'aria-disabled', 'true' );
+			// Busy survives a close and reopen, so the item never looks ready
+			// while the request is still out.
 			this.result( item, 'busy', config.i18n.emailSending );
 
 			let success = false;
@@ -1445,34 +1417,38 @@
 				} );
 				const payload = await response.json();
 				success = !! payload.success;
-				message = ( payload.data && payload.data.message ) || message;
-				this.showExpiry( row, payload.data && payload.data.expiry );
-			} catch ( error ) {
+				message = payload.data?.message || message;
+				this.showExpiry( row, payload.data?.expiry );
+			} catch {
 				// Keeps the generic failure message.
 			}
 
-			item.removeAttribute( 'aria-disabled' );
-			if ( this.open !== menu ) {
-				this.announce( message );
+			this.finish( item, success, success ? config.i18n.emailSent : config.i18n.emailFailedShort, message );
+		},
+
+		// Shows the outcome on the item and closes the menu a moment later. A
+		// menu already closed only hears the announcement.
+		finish( item, success, label, announcement ) {
+			const popover = item.closest( '.albert-setup-menu__popover' );
+			this.announce( announcement );
+
+			if ( ! popover.matches( ':popover-open' ) ) {
+				this.result( item, null );
 				return;
 			}
 
-			this.result( item, success ? 'success' : 'error', success ? config.i18n.emailSent : config.i18n.emailFailedShort );
-			this.announce( message );
-			this.closeAfter( menu, success ? 2000 : 4000 );
+			this.result( item, success ? 'success' : 'error', label );
+			const menu = popover.closest( '[data-albert-setup-menu]' );
+			window.clearTimeout( menu.albertCloseTimer );
+			menu.albertCloseTimer = window.setTimeout( () => popover.matches( ':popover-open' ) && popover.hidePopover(), success ? 2000 : 4000 );
 		},
 
-		// The item itself says how it went: its icon and label change, and
-		// close() puts both back. State null restores the original.
+		// The state drives the icon and colour in CSS; only the words change here.
 		result( item, state, text ) {
 			const label = item.querySelector( '[data-albert-setup-label]' );
-			const icon = item.querySelector( '.dashicons' );
-			label.dataset.label = label.dataset.label || label.textContent.trim();
-			icon.dataset.icon = icon.dataset.icon || icon.className;
-
-			const icons = { success: 'dashicons-yes', error: 'dashicons-warning', busy: 'dashicons-update' };
+			label.dataset.label ??= label.textContent.trim();
 			label.textContent = state ? text : label.dataset.label;
-			icon.className = state ? 'dashicons ' + icons[ state ] : icon.dataset.icon;
+
 			if ( state ) {
 				item.dataset.state = state;
 			} else {
@@ -1480,23 +1456,14 @@
 			}
 		},
 
-		closeAfter( menu, delay ) {
-			window.clearTimeout( menu.albertResultTimer );
-			menu.albertResultTimer = window.setTimeout( () => {
-				if ( this.open === menu ) {
-					this.close( menu.contains( document.activeElement ) );
-				}
-			}, delay );
-		},
-
 		announce( message ) {
-			if ( message && window.Albert && window.Albert.liveRegion ) {
-				window.Albert.liveRegion.announce( message );
+			if ( message ) {
+				window.Albert?.liveRegion?.announce( message );
 			}
 		},
 
 		showExpiry( row, text ) {
-			const expiry = row && row.querySelector( '.albert-user-item__expiry' );
+			const expiry = row?.querySelector( '.albert-user-item__expiry' );
 			if ( expiry && text ) {
 				expiry.textContent = text;
 			}

@@ -1687,31 +1687,44 @@ class Connections implements Hookable {
 				// What an agency sends a client: a link that opens the connect
 				// dialog on arrival. Not on your own row: you connect from the top.
 				if ( $user_id !== get_current_user_id() ) {
-					$menu_id = 'albert-setup-menu-' . $user_id;
+					$menu_id = 'albert-setup-' . $user_id;
 					$pending = $entry['authorised_at'] === null && $entry['expires_at'] !== null;
 					?>
 					<div class="albert-setup-menu" data-albert-setup-menu data-url="<?php echo esc_url( ConnectPage::setup_url( $user ) ); ?>" data-action-url="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"<?php echo $pending ? ' data-renew-nonce="' . esc_attr( wp_create_nonce( self::RENEW_SETUP_ACTION . '_' . $user_id ) ) . '"' : ''; ?>>
-						<button type="button" class="button button-small albert-setup-menu__toggle" style="anchor-name: --<?php echo esc_attr( $menu_id ); ?>" aria-haspopup="menu" aria-expanded="false" aria-controls="<?php echo esc_attr( $menu_id ); ?>" aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?>">
+						<button
+							type="button"
+							class="button button-small albert-setup-menu__toggle"
+							id="<?php echo esc_attr( $menu_id ); ?>-toggle"
+							popovertarget="<?php echo esc_attr( $menu_id ); ?>-popover"
+							aria-haspopup="menu"
+							aria-expanded="false"
+							aria-controls="<?php echo esc_attr( $menu_id ); ?>-menu"
+							aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?> <?php echo esc_attr( $menu_id ); ?>-help"
+							style="anchor-name: --<?php echo esc_attr( $menu_id ); ?>"
+						>
 							<?php esc_html_e( 'Send setup link', 'albert-ai-butler' ); ?>
 							<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
 						</button>
-						<div class="albert-setup-menu__popover" id="<?php echo esc_attr( $menu_id ); ?>" role="menu" aria-describedby="<?php echo esc_attr( $menu_id ); ?>-help" popover="manual" style="position-anchor: --<?php echo esc_attr( $menu_id ); ?>">
+						<?php // The popover holds the help line and the menu: a menu may only contain its items. ?>
+						<div class="albert-setup-menu__popover" id="<?php echo esc_attr( $menu_id ); ?>-popover" popover style="position-anchor: --<?php echo esc_attr( $menu_id ); ?>">
 							<p class="albert-setup-menu__help" id="<?php echo esc_attr( $menu_id ); ?>-help"><?php esc_html_e( 'Opens the steps to connect their assistant.', 'albert-ai-butler' ); ?></p>
-							<?php if ( SetupInvite::can_send_to( $user ) ) { ?>
-								<button type="button" class="albert-setup-menu__item" role="menuitem" tabindex="-1" data-albert-setup-email data-nonce="<?php echo esc_attr( wp_create_nonce( self::EMAIL_SETUP_ACTION . '_' . $user_id ) ); ?>">
-									<span class="dashicons dashicons-email-alt" aria-hidden="true"></span>
-									<span data-albert-setup-label>
-										<?php
-										/* translators: %s: the person's display name. */
-										echo esc_html( sprintf( __( 'Email to %s', 'albert-ai-butler' ), $user->display_name ) );
-										?>
-									</span>
+							<div class="albert-setup-menu__list" id="<?php echo esc_attr( $menu_id ); ?>-menu" role="menu" aria-labelledby="<?php echo esc_attr( $menu_id ); ?>-toggle">
+								<?php if ( SetupInvite::can_send_to( $user ) ) { ?>
+									<button type="button" class="albert-setup-menu__item albert-setup-menu__item--email" role="menuitem" tabindex="-1" data-albert-setup-email data-nonce="<?php echo esc_attr( wp_create_nonce( self::EMAIL_SETUP_ACTION . '_' . $user_id ) ); ?>">
+										<span class="dashicons dashicons-email-alt" aria-hidden="true"></span>
+										<span data-albert-setup-label>
+											<?php
+											/* translators: %s: the person's display name. */
+											echo esc_html( sprintf( __( 'Email to %s', 'albert-ai-butler' ), $user->display_name ) );
+											?>
+										</span>
+									</button>
+								<?php } ?>
+								<button type="button" class="albert-setup-menu__item albert-setup-menu__item--copy" role="menuitem" tabindex="-1" data-albert-setup-copy>
+									<span class="dashicons dashicons-admin-links" aria-hidden="true"></span>
+									<span data-albert-setup-label><?php esc_html_e( 'Copy link', 'albert-ai-butler' ); ?></span>
 								</button>
-							<?php } ?>
-							<button type="button" class="albert-setup-menu__item" role="menuitem" tabindex="-1" data-albert-setup-copy>
-								<span class="dashicons dashicons-admin-links" aria-hidden="true"></span>
-								<span data-albert-setup-label><?php esc_html_e( 'Copy link', 'albert-ai-butler' ); ?></span>
-							</button>
+							</div>
 						</div>
 					</div>
 				<?php } ?>
