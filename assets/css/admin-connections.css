@@ -737,18 +737,30 @@ a.albert-badge:focus-visible {
 	font-size: 16px;
 }
 
-/* Placed by the script from the button's position; see SetupMenu.place(). */
+/*
+ * Below the button, left edges aligned; flipped above, or to the other side,
+ * only when it does not fit. Anchored by the browser where it can, by
+ * SetupMenu.place() where it cannot.
+ */
 .albert-setup-menu__popover {
 	position: fixed;
 	inset: auto;
 	box-sizing: border-box;
 	margin: 0;
-	inline-size: 280px;
+	inline-size: min(280px, calc(100vw - 16px));
 	padding: var(--albert-space-200);
 	border: 1px solid oklch(0.817 0.0042 264.5); /* #c3c4c7 */
 	border-radius: var(--albert-radius-md);
 	background: var(--albert-color-surface);
 	box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+}
+
+@supports (position-area: block-end) {
+	.albert-setup-menu__popover {
+		position-area: block-end span-inline-end;
+		position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+		margin-block: 4px;
+	}
 }
 
 .albert-setup-menu__help {

@@ -1691,11 +1691,11 @@ class Connections implements Hookable {
 					$pending = $entry['authorised_at'] === null && $entry['expires_at'] !== null;
 					?>
 					<div class="albert-setup-menu" data-albert-setup-menu data-url="<?php echo esc_url( ConnectPage::setup_url( $user ) ); ?>" data-action-url="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"<?php echo $pending ? ' data-renew-nonce="' . esc_attr( wp_create_nonce( self::RENEW_SETUP_ACTION . '_' . $user_id ) ) . '"' : ''; ?>>
-						<button type="button" class="button button-small albert-setup-menu__toggle" aria-haspopup="menu" aria-expanded="false" aria-controls="<?php echo esc_attr( $menu_id ); ?>" aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?>">
+						<button type="button" class="button button-small albert-setup-menu__toggle" style="anchor-name: --<?php echo esc_attr( $menu_id ); ?>" aria-haspopup="menu" aria-expanded="false" aria-controls="<?php echo esc_attr( $menu_id ); ?>" aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?>">
 							<?php esc_html_e( 'Send setup link', 'albert-ai-butler' ); ?>
 							<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
 						</button>
-						<div class="albert-setup-menu__popover" id="<?php echo esc_attr( $menu_id ); ?>" role="menu" aria-describedby="<?php echo esc_attr( $menu_id ); ?>-help" popover="manual">
+						<div class="albert-setup-menu__popover" id="<?php echo esc_attr( $menu_id ); ?>" role="menu" aria-describedby="<?php echo esc_attr( $menu_id ); ?>-help" popover="manual" style="position-anchor: --<?php echo esc_attr( $menu_id ); ?>">
 							<p class="albert-setup-menu__help" id="<?php echo esc_attr( $menu_id ); ?>-help"><?php esc_html_e( 'Opens the steps to connect their assistant.', 'albert-ai-butler' ); ?></p>
 							<?php if ( SetupInvite::can_send_to( $user ) ) { ?>
 								<button type="button" class="albert-setup-menu__item" role="menuitem" tabindex="-1" data-albert-setup-email data-nonce="<?php echo esc_attr( wp_create_nonce( self::EMAIL_SETUP_ACTION . '_' . $user_id ) ); ?>">

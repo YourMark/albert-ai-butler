@@ -1309,7 +1309,7 @@
 
 			this.open = menu;
 			menu.querySelector( '.albert-setup-menu__popover' ).showPopover();
-			this.place( menu, true );
+			this.place( menu );
 			menu.querySelector( '.albert-setup-menu__toggle' ).setAttribute( 'aria-expanded', 'true' );
 			this.items( menu )[ 0 ].focus( { preventScroll: true } );
 			this.renew( menu );
@@ -1325,7 +1325,6 @@
 			window.clearTimeout( menu.albertResultTimer );
 			this.items( menu ).forEach( ( item ) => this.result( item, null ) );
 			menu.querySelector( '.albert-setup-menu__popover' ).hidePopover();
-			document.body.style.paddingBlockEnd = '';
 			const toggle = menu.querySelector( '.albert-setup-menu__toggle' );
 			toggle.setAttribute( 'aria-expanded', 'false' );
 			if ( restoreFocus ) {
@@ -1333,30 +1332,23 @@
 			}
 		},
 
-		// Below the button, left edges aligned, kept inside the card. When the
-		// window is too short the page scrolls to make room, growing for as
-		// long as the menu is open if it ends too soon.
-		place( menu, scroll = false ) {
-			const popover = menu.querySelector( '.albert-setup-menu__popover' );
-			const button = menu.querySelector( '.albert-setup-menu__toggle' ).getBoundingClientRect();
-			const card = ( menu.closest( '.albert-card' ) || document.body ).getBoundingClientRect();
-
-			popover.style.inlineSize = Math.min( 280, card.width - 16 ) + 'px';
-			const { width, height } = popover.getBoundingClientRect();
-			const top = button.bottom + 4;
-			const overflow = top + height + 16 - window.innerHeight;
-
-			if ( scroll && overflow > 0 ) {
-				const room = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
-				if ( room < overflow ) {
-					document.body.style.paddingBlockEnd = ( overflow - room ) + 'px';
-				}
-				window.scrollBy( 0, overflow );
-				return this.place( menu );
+		// Browsers with CSS anchor positioning place the menu themselves (see
+		// the stylesheet). Elsewhere, the same rule by hand: below the button,
+		// above it only when it does not fit below, inside the window.
+		place( menu ) {
+			if ( window.CSS && CSS.supports( 'position-area', 'block-end' ) ) {
+				return;
 			}
 
-			popover.style.left = Math.max( card.left + 8, Math.min( button.left, card.right - 8 - width ) ) + 'px';
-			popover.style.top = top + 'px';
+			const popover = menu.querySelector( '.albert-setup-menu__popover' );
+			const button = menu.querySelector( '.albert-setup-menu__toggle' ).getBoundingClientRect();
+			const { width, height } = popover.getBoundingClientRect();
+			const below = button.bottom + 4;
+			const above = button.top - 4 - height;
+			const fitsBelow = below + height <= window.innerHeight;
+
+			popover.style.top = ( fitsBelow || above < 0 ? below : above ) + 'px';
+			popover.style.left = Math.max( 8, Math.min( button.left, window.innerWidth - 8 - width ) ) + 'px';
 		},
 
 		keydown( event ) {
