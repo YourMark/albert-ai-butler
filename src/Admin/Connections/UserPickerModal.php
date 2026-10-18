@@ -151,11 +151,9 @@ final class UserPickerModal {
 					/* translators: %d: number of selected people. */
 					'addMany'                 => __( 'Add %d users', 'albert-ai-butler' ),
 					'addFailed'               => __( 'Could not add the selected people. Reload the page and try again.', 'albert-ai-butler' ),
-					'emailSent'               => __( 'Email sent', 'albert-ai-butler' ),
-					'emailFailed'             => __( 'Email failed, copy the link instead', 'albert-ai-butler' ),
-					/* translators: %s: when the invitation now expires, e.g. "Expires at Oct 18, 2026, 12:14 PM". */
-					'renewed'                 => __( 'Link copied. The invitation was restarted: %s.', 'albert-ai-butler' ),
-					'renewFailed'             => __( 'Link copied, but the invitation could not be restarted. Reload the page to check it.', 'albert-ai-butler' ),
+					'emailFailed'             => __( 'The email couldn’t be sent. Copy the link and send it another way.', 'albert-ai-butler' ),
+					'copied'                  => __( 'Copied', 'albert-ai-butler' ),
+					'copiedAnnounce'          => __( 'Setup link copied', 'albert-ai-butler' ),
 					'noRole'                  => __( 'No role on this site', 'albert-ai-butler' ),
 					/* translators: %s: the person's name. */
 					'chosen'                  => __( '%s added to the selection.', 'albert-ai-butler' ),

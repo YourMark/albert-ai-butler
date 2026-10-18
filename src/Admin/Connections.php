@@ -673,7 +673,7 @@ class Connections implements Hookable {
 		if ( $failed > 0 ) {
 			return sprintf(
 				/* translators: 1: number of emails sent, 2: number that failed. */
-				__( 'Setup emails sent: %1$d. Not sent: %2$d; use Copy setup link for those.', 'albert-ai-butler' ),
+				__( 'Setup emails sent: %1$d. Not sent: %2$d; copy their link from Send setup link instead.', 'albert-ai-butler' ),
 				$sent,
 				$failed
 			);
@@ -717,9 +717,9 @@ class Connections implements Hookable {
 		$sent    = $user instanceof \WP_User && SetupInvite::send( $user, wp_get_current_user() );
 
 		$message = $sent
-			/* translators: %s: the person's name. */
-			? sprintf( __( 'Setup link emailed to %s.', 'albert-ai-butler' ), $user->display_name )
-			: __( 'The email could not be sent. Use Copy setup link and send it yourself.', 'albert-ai-butler' );
+			/* translators: %s: the person's email address. */
+			? sprintf( __( 'Setup link sent to %s.', 'albert-ai-butler' ), $user->user_email )
+			: __( 'The email couldn’t be sent. Copy the link and send it another way.', 'albert-ai-butler' );
 
 		if ( $is_ajax ) {
 			$data = [
@@ -739,10 +739,10 @@ class Connections implements Hookable {
 	}
 
 	/**
-	 * Restart someone's invitation because their setup link was just copied.
+	 * Restart someone's invitation because their setup link menu was opened.
 	 *
-	 * Copying happens in the browser; this runs beside it, so a link sent
-	 * on the last day of the window, or after it, still works when opened.
+	 * So a link sent on the last day of the window, or after it, still works
+	 * when opened, whichever way it is sent.
 	 *
 	 * @return void
 	 * @since 1.5.0
@@ -1564,7 +1564,6 @@ class Connections implements Hookable {
 
 		?>
 		<div class="albert-card__body albert-card__body--flush albert-userlist">
-			<p class="screen-reader-text" id="albert-renew-hint"><?php esc_html_e( 'Copying the link restarts this person’s invitation.', 'albert-ai-butler' ); ?></p>
 			<ul class="albert-userlist__rows" aria-label="<?php esc_attr_e( 'Users who may approve an assistant', 'albert-ai-butler' ); ?>">
 				<?php foreach ( $allowed_users as $user_id => $entry ) { ?>
 					<?php $this->render_allowed_user_row( (int) $user_id, $entry ); ?>
@@ -1684,30 +1683,37 @@ class Connections implements Hookable {
 				<?php if ( $expiry !== '' ) { ?>
 					<span class="albert-user-item__expiry"><?php echo esc_html( $expiry ); ?></span>
 				<?php } ?>
-				<?php // What an agency sends a client: a link that opens the connect dialog on arrival. ?>
-				<div class="albert-user-item__setup">
-					<button
-						type="button"
-						class="button-link albert-copy-button"
-						data-copy-text="<?php echo esc_url( ConnectPage::setup_url( $user ) ); ?>"
-						aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?><?php echo $entry['authorised_at'] === null && $entry['expires_at'] !== null ? ' albert-renew-hint' : ''; ?>"
-						<?php if ( $entry['authorised_at'] === null && $entry['expires_at'] !== null ) { ?>
-							data-albert-renew="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
-							data-nonce="<?php echo esc_attr( wp_create_nonce( self::RENEW_SETUP_ACTION . '_' . $user_id ) ); ?>"
-							title="<?php esc_attr_e( 'Copying the link restarts this person’s invitation.', 'albert-ai-butler' ); ?>"
-						<?php } ?>
-					>
-						<?php esc_html_e( 'Copy setup link', 'albert-ai-butler' ); ?>
-					</button>
-					<?php if ( $user_id !== get_current_user_id() && SetupInvite::can_send_to( $user ) ) { ?>
-						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-albert-email-setup>
-							<input type="hidden" name="action" value="<?php echo esc_attr( self::EMAIL_SETUP_ACTION ); ?>" />
-							<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>" />
-							<?php wp_nonce_field( self::EMAIL_SETUP_ACTION . '_' . $user_id, '_wpnonce', false ); ?>
-							<button type="submit" class="button-link" aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?>"><?php esc_html_e( 'Email setup link', 'albert-ai-butler' ); ?></button>
-						</form>
-					<?php } ?>
-				</div>
+				<?php
+				// What an agency sends a client: a link that opens the connect
+				// dialog on arrival. Not on your own row: you connect from the top.
+				if ( $user_id !== get_current_user_id() ) {
+					$menu_id = 'albert-setup-menu-' . $user_id;
+					$pending = $entry['authorised_at'] === null && $entry['expires_at'] !== null;
+					?>
+					<div class="albert-setup-menu" data-albert-setup-menu data-url="<?php echo esc_url( ConnectPage::setup_url( $user ) ); ?>" data-action-url="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"<?php echo $pending ? ' data-renew-nonce="' . esc_attr( wp_create_nonce( self::RENEW_SETUP_ACTION . '_' . $user_id ) ) . '"' : ''; ?>>
+						<button type="button" class="button button-small albert-setup-menu__toggle" aria-haspopup="menu" aria-expanded="false" aria-controls="<?php echo esc_attr( $menu_id ); ?>" aria-describedby="albert-user-name-<?php echo esc_attr( (string) $user_id ); ?>">
+							<?php esc_html_e( 'Send setup link', 'albert-ai-butler' ); ?>
+							<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
+						</button>
+						<div class="albert-setup-menu__popover" id="<?php echo esc_attr( $menu_id ); ?>" role="menu" aria-describedby="<?php echo esc_attr( $menu_id ); ?>-help" popover="manual">
+							<p class="albert-setup-menu__help" id="<?php echo esc_attr( $menu_id ); ?>-help"><?php esc_html_e( 'Opens the steps to connect their assistant.', 'albert-ai-butler' ); ?></p>
+							<?php if ( SetupInvite::can_send_to( $user ) ) { ?>
+								<button type="button" class="albert-setup-menu__item" role="menuitem" tabindex="-1" data-albert-setup-email data-nonce="<?php echo esc_attr( wp_create_nonce( self::EMAIL_SETUP_ACTION . '_' . $user_id ) ); ?>">
+									<span class="dashicons dashicons-email-alt" aria-hidden="true"></span>
+									<?php
+									/* translators: %s: the person's display name. */
+									echo esc_html( sprintf( __( 'Email to %s', 'albert-ai-butler' ), $user->display_name ) );
+									?>
+								</button>
+							<?php } ?>
+							<button type="button" class="albert-setup-menu__item" role="menuitem" tabindex="-1" data-albert-setup-copy>
+								<span class="dashicons dashicons-admin-links" aria-hidden="true"></span>
+								<span data-albert-setup-copy-label><?php esc_html_e( 'Copy link', 'albert-ai-butler' ); ?></span>
+							</button>
+						</div>
+						<div class="albert-setup-menu__notice" data-albert-setup-notice></div>
+					</div>
+				<?php } ?>
 			</div>
 			<div class="albert-user-item__sessions">
 				<?php if ( $session_count > 0 ) { ?>

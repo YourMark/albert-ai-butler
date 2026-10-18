@@ -1256,82 +1256,226 @@
 	};
 
 	/**
-	 * "Email setup link" in Who may connect: send it without leaving the
-	 * screen, and say on the button that it went.
+	 * "Send setup link" in Who may connect: a menu button (APG pattern) with
+	 * Email and Copy. One menu open at a time. The menu is a popover, in the
+	 * top layer, because the list scrolls and would clip it.
 	 */
-	const SetupEmail = {
+	const SetupMenu = {
+		open: null,
+
 		init() {
-			document.addEventListener( 'submit', async ( event ) => {
-				const form = event.target.closest( '[data-albert-email-setup]' );
-				if ( ! form ) {
-					return;
-				}
-
-				event.preventDefault();
-				const button = form.querySelector( 'button' );
-				// aria-disabled, not disabled: disabling the focused button would
-				// drop focus to the page and lose the person's place in the list.
-				if ( button.getAttribute( 'aria-disabled' ) === 'true' ) {
-					return;
-				}
-				const label = button.dataset.label || button.textContent.trim();
-				button.dataset.label = label;
-				button.setAttribute( 'aria-disabled', 'true' );
-				const row = form.closest( '[data-albert-user-row]' );
-
-				let message = '';
-				try {
-					const response = await fetch( form.getAttribute( 'action' ), {
-						method: 'POST',
-						credentials: 'same-origin',
-						headers: { 'X-Requested-With': 'XMLHttpRequest' },
-						body: new FormData( form ),
-					} );
-					const payload = await response.json();
-					message = ( payload.data && payload.data.message ) || '';
-					SetupEmail.showExpiry( row, payload.data && payload.data.expiry );
-					button.textContent = payload.success ? ( config.i18n.emailSent || message ) : ( config.i18n.emailFailed || message );
-				} catch ( error ) {
-					button.textContent = config.i18n.emailFailed || label;
-					message = config.i18n.emailFailed || '';
-				}
-
-				// The result stays readable for a moment, then it can be sent again.
-				window.setTimeout( () => {
-					button.textContent = label;
-					button.removeAttribute( 'aria-disabled' );
-				}, 4000 );
-
-				if ( message && window.Albert && window.Albert.liveRegion ) {
-					window.Albert.liveRegion.announce( message );
-				}
-			} );
-
-			// Copying a pending invitation's link restarts its window too. The
-			// copy itself is admin-settings.js's; this only tells the server.
 			document.addEventListener( 'click', ( event ) => {
-				const button = event.target.closest( '[data-albert-renew]' );
-				if ( ! button ) {
+				const toggle = event.target.closest( '.albert-setup-menu__toggle' );
+				if ( toggle ) {
+					const menu = toggle.closest( '[data-albert-setup-menu]' );
+					if ( this.open === menu ) {
+						this.close( true );
+					} else {
+						this.show( menu );
+					}
 					return;
 				}
 
-				const body = new FormData();
-				body.append( 'action', 'albert_renew_setup_link' );
-				body.append( 'user_id', button.closest( '[data-albert-user-row]' ).dataset.userId );
-				body.append( '_wpnonce', button.dataset.nonce );
+				const item = event.target.closest( '[data-albert-setup-menu] [role="menuitem"]' );
+				if ( item ) {
+					if ( item.hasAttribute( 'data-albert-setup-copy' ) ) {
+						this.copy( item );
+					} else {
+						this.email( item );
+					}
+					return;
+				}
 
-				fetch( button.dataset.albertRenew, { method: 'POST', credentials: 'same-origin', body } )
-					.then( ( response ) => ( response.ok ? response.json() : Promise.reject( response.status ) ) )
-					.then( ( payload ) => {
-						const expiry = payload.success && payload.data ? payload.data.expiry : '';
-						SetupEmail.showExpiry( button.closest( '[data-albert-user-row]' ), expiry );
-						// After the copy's own "Copied!", so this is what is heard last.
-						if ( expiry ) {
-							window.setTimeout( () => SetupEmail.announce( ( config.i18n.renewed || '%s' ).replace( '%s', expiry ) ), 600 );
-						}
-					} )
-					.catch( () => window.setTimeout( () => SetupEmail.announce( config.i18n.renewFailed ), 600 ) );
+				if ( this.open && ! this.open.contains( event.target ) ) {
+					this.close( false );
+				}
 			} );
+
+			document.addEventListener( 'keydown', ( event ) => this.keydown( event ) );
+
+			const follow = () => this.open && this.place( this.open );
+			window.addEventListener( 'resize', follow );
+			document.addEventListener( 'scroll', follow, true );
+		},
+
+		items( menu ) {
+			return [ ...menu.querySelectorAll( '[role="menuitem"]' ) ];
+		},
+
+		show( menu ) {
+			if ( this.open ) {
+				this.close( false );
+			}
+
+			this.open = menu;
+			menu.querySelector( '.albert-setup-menu__popover' ).showPopover();
+			this.place( menu );
+			menu.querySelector( '.albert-setup-menu__toggle' ).setAttribute( 'aria-expanded', 'true' );
+			this.items( menu )[ 0 ].focus();
+			this.renew( menu );
+		},
+
+		close( restoreFocus ) {
+			const menu = this.open;
+			if ( ! menu ) {
+				return;
+			}
+
+			this.open = null;
+			window.clearTimeout( menu.albertCopyTimer );
+			const copyLabel = menu.querySelector( '[data-albert-setup-copy-label]' );
+			if ( copyLabel && copyLabel.dataset.label ) {
+				copyLabel.textContent = copyLabel.dataset.label;
+			}
+			menu.querySelector( '.albert-setup-menu__popover' ).hidePopover();
+			const toggle = menu.querySelector( '.albert-setup-menu__toggle' );
+			toggle.setAttribute( 'aria-expanded', 'false' );
+			if ( restoreFocus ) {
+				toggle.focus();
+			}
+		},
+
+		// Below the button, left edges aligned; kept inside the card, and
+		// above the button when there is no room below.
+		place( menu ) {
+			const popover = menu.querySelector( '.albert-setup-menu__popover' );
+			const button = menu.querySelector( '.albert-setup-menu__toggle' ).getBoundingClientRect();
+			const card = ( menu.closest( '.albert-card' ) || document.body ).getBoundingClientRect();
+			const gap = 4;
+
+			popover.style.inlineSize = Math.min( 280, card.width - 16 ) + 'px';
+			const { width, height } = popover.getBoundingClientRect();
+			const left = Math.max( card.left + 8, Math.min( button.left, card.right - 8 - width ) );
+			const below = button.bottom + gap;
+			const top = below + height > window.innerHeight && button.top - gap - height > 0
+				? button.top - gap - height
+				: below;
+
+			popover.style.left = left + 'px';
+			popover.style.top = top + 'px';
+		},
+
+		keydown( event ) {
+			const menu = this.open;
+			if ( ! menu || ! menu.contains( event.target ) ) {
+				return;
+			}
+
+			if ( event.key === 'Escape' ) {
+				event.preventDefault();
+				this.close( true );
+				return;
+			}
+
+			// Tab leaves the menu and carries on to the next focusable element.
+			if ( event.key === 'Tab' ) {
+				this.close( false );
+				return;
+			}
+
+			const items = this.items( menu );
+			const index = items.indexOf( document.activeElement );
+			if ( index === -1 ) {
+				return;
+			}
+
+			const next = {
+				ArrowDown: ( index + 1 ) % items.length,
+				ArrowUp: ( index - 1 + items.length ) % items.length,
+				Home: 0,
+				End: items.length - 1,
+			}[ event.key ];
+
+			if ( next !== undefined ) {
+				event.preventDefault();
+				items[ next ].focus();
+			}
+		},
+
+		// A pending invitation restarts as soon as the menu opens, so whichever
+		// way the link goes, it still works when the person opens it.
+		renew( menu ) {
+			const nonce = menu.dataset.renewNonce;
+			if ( ! nonce ) {
+				return;
+			}
+
+			const row = menu.closest( '[data-albert-user-row]' );
+			const body = new FormData();
+			body.append( 'action', 'albert_renew_setup_link' );
+			body.append( 'user_id', row.dataset.userId );
+			body.append( '_wpnonce', nonce );
+
+			fetch( menu.dataset.actionUrl, { method: 'POST', credentials: 'same-origin', body } )
+				.then( ( response ) => ( response.ok ? response.json() : null ) )
+				.then( ( payload ) => this.showExpiry( row, payload && payload.success && payload.data ? payload.data.expiry : '' ) )
+				.catch( () => {} );
+		},
+
+		async copy( item ) {
+			const menu = item.closest( '[data-albert-setup-menu]' );
+			if ( ! window.Albert || ! ( await window.Albert.clipboard.copy( menu.dataset.url ) ) ) {
+				return;
+			}
+
+			const label = item.querySelector( '[data-albert-setup-copy-label]' );
+			label.dataset.label = label.dataset.label || label.textContent.trim();
+			label.textContent = config.i18n.copied;
+			this.announce( config.i18n.copiedAnnounce );
+
+			window.clearTimeout( menu.albertCopyTimer );
+			menu.albertCopyTimer = window.setTimeout( () => {
+				if ( this.open === menu ) {
+					this.close( true );
+				}
+			}, 2000 );
+		},
+
+		async email( item ) {
+			if ( item.getAttribute( 'aria-disabled' ) === 'true' ) {
+				return;
+			}
+
+			const menu = item.closest( '[data-albert-setup-menu]' );
+			const row = menu.closest( '[data-albert-user-row]' );
+			const body = new FormData();
+			body.append( 'action', 'albert_email_setup_link' );
+			body.append( 'user_id', row.dataset.userId );
+			body.append( '_wpnonce', item.dataset.nonce );
+
+			item.setAttribute( 'aria-disabled', 'true' );
+			this.close( true );
+
+			let success = false;
+			let message = config.i18n.emailFailed;
+			try {
+				const response = await fetch( menu.dataset.actionUrl, {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'X-Requested-With': 'XMLHttpRequest' },
+					body,
+				} );
+				const payload = await response.json();
+				success = !! payload.success;
+				message = ( payload.data && payload.data.message ) || message;
+				this.showExpiry( row, payload.data && payload.data.expiry );
+			} catch ( error ) {
+				// Keeps the generic failure message.
+			}
+
+			item.removeAttribute( 'aria-disabled' );
+			this.notice( menu, message, success );
+		},
+
+		notice( menu, message, success ) {
+			const holder = menu.querySelector( '[data-albert-setup-notice]' );
+			const notice = document.createElement( 'div' );
+			notice.className = 'notice inline ' + ( success ? 'notice-success' : 'notice-error' );
+			const text = document.createElement( 'p' );
+			text.textContent = message;
+			notice.append( text );
+			holder.replaceChildren( notice );
+			this.announce( message );
 		},
 
 		announce( message ) {
@@ -1354,7 +1498,7 @@
 		AllowedUserFilter.init();
 		AllowedUserRemoval.init();
 		UserPicker.init();
-		SetupEmail.init();
+		SetupMenu.init();
 	}
 
 	if ( document.readyState === 'loading' ) {

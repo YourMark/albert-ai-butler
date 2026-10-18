@@ -714,36 +714,95 @@ a.albert-badge:focus-visible {
 	margin: 0;
 }
 
-/* Under the name, so the row's actions keep their width for Remove. */
-.albert-user-item__setup {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--albert-space-100) var(--albert-space-300);
-	margin-block-start: var(--albert-space-100);
-	font-size: var(--albert-font-size-sm);
-}
-
-.albert-user-item__setup form {
-	display: inline;
-	margin: 0;
-}
-
 /* Text-sized links still get a 24px target (WCAG 2.5.8). */
-.albert-user-item__setup .button-link,
 .albert-conn__actions .button-link {
 	display: inline-flex;
 	align-items: center;
 	min-block-size: 24px;
 }
 
-.albert-user-item__setup .button-link {
-	font-size: inherit;
+/* "Send setup link": a menu button under the name. */
+.albert-setup-menu {
+	position: relative;
+	margin-block-start: var(--albert-space-300);
 }
 
-.albert-user-item__setup .button-link[aria-disabled="true"] {
+.albert-page .button.albert-setup-menu__toggle {
+	gap: var(--albert-space-100);
+}
+
+.albert-setup-menu__toggle .dashicons {
+	inline-size: 16px;
+	block-size: 16px;
+	font-size: 16px;
+}
+
+/* Placed by the script from the button's position; see SetupMenu.place(). */
+.albert-setup-menu__popover {
+	position: fixed;
+	inset: auto;
+	box-sizing: border-box;
+	margin: 0;
+	inline-size: 280px;
+	padding: var(--albert-space-200);
+	border: 1px solid oklch(0.817 0.0042 264.5); /* #c3c4c7 */
+	border-radius: var(--albert-radius-md);
+	background: var(--albert-color-surface);
+	box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+}
+
+.albert-setup-menu__help {
+	margin: 0;
+	padding: var(--albert-space-200) var(--albert-space-300) var(--albert-space-300);
+	border-block-end: 1px solid var(--albert-color-border-subtle);
+	margin-block-end: var(--albert-space-200);
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-neutral);
+}
+
+.albert-setup-menu__item {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-space-300);
+	inline-size: 100%;
+	min-block-size: 36px;
+	padding: var(--albert-space-200) var(--albert-space-300);
+	border: 0;
+	border-radius: var(--albert-radius-sm);
+	background: none;
+	color: var(--albert-color-text);
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.albert-setup-menu__item:hover {
+	background: var(--albert-color-surface-hover);
+}
+
+.albert-setup-menu__item:focus {
+	outline: 0;
+	box-shadow: 0 0 0 var(--albert-focus-width) var(--wp-admin-theme-color, #3858e9);
+}
+
+.albert-setup-menu__item .dashicons {
 	color: var(--albert-color-text-muted);
-	cursor: default;
+}
+
+.albert-setup-menu__notice:empty {
+	display: none;
+}
+
+.albert-setup-menu__notice .notice {
+	margin: var(--albert-space-300) 0 0;
+}
+
+@media (max-width: 782px) {
+	.albert-page .button.albert-setup-menu__toggle,
+	.albert-setup-menu__item {
+		min-block-size: 44px;
+		block-size: auto;
+	}
 }
 
 /* The add-people dialog's email option sits at the start of its footer. */
