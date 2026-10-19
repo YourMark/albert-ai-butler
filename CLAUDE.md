@@ -145,7 +145,7 @@ albert-ai-butler/
 │   │   ├── Database/
 │   │   │   └── Installer.php           # Creates OAuth database tables
 │   │   ├── Endpoints/
-│   │   │   ├── OAuthController.php     # /oauth/token, metadata, jwks
+│   │   │   ├── OAuthController.php     # /oauth/token, metadata, .well-known, resource, jwks
 │   │   │   ├── OAuthDiscovery.php      # .well-known endpoints
 │   │   │   ├── AuthorizationPage.php   # User consent UI
 │   │   │   ├── ClientRegistration.php  # Dynamic client registration

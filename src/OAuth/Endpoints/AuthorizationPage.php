@@ -448,7 +448,7 @@ class AuthorizationPage implements Hookable {
 	/**
 	 * Send page_headers(), no-cache and the status. Call before any output.
 	 *
-	 * @param int $status HTTP status code.
+	 * @param int $status HTTP status code. Default 200.
 	 *
 	 * @return void
 	 * @since 1.6.0
