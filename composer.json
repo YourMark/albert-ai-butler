@@ -49,6 +49,7 @@
         "test": "phpunit --configuration phpunit-unit.xml.dist",
         "test:unit": "phpunit --configuration phpunit-unit.xml.dist",
         "test:integration": "phpunit --configuration phpunit.xml.dist",
+        "check:em-dashes": "php bin/check-em-dashes.php",
         "lint": "find src/ tests/ -name '*.php' -exec php -l {} \\;"
     },
     "config": {

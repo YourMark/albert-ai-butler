@@ -116,7 +116,7 @@ class CreateUploadLink extends BaseAbility {
 				],
 				'upload_token'   => [
 					'type'        => 'string',
-					'description' => 'Single-use credential. Send it in the token_header header — never as part of the URL.',
+					'description' => 'Single-use credential. Send it in the token_header header, never as part of the URL.',
 				],
 				'token_header'   => [
 					'type'        => 'string',

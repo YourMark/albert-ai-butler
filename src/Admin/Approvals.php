@@ -948,7 +948,7 @@ class Approvals implements Hookable {
 
 	/**
 	 * A `<time>` element for a stored UTC datetime, machine-readable and relative,
-	 * or a plain dash when there is none. Escapes its own output.
+	 * or nothing when there is none. Escapes its own output.
 	 *
 	 * @param string|null $mysql_datetime UTC MySQL datetime, or null.
 	 *
@@ -957,7 +957,7 @@ class Approvals implements Hookable {
 	 */
 	private function time_tag( ?string $mysql_datetime ): string {
 		if ( $mysql_datetime === null ) {
-			return '—';
+			return '';
 		}
 
 		$timestamp = strtotime( $mysql_datetime . ' UTC' );

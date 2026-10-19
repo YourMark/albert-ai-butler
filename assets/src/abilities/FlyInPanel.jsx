@@ -219,7 +219,7 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 				>
 					<p>
 						{ __(
-							'A WordPress capability that gates this ability — it can run only for users whose role grants this capability. This value is best-effort; an ability or add-on can override it.',
+							'A WordPress capability that gates this ability: it can run only for users whose role grants this capability. This value is best-effort; an ability or add-on can override it.',
 							'albert-ai-butler'
 						) }
 					</p>

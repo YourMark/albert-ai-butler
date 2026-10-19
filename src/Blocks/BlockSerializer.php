@@ -355,7 +355,7 @@ class BlockSerializer {
 		// Content preserved; only the block's own wrapper is best-effort.
 		$issues[] = $this->issue(
 			self::SEVERITY_WARNING,
-			"{$path}.name '{$name}' is a registered block without dedicated handling — its content is preserved, but the block's own markup could not be reproduced exactly; verify the result in the editor, or use a fully supported block (e.g. core/paragraph, core/heading, core/group)."
+			"{$path}.name '{$name}' is a registered block without dedicated handling. Its content is preserved, but the block's own markup could not be reproduced exactly; verify the result in the editor, or use a fully supported block (e.g. core/paragraph, core/heading, core/group)."
 		);
 
 		return $this->make_block( $name, $attributes, $inner_html, $inner_blocks );

@@ -108,7 +108,7 @@ class BlockMarkdownTest extends TestCase {
 
 		$out = $this->markdown->render( $markup );
 
-		$this->assertSame( "> Be excellent.\n>\n> — Jane Doe", $out );
+		$this->assertSame( "> Be excellent.\n>\n> Jane Doe", $out );
 	}
 
 	public function test_pullquote_with_cite_tag_renders_author_line(): void {
@@ -118,7 +118,7 @@ class BlockMarkdownTest extends TestCase {
 		$out = $this->markdown->render( $markup );
 
 		// The citation is appended as a Markdown attribution line.
-		$this->assertStringContainsString( "\n>\n> — Ada Lovelace", $out );
+		$this->assertStringContainsString( "\n>\n> Ada Lovelace", $out );
 		$this->assertStringStartsWith( '> Big idea', $out );
 	}
 

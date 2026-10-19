@@ -79,7 +79,7 @@ class Update extends BaseAbility {
 				],
 				'content'    => [
 					'type'        => 'string',
-					'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown — converted to blocks automatically. For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire post body when set.',
+					'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire post body when set.',
 				],
 				'blocks'     => [
 					'type'        => 'array',
@@ -127,7 +127,7 @@ class Update extends BaseAbility {
 				'edit_url'     => [ 'type' => 'string' ],
 				'block_issues' => [
 					'type'        => 'array',
-					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here — they come back as a WP_Error with code "block_validation_failed" and the post is not updated.',
+					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the post is not updated.',
 					'items'       => [ 'type' => 'string' ],
 				],
 			],

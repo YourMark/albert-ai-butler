@@ -112,7 +112,7 @@ class ContentFormatter {
 			'type'        => 'array',
 			'description' => 'Which content representations to return. Optional; when omitted or empty, defaults to ["content","blocks","plaintext"] for backward compatibility. '
 				. 'Allowed values: "content" (raw block markup), "blocks" (structured block tree), "plaintext" (flattened text), '
-				. '"html" (rendered HTML via do_blocks — the only way to see dynamic-block output), "markdown" (Markdown rendering). '
+				. '"html" (rendered HTML via do_blocks, the only way to see dynamic-block output), "markdown" (Markdown rendering). '
 				. 'Only the requested representations are included in the result.',
 			'items'       => [
 				'type' => 'string',

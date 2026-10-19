@@ -77,7 +77,7 @@ class AnnotationPresenter {
 		return [
 			'key'         => 'read',
 			'label'       => __( 'Read', 'albert-ai-butler' ),
-			'description' => __( 'Only reads data — never creates, changes, or deletes anything on your site.', 'albert-ai-butler' ),
+			'description' => __( 'Only reads data. It never creates, changes, or deletes anything on your site.', 'albert-ai-butler' ),
 			'icon'        => 'dashicons-visibility',
 			'tone'        => 'neutral',
 		];

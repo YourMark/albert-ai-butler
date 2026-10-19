@@ -139,7 +139,7 @@ class AdapterHealth implements Hookable {
 	 * @since 1.4.0
 	 */
 	private function explanation(): string {
-		$preamble = esc_html__( 'The MCP endpoint is switched off, so every request to it fails with an authentication error even though no token would work — there is nothing registered to authenticate against.', 'albert-ai-butler' );
+		$preamble = esc_html__( 'The MCP endpoint is switched off, so every request to it fails with an authentication error even though no token would work: there is nothing registered to authenticate against.', 'albert-ai-butler' );
 
 		if ( ! $this->present() ) {
 			return $preamble . ' ' . sprintf(
@@ -179,7 +179,7 @@ class AdapterHealth implements Hookable {
 					'label' => __( 'MCP library', 'albert-ai-butler' ),
 					'value' => $missing === []
 						? __( 'usable', 'albert-ai-butler' )
-						: __( 'unusable — the MCP endpoint cannot work', 'albert-ai-butler' ),
+						: __( 'unusable: the MCP endpoint cannot work', 'albert-ai-butler' ),
 				],
 				'mcp_loaded_at' => [
 					'label' => __( 'MCP library loaded from', 'albert-ai-butler' ),

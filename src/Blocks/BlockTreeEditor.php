@@ -396,7 +396,7 @@ class BlockTreeEditor {
 			'block_path_mismatch',
 			sprintf(
 				/* translators: 1: expected block name, 2: path, 3: actual block name. */
-				__( 'Expected %1$s at %2$s but found %3$s. The post changed since you read it — re-read and retry.', 'albert-ai-butler' ),
+				__( 'Expected %1$s at %2$s but found %3$s. The post changed since you read it. Re-read and retry.', 'albert-ai-butler' ),
 				$expect,
 				self::format_path( $path ),
 				$actual_name === null ? 'classic/freeform content' : (string) $actual_name
