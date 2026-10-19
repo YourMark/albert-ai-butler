@@ -429,23 +429,24 @@ class AuthorizationPage implements Hookable {
 	}
 
 	/**
-	 * Headers that stop another site framing these pages.
+	 * Header lines every page this endpoint renders sends, besides no-cache.
 	 *
 	 * DENY rather than core's send_frame_options_header() (SAMEORIGIN): nothing
 	 * frames the consent page, and a framed Authorize button is a clickjack.
 	 *
-	 * @return string[]
+	 * @return string[] Raw header lines, for header().
 	 * @since 1.6.0
 	 */
-	public static function frame_headers(): array {
+	public static function page_headers(): array {
 		return [
+			'Content-Type: text/html; charset=utf-8',
 			'X-Frame-Options: DENY',
 			"Content-Security-Policy: frame-ancestors 'none'",
 		];
 	}
 
 	/**
-	 * Headers shared by every page this endpoint renders.
+	 * Send page_headers(), no-cache and the status. Call before any output.
 	 *
 	 * @param int $status HTTP status code.
 	 *
@@ -454,9 +455,8 @@ class AuthorizationPage implements Hookable {
 	 */
 	private function send_page_headers( int $status = 200 ): void {
 		nocache_headers();
-		header( 'Content-Type: text/html; charset=utf-8' );
 
-		foreach ( self::frame_headers() as $header ) {
+		foreach ( self::page_headers() as $header ) {
 			header( $header );
 		}
 

@@ -21,10 +21,16 @@ use ReflectionMethod;
 class FrameHeadersTest extends TestCase {
 
 	public function test_framing_is_refused_by_both_headers(): void {
-		$headers = AuthorizationPage::frame_headers();
+		$headers = AuthorizationPage::page_headers();
 
 		$this->assertContains( 'X-Frame-Options: DENY', $headers );
 		$this->assertContains( "Content-Security-Policy: frame-ancestors 'none'", $headers );
+	}
+
+	public function test_the_helper_sends_every_page_header(): void {
+		$body = $this->body( 'send_page_headers' );
+
+		$this->assertMatchesRegularExpression( '/foreach \( self::page_headers\(\) as \$(\w+) \) \{\s*header\( \$\1 \);/', $body );
 	}
 
 	/**
@@ -40,18 +46,32 @@ class FrameHeadersTest extends TestCase {
 	}
 
 	/**
+	 * Headers sent after the first byte of output are dropped.
+	 *
 	 * @dataProvider pages
 	 *
 	 * @param string $method Render method.
 	 */
-	public function test_every_page_sends_them( string $method ): void {
-		$this->assertStringContainsString( '$this->send_page_headers(', $this->body( $method ) );
+	public function test_every_page_sends_them_before_any_output( string $method ): void {
+		$body    = $this->body( $method );
+		$headers = strpos( $body, '$this->send_page_headers(' );
+
+		$this->assertNotFalse( $headers, "$method does not send the page headers." );
+
+		foreach ( [ '?>', 'echo ', 'print ', 'printf(' ] as $output ) {
+			$at = strpos( $body, $output );
+
+			if ( false !== $at ) {
+				$this->assertLessThan( $at, $headers, "$method outputs before sending the page headers." );
+			}
+		}
 	}
 
 	public function test_no_page_sends_headers_of_its_own(): void {
 		$source = (string) file_get_contents( (string) ( new ReflectionClass( AuthorizationPage::class ) )->getFileName() );
 
 		$this->assertSame( 1, substr_count( $source, 'nocache_headers()' ), 'Only send_page_headers() may start a page.' );
+		$this->assertSame( 1, substr_count( $source, 'status_header(' ), 'Only send_page_headers() may set the status.' );
 	}
 
 	/**
