@@ -749,8 +749,10 @@ handle.
 *looks* like, so the same person is found or not found depending on how you typed
 it), plus `capabilities[]` from the
 `albert/connections/allowed_user_capability` filter (default `edit_posts`) and
-`per_page=20`. Removing an allowed user revokes their tokens immediately, because
-the allowed list is otherwise only checked when an authorisation *starts*.
+`per_page=20`. Removing an allowed user revokes their tokens immediately, and since
+1.6.0 `TokenValidator` also checks the list on every request, so a token stops
+working however its user left the list. A password change or reset
+(`OAuth\PasswordChange`) revokes the person's tokens too; a login rehash does not.
 
 `search`/`roles`/`capabilities` on that route all require `list_users`. The screen
 is `manage_options`, so administrators are fine; if a narrower capability is ever

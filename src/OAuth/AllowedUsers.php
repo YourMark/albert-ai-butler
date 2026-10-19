@@ -164,7 +164,8 @@ class AllowedUsers {
 	 * Not just membership: a never-authorised entry past its stored
 	 * `expires_at` is refused here too, live, rather than waiting for
 	 * {@see \Albert\Cron\AllowedUserExpiry} to have physically removed it.
-	 * Checked at {@see \Albert\OAuth\Endpoints\AuthorizationPage::handle_authorization()}.
+	 * Checked at {@see \Albert\OAuth\Endpoints\AuthorizationPage::handle_authorization()}
+	 * and, since 1.6.0, on every token in {@see \Albert\OAuth\Server\TokenValidator}.
 	 *
 	 * @param int $user_id The user id.
 	 *
