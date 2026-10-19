@@ -112,6 +112,23 @@ Connections use OAuth 2.0 with short-lived, self-refreshing tokens. No password 
 
 ---
 
+### Works with the plugins you already use
+
+Albert is not limited to its own abilities. Plugins that offer abilities to AI assistants through the WordPress Abilities API show up on Albert's Abilities screen, where you choose which ones your assistant may use over the same connection. Many popular plugins already do:
+
+* **SEO**: Yoast SEO, Rank Math, All in One SEO, SEOPress, SiteSEO, SureRank.
+* **Forms**: Gravity Forms, WPForms, Fluent Forms, Formidable Forms.
+* **Page builders**: Elementor, Ultimate Addons for Elementor, Premium Addons for Elementor, SiteOrigin Page Builder.
+* **Custom fields**: Advanced Custom Fields (ACF), Secure Custom Fields, Meta Box.
+* **E-commerce**: WooCommerce, plus [Albert for WooCommerce](https://albertwp.com/add-ons/albert-for-woocommerce/) for orders, products, coupons and reports.
+* **Search and analytics**: Search & Filter Pro, Koko Analytics Pro, PixelYourSite.
+* **Performance and media**: Imagify, ShortPixel, SpeedyCache.
+* **Security, backups and activity**: Jetpack, Akismet (once you enable its MCP access), BackWPup, Simple History.
+
+What each plugin lets your assistant do is up to that plugin. You decide which of its abilities are switched on, and the assistant only ever acts with the permissions of the person who approved the connection.
+
+---
+
 ### Go further with Albert Premium
 
 [Albert Premium](https://albertwp.com) adds per-role and per-user permission rules, your own custom post types, and a full activity log with filters and retention.
