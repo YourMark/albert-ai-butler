@@ -1256,92 +1256,214 @@
 	};
 
 	/**
-	 * "Email setup link" in Who may connect: send it without leaving the
-	 * screen, and say on the button that it went.
+	 * "Send setup link" in Who may connect: an APG menu button on a native
+	 * popover. The browser opens and closes it, light-dismisses it, closes it
+	 * on Escape, keeps one open at a time and returns focus to the button.
+	 * This adds what it cannot: focus into the menu, arrow keys, Tab out, the
+	 * two actions, and placement where CSS anchor positioning is missing.
 	 */
-	const SetupEmail = {
+	const SetupMenu = {
+		anchored: window.CSS && CSS.supports( 'position-area', 'block-end' ),
+
 		init() {
-			document.addEventListener( 'submit', async ( event ) => {
-				const form = event.target.closest( '[data-albert-email-setup]' );
-				if ( ! form ) {
-					return;
+			// `toggle` does not bubble; capture catches it for every menu.
+			document.addEventListener( 'toggle', ( event ) => {
+				if ( event.target.matches( '.albert-setup-menu__popover' ) ) {
+					this.toggled( event.target, event.newState === 'open' );
 				}
+			}, true );
 
-				event.preventDefault();
-				const button = form.querySelector( 'button' );
-				// aria-disabled, not disabled: disabling the focused button would
-				// drop focus to the page and lose the person's place in the list.
-				if ( button.getAttribute( 'aria-disabled' ) === 'true' ) {
-					return;
-				}
-				const label = button.dataset.label || button.textContent.trim();
-				button.dataset.label = label;
-				button.setAttribute( 'aria-disabled', 'true' );
-				const row = form.closest( '[data-albert-user-row]' );
-
-				let message = '';
-				try {
-					const response = await fetch( form.getAttribute( 'action' ), {
-						method: 'POST',
-						credentials: 'same-origin',
-						headers: { 'X-Requested-With': 'XMLHttpRequest' },
-						body: new FormData( form ),
-					} );
-					const payload = await response.json();
-					message = ( payload.data && payload.data.message ) || '';
-					SetupEmail.showExpiry( row, payload.data && payload.data.expiry );
-					button.textContent = payload.success ? ( config.i18n.emailSent || message ) : ( config.i18n.emailFailed || message );
-				} catch ( error ) {
-					button.textContent = config.i18n.emailFailed || label;
-					message = config.i18n.emailFailed || '';
-				}
-
-				// The result stays readable for a moment, then it can be sent again.
-				window.setTimeout( () => {
-					button.textContent = label;
-					button.removeAttribute( 'aria-disabled' );
-				}, 4000 );
-
-				if ( message && window.Albert && window.Albert.liveRegion ) {
-					window.Albert.liveRegion.announce( message );
-				}
-			} );
-
-			// Copying a pending invitation's link restarts its window too. The
-			// copy itself is admin-settings.js's; this only tells the server.
 			document.addEventListener( 'click', ( event ) => {
-				const button = event.target.closest( '[data-albert-renew]' );
-				if ( ! button ) {
-					return;
+				const item = event.target.closest( '.albert-setup-menu__item' );
+				if ( item?.hasAttribute( 'data-albert-setup-email' ) ) {
+					this.email( item );
+				} else if ( item?.hasAttribute( 'data-albert-setup-copy' ) ) {
+					this.copy( item );
 				}
-
-				const body = new FormData();
-				body.append( 'action', 'albert_renew_setup_link' );
-				body.append( 'user_id', button.closest( '[data-albert-user-row]' ).dataset.userId );
-				body.append( '_wpnonce', button.dataset.nonce );
-
-				fetch( button.dataset.albertRenew, { method: 'POST', credentials: 'same-origin', body } )
-					.then( ( response ) => ( response.ok ? response.json() : Promise.reject( response.status ) ) )
-					.then( ( payload ) => {
-						const expiry = payload.success && payload.data ? payload.data.expiry : '';
-						SetupEmail.showExpiry( button.closest( '[data-albert-user-row]' ), expiry );
-						// After the copy's own "Copied!", so this is what is heard last.
-						if ( expiry ) {
-							window.setTimeout( () => SetupEmail.announce( ( config.i18n.renewed || '%s' ).replace( '%s', expiry ) ), 600 );
-						}
-					} )
-					.catch( () => window.setTimeout( () => SetupEmail.announce( config.i18n.renewFailed ), 600 ) );
 			} );
+
+			document.addEventListener( 'keydown', ( event ) => this.keydown( event ) );
+
+			if ( ! this.anchored ) {
+				const follow = () => {
+					const popover = document.querySelector( '.albert-setup-menu__popover:popover-open' );
+					if ( popover ) {
+						this.place( popover );
+					}
+				};
+				window.addEventListener( 'resize', follow );
+				document.addEventListener( 'scroll', follow, true );
+			}
+		},
+
+		toggled( popover, open ) {
+			const menu = popover.closest( '[data-albert-setup-menu]' );
+			menu.querySelector( '.albert-setup-menu__toggle' ).setAttribute( 'aria-expanded', String( open ) );
+
+			if ( ! open ) {
+				window.clearTimeout( menu.albertCloseTimer );
+				this.items( menu ).filter( ( item ) => item.dataset.state !== 'busy' ).forEach( ( item ) => this.result( item, null ) );
+				return;
+			}
+
+			if ( ! this.anchored ) {
+				this.place( popover );
+			}
+			this.items( menu )[ 0 ].focus();
+			this.renew( menu );
+		},
+
+		items( menu ) {
+			return [ ...menu.querySelectorAll( '[role="menuitem"]' ) ];
+		},
+
+		keydown( event ) {
+			const list = event.target.closest( '.albert-setup-menu [role="menu"]' );
+			if ( ! list ) {
+				return;
+			}
+
+			// Tab leaves the menu: close it after the browser has moved focus, so
+			// focus lands where Tab was going. Not on focusout, which Safari also
+			// fires when a click lands on a button it does not focus.
+			if ( event.key === 'Tab' ) {
+				const popover = list.closest( '.albert-setup-menu__popover' );
+				window.setTimeout( () => {
+					if ( ! popover.contains( document.activeElement ) ) {
+						popover.hidePopover();
+					}
+				} );
+				return;
+			}
+
+			const items = this.items( list );
+			const index = items.indexOf( event.target );
+			const next = {
+				ArrowDown: ( index + 1 ) % items.length,
+				ArrowUp: ( index - 1 + items.length ) % items.length,
+				Home: 0,
+				End: items.length - 1,
+			}[ event.key ];
+
+			if ( next !== undefined ) {
+				event.preventDefault();
+				items[ next ].focus();
+			}
+		},
+
+		// Fallback for browsers without CSS anchor positioning, same rule as the
+		// stylesheet: below the button, above it only when it does not fit.
+		place( popover ) {
+			const button = popover.closest( '[data-albert-setup-menu]' ).querySelector( '.albert-setup-menu__toggle' ).getBoundingClientRect();
+			const { width, height } = popover.getBoundingClientRect();
+			const below = button.bottom + 4;
+			const above = button.top - 4 - height;
+
+			popover.style.top = ( below + height <= window.innerHeight || above < 0 ? below : above ) + 'px';
+			popover.style.left = Math.max( 8, Math.min( button.left, window.innerWidth - 8 - width ) ) + 'px';
+		},
+
+		// A pending invitation restarts as the menu opens, so whichever way the
+		// link goes, it still works when the person opens it.
+		renew( menu ) {
+			const nonce = menu.dataset.renewNonce;
+			if ( ! nonce ) {
+				return;
+			}
+
+			const row = menu.closest( '[data-albert-user-row]' );
+			const body = new FormData();
+			body.append( 'action', 'albert_renew_setup_link' );
+			body.append( 'user_id', row.dataset.userId );
+			body.append( '_wpnonce', nonce );
+
+			fetch( menu.dataset.actionUrl, { method: 'POST', credentials: 'same-origin', body } )
+				.then( ( response ) => ( response.ok ? response.json() : null ) )
+				.then( ( payload ) => this.showExpiry( row, payload?.success ? payload.data?.expiry : '' ) )
+				.catch( () => {} );
+		},
+
+		async copy( item ) {
+			const menu = item.closest( '[data-albert-setup-menu]' );
+			const copied = await window.Albert?.clipboard?.copy( menu.dataset.url );
+
+			this.finish( item, !! copied, copied ? config.i18n.copied : config.i18n.copyFailed, copied ? config.i18n.copiedAnnounce : config.i18n.copyFailed );
+		},
+
+		async email( item ) {
+			if ( item.dataset.state === 'busy' ) {
+				return;
+			}
+
+			const menu = item.closest( '[data-albert-setup-menu]' );
+			const row = menu.closest( '[data-albert-user-row]' );
+			const body = new FormData();
+			body.append( 'action', 'albert_email_setup_link' );
+			body.append( 'user_id', row.dataset.userId );
+			body.append( '_wpnonce', item.dataset.nonce );
+
+			// Busy survives a close and reopen, so the item never looks ready
+			// while the request is still out.
+			this.result( item, 'busy', config.i18n.emailSending );
+
+			let success = false;
+			let message = config.i18n.emailFailed;
+			try {
+				const response = await fetch( menu.dataset.actionUrl, {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'X-Requested-With': 'XMLHttpRequest' },
+					body,
+				} );
+				const payload = await response.json();
+				success = !! payload.success;
+				message = payload.data?.message || message;
+				this.showExpiry( row, payload.data?.expiry );
+			} catch {
+				// Keeps the generic failure message.
+			}
+
+			this.finish( item, success, success ? config.i18n.emailSent : config.i18n.emailFailedShort, message );
+		},
+
+		// Shows the outcome on the item and closes the menu a moment later. A
+		// menu already closed only hears the announcement.
+		finish( item, success, label, announcement ) {
+			const popover = item.closest( '.albert-setup-menu__popover' );
+			this.announce( announcement );
+
+			if ( ! popover.matches( ':popover-open' ) ) {
+				this.result( item, null );
+				return;
+			}
+
+			this.result( item, success ? 'success' : 'error', label );
+			const menu = popover.closest( '[data-albert-setup-menu]' );
+			window.clearTimeout( menu.albertCloseTimer );
+			menu.albertCloseTimer = window.setTimeout( () => popover.matches( ':popover-open' ) && popover.hidePopover(), success ? 2000 : 4000 );
+		},
+
+		// The state drives the icon and colour in CSS; only the words change here.
+		result( item, state, text ) {
+			const label = item.querySelector( '[data-albert-setup-label]' );
+			label.dataset.label ??= label.textContent.trim();
+			label.textContent = state ? text : label.dataset.label;
+
+			if ( state ) {
+				item.dataset.state = state;
+			} else {
+				delete item.dataset.state;
+			}
 		},
 
 		announce( message ) {
-			if ( message && window.Albert && window.Albert.liveRegion ) {
-				window.Albert.liveRegion.announce( message );
+			if ( message ) {
+				window.Albert?.liveRegion?.announce( message );
 			}
 		},
 
 		showExpiry( row, text ) {
-			const expiry = row && row.querySelector( '.albert-user-item__expiry' );
+			const expiry = row?.querySelector( '.albert-user-item__expiry' );
 			if ( expiry && text ) {
 				expiry.textContent = text;
 			}
@@ -1354,7 +1476,7 @@
 		AllowedUserFilter.init();
 		AllowedUserRemoval.init();
 		UserPicker.init();
-		SetupEmail.init();
+		SetupMenu.init();
 	}
 
 	if ( document.readyState === 'loading' ) {
