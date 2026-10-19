@@ -7,6 +7,16 @@
 
 **Connect your WordPress site to AI assistants with secure OAuth 2.0 authentication and the Model Context Protocol (MCP).**
 
+## Safe by default
+
+- **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request. Needs WordPress 7.1.
+- **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
+- **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
+- **No tracking.** Albert sends nothing about your site or your usage anywhere.
+- **Personal data hidden by default.** Names, email addresses, phone numbers and postal addresses are masked before an assistant sees them. New sites start on Strict.
+
+What Albert stores and for how long is listed under Privacy Policy in [readme.txt](readme.txt).
+
 ## Description
 
 Albert provides a powerful API that exposes WordPress functionality to AI assistants through the Model Context Protocol (MCP). This plugin acts as a secure bridge between your WordPress site and AI-powered tools like Claude, enabling them to interact with and control various aspects of your website through a standardized interface.
