@@ -5,24 +5,98 @@
 ![Tested up to](https://img.shields.io/badge/Tested%20up%20to-7.1-blue)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
 
-**Connect your WordPress site to AI assistants with secure OAuth 2.0 authentication and the Model Context Protocol (MCP).**
+**The easiest, safest way to connect Claude, ChatGPT and other AI assistants to WordPress, built on WordPress's own MCP Adapter.**
+
+## Safe by default
+
+- **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request. Needs WordPress 7.1.
+- **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
+- **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
+- **No tracking.** Albert sends nothing about your site or your usage anywhere.
+- **Personal data hidden by default.** Names, email addresses, phone numbers and postal addresses are masked before an assistant sees them. New sites start on Strict.
+
+What Albert stores and for how long is listed under Privacy Policy in [readme.txt](readme.txt).
 
 ## Description
 
-Albert provides a powerful API that exposes WordPress functionality to AI assistants through the Model Context Protocol (MCP). This plugin acts as a secure bridge between your WordPress site and AI-powered tools like Claude, enabling them to interact with and control various aspects of your website through a standardized interface.
+Connect your AI assistant to your site once, and it writes, edits and files your content directly, in real WordPress blocks, inside limits you set.
 
-Think of abilities as superpowers that you can grant to AI assistants - from managing content and products to handling complex workflows. The abilities API provides a standardized way for AI assistants to:
+**The easiest and safest way to use the WordPress MCP Adapter.** The MCP Adapter is WordPress's own way for AI assistants to reach a site, and on its own it leaves setup, sign-in and permissions to you. Albert adds them:
 
-- Discover available actions they can perform on your site
-- Execute those actions with proper authentication and authorization
-- Receive structured responses they can understand and act upon
-- Extend WordPress and WooCommerce functionality in AI-friendly ways
+- **Guided setup.** Click Connect an assistant, say where your site runs and which app you use, and Albert shows that app's exact steps, then tells you the moment the connection works. Sites that only run on your computer work too.
+- **A proper sign-in.** OAuth 2.0 with short-lived tokens you can revoke.
+- **You choose who may connect.** Only the people on your list can approve an assistant, and Send setup link emails them a link to the steps.
+- **Nothing destructive without your approval.** Safe mode holds deletes, role changes and key settings until you approve them.
+- **Real blocks, block patterns and your site's own context**, so the assistant's work fits your site.
+
+## Works with your plugins
+
+Albert is not limited to its own abilities. Plugins that offer abilities to AI assistants through the WordPress Abilities API show up on Albert's Abilities screen, where you choose which ones your assistant may use over the same connection. Many of the plugins you already run do:
+
+**SEO**
+- [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/)
+- [Rank Math SEO](https://wordpress.org/plugins/seo-by-rank-math/)
+- [All in One SEO](https://wordpress.org/plugins/all-in-one-seo-pack/)
+- [SEOPress](https://wordpress.org/plugins/wp-seopress/)
+- [SiteSEO](https://wordpress.org/plugins/siteseo/)
+- [SureRank](https://wordpress.org/plugins/surerank/)
+- [Broken Link Checker by AIOSEO](https://wordpress.org/plugins/broken-link-checker-seo/)
+
+**Forms**
+- [Gravity Forms](https://www.gravityforms.com/)
+- [WPForms](https://wordpress.org/plugins/wpforms-lite/)
+- [Fluent Forms](https://wordpress.org/plugins/fluentform/)
+- [Formidable Forms](https://wordpress.org/plugins/formidable/)
+
+**Page builders**
+- [Elementor](https://wordpress.org/plugins/elementor/)
+- [Ultimate Addons for Elementor](https://wordpress.org/plugins/header-footer-elementor/)
+- [Premium Addons for Elementor](https://wordpress.org/plugins/premium-addons-for-elementor/)
+- [Page Builder by SiteOrigin](https://wordpress.org/plugins/siteorigin-panels/)
+- [SiteOrigin Widgets Bundle](https://wordpress.org/plugins/so-widgets-bundle/)
+
+**Custom fields**
+- [Advanced Custom Fields (ACF)](https://wordpress.org/plugins/advanced-custom-fields/)
+- [Secure Custom Fields](https://wordpress.org/plugins/secure-custom-fields/)
+- [Meta Box](https://wordpress.org/plugins/meta-box/)
+
+**E-commerce**
+- [WooCommerce](https://wordpress.org/plugins/woocommerce/)
+- [Cart Abandonment Recovery for WooCommerce](https://wordpress.org/plugins/woo-cart-abandonment-recovery/)
+
+Want your assistant to manage orders, products, coupons and reports too? [Albert for WooCommerce](https://albertwp.com/add-ons/albert-for-woocommerce/) adds 21 store abilities on top of these.
+
+**Search**
+- [Search & Filter Pro](https://searchandfilter.com/)
+
+**Analytics and tracking**
+- [Koko Analytics Pro](https://www.kokoanalytics.com/)
+- [PixelYourSite](https://wordpress.org/plugins/pixelyoursite/)
+
+**Performance and media**
+- [Imagify](https://wordpress.org/plugins/imagify/)
+- [ShortPixel Image Optimizer](https://wordpress.org/plugins/shortpixel-image-optimiser/)
+- [SpeedyCache](https://wordpress.org/plugins/speedycache/)
+
+**Security, backups and activity**
+- [Jetpack](https://wordpress.org/plugins/jetpack/)
+- [Akismet Anti-spam](https://wordpress.org/plugins/akismet/)\*
+- [BackWPup](https://wordpress.org/plugins/backwpup/)
+- [Simple History](https://wordpress.org/plugins/simple-history/)
+- [Disable Comments](https://wordpress.org/plugins/disable-comments/)
+
+**Email**
+- [GoSMTP](https://wordpress.org/plugins/gosmtp/)
+
+\* Exposes its abilities to assistants only after you switch that on in the plugin's own settings.
+
+What an assistant can do with each plugin is decided by that plugin. Albert adds the controls around it: you choose on the Abilities screen which abilities are switched on, and the assistant only ever acts as the WordPress user who approved the connection, with that user's permissions. [Albert Premium](https://albertwp.com/add-ons/premium-service/) adds per-role and per-user rules for every ability, these plugins' included. Missing a plugin you use? Its abilities appear on the Abilities screen as soon as it registers them.
 
 ## Requirements
 
 - **WordPress**: 6.9 or higher
 - **PHP**: 8.1 or higher (8.3+ recommended)
-- **WooCommerce**: 10.4 or higher (if WooCommerce integration is used)
+- **WooCommerce**: 11.0 or higher (if WooCommerce integration is used)
 - **MySQL**: 8.0+ or MariaDB 10.5+
 - **HTTPS**: required for OAuth
 - **Permalinks**: any setting other than Plain
@@ -92,10 +166,67 @@ This plugin is licensed under GPL v2 or later.
 
 ## Credits
 
-Developed by Mark Jansen - Your Mark Media
+Developed by Mark Jansen, Your Mark Media
 Website: https://yourmark.nl
 
 ## Changelog
+
+### 1.5.0
+
+Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
+
+**Features**
+
+- **Safe mode: nothing destructive happens without you.** Switched on by default. When your assistant asks to delete a post, change someone's role, or rewrite a foundational setting, the action is held and waits for your approval in wp-admin. You see what it would actually change, resolved as it is now rather than as a line of code, and you are warned if the page has been edited since the request was made. Editors approve their own requests, administrators approve anyone's, and nobody can approve something they could not have done themselves. The assistant cannot approve its own work and cannot switch safe mode off. Requests expire if nobody decides, so a stale intent is never applied to today's site. Needs WordPress 7.1; on older versions Albert says plainly that it cannot hold anything instead of letting the switch imply otherwise.
+- **Reuse your block patterns.** Your assistant can now browse the block patterns your theme and plugins provide, and your own saved patterns, and reuse one as the starting point for a new page instead of building the layout from scratch. It can also save a layout as a reusable pattern of its own.
+- **Connect an assistant, step by step.** One button on the Dashboard and on Connections opens a short guide: where your site runs, which app you use, then the exact steps for that app. It tells you the moment the connection really works, because Albert sees it arrive, and then suggests a few first things to ask. If nothing arrives, it lists the usual reasons.
+- **Everyone you allow can connect, whatever their role.** People on your list of who may connect an assistant now get a Connect page under Albert, with the same step-by-step guide and their own connected assistants, which they can disconnect themselves. They see nothing else: no logs, no settings, nobody else's connections. Next to each person on the list, Send setup link emails them a link that opens the guide straight away, or copies it for you to send yourself. When you add people you can tick Email them how to connect.
+
+**Improvements**
+
+- When someone who isn't on the list of people who may connect an assistant tries to connect one, the page now says who can fix it and how. An administrator who isn't on the list gets a button that opens Connections, where they can add themselves.
+- After you approve an assistant, the page now says so and takes you back to your app, with a link in case that doesn't happen.
+- The MCP Adapter, the part Albert uses to talk to AI assistants, is now its own plugin on WordPress.org. Albert uses that plugin when it is active, and asks you to install it with one click on its screens, on the Plugins screen and in Site Health. Albert still includes its own copy for now, but a coming update will rely on the plugin. Where plugin installs are switched off on your site, or you cannot install plugins yourself, Albert tells you who needs to act.
+- The setup steps for each assistant are rewritten as short numbered steps, with the one button or command each step needs right inside it. Claude gets an Add to Claude button that opens Claude with your site already filled in, and there are new steps for Codex, Windsurf, Gemini CLI and Cline, plus a bridge for apps that cannot connect to an address on their own.
+- Albert now recognises a site that only runs on your computer (a local site), lists the apps that work with it first, and explains why Claude on the web and ChatGPT cannot reach it, instead of showing steps that would fail.
+- On a site that only runs on your computer, Claude Desktop now connects with a small install file made for your site: download it, open it, and approve in your browser. Nothing else to install. It needs the site on https or on localhost.
+- The Dashboard's "Connect an AI assistant" step is about you: it ticks off when you have connected an assistant yourself, and a Connect an assistant button stays on the Dashboard after setup.
+
+**Fixes**
+
+- Asking your assistant to build a page with a layout block that holds other content (such as a Cover block wrapped around a heading and text) could silently save the block empty, losing everything inside it. These blocks now keep their contents.
+- In the rare case where a block's content genuinely can't be reproduced, the assistant is now told clearly, instead of the block being saved empty as if it had worked.
+- Pages your assistant builds with blocks no longer raise a WordPress debug notice each time they are shown. Pages built before this update stop once they are saved again in the editor.
+- Asking your assistant to change a layout block's settings, such as a group's background, could remove everything inside it. The contents now stay, unless the assistant explicitly replaces them.
+- Apps that sign in with their own kind of link, such as Cursor, could not connect: every attempt ended in "Invalid Request". They now connect.
+- Long text in the list of people who may connect an assistant now wraps instead of being cut off.
+- The Dashboard's Albert for WooCommerce recommendation now opens the add-on's own page.
+- When another plugin switched off the MCP adapter's built-in tools, assistants could sign in but saw no tools at all. Albert now adds the three tools it needs when they are missing, without replacing anyone else's.
+- Claude Code could not connect on hosts such as SiteGround that answer part of the sign-in discovery themselves: it stopped with "Dynamic Client Registration rejected" before the approval screen. It now connects.
+- After about twenty connection attempts, including ones never finished and apps you had disconnected, no new assistant could connect at all and nothing said why. Only connections that still work count towards the limit now, old unused ones are cleaned up, and the Dashboard tells you if the limit is ever reached.
+
+**Security**
+
+- Albert now closes an unused extra way in. An AI assistant that held a WordPress application password could previously reach your site's tools without going through Albert's sign-in, the list of people you allow to connect, or the approval screen, and it left no record under Connections. That entry point is switched off, so assistants must connect the approved way.
+- Your assistant can no longer pick or change a WordPress password. Creating a user previously meant the assistant invented a password and sent it to your site, which also left it sitting in the AI provider's record of the conversation. Now your site generates the password itself and hands back a one-time link for the new person to set their own. Changing an existing user's password is refused outright: that account's owner can reset it from the login screen, and nobody else needs to.
+- When you deny an app, or its sign-in fails, Albert now sends the app's own reference back to it safely encoded, so a crafted value can no longer add extra parameters to the address the app is sent back to.
+- Albert now refuses to register an app whose return address contains spaces or hidden control characters.
+
+**Developer**
+
+- Safe mode holds destructive calls made over an Albert connection at WordPress 7.1's `wp_pre_execute_ability`. A call is held when the ability's `destructive` annotation is not `false`, when the ability is on the high-risk list, or when its input grants an administrator role or writes a high-risk option. WP-CLI, direct PHP and other plugins are not gated. A held call is logged as `warning`. Settings: `albert_safe_mode` and `albert_safe_mode_ttl_minutes`. New hooks: `albert/safe_mode/high_risk_abilities`, `high_risk_options`, `protected_options`, `exempt_abilities`, `retention_days`, `display_input`, `held`, `approved`, `rejected`, `expired`, `abandoned`, `option_write_blocked`, `option_restored`, and `albert/approvals/view_capability`.
+- When the MCP Adapter plugin is active it supplies the adapter; Albert's bundled copy (0.7.0) is the fallback. New filter `albert/mcp/adapter_notice`.
+- The MCP adapter's default server is emptied so it cannot run abilities outside Albert's sign-in. New filter `albert/mcp/disable_default_server` (default `true`).
+- `albert/create-user` and `albert/update-user` no longer accept a `password`. `albert/create-user` returns a one-time `password_reset_url` instead.
+- New abilities: `albert/find-patterns`, `albert/view-pattern`, `albert/create-pattern`, `albert/update-pattern` and `albert/delete-pattern`.
+- New `albert_connect` capability, held by administrators and everyone on the allowed list.
+- New filter `albert/oauth/stale_client_days` (default 7, `0` keeps unused clients). `albert/oauth/registration_rejected` fires with `client_limit_reached` when the client limit is reached.
+
+**Credits**
+
+- [David Beentjes](https://github.com/unlocdavid) for helping fix the lost block contents.
+- [Rodolfo Melogli](https://profiles.wordpress.org/businessbloomer/) for reporting the Claude Code connection failure on SiteGround.
+- [Sébastien](https://profiles.wordpress.org/seb94100/) for testing a connection that showed no tools.
 
 ### 1.4.2
 
@@ -245,35 +376,35 @@ A security update for how AI assistants connect.
 Two headline changes: the Abilities screen has been rebuilt from scratch, and personal data is now kept private from AI assistants automatically.
 
 **Features**
-- Rebuilt Abilities screen — a fast, modern list with search, filter by category or supplier, sort, and pagination, matching the rest of the WordPress admin.
-- Switch abilities on or off instantly, one at a time or in bulk — no Save button.
+- Rebuilt Abilities screen: a fast, modern list with search, filter by category or supplier, sort, and pagination, matching the rest of the WordPress admin.
+- Switch abilities on or off instantly, one at a time or in bulk, with no Save button.
 - A detail panel on every ability showing its inputs, the permission it needs, and when it last ran.
-- Privacy mode — personal data (names, email addresses, phone numbers, postal addresses) is redacted from AI results before it leaves your site. Choose Strict, Balanced, or Off.
+- Privacy mode: personal data (names, email addresses, phone numbers, postal addresses) is redacted from AI results before it leaves your site. Choose Strict, Balanced, or Off.
 - Reveal the real personal details only when you explicitly ask, gated by your own capabilities.
 
 **Improvements**
-- The Abilities screen was rebuilt for accessibility throughout — full keyboard and screen-reader support, with clearer focus and contrast.
+- The Abilities screen was rebuilt for accessibility throughout: full keyboard and screen-reader support, with clearer focus and contrast.
 - The three core tools an assistant uses to discover and run abilities can no longer be switched off and repair themselves on load, so a connection never breaks after an update.
 
 **Developer**
-- New extension points on the Abilities screen let add-ons plug straight in — this powers Albert Premium's per-role and per-user permission rules.
-- New `albert/privacy/*` filters let add-ons protect their own fields — the WooCommerce add-on uses these to strip payment and card data.
+- New extension points on the Abilities screen let add-ons plug straight in. This powers Albert Premium's per-role and per-user permission rules.
+- New `albert/privacy/*` filters let add-ons protect their own fields. The WooCommerce add-on uses these to strip payment and card data.
 
 ### 1.2.0
 
-Albert now understands the WordPress block editor — a big step up in how AI assistants read and write your content.
+Albert now understands the WordPress block editor, a big step up in how AI assistants read and write your content.
 
 **Features**
-- Block editor support — assistants work with real WordPress blocks instead of raw HTML, reading a post as a clean, structured outline and composing new content with proper blocks (headings, paragraphs, lists, quotes, images, buttons, columns, groups).
-- Edit one block at a time — change, add, move, or remove a single block without disturbing the rest of the page.
-- Classic editor support — classic-editor sites, posts, and pages are read and saved as HTML.
-- Built-in guidance — ships a playbook and reference data that teach connected assistants how your site's blocks work.
+- Block editor support: assistants work with real WordPress blocks instead of raw HTML, reading a post as a clean, structured outline and composing new content with proper blocks (headings, paragraphs, lists, quotes, images, buttons, columns, groups).
+- Edit one block at a time: change, add, move, or remove a single block without disturbing the rest of the page.
+- Classic editor support: classic-editor sites, posts, and pages are read and saved as HTML.
+- Built-in guidance: ships a playbook and reference data that teach connected assistants how your site's blocks work.
 
 **Improvements**
-- Cleaner content, fewer errors — Albert validates blocks as they're written and steers the assistant to fix mistakes, avoiding the block editor's "unexpected content" warnings.
+- Cleaner content, fewer errors: Albert validates blocks as they're written and steers the assistant to fix mistakes, avoiding the block editor's "unexpected content" warnings.
 - Assistants only use the blocks your site (and the connected user) are allowed to use.
 - Long posts are paged automatically, so big content is never cut off mid-way when an assistant reads it.
-- Safer updates — abilities added by a plugin update now start switched off; you decide what to turn on.
+- Safer updates: abilities added by a plugin update now start switched off; you decide what to turn on.
 
 ### 1.1.1
 
@@ -290,27 +421,27 @@ A bug-fix release.
 A major admin redesign, new activity logging, and a stack of reliability fixes.
 
 **Features**
-- Unified abilities page — one filterable list of every registered ability, whether it comes from WordPress core, WooCommerce, or any third-party plugin. Search, filter by category or supplier, read/write/delete at a glance.
-- Instant per-row save — toggles save immediately. No Save Changes button, no lost work.
-- Activity logging — a dashboard widget showing the most recent ability execution, and a "Last run" line on every ability.
-- Plain-language annotation chips — each ability is labelled Read, Write, or Delete with accessible tooltips (replaces the developer-facing "Destructive / Idempotent / Readonly" terms).
-- List / paginated view toggle — preference persisted server-side, no flash of content on load.
+- Unified abilities page: one filterable list of every registered ability, whether it comes from WordPress core, WooCommerce, or any third-party plugin. Search, filter by category or supplier, read/write/delete at a glance.
+- Instant per-row save: toggles save immediately. No Save Changes button, no lost work.
+- Activity logging: a dashboard widget showing the most recent ability execution, and a "Last run" line on every ability.
+- Plain-language annotation chips: each ability is labelled Read, Write, or Delete with accessible tooltips (replaces the developer-facing "Destructive / Idempotent / Readonly" terms).
+- List / paginated view toggle: preference persisted server-side, no flash of content on load.
 
 **Fixes**
 - Ability categories now register at the default hook priority, preventing collisions with WordPress core's built-in categories on WP 6.9+.
 - Restored a missing `user` category that Users abilities depend on.
-- The `password` field on `core/users/create` is now correctly flagged as required in its input schema.
+- The `password` field on `albert/create-user` is now correctly flagged as required in its input schema.
 - Fixed `Logger::log_execution` visibility so extenders can hook it cleanly.
 - Consolidated REST namespace handling to a single `Plugin::REST_NAMESPACE` constant.
 
 **Improvements**
-- Accessibility — keyboard-reachable chip tooltips, WCAG 2.2 AA contrast on all chip tones, debounced aria-live stats announcements during search, and focus indicators on pagination buttons and filter selects.
+- Accessibility: keyboard-reachable chip tooltips, WCAG 2.2 AA contrast on all chip tones, debounced aria-live stats announcements during search, and focus indicators on pagination buttons and filter selects.
 
 **Developer**
 - New `albert/abilities/suppliers` filter so third-party plugins can register branded supplier names for the filter dropdown.
-- Comprehensive automated test suite — input validation, output schema, permission, and per-parameter coverage on every ability. Auto-discovers abilities from `src/Abilities/` so new abilities are tested without touching the test files.
+- Comprehensive automated test suite: input validation, output schema, permission, and per-parameter coverage on every ability. Auto-discovers abilities from `src/Abilities/` so new abilities are tested without touching the test files.
 - CI matrix now covers PHP 8.1–8.4, WordPress 6.9 and latest, and WooCommerce 10.5/10.6/latest.
-- Removed redundant manual `empty()` input validation from every ability — WordPress core's `WP_Ability::validate_input()` already enforces the schema.
+- Removed redundant manual `empty()` input validation from every ability, since WordPress core's `WP_Ability::validate_input()` already enforces the schema.
 - Unified internal settings API.
 - Removed: the deferred-save bulk form, category-grouped card layout, per-category subpages, and the "CORE" / "ALBERT" uppercase source badges.
 

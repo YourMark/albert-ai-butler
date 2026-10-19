@@ -334,4 +334,28 @@ class AllowedUsersTest extends TestCase {
 		$this->assertNull( AllowedUsers::expires_at( $user_id ) );
 		$this->assertTrue( AllowedUsers::is_allowed( $user_id ) );
 	}
+
+	/**
+	 * Sending the link restarts a pending invitation, an expired one too,
+	 * and leaves someone who connected or never expires alone.
+	 *
+	 * @return void
+	 */
+	public function test_renew_invitation(): void {
+		$expired   = self::factory()->user->create();
+		$connected = self::factory()->user->create();
+		$forever   = self::factory()->user->create();
+		$this->seed( $expired, time() - 3 * DAY_IN_SECONDS, null, time() - DAY_IN_SECONDS );
+		$this->seed( $connected, time() - 3 * DAY_IN_SECONDS, time() - DAY_IN_SECONDS, time() - DAY_IN_SECONDS );
+		$this->seed( $forever, time() - 3 * DAY_IN_SECONDS, null, null );
+
+		$this->assertTrue( AllowedUsers::renew_invitation( $expired ) );
+		$this->assertEqualsWithDelta( time() + DAY_IN_SECONDS, AllowedUsers::expires_at( $expired ), 5 );
+		$this->assertTrue( AllowedUsers::is_allowed( $expired ) );
+
+		$this->assertFalse( AllowedUsers::renew_invitation( $connected ) );
+		$this->assertFalse( AllowedUsers::renew_invitation( $forever ) );
+		$this->assertNull( AllowedUsers::expires_at( $forever ) );
+		$this->assertFalse( AllowedUsers::renew_invitation( self::factory()->user->create() ) );
+	}
 }

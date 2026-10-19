@@ -241,6 +241,32 @@ class AllowedUsers {
 	}
 
 	/**
+	 * Restart a pending invitation's window from now, an expired one included.
+	 *
+	 * For when somebody is sent their setup link: the window then runs from
+	 * the moment they could act on it. Someone who already connected, or
+	 * whose entry never expires, is left alone.
+	 *
+	 * @param int $user_id The user id.
+	 *
+	 * @return bool Whether the expiry changed.
+	 * @since 1.5.0
+	 */
+	public static function renew_invitation( int $user_id ): bool {
+		$all   = self::all();
+		$entry = $all[ $user_id ] ?? null;
+
+		if ( $entry === null || $entry['authorised_at'] !== null || $entry['expires_at'] === null ) {
+			return false;
+		}
+
+		$all[ $user_id ]['expires_at'] = self::compute_expiry( time() );
+		self::save( $all );
+
+		return true;
+	}
+
+	/**
 	 * When a user's invitation expires (or expired), or null if it does not
 	 * expire: expiry was off when it was granted, they are not on the list,
 	 * or the entry predates the 1.4.0 migration.

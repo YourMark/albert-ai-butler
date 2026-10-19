@@ -12,26 +12,22 @@ namespace Albert\MCP;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Support\WpCompat;
-use WP\McpSchema\Server\Tools\DTO\Tool;
 
 /**
- * Shapes every schema Albert emits to an MCP client, at the two points where a
- * schema crosses to the client.
+ * Shapes the ability schemas Albert hands an MCP client.
  *
  * The Abilities API stores canonical, WordPress-style schemas that may carry
  * server-only keys — `sanitize_callback`, `validate_callback`, `arg_options`,
  * `readonly`. Those are meaningful to the server but noise (or worse) to a
  * client, and the adapter does not strip them itself. WordPress 7.1 added
- * `wp_prepare_json_schema_for_client()` to remove them; this class applies it at
- * the two points where a schema crosses to the client, leaving the registered
- * canonical schema (used for execution and validation) untouched:
+ * `wp_prepare_json_schema_for_client()` to remove them; this class applies it to
+ * the `input_schema` / `output_schema` that `get-ability-info` returns, caught on
+ * the raw result via `mcp_adapter_tool_call_result`, leaving the registered
+ * canonical schema (used for execution and validation) untouched.
  *
- *  1. `tools/list` — each tool's `inputSchema` / `outputSchema`, via the
- *     `mcp_adapter_tools_list` filter. The adapter has already shaped these into
- *     MCP object form, so preparation composes on top of that.
- *  2. `get-ability-info` — the `input_schema` / `output_schema` the meta-tool
- *     returns for a single ability, caught on the raw execution result (before
- *     the adapter wraps it into a protocol DTO) via `mcp_adapter_tool_call_result`.
+ * `tools/list` is not prepared: Albert's server lists only the adapter's three
+ * meta-tools, whose schemas carry neither problem. Abilities reach the client
+ * through `get-ability-info`.
  *
  * Two things happen there. Server-only key stripping runs through
  * `wp_prepare_json_schema_for_client()` and needs WordPress 7.1; below that the
@@ -60,85 +56,20 @@ class SchemaPreparer {
 	const ABILITY_INFO_TOOL = 'mcp-adapter/get-ability-info';
 
 	/**
-	 * Register the two boundary filters.
-	 *
-	 * `tools/list` preparation runs at priority 20 so it acts on the list after
-	 * {@see Server::hide_unauthorized_tools()} (priority 10) has removed tools
-	 * the user cannot run — no point preparing a schema that is about to be
-	 * dropped.
+	 * Register the get-ability-info result filter.
 	 *
 	 * @return void
 	 * @since 1.4.0
 	 */
 	public function register_hooks(): void {
-		add_filter( 'mcp_adapter_tools_list', [ $this, 'prepare_tools_list' ], 20, 2 );
 		add_filter( 'mcp_adapter_tool_call_result', [ $this, 'prepare_ability_info_result' ], 10, 5 );
-	}
-
-	/**
-	 * Prepare the `inputSchema` / `outputSchema` of every listed tool.
-	 *
-	 * `mcp_adapter_tools_list` is a global hook fired by any MCP server built on
-	 * the adapter family (including WooCommerce's own bundled copy), so this acts
-	 * only on Albert's own server, matching {@see Server::hide_unauthorized_tools()}.
-	 *
-	 * @param mixed $tools  Array of protocol Tool DTOs (passed through untouched
-	 *                      if not an array, e.g. a foreign filter short-circuit).
-	 * @param mixed $server The MCP server firing the filter.
-	 *
-	 * @return mixed The tools list with client-prepared schemas on 7.1+.
-	 * @since 1.4.0
-	 */
-	public function prepare_tools_list( $tools, $server = null ) {
-		if ( ! Server::is_albert_server( $server ) ) {
-			return $tools;
-		}
-
-		if ( ! is_array( $tools ) ) {
-			return $tools;
-		}
-
-		foreach ( $tools as $index => $tool ) {
-			if ( $tool instanceof Tool ) {
-				$tools[ $index ] = $this->prepare_tool( $tool );
-			}
-		}
-
-		return $tools;
-	}
-
-	/**
-	 * Rebuild a single Tool DTO with its schemas prepared for the client.
-	 *
-	 * The Tool DTO is immutable from outside, so it is rebuilt from its array
-	 * form with the prepared schemas swapped in. Every Albert schema needs it on
-	 * every version — `BaseAbility` gives each one a root `default` that has to
-	 * be re-objected — so there is nothing to gain from skipping the rebuild.
-	 *
-	 * @param Tool $tool The tool to prepare.
-	 *
-	 * @return Tool A new Tool DTO with client-prepared schemas.
-	 * @since 1.4.0
-	 */
-	private function prepare_tool( Tool $tool ): Tool {
-		$data = $tool->toArray();
-
-		foreach ( [ 'inputSchema', 'outputSchema' ] as $key ) {
-			if ( isset( $data[ $key ] ) && is_array( $data[ $key ] ) ) {
-				// Skip the root map: Tool::fromArray() needs an array there and
-				// re-objects an empty top-level map itself.
-				$data[ $key ] = $this->restore_object_maps( $this->prepare_schema( $data[ $key ] ), true );
-			}
-		}
-
-		return Tool::fromArray( $data );
 	}
 
 	/**
 	 * Run one schema through client preparation.
 	 *
-	 * `wp_prepare_json_schema_for_client()` recurses only into arrays, but the
-	 * Tool DTO renders nested sub-schemas as `stdClass`, so the tree is first
+	 * `wp_prepare_json_schema_for_client()` recurses only into arrays, but a
+	 * registered schema may hold `stdClass` sub-schemas, so the tree is first
 	 * normalised to a pure array tree. The normalisation is a manual walk rather
 	 * than a `json_encode()`/`json_decode()` round-trip: a round-trip returns
 	 * `false` for a value it cannot serialise, which would make this fall back to
@@ -245,20 +176,12 @@ class SchemaPreparer {
 	 * when they are empty. Non-empty maps already have string keys and serialise
 	 * as objects correctly, so only the empty case needs fixing.
 	 *
-	 * `$skip_root` leaves the top-level keyword maps as arrays. The tools/list
-	 * path feeds the result back through `Tool::fromArray()`, whose object-map
-	 * validation requires an array at that top level and would throw on a
-	 * `stdClass` — and the DTO already re-objects an empty top-level map itself
-	 * on the way out. The get-ability-info path is serialised directly with no
-	 * DTO, so it restores the root too.
-	 *
-	 * @param array<string, mixed> $schema    The prepared schema.
-	 * @param bool                 $skip_root Whether to leave the top-level maps as arrays.
+	 * @param array<string, mixed> $schema The prepared schema.
 	 *
 	 * @return array<string, mixed> The schema with empty keyword maps re-objected.
 	 * @since 1.4.0
 	 */
-	private function restore_object_maps( array $schema, bool $skip_root = false ): array {
+	private function restore_object_maps( array $schema ): array {
 		$object_map_keywords = [ 'properties', 'patternProperties', 'dependentSchemas', 'definitions', '$defs' ];
 
 		foreach ( $schema as $key => $value ) {
@@ -266,10 +189,9 @@ class SchemaPreparer {
 				continue;
 			}
 
-			// Nested levels always restore; only the caller's root may be skipped.
 			$value = $this->restore_object_maps( $value );
 
-			$schema[ $key ] = ( $value === [] && ! $skip_root && in_array( $key, $object_map_keywords, true ) )
+			$schema[ $key ] = ( $value === [] && in_array( $key, $object_map_keywords, true ) )
 				? new \stdClass()
 				: $value;
 		}
@@ -280,8 +202,8 @@ class SchemaPreparer {
 	/**
 	 * Prepare the schemas embedded in a get-ability-info result.
 	 *
-	 * Fires on the raw execution result, before the adapter wraps it into a
-	 * protocol DTO, so the `input_schema` / `output_schema` keys are plain
+	 * Fires on the raw execution result, before the adapter turns it into a
+	 * protocol response, so the `input_schema` / `output_schema` keys are plain
 	 * arrays returned by the meta-tool. Every other tool, and every non-array
 	 * result (e.g. a WP_Error), passes through untouched.
 	 *
@@ -309,7 +231,6 @@ class SchemaPreparer {
 
 		foreach ( [ 'input_schema', 'output_schema' ] as $key ) {
 			if ( isset( $result[ $key ] ) && is_array( $result[ $key ] ) ) {
-				// No DTO here: serialised directly, so restore the root too.
 				$result[ $key ] = $this->restore_object_maps( $this->prepare_schema( $result[ $key ] ) );
 			}
 		}
