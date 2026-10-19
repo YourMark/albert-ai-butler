@@ -8,7 +8,7 @@ Stable tag: 1.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-ChatGPT and Claude, connected in three steps. Your AI assistant knows your site, writes real blocks, and only does what you allow
+The easiest, safest way to connect Claude, ChatGPT and other AI assistants to WordPress, built on WordPress's own MCP Adapter.
 
 == Description ==
 
@@ -17,6 +17,8 @@ ChatGPT and Claude, connected in three steps. Your AI assistant knows your site,
 You already ask ChatGPT or Claude to plan posts, rewrite copy and answer questions about your business. Then you paste the result into WordPress by hand, and fix the formatting.
 
 Albert removes that step. Connect your AI assistant to your site once, and it writes, edits and files your content directly, in real WordPress blocks, inside limits you set. No copy and paste, no plugin-specific chat window, no code.
+
+**The easiest and safest way to use the WordPress MCP Adapter.** The MCP Adapter is WordPress's own way for AI assistants to reach a site, and on its own it leaves setup, sign-in and permissions to you. Albert adds them: a guided setup, a proper sign-in, a list of who may connect, and nothing destructive without your approval.
 
 * **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request. Needs WordPress 7.1.
 * **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
@@ -30,7 +32,7 @@ Albert removes that step. Connect your AI assistant to your site once, and it wr
 
 Copy your site's connection URL, paste it into your assistant, approve the request. That is the whole setup, and it is the same for every assistant.
 
-Albert walks you through it per assistant, with the exact steps for the one you use, so there is nothing to look up.
+Not sure where to paste it? Click Connect an assistant, tell Albert where your site runs and which app you use, and it shows that app's exact steps. It tells you the moment the connection works, and what to ask first. Sites that only run on your computer work too, and Claude Desktop gets a one-file install.
 
 ---
 
@@ -64,6 +66,7 @@ Not every guest needs a key to every room.
 * **Write and delete start switched off.** You turn on exactly what you want, and nothing else.
 * **Your WordPress roles still apply.** An assistant can never do more than the person who approved it.
 * **New actions arrive switched off**, so a plugin update never quietly widens what an assistant can reach.
+* **You choose who may connect.** Only the people on your list can approve an assistant. Each gets their own Connect page, and Send setup link emails them a link to the steps.
 * **Revoke any connection at any time.**
 
 ---
@@ -100,7 +103,7 @@ Choose **Strict**, **Balanced** or **Off**. New sites start on Strict. Reveal th
 
 ### Works with the assistant you already use
 
-Claude Desktop, claude.ai, Claude Code, ChatGPT, Cursor, VS Code, or anything else that speaks the Model Context Protocol. Albert turns your site into an MCP server, so the same connection URL works everywhere and you are never locked to one vendor.
+Claude Desktop, claude.ai, Claude Code, ChatGPT, Cursor, VS Code, or anything else that speaks the Model Context Protocol. Albert serves your site to them through WordPress's own MCP Adapter, so the same connection URL works everywhere and you are never locked to one vendor.
 
 Connections use OAuth 2.0 with short-lived, self-refreshing tokens. No password is ever shared with an AI company.
 
@@ -111,6 +114,7 @@ Connections use OAuth 2.0 with short-lived, self-refreshing tokens. No password 
 * **Posts and pages**: find, view, create, update and delete, block by block.
 * **Media**: browse the library, set featured images, and receive files your assistant sends you directly.
 * **Users and taxonomies**: find and manage users, categories, tags and custom terms.
+* **Block patterns**: find and reuse the patterns from your theme, plugins and library, and save new ones.
 * **WooCommerce**: look up products, orders and customers when WooCommerce is active.
 * **Anything you build**: register your own actions with the WordPress Abilities API.
 
@@ -344,10 +348,10 @@ Assistants now know what your site is, can send you files directly, and every ad
 A security update. Connecting an AI assistant now requires an exact return address, the approval screen shows where you are being sent, and app connections are checked more strictly. Recommended for all sites.
 
 = 1.3.0 =
-The Abilities screen has been rebuilt from scratch — search, filter, instant and bulk on/off, and a detail panel for every ability. And personal data (names, emails, phone numbers, addresses) is now hidden from AI assistants automatically, with a setting to control how strict that is.
+The Abilities screen has been rebuilt from scratch, with search, filter, instant and bulk on/off, and a detail panel for every ability. And personal data (names, emails, phone numbers, addresses) is now hidden from AI assistants automatically, with a setting to control how strict that is.
 
 = 1.2.0 =
-Adds full block-editor support (read, write, and edit individual blocks), classic-editor handling, automatic paging for long posts, and safer defaults — newly added abilities now start switched off. Your existing enabled/disabled settings are preserved.
+Adds full block-editor support (read, write, and edit individual blocks), classic-editor handling, automatic paging for long posts, and safer defaults: newly added abilities now start switched off. Your existing enabled/disabled settings are preserved.
 
 = 1.1.1 =
 Fixes OAuth discovery endpoints when the request URL has a trailing slash. Recommended for sites where the host or CDN adds a trailing slash to .well-known URLs.
@@ -378,7 +382,7 @@ Uninstalling Albert removes its tables and settings. On a multisite network this
 
 == Credits ==
 
-Developed by Mark Jansen - Your Mark Media
+Developed by Mark Jansen, Your Mark Media
 Website: https://yourmark.nl
 Plugin URL: https://wordpress.org/plugins/albert/
 
