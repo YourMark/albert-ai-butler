@@ -189,23 +189,9 @@ class AuthorizationPage implements Hookable {
 			return;
 		}
 
-		// PKCE policy: this server accepts only the S256 challenge method, and a
-		// public (native/loopback) client MUST use PKCE: a secret alone cannot
-		// protect it (RFC 8252). league enforces presence for public clients at
-		// token time; we reject a non-S256 method and a missing challenge up front.
-		if ( $code_challenge !== '' && $code_challenge_method !== 'S256' ) {
-			$this->render_error_page(
-				__( 'Invalid Request', 'albert-ai-butler' ),
-				__( 'This site requires PKCE using the S256 code challenge method.', 'albert-ai-butler' )
-			);
-			return;
-		}
-
-		if ( ! $client->isConfidential() && $code_challenge === '' ) {
-			$this->render_error_page(
-				__( 'Invalid Request', 'albert-ai-butler' ),
-				__( 'This application must use PKCE (a code challenge) to connect.', 'albert-ai-butler' )
-			);
+		$pkce_problem = self::pkce_problem( $code_challenge, $code_challenge_method );
+		if ( $pkce_problem !== '' ) {
+			$this->render_error_page( __( 'Invalid Request', 'albert-ai-butler' ), $pkce_problem );
 			return;
 		}
 
@@ -249,6 +235,32 @@ class AuthorizationPage implements Hookable {
 
 		// Show consent page.
 		$this->render_consent_page( $client, $redirect_uri, $state, $scope, $code_challenge, $code_challenge_method );
+	}
+
+	/**
+	 * Why a request's PKCE parameters are refused, or '' when they are fine.
+	 *
+	 * Every client must send an S256 challenge, confidential ones included. PKCE
+	 * binds the code to the request that asked for it, which a client secret
+	 * does not (RFC 9700 §2.1.1), and MCP's authorization spec requires it of all
+	 * clients. Checked here because league only demands it of public clients.
+	 *
+	 * @param string $code_challenge        The code_challenge parameter.
+	 * @param string $code_challenge_method The code_challenge_method parameter.
+	 *
+	 * @return string
+	 * @since 1.6.0
+	 */
+	public static function pkce_problem( string $code_challenge, string $code_challenge_method ): string {
+		if ( $code_challenge === '' ) {
+			return __( 'This application must use PKCE (a code challenge) to connect.', 'albert-ai-butler' );
+		}
+
+		if ( $code_challenge_method !== 'S256' ) {
+			return __( 'This site requires PKCE using the S256 code challenge method.', 'albert-ai-butler' );
+		}
+
+		return '';
 	}
 
 	/**

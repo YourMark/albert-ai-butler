@@ -175,4 +175,31 @@ class AuthorizationPageTest extends TestCase {
 
 		$this->assertSame( '', $this->read( 'redirect_uri', '', true ) );
 	}
+
+	/**
+	 * A missing challenge is refused whatever the client type; only S256 passes.
+	 *
+	 * @return void
+	 */
+	public function test_pkce_is_required_with_s256(): void {
+		$this->assertSame( '', AuthorizationPage::pkce_problem( 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM', 'S256' ) );
+		$this->assertStringContainsString( 'must use PKCE', AuthorizationPage::pkce_problem( '', '' ) );
+		$this->assertStringContainsString( 'must use PKCE', AuthorizationPage::pkce_problem( '', 'S256' ) );
+		$this->assertStringContainsString( 'S256', AuthorizationPage::pkce_problem( 'challenge', 'plain' ) );
+		$this->assertStringContainsString( 'S256', AuthorizationPage::pkce_problem( 'challenge', '' ) );
+	}
+
+	/**
+	 * The handler applies the check to every client, before anything else is shown.
+	 *
+	 * @return void
+	 */
+	public function test_no_client_type_is_exempt_from_pkce(): void {
+		$handler = new ReflectionMethod( AuthorizationPage::class, 'handle_authorization' );
+		$lines   = (array) file( (string) $handler->getFileName() );
+		$body    = implode( '', array_slice( $lines, $handler->getStartLine() - 1, $handler->getEndLine() - $handler->getStartLine() + 1 ) );
+
+		$this->assertStringNotContainsString( 'isConfidential', $body );
+		$this->assertLessThan( strpos( $body, 'is_user_logged_in' ), strpos( $body, 'self::pkce_problem(' ) );
+	}
 }
