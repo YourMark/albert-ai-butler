@@ -28,6 +28,69 @@ Think of abilities as superpowers that you can grant to AI assistants - from man
 - Receive structured responses they can understand and act upon
 - Extend WordPress and WooCommerce functionality in AI-friendly ways
 
+## Works with your plugins
+
+Albert is not limited to its own abilities. Plugins that offer abilities to AI assistants through the WordPress Abilities API show up on Albert's Abilities screen, where you choose which ones your assistant may use over the same connection. Many of the plugins you already run do:
+
+**SEO**
+- [Yoast SEO](https://wordpress.org/plugins/wordpress-seo/)
+- [Rank Math SEO](https://wordpress.org/plugins/seo-by-rank-math/)
+- [All in One SEO](https://wordpress.org/plugins/all-in-one-seo-pack/)
+- [SEOPress](https://wordpress.org/plugins/wp-seopress/)
+- [SiteSEO](https://wordpress.org/plugins/siteseo/)
+- [SureRank](https://wordpress.org/plugins/surerank/)
+- [Broken Link Checker by AIOSEO](https://wordpress.org/plugins/broken-link-checker-seo/)
+
+**Forms**
+- [Gravity Forms](https://www.gravityforms.com/)
+- [WPForms](https://wordpress.org/plugins/wpforms-lite/)
+- [Fluent Forms](https://wordpress.org/plugins/fluentform/)
+- [Formidable Forms](https://wordpress.org/plugins/formidable/)
+
+**Page builders**
+- [Elementor](https://wordpress.org/plugins/elementor/)
+- [Ultimate Addons for Elementor](https://wordpress.org/plugins/header-footer-elementor/)
+- [Premium Addons for Elementor](https://wordpress.org/plugins/premium-addons-for-elementor/)
+- [Page Builder by SiteOrigin](https://wordpress.org/plugins/siteorigin-panels/)
+- [SiteOrigin Widgets Bundle](https://wordpress.org/plugins/so-widgets-bundle/)
+
+**Custom fields**
+- [Advanced Custom Fields (ACF)](https://wordpress.org/plugins/advanced-custom-fields/)
+- [Secure Custom Fields](https://wordpress.org/plugins/secure-custom-fields/)
+- [Meta Box](https://wordpress.org/plugins/meta-box/)
+
+**E-commerce**
+- [WooCommerce](https://wordpress.org/plugins/woocommerce/)
+- [Cart Abandonment Recovery for WooCommerce](https://wordpress.org/plugins/woo-cart-abandonment-recovery/)
+
+Want your assistant to manage orders, products, coupons and reports too? [Albert for WooCommerce](https://albertwp.com/add-ons/albert-for-woocommerce/) adds 21 store abilities on top of these.
+
+**Search**
+- [Search & Filter Pro](https://searchandfilter.com/)
+
+**Analytics and tracking**
+- [Koko Analytics Pro](https://www.kokoanalytics.com/)
+- [PixelYourSite](https://wordpress.org/plugins/pixelyoursite/)
+
+**Performance and media**
+- [Imagify](https://wordpress.org/plugins/imagify/)
+- [ShortPixel Image Optimizer](https://wordpress.org/plugins/shortpixel-image-optimiser/)
+- [SpeedyCache](https://wordpress.org/plugins/speedycache/)
+
+**Security, backups and activity**
+- [Jetpack](https://wordpress.org/plugins/jetpack/)
+- [Akismet Anti-spam](https://wordpress.org/plugins/akismet/)\*
+- [BackWPup](https://wordpress.org/plugins/backwpup/)
+- [Simple History](https://wordpress.org/plugins/simple-history/)
+- [Disable Comments](https://wordpress.org/plugins/disable-comments/)
+
+**Email**
+- [GoSMTP](https://wordpress.org/plugins/gosmtp/)
+
+\* Exposes its abilities to assistants only after you switch that on in the plugin's own settings.
+
+What an assistant can do with each plugin is decided by that plugin. Albert adds the controls around it: you choose on the Abilities screen which abilities are switched on, and the assistant only ever acts as the WordPress user who approved the connection, with that user's permissions. [Albert Premium](https://albertwp.com/add-ons/premium-service/) adds per-role and per-user rules for every ability, these plugins' included. Missing a plugin you use? Its abilities appear on the Abilities screen as soon as it registers them.
+
 ## Requirements
 
 - **WordPress**: 6.9 or higher
@@ -116,7 +179,7 @@ Adds safe mode, which holds destructive actions for your approval, and closes a 
 - **Safe mode: nothing destructive happens without you.** Switched on by default. When your assistant asks to delete a post, change someone's role, or rewrite a foundational setting, the action is held and waits for your approval in wp-admin. You see what it would actually change, resolved as it is now rather than as a line of code, and you are warned if the page has been edited since the request was made. Editors approve their own requests, administrators approve anyone's, and nobody can approve something they could not have done themselves. The assistant cannot approve its own work and cannot switch safe mode off. Requests expire if nobody decides, so a stale intent is never applied to today's site. Needs WordPress 7.1; on older versions Albert says plainly that it cannot hold anything instead of letting the switch imply otherwise.
 - Your assistant can now browse the block patterns your theme and plugins provide, and your own saved patterns, and reuse one as the starting point for a new page instead of building the layout from scratch. It can also save a layout as a reusable pattern of its own.
 - **Connect an assistant, step by step.** One button on the Dashboard and on Connections opens a short guide: where your site runs, which app you use, then the exact steps for that app. It tells you the moment the connection really works, because Albert sees it arrive, and then suggests a few first things to ask. If nothing arrives, it lists the usual reasons.
-- **Everyone you allow can connect, whatever their role.** People on your list of who may connect an assistant now get a Connect page under Albert, with the same step-by-step guide and their own connected assistants, which they can disconnect themselves. They see nothing else: no logs, no settings, nobody else's connections. Next to each person on the list, Copy setup link gives you a link that opens the guide straight away, and Email setup link sends it to them. When you add people you can tick Email them how to connect.
+- **Everyone you allow can connect, whatever their role.** People on your list of who may connect an assistant now get a Connect page under Albert, with the same step-by-step guide and their own connected assistants, which they can disconnect themselves. They see nothing else: no logs, no settings, nobody else's connections. Next to each person on the list, Send setup link emails them a link that opens the guide straight away, or copies it for you to send yourself. When you add people you can tick Email them how to connect.
 
 **Improvements**
 

@@ -116,6 +116,23 @@ Connections use OAuth 2.0 with short-lived, self-refreshing tokens. No password 
 
 ---
 
+### Works with the plugins you already use
+
+Albert is not limited to its own abilities. Plugins that offer abilities to AI assistants through the WordPress Abilities API show up on Albert's Abilities screen, where you choose which ones your assistant may use over the same connection. Many popular plugins already do:
+
+* **SEO**: Yoast SEO, Rank Math, All in One SEO, SEOPress, SiteSEO, SureRank.
+* **Forms**: Gravity Forms, WPForms, Fluent Forms, Formidable Forms.
+* **Page builders**: Elementor, Ultimate Addons for Elementor, Premium Addons for Elementor, SiteOrigin Page Builder.
+* **Custom fields**: Advanced Custom Fields (ACF), Secure Custom Fields, Meta Box.
+* **E-commerce**: WooCommerce, plus [Albert for WooCommerce](https://albertwp.com/add-ons/albert-for-woocommerce/) for orders, products, coupons and reports.
+* **Search and analytics**: Search & Filter Pro, Koko Analytics Pro, PixelYourSite.
+* **Performance and media**: Imagify, ShortPixel, SpeedyCache.
+* **Security, backups and activity**: Jetpack, Akismet (once you enable its MCP access), BackWPup, Simple History.
+
+What each plugin lets your assistant do is up to that plugin. You decide which of its abilities are switched on, and the assistant only ever acts with the permissions of the person who approved the connection.
+
+---
+
 ### Go further with Albert Premium
 
 [Albert Premium](https://albertwp.com) adds per-role and per-user permission rules, your own custom post types, and a full activity log with filters and retention.
@@ -222,7 +239,7 @@ Adds safe mode, which holds destructive actions for your approval, and closes a 
 * **Safe mode: nothing destructive happens without you.** Switched on by default. When your assistant asks to delete a post, change someone's role, or rewrite a foundational setting, the action is held and waits for your approval in wp-admin. You see what it would actually change, resolved as it is now rather than as a line of code, and you are warned if the page has been edited since the request was made. Editors approve their own requests, administrators approve anyone's, and nobody can approve something they could not have done themselves. The assistant cannot approve its own work and cannot switch safe mode off. Requests expire if nobody decides, so a stale intent is never applied to today's site. Needs WordPress 7.1; on older versions Albert says plainly that it cannot hold anything instead of letting the switch imply otherwise.
 * Your assistant can now browse the block patterns your theme and plugins provide, and your own saved patterns, and reuse one as the starting point for a new page instead of building the layout from scratch. It can also save a layout as a reusable pattern of its own.
 * **Connect an assistant, step by step.** One button on the Dashboard and on Connections opens a short guide: where your site runs, which app you use, then the exact steps for that app. It tells you the moment the connection really works, because Albert sees it arrive, and then suggests a few first things to ask. If nothing arrives, it lists the usual reasons.
-* **Everyone you allow can connect, whatever their role.** People on your list of who may connect an assistant now get a Connect page under Albert, with the same step-by-step guide and their own connected assistants, which they can disconnect themselves. They see nothing else: no logs, no settings, nobody else's connections. Next to each person on the list, Copy setup link gives you a link that opens the guide straight away, and Email setup link sends it to them. When you add people you can tick Email them how to connect.
+* **Everyone you allow can connect, whatever their role.** People on your list of who may connect an assistant now get a Connect page under Albert, with the same step-by-step guide and their own connected assistants, which they can disconnect themselves. They see nothing else: no logs, no settings, nobody else's connections. Next to each person on the list, Send setup link emails them a link that opens the guide straight away, or copies it for you to send yourself. When you add people you can tick Email them how to connect.
 
 **Improvements**
 
