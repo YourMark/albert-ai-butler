@@ -31,7 +31,7 @@ export default function AdvancedPermissionsUpsell( { capabilityContent } ) {
 		<div className="albert-perms-upsell albert-perms-panel">
 			<p className="albert-perms-panel__intro">
 				{ __(
-					'Control who can use this ability — by its required capability, or with custom per-role and per-user rules.',
+					'Control who can use this ability, by its required capability or with custom per-role and per-user rules.',
 					'albert-ai-butler'
 				) }
 			</p>

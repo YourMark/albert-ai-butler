@@ -38,7 +38,7 @@ abstract class AbstractAddBlock extends AbstractBlockEdit {
 		$properties['position'] = [
 			'type'        => 'string',
 			'enum'        => [ 'before', 'after', 'inside_start', 'inside_end' ],
-			'description' => 'Where to insert the new block relative to `path`: "before"/"after" place it as a sibling of the block at `path`; "inside_start"/"inside_end" prepend/append it inside that block\'s inner blocks — only valid when the block at `path` is a container (e.g. core/group, core/columns, core/column, core/buttons); on a leaf block like a paragraph this is rejected, so use "before"/"after" instead. Use "after" with the last block\'s path to append to the end.',
+			'description' => 'Where to insert the new block relative to `path`: "before"/"after" place it as a sibling of the block at `path`; "inside_start"/"inside_end" prepend/append it inside that block\'s inner blocks. Those two are only valid when the block at `path` is a container (e.g. core/group, core/columns, core/column, core/buttons); on a leaf block like a paragraph this is rejected, so use "before"/"after" instead. Use "after" with the last block\'s path to append to the end.',
 		];
 
 		return [

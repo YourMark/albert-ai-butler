@@ -9,7 +9,7 @@ requires: block_editor
 Albert lets you edit WordPress posts and pages as **structured blocks** instead of
 raw HTML. WordPress content is made of blocks (paragraphs, headings, images, columns,
 and so on). When you send Albert a list of block specs, Albert serializes them into
-correct block-editor markup for you — you never hand-write block comments or inner HTML.
+correct block-editor markup for you, so you never hand-write block comments or inner HTML.
 
 Always prefer the structured `blocks` field over a raw `content` string. The exception
 is the classic editor (see "Classic-editor sites" at the end).
@@ -22,7 +22,7 @@ read together, and only this guide is worth reading end to end.
 ## Know which blocks you may use
 
 Before composing blocks, call `albert/list-block-types` to see the block types you
-may use on this site — the list reflects your permissions, so it only contains blocks
+may use on this site. The list reflects your permissions, so it only contains blocks
 you are allowed to save. Use `albert/get-block-type` to inspect a single block's
 attributes. Composing a block that is not in your allowed set returns a
 `block_validation_failed` error naming it, and nothing is saved.
@@ -47,19 +47,19 @@ Every block is an object with three keys:
 }
 ```
 
-- `name` — the registered block type, e.g. `core/paragraph`. Always namespaced.
-- `attributes` — the block's settings (heading level, image URL, etc.). Optional.
-- `innerBlocks` — child blocks, for container blocks like columns or lists. Optional.
+- `name`: the registered block type, e.g. `core/paragraph`. Always namespaced.
+- `attributes`: the block's settings (heading level, image URL, etc.). Optional.
+- `innerBlocks`: child blocks, for container blocks like columns or lists. Optional.
 
-Use only block names that `albert/list-block-types` reports as available to you — that
+Use only block names that `albert/list-block-types` reports as available to you: that
 is how you know what is registered and allowed on this site. Do not invent names, and do
 not use a block missing from that list: either case comes back as a
 `block_validation_failed` error naming the block, so you can fix it and retry. If you need
 arbitrary HTML that has no matching block, use `core/html` and put the markup in its
 `html` attribute.
 
-Text attributes (`content`, a button's `text`, a quote's `citation`) accept inline HTML —
-`<strong>`, `<em>`, `<a href="…">`, `<code>` — which Albert sanitizes. Use them for inline
+Text attributes (`content`, a button's `text`, a quote's `citation`) accept inline HTML
+(`<strong>`, `<em>`, `<a href="…">`, `<code>`), which Albert sanitizes. Use them for inline
 emphasis and for links inside text.
 
 ## Examples
@@ -76,7 +76,7 @@ Heading with a level:
 { "name": "core/heading", "attributes": { "level": 2, "content": "Section title" } }
 ```
 
-Image (a media library reference — include the attachment `id`, its `url`, and `alt`):
+Image (a media library reference: include the attachment `id`, its `url`, and `alt`):
 
 ```json
 { "name": "core/image", "attributes": { "id": 123, "url": "https://your-site.com/wp-content/uploads/2026/06/cat.jpg", "alt": "A grey cat" } }
@@ -107,7 +107,7 @@ List (a `core/list` wraps `core/list-item` children):
 
 For a numbered list, add `"ordered": true` to the `core/list` attributes (it renders as `<ol>`).
 
-Nested layout — two columns, each holding a paragraph:
+Nested layout, two columns each holding a paragraph:
 
 ```json
 {
@@ -139,16 +139,16 @@ block needs both the attachment `id` and its `url` (plus `alt`):
 - **When updating a post, never change the `id` of an existing image.** Read the current
   blocks first and keep each image block's `id` and `url` exactly as they are, unless the
   user explicitly asks for a different image.
-- A bare external `url` with no `id` works but is discouraged — it is not linked to the
+- A bare external `url` with no `id` works but is discouraged: it is not linked to the
   media library.
 
 ## Links and buttons
 
-Links use a plain **URL** — there is no id-based link reference (unlike images). This applies
+Links use a plain **URL**. There is no id-based link reference (unlike images). This applies
 to `core/button` (its `url` attribute) and to `<a href>` links inside text attributes.
 
 - For an **internal** page or post, use its real **permalink** as the URL. Look it up with
-  `albert/find-posts` / `albert/view-post` (or the `*-page` abilities) — they return a
+  `albert/find-posts` / `albert/view-post` (or the `*-page` abilities). They return a
   `permalink`; use that. Never guess a slug or put a post id in a link.
 - For an **external** link, use the full absolute URL.
 
@@ -196,17 +196,17 @@ build a post body). By default it is an unsynced copy-on-insert template; set
 with `albert/delete-pattern`. Create, update and delete work on **user patterns
 only**: registered theme/plugin patterns are read-only and return an error.
 
-## Granular block edits — change ONE block at a time
+## Granular block edits: change ONE block at a time
 
 `create-*` and `update-*` replace the **whole** post body. For a long post, or when
 you only need to change one block, that is wasteful and risks degrading blocks you
 did not mean to touch. Instead use the granular block-edit abilities, which change
 exactly one block and preserve every other block **byte-for-byte**:
 
-- `albert/edit-post-block` — replace one block with a new spec.
-- `albert/add-post-block` — insert one block before/after another, or inside it.
-- `albert/remove-post-block` — delete one block.
-- `albert/move-post-block` — reorder one block among its siblings.
+- `albert/edit-post-block`: replace one block with a new spec.
+- `albert/add-post-block`: insert one block before/after another, or inside it.
+- `albert/remove-post-block`: delete one block.
+- `albert/move-post-block`: reorder one block among its siblings.
 
 (Use the `albert/*-page-block` equivalents for pages.)
 
@@ -218,7 +218,7 @@ says there. That is where the detail is kept current.
 
 **When to use which:** prefer granular ops for large posts or single-block changes;
 use whole-content `update-*` when you are rewriting most of the body. Granular block
-edits apply to block-editor targets only — on a classic post they return
+edits apply to block-editor targets only. On a classic post they return
 `classic_editor_no_block_edits` (use `update-post` with HTML instead).
 
 ## Rules
@@ -234,28 +234,28 @@ edits apply to block-editor targets only — on a classic post they return
 
 A write may report problems:
 
-- **`block_issues`** — a list of non-fatal warnings (the content still saved). Read each
+- **`block_issues`**: a list of non-fatal warnings (the content still saved). Read each
   message, decide whether it matters, fix the offending block specs, and write again if needed.
-- **`block_validation_failed`** — a fatal error; nothing was saved. Read the messages, correct
+- **`block_validation_failed`**: a fatal error; nothing was saved. Read the messages, correct
   the block specs they point to (usually an unknown block name or a malformed attribute), and retry.
 
 Do not ignore these. Read the message text and fix the specific block it names.
 
 ## Reading formats
 
-`format` is an **array** of format names, so you can request several at once — for
+`format` is an **array** of format names, so you can request several at once, for
 example `"format": ["blocks", "plaintext"]`. A scalar string is ignored and the
 default format is returned instead, so always send an array, e.g. `"format": ["blocks"]`
 or `"format": ["markdown"]`.
 
 Choose the format(s) that fit the task:
 
-- `["blocks"]` — the structured tree. Use this when you intend to edit and write back.
-- `["content"]` — the raw stored block markup (block comments included). Use only when you
+- `["blocks"]`: the structured tree. Use this when you intend to edit and write back.
+- `["content"]`: the raw stored block markup (block comments included). Use only when you
   need the exact stored string.
-- `["plaintext"]` — text with all markup stripped. Use for summarizing or analyzing wording.
-- `["html"]` — rendered front-end HTML. Use to see what a visitor sees.
-- `["markdown"]` — a Markdown rendering. Use for a compact, readable overview.
+- `["plaintext"]`: text with all markup stripped. Use for summarizing or analyzing wording.
+- `["html"]`: rendered front-end HTML. Use to see what a visitor sees.
+- `["markdown"]`: a Markdown rendering. Use for a compact, readable overview.
 
 ## Large posts are paginated by block
 
@@ -268,16 +268,16 @@ with each other.
 
 Each result carries a `_meta` object:
 
-- `total_blocks` — how many top-level blocks the post has.
-- `offset` / `limit` — the window that was applied.
-- `returned_blocks` — how many blocks this response contains.
-- `truncated` — `true` if more blocks remain, or a text field was byte-capped.
-- `next_offset` — present only when more blocks remain; the `offset` to request next.
-- `note` — a short, actionable summary.
+- `total_blocks`: how many top-level blocks the post has.
+- `offset` / `limit`: the window that was applied.
+- `returned_blocks`: how many blocks this response contains.
+- `truncated`: `true` if more blocks remain, or a text field was byte-capped.
+- `next_offset`: present only when more blocks remain; the `offset` to request next.
+- `note`: a short, actionable summary.
 
 When `_meta.truncated` is `true`, look at `_meta.next_offset`:
 
-- **If `next_offset` is present**, more blocks remain — re-request the same ability
+- **If `next_offset` is present**, more blocks remain. Re-request the same ability
   with `"offset": <next_offset>` (and optionally a `"limit"`). Keep going until
   `_meta.truncated` is `false`.
 - **If `next_offset` is absent** (but `truncated` is still `true`), the block window
@@ -287,7 +287,7 @@ When `_meta.truncated` is `true`, look at `_meta.next_offset`:
 
 To read a specific section, pass `offset`/`limit` directly. The `find-*` abilities
 don't take `offset`/`limit` (they page at the post level), but each item may carry a
-`truncated: true` flag when its text was capped — call `view-post` / `view-page` for
+`truncated: true` flag when its text was capped. Call `view-post` / `view-page` for
 that item's full, paginated content.
 
 ## Classic-editor sites
@@ -297,15 +297,15 @@ be made per post type or even per individual post, so always check before writin
 
 Every read ability exposes two signals on each post or page:
 
-- **`editor`** — `"block"` or `"classic"`. This is the editor the target uses.
-- **`has_blocks`** — whether the stored content currently contains block markup. It can differ
+- **`editor`**: `"block"` or `"classic"`. This is the editor the target uses.
+- **`has_blocks`**: whether the stored content currently contains block markup. It can differ
   from `editor` (for example, block content saved on a post later switched to classic), so
   treat `editor` as the instruction for how to write.
 
 When `editor` is `"classic"`, block specs do not apply: send plain **HTML in the `content`
 field**, not `blocks`. If you send `blocks` to a classic target, the write fails with a
 `classic_editor_blocks_unsupported` error and nothing is saved. The allowed-block list does
-not apply to classic targets either — any valid HTML is accepted (WordPress sanitizes it per
+not apply to classic targets either: any valid HTML is accepted (WordPress sanitizes it per
 your permissions).
 
 When `editor` is `"block"`, write structured `blocks` as described above.

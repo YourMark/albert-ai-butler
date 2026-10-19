@@ -189,7 +189,7 @@ class OAuthController implements Hookable {
 					'[Albert] Token request rejected (%s): %s%s',
 					$e->getErrorType(),
 					$e->getMessage(),
-					$e->getHint() !== null ? ' — ' . $e->getHint() : ''
+					$e->getHint() !== null ? ' (' . $e->getHint() . ')' : ''
 				)
 			);
 		}

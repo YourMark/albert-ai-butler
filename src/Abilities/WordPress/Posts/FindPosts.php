@@ -130,7 +130,7 @@ class FindPosts extends BaseAbility {
 							],
 							'blocks'     => [
 								'type'        => 'array',
-								'description' => 'The post content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path }. "path" (e.g. [2], [2,0]) is the block\'s address — pass it to the edit/add/remove/move-post-block abilities. Included when "blocks" is requested (default).',
+								'description' => 'The post content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path }. "path" (e.g. [2], [2,0]) is the block\'s address: pass it to the edit/add/remove/move-post-block abilities. Included when "blocks" is requested (default).',
 								'items'       => [ 'type' => 'object' ],
 							],
 							'plaintext'  => [
@@ -139,7 +139,7 @@ class FindPosts extends BaseAbility {
 							],
 							'html'       => [
 								'type'        => 'string',
-								'description' => 'Rendered HTML produced by do_blocks() — reflects dynamic/server-rendered block output. Only included when "html" is requested.',
+								'description' => 'Rendered HTML produced by do_blocks(), so it reflects dynamic/server-rendered block output. Only included when "html" is requested.',
 							],
 							'markdown'   => [
 								'type'        => 'string',
