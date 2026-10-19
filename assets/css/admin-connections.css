@@ -714,36 +714,153 @@ a.albert-badge:focus-visible {
 	margin: 0;
 }
 
-/* Under the name, so the row's actions keep their width for Remove. */
-.albert-user-item__setup {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--albert-space-100) var(--albert-space-300);
-	margin-block-start: var(--albert-space-100);
-	font-size: var(--albert-font-size-sm);
-}
-
-.albert-user-item__setup form {
-	display: inline;
-	margin: 0;
-}
-
 /* Text-sized links still get a 24px target (WCAG 2.5.8). */
-.albert-user-item__setup .button-link,
 .albert-conn__actions .button-link {
 	display: inline-flex;
 	align-items: center;
 	min-block-size: 24px;
 }
 
-.albert-user-item__setup .button-link {
-	font-size: inherit;
+/* "Send setup link": a menu button under the name. */
+.albert-setup-menu {
+	margin-block-start: var(--albert-space-300);
 }
 
-.albert-user-item__setup .button-link[aria-disabled="true"] {
+.albert-page .button.albert-setup-menu__toggle {
+	gap: var(--albert-space-100);
+}
+
+.albert-setup-menu__toggle .dashicons {
+	inline-size: 16px;
+	block-size: 16px;
+	font-size: 16px;
+	transition: rotate 0.15s;
+}
+
+.albert-setup-menu__toggle[aria-expanded="true"] .dashicons {
+	rotate: 180deg;
+}
+
+/*
+ * A native popover in the top layer, so the scrolling list cannot clip it.
+ * Where CSS anchor positioning exists the browser places it and flips it when
+ * it does not fit; SetupMenu.place() does the same elsewhere.
+ */
+.albert-setup-menu__popover {
+	position: fixed;
+	inset: auto;
+	box-sizing: border-box;
+	inline-size: min(280px, calc(100vw - 16px));
+	margin: 0;
+	padding: var(--albert-space-200);
+	border: 1px solid oklch(0.817 0.0042 264.5); /* #c3c4c7 */
+	border-radius: var(--albert-radius-md);
+	background: var(--albert-color-surface);
+	color: var(--albert-color-text);
+	box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+}
+
+@supports (position-area: block-end) {
+	.albert-setup-menu__popover {
+		position-area: block-end span-inline-end;
+		position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+		/* Hidden, not left floating, when its row scrolls out of the list. */
+		position-visibility: anchors-visible;
+		margin-block: 4px;
+	}
+}
+
+.albert-setup-menu__help {
+	margin: 0 0 var(--albert-space-200);
+	padding: var(--albert-space-200) var(--albert-space-300) var(--albert-space-300);
+	border-block-end: 1px solid var(--albert-color-border-subtle);
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-neutral);
+}
+
+.albert-setup-menu__list {
+	display: grid;
+	gap: 2px;
+}
+
+.albert-setup-menu__item {
+	display: flex;
+	align-items: center;
+	gap: var(--albert-space-300);
+	min-block-size: 36px;
+	padding: var(--albert-space-200) var(--albert-space-300);
+	border: 0;
+	border-radius: var(--albert-radius-sm);
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.albert-setup-menu__item:is(:hover, :focus-visible) {
+	background: var(--albert-color-surface-hover);
+}
+
+/* An outline, not a shadow, so it survives forced-colors mode. */
+.albert-setup-menu__item:focus-visible {
+	outline: var(--albert-focus-width) solid var(--albert-focus-color);
+	outline-offset: -2px;
+}
+
+.albert-setup-menu__item .dashicons {
 	color: var(--albert-color-text-muted);
-	cursor: default;
+}
+
+/* The outcome lives in data-state; the script only changes the words. */
+.albert-setup-menu__item[data-state="busy"] {
+	cursor: progress;
+}
+
+.albert-setup-menu__item[data-state="busy"] .dashicons::before {
+	content: "\f463"; /* update */
+	display: inline-block;
+	animation: albert-setup-spin 1s linear infinite;
+}
+
+.albert-setup-menu__item[data-state="success"],
+.albert-setup-menu__item[data-state="success"] .dashicons {
+	color: var(--albert-color-success);
+}
+
+.albert-setup-menu__item[data-state="success"] .dashicons::before {
+	content: "\f147"; /* yes */
+}
+
+.albert-setup-menu__item[data-state="error"],
+.albert-setup-menu__item[data-state="error"] .dashicons {
+	color: var(--albert-color-danger);
+}
+
+.albert-setup-menu__item[data-state="error"] .dashicons::before {
+	content: "\f534"; /* warning */
+}
+
+@keyframes albert-setup-spin {
+	to {
+		rotate: 360deg;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.albert-setup-menu__toggle .dashicons,
+	.albert-setup-menu__item[data-state="busy"] .dashicons::before {
+		transition: none;
+		animation: none;
+	}
+}
+
+@media (max-width: 782px) {
+	.albert-page .button.albert-setup-menu__toggle,
+	.albert-setup-menu__item {
+		min-block-size: 44px;
+		block-size: auto;
+	}
 }
 
 /* The add-people dialog's email option sits at the start of its footer. */
