@@ -24,8 +24,6 @@ Albert removes that step. Connect your AI assistant to your site once, and it wr
 * **No tracking.** Albert sends nothing about your site or your usage anywhere.
 * **Personal data hidden by default.** Names, email addresses, phone numbers and postal addresses are masked before an assistant sees them. New sites start on Strict.
 
-<!-- TODO: add social proof once you have it. Active installs, star rating, or a named site. One line near the top converts better than anything else on this page. -->
-
 ---
 
 ### Connect in three steps
