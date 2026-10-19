@@ -76,6 +76,15 @@ class ClientRegistration implements Hookable {
 	const DEFAULT_MAX_CLIENTS = 20;
 
 	/**
+	 * How old an unused client must be before a new registration may evict it,
+	 * so somebody still on the login or consent screen keeps their place.
+	 *
+	 * @since 1.6.0
+	 * @var int
+	 */
+	const EVICTABLE_AFTER_MINUTES = 10;
+
+	/**
 	 * Register WordPress hooks.
 	 *
 	 * @return void
@@ -134,17 +143,6 @@ class ClientRegistration implements Hookable {
 
 		$client_name = isset( $body['client_name'] ) ? sanitize_text_field( $body['client_name'] ) : 'MCP Client';
 
-		// Per-site client cap, against live clients only (see count_live_clients()).
-		if ( self::limit_reached( $client_repo ) ) {
-			$this->log_rejected_registration( 'client_limit_reached', '', $client_name );
-
-			return new WP_Error(
-				'client_limit_reached',
-				__( 'This site has reached its maximum number of registered clients.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		// redirect_uris is REQUIRED (RFC 7591). Absence is rejected — no wildcard fallback.
 		$redirect_uris = isset( $body['redirect_uris'] ) ? $this->sanitize_redirect_uris( $body['redirect_uris'] ) : [];
 
@@ -185,6 +183,20 @@ class ClientRegistration implements Hookable {
 		// A native (private-use scheme) or loopback client is a public client per
 		// RFC 8252: it cannot protect a secret, so PKCE — not a secret — guards it.
 		$is_confidential = ! $this->requires_public_client( $redirect_uris );
+
+		// Per-site client cap, against live clients only (see count_live_clients()).
+		// At the cap, an unused registration gives up its place, so strangers who
+		// register and walk away cannot lock a real assistant out for a day.
+		// Checked last, so an invalid request never evicts anything.
+		if ( self::at_cap( $client_repo ) && ! $this->evict_unused_client( $client_repo ) ) {
+			$this->log_rejected_registration( 'client_limit_reached', '', $client_name );
+
+			return new WP_Error(
+				'client_limit_reached',
+				__( 'This site has reached its maximum number of registered clients.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
+		}
 
 		// Create the client.
 		$result = $client_repo->createClient(
@@ -569,17 +581,66 @@ class ClientRegistration implements Hookable {
 	}
 
 	/**
-	 * Whether the registration cap is reached, so a new client would be refused.
+	 * Whether the registration cap is reached and nothing can make room, so a new
+	 * client would be refused.
 	 *
 	 * @param ClientRepository|null $repository Repository to count with.
 	 *
 	 * @return bool
 	 * @since 1.5.0
+	 * @since 1.6.0 False while an unused client can be evicted.
 	 */
 	public static function limit_reached( ?ClientRepository $repository = null ): bool {
+		$repository ??= new ClientRepository();
+
+		return self::at_cap( $repository ) && $repository->find_evictable_client( self::EVICTABLE_AFTER_MINUTES ) === null;
+	}
+
+	/**
+	 * Whether every place under the cap is taken.
+	 *
+	 * @param ClientRepository $repository Repository to count with.
+	 *
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	private static function at_cap( ClientRepository $repository ): bool {
 		$max = self::max_clients();
 
-		return $max > 0 && ( $repository ?? new ClientRepository() )->count_live_clients() >= $max;
+		return $max > 0 && $repository->count_live_clients() >= $max;
+	}
+
+	/**
+	 * Delete the oldest client that never connected, to make room for a new one.
+	 *
+	 * @param ClientRepository $repository Repository to evict with.
+	 *
+	 * @return bool Whether a client was evicted.
+	 * @since 1.6.0
+	 */
+	private function evict_unused_client( ClientRepository $repository ): bool {
+		$client = $repository->find_evictable_client( self::EVICTABLE_AFTER_MINUTES );
+
+		if ( $client === null || ! $repository->deleteClient( $client['client_id'] ) ) {
+			return false;
+		}
+
+		/**
+		 * Fires when a client that never connected is deleted to make room under the cap.
+		 *
+		 * @since 1.6.0
+		 *
+		 * @param string $client_id   The evicted client's id.
+		 * @param string $client_name The name it registered with.
+		 */
+		do_action( 'albert/oauth/client_evicted', $client['client_id'], $client['name'] );
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Diagnostic aid, gated on WP_DEBUG.
+			error_log( sprintf( '[Albert] Evicted unused client %s (%s) to make room under the client limit', $client['client_id'], $client['name'] ) );
+		}
+
+		return true;
 	}
 
 	/**

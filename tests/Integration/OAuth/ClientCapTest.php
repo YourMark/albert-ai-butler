@@ -74,26 +74,27 @@ class ClientCapTest extends TestCase {
 	}
 
 	/**
-	 * Insert a client registered `$hours_ago` hours ago.
+	 * Insert a client registered `$hours_ago` hours (plus `$minutes_ago` minutes) ago.
 	 *
-	 * @param string $client_id Client id.
-	 * @param int    $hours_ago Age in hours.
+	 * @param string $client_id   Client id.
+	 * @param int    $hours_ago   Age in hours.
+	 * @param int    $minutes_ago Extra age in minutes.
 	 *
 	 * @return string
 	 */
-	private function client( string $client_id, int $hours_ago ): string {
+	private function client( string $client_id, int $hours_ago, int $minutes_ago = 0 ): string {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture; created_at in the database's own time zone, as the column default writes it.
 		$wpdb->query(
 			$wpdb->prepare(
 				'INSERT INTO %i ( client_id, name, redirect_uri, is_confidential, created_at )
-				VALUES ( %s, %s, %s, 0, DATE_SUB( NOW(), INTERVAL %d HOUR ) )',
+				VALUES ( %s, %s, %s, 0, DATE_SUB( NOW(), INTERVAL %d MINUTE ) )',
 				Tables::oauth()['clients'],
 				$client_id,
 				'Client ' . $client_id,
 				'http://localhost:5000/callback',
-				$hours_ago
+				$hours_ago * 60 + $minutes_ago
 			)
 		);
 
@@ -233,11 +234,12 @@ class ClientCapTest extends TestCase {
 	}
 
 	/**
-	 * A fresh registration nobody completed still counts, so the cap bounds abuse.
+	 * A registration nobody completed holds its place for ten minutes, so the cap
+	 * still bounds abuse.
 	 *
 	 * @return void
 	 */
-	public function test_a_fresh_unauthorised_client_counts_for_a_day(): void {
+	public function test_a_fresh_unauthorised_client_keeps_its_place(): void {
 		$this->client( 'fresh-1', 0 );
 		$this->client( 'fresh-2', 0 );
 		$this->client( 'fresh-3', 0 );
@@ -246,6 +248,73 @@ class ClientCapTest extends TestCase {
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'client_limit_reached', $result->get_error_code() );
+	}
+
+	/**
+	 * At the cap, the oldest client that never connected makes room, and is reported.
+	 *
+	 * @return void
+	 */
+	public function test_at_the_cap_the_oldest_unused_client_makes_room(): void {
+		$this->client( 'unused-newer', 2 );
+		$this->client( 'unused-oldest', 5 );
+		$this->token( $this->client( 'live', 240 ), 'live' );
+
+		$evicted = [];
+		add_action(
+			'albert/oauth/client_evicted',
+			static function ( string $client_id, string $client_name ) use ( &$evicted ): void {
+				$evicted[] = [ $client_id, $client_name ];
+			},
+			10,
+			2
+		);
+
+		$this->assertFalse( ClientRegistration::limit_reached() );
+		$this->assertNotInstanceOf( WP_Error::class, $this->register() );
+		$this->assertSame( [ [ 'unused-oldest', 'Client unused-oldest' ] ], $evicted );
+		$this->assertFalse( $this->exists( 'unused-oldest' ) );
+		$this->assertTrue( $this->exists( 'unused-newer' ) );
+		$this->assertTrue( $this->exists( 'live' ) );
+	}
+
+	/**
+	 * Nothing that connected, is connecting, or started in the last ten minutes is evicted.
+	 *
+	 * @return void
+	 */
+	public function test_eviction_spares_clients_that_connected_or_are_connecting(): void {
+		$this->token( $this->client( 'connected-once', 2 ), 'expired' );
+		$this->auth_code( $this->client( 'signing-in', 2 ) );
+		$this->client( 'just-started', 0, 9 );
+
+		$result = $this->register();
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'client_limit_reached', $result->get_error_code() );
+		$this->assertTrue( ClientRegistration::limit_reached() );
+		foreach ( [ 'connected-once', 'signing-in', 'just-started' ] as $client_id ) {
+			$this->assertTrue( $this->exists( $client_id ), "$client_id must not be evicted." );
+		}
+	}
+
+	/**
+	 * A request refused for another reason evicts nothing.
+	 *
+	 * @return void
+	 */
+	public function test_an_invalid_request_evicts_nothing(): void {
+		$this->client( 'unused-1', 2 );
+		$this->client( 'unused-2', 2 );
+		$this->client( 'unused-3', 2 );
+		$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+
+		$request = new WP_REST_Request( 'POST', '/albert/v1/oauth/register' );
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body( (string) wp_json_encode( [ 'client_name' => 'Broken' ] ) );
+
+		$this->assertInstanceOf( WP_Error::class, ( new ClientRegistration() )->handle_registration( $request ) );
+		$this->assertSame( 3, ( new ClientRepository() )->count_live_clients() );
 	}
 
 	/**
