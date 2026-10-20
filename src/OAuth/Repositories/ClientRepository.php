@@ -400,6 +400,52 @@ class ClientRepository implements ClientRepositoryInterface {
 	}
 
 	/**
+	 * The oldest client that holds a place under the cap without ever connecting.
+	 *
+	 * Inside the grace window of {@see self::count_live_clients()}, older than
+	 * `$min_age_minutes` so a sign-in in progress keeps its place, with no token
+	 * row and no unexpired authorization code.
+	 *
+	 * @param int $min_age_minutes Minimum age in minutes.
+	 * @param int $grace_hours     The grace window count_live_clients() uses.
+	 *
+	 * @return array{client_id: string, name: string}|null
+	 * @since 1.6.0
+	 */
+	public function find_evictable_client( int $min_age_minutes = 10, int $grace_hours = 24 ): ?array {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, cap enforcement.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT c.client_id, c.name FROM %i c
+				WHERE c.created_at >= DATE_SUB( NOW(), INTERVAL %d HOUR )
+					AND c.created_at < DATE_SUB( NOW(), INTERVAL %d MINUTE )
+					AND NOT EXISTS ( SELECT 1 FROM %i t WHERE t.client_id = c.client_id )
+					AND NOT EXISTS (
+						SELECT 1 FROM %i a
+						WHERE a.client_id = c.client_id AND a.revoked = 0 AND a.expires_at > UTC_TIMESTAMP()
+					)
+				ORDER BY c.created_at ASC, c.id ASC
+				LIMIT 1',
+				$tables['clients'],
+				$grace_hours,
+				$min_age_minutes,
+				$tables['access_tokens'],
+				$tables['auth_codes']
+			),
+			ARRAY_A
+		);
+
+		return is_array( $row ) ? [
+			'client_id' => (string) $row['client_id'],
+			'name'      => (string) $row['name'],
+		] : null;
+	}
+
+	/**
 	 * Delete clients older than `$days` that hold no token at all.
 	 *
 	 * No token row, revoked or not: the client never authorised, or every token

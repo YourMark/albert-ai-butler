@@ -175,4 +175,18 @@ class AuthorizationPageTest extends TestCase {
 
 		$this->assertSame( '', $this->read( 'redirect_uri', '', true ) );
 	}
+
+	/**
+	 * A missing challenge is refused whatever the client type; only S256 passes.
+	 *
+	 * @return void
+	 */
+	public function test_pkce_is_required_with_s256(): void {
+		$this->assertSame( '', AuthorizationPage::pkce_problem( 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM', 'S256' ) );
+		$this->assertStringContainsString( 'must use PKCE', AuthorizationPage::pkce_problem( '', '' ) );
+		$this->assertStringContainsString( 'must use PKCE', AuthorizationPage::pkce_problem( '', 'S256' ) );
+		$this->assertStringContainsString( 'S256', AuthorizationPage::pkce_problem( 'challenge', 'plain' ) );
+		$this->assertStringContainsString( 'S256', AuthorizationPage::pkce_problem( 'challenge', '' ) );
+		$this->assertStringContainsString( 'not valid', AuthorizationPage::pkce_problem( 'too-short', 'S256' ) );
+	}
 }

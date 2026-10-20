@@ -45,4 +45,4 @@ paths:
 - The form has `<input name="action">`, which shadows `form.action`. Read `form.getAttribute('action')`.
 - The picker never lists the whole user table. It searches `/wp/v2/users` with explicit `search_columns[]` (otherwise `WP_User_Query` picks columns from what the term looks like), `capabilities[]` from `albert/connections/allowed_user_capability`, and `per_page`. Suggestions before typing are two bounded requests, administrators first, leaving out people already allowed.
 - Those parameters need `list_users`. Fine while the screen is `manage_options`; revisit if that ever narrows.
-- Removing a person revokes all their tokens. `TokenValidator` also checks the list on every request, and a password change or reset revokes too (`OAuth\PasswordChange`).
+- Removing a person revokes all their tokens. `TokenValidator` also checks the list on every request, and a password change or reset revokes too (`OAuth\PasswordChange`). A login rehash must not: core calls `wp_set_password()` for it, so never hook that.
