@@ -158,7 +158,7 @@ The plugin uses a modern, modular architecture:
 - **PSR-4 Autoloading**: Composer-based autoloading
 - **Type Safety**: Full PHP type declarations
 
-See `CLAUDE.md` for detailed architectural documentation.
+See `AGENTS.md` and `.claude/rules/` for architecture notes.
 
 ## License
 

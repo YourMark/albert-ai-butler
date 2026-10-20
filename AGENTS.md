@@ -4,17 +4,22 @@ WordPress plugin that exposes WordPress functionality to AI assistants via MCP (
 
 **Stack:** PHP 8.1+ | WordPress 6.9+ | OAuth 2.0 (league/oauth2-server) | PSR-4 autoloading
 
+**Requires:** MySQL 8.0+ or MariaDB 10.5+, HTTPS for OAuth, any permalink structure except Plain.
+WooCommerce is optional; support is the current stable X.Y and the two before it, which is what CI tests.
+
 This is the canonical, agent-neutral instruction file for this repo — read it whatever
 AI agent (or if you're a human) you are. Tool-specific files import it: `.claude/CLAUDE.md`
-is a thin `@`-import of this file. The deep architecture reference is the root
-[`CLAUDE.md`](CLAUDE.md) — read that too for full detail.
+is a thin `@`-import of this file.
 
 ## What goes where
-- **AGENTS.md** — always loaded. Product identity, architecture map, hard "never" rules, API index. Keep it lean.
-- **rules/** (`.claude/rules/`) — loaded on demand. Product-specific depth.
-- **agent-rules/** — shared rules across all Albert repos (a git submodule).
-- **Enforcement** — native git hooks (any agent or human) plus an optional Claude Code adapter.
-- **root `CLAUDE.md`** — the deep canonical project reference (checked into git); AGENTS.md supplements it.
+- **AGENTS.md**: always loaded, in every session and every subagent. Product identity, architecture map, hard "never" rules. Keep it lean.
+- **`.claude/rules/<area>.md`**: one per area, each with a `paths:` list so it loads only when that code is touched. The why behind each area's design lives here.
+- **`.claude/skills/`**: reference material loaded only when the task calls for it (the hooks reference).
+- **agent-rules/**: shared rules across all Albert repos (a git submodule).
+- **Enforcement**: native git hooks (any agent or human) plus an optional Claude Code adapter.
+
+A note about one area goes in that area's rule, never here. A line the code already
+says (a directory tree, an ability list, an endpoint table) goes nowhere.
 
 ## Rules
 
@@ -27,8 +32,15 @@ Shared (submodule — `git@github.com:YourMark/albert-agent-rules`):
 
 Product-specific:
 - [Patterns](.claude/rules/patterns.md) - Albert class patterns, bounded contexts, testing stubs
-- [Hooks & extension reference](.claude/rules/hooks-reference.md) - full hook table, admin asset/menu contracts, agent-context model
-- [OAuth](.claude/rules/oauth.md) - how the OAuth endpoints are served
+- [Abilities](.claude/rules/abilities.md) - creating an ability
+- [Abilities screen](.claude/rules/abilities-screen.md) - the DataViews screen, row augmentation, source labels
+- [Agent context](.claude/rules/agent-context.md) - what `discover-abilities` tells an assistant, the skills registry
+- [Safe mode](.claude/rules/safe-mode.md) - what is held for approval, and why
+- [Connections](.claude/rules/connections.md) - the Connections screen, connect dialog, allowed users
+- [OAuth](.claude/rules/oauth.md) - how the OAuth endpoints are served, token validation
+- [Logging](.claude/rules/logging.md) - the three outcomes, schema, failure capture
+- [Bundled MCP adapter](.claude/rules/mcp-adapter.md) - plugin first, shared, never scoped; the WooCommerce timing bug
+- [Hooks & extension reference](.claude/skills/albert-hooks/SKILL.md) (a skill) - full hook table, admin asset/menu contracts, agent-context model
 
 ## Enforcement (run once per clone)
 
@@ -84,8 +96,6 @@ assets/            # CSS and JS for admin UI
 lib/mcp-adapter/   # Bundled MCP adapter, its own Composer project (fallback when the plugin is inactive)
 ```
 
-Full per-directory detail is in the root [`CLAUDE.md`](CLAUDE.md).
-
 ## Ecosystem
 
 Free is the **core**. All add-ons depend on it. The core never depends on add-ons.
@@ -131,15 +141,16 @@ Never rename the legacy IDs: they are part of the public API.
   `fix/`; if it adds something new it is `feature/`. Renaming a branch on GitHub closes its PR.
 - **NEVER use `chore`. Anywhere.** Not in a branch name, a commit message, or a PR title.
   If a commit does not fit `fix:` or `feat:`, write a plain sentence: "Set the release version to 1.4.0".
+- **NEVER scope the MCP adapter or require it from the root `composer.json`**, and never reintroduce `Albert\Vendor\`. It is shared through Jetpack Autoloader; see `.claude/rules/mcp-adapter.md`.
 - **NEVER bump version without approval.** Version bumps only happen in release branches, never on `development`, feature branches, or `main`.
 - **PR titles are plain, human-readable sentences** — never conventional-commit prefixes. Example: "Upgrade MCP adapter to 0.5.0", not "chore(deps): upgrade...".
 
 ## WooCommerce mcp-adapter Timing Bug
 
-`Plugin::init()` skips `McpAdapter::instance()` when `is_admin()` to avoid a timing conflict where WooCommerce's REST preloading triggers `wp_get_ability()` for tools that aren't registered yet. See root `CLAUDE.md` for full details.
+`Plugin::init()` skips `McpAdapter::instance()` when `is_admin()` to avoid a timing conflict where WooCommerce's REST preloading triggers `wp_get_ability()` for tools that aren't registered yet. See `.claude/rules/mcp-adapter.md` for full details.
 
 ## Extensibility Hooks
 
 All hooks follow `albert/{location}/{hook_name}`. The full hook table, the admin
 asset/menu contracts, and the agent-context model live in
-[Hooks & extension reference](.claude/rules/hooks-reference.md).
+[Hooks & extension reference](.claude/skills/albert-hooks/SKILL.md).
