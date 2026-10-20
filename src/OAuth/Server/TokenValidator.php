@@ -10,6 +10,7 @@
 namespace Albert\OAuth\Server;
 
 use Exception;
+use Albert\OAuth\AllowedUsers;
 use Albert\OAuth\Endpoints\Psr7Bridge;
 use Albert\OAuth\Repositories\ClientRepository;
 use League\OAuth2\Server\Exception\OAuthServerException;
@@ -60,6 +61,17 @@ class TokenValidator {
 				return new WP_Error(
 					'oauth_user_not_found',
 					__( 'User associated with token not found.', 'albert-ai-butler' ),
+					[ 'status' => 401 ]
+				);
+			}
+
+			// The list is otherwise checked only when an authorisation starts, so
+			// somebody dropped from it by expiry, a filter or a direct option
+			// write kept their connection until the token died.
+			if ( ! AllowedUsers::is_allowed( $user->ID ) ) {
+				return new WP_Error(
+					'oauth_user_not_allowed',
+					__( 'This account is no longer allowed to connect assistants to this site.', 'albert-ai-butler' ),
 					[ 'status' => 401 ]
 				);
 			}

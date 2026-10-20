@@ -92,6 +92,7 @@ use Albert\Admin\Rest\ConnectController;
 use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
 use Albert\OAuth\DiscoveryHealth;
+use Albert\OAuth\PasswordChange;
 use Albert\Privacy\PrivacyMode;
 use Albert\Execution\InterceptorDecision;
 use Albert\SafeMode\Gate as SafeModeGate;
@@ -228,6 +229,8 @@ class Plugin {
 		// Albert active before this cron was introduced and never re-activate.
 		( new AllowedUserExpiry() )->register_hooks();
 		AllowedUserExpiry::schedule();
+
+		( new PasswordChange() )->register_hooks();
 
 		// Daily cleanup of expired OAuth token rows. Same self-healing reason.
 		( new TokenCleanup() )->register_hooks();
