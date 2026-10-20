@@ -120,7 +120,7 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/abilities_icons` | filter | Customize category icons |
 | `albert/developer_mode` | filter | Toggle developer mode |
 | `albert/logging/enabled` | filter | Disable Free's ability log (Premium uses this) |
-| `albert/logging/outcome` | filter | `( string $status, string $ability_name, WP_Error $error ): string` — the outcome recorded for a *failed* invocation, one of `success`, `warning`, `error`. Albert classifies by its own conventions: anything ending `_not_found` (plus `not_found` / `invalid_post` / `invalid_attachment`) is a `success` — the ability ran correctly and the answer is legitimately negative; anything ending `_permission_denied` (plus `ability_invalid_permissions` / `ability_disabled` / `capability_revoked` / `rest_forbidden` / `forbidden`), or any row whose `failure_stage` is `permission`, is a `warning` — blocked by policy, nothing broke. Third-party abilities do not follow those conventions, and this is their way out. Neither `success` nor `warning` fires `albert/logging/ability_failed`; only `success` has `failure_stage` forced to NULL. See `Logging\Outcome`. Since 1.5.0 `Outcome::HELD_CODE` (`albert_awaiting_approval`, safe mode holding a call) classifies as `warning` on its own branch rather than joining `POLICY_CODES`: that set means "you may not" and "this is switched off", both final, where a hold means *not yet decided* |
+| `albert/logging/outcome` | filter | `( string $status, string $ability_name, WP_Error $error ): string`, fired only for a failed invocation. Return `success`, `warning` or `error` to correct how Albert classified a third-party code; any other value is ignored. How Albert classifies: `.claude/rules/logging.md` and `Logging\Outcome` |
 | `albert/blocks/read_block_limit` | filter | Default top-level blocks per read window (default 200; 0 = unlimited) |
 | `albert/blocks/read_max_bytes` | filter | Per-field byte cap on read text representations (default 50000) |
 | `albert/media/upload_link_max_bytes` | filter | Default byte cap for a media upload link when a caller doesn't request one; accepts an int, a float, or a php.ini-shorthand string (`"10M"`, `"2G"`) via `wp_convert_hr_to_bytes()`, clamped to `MAX_SETTABLE_MB` (2 GB); return `null` to defer to the `albert_upload_link_max_mb` option/default (10 MB). See `UploadLinkService::get_default_max_bytes_filter_state()`. Not deprecated. Since 1.4.0 `Settings\Overrides` bridges it onto the generic settings chain, so the Settings screen renders the field read-only and names this filter while it is active; the limit *enforced* still comes from here in exact bytes, not the megabyte figure the screen shows |
@@ -174,20 +174,9 @@ what guarantees load order for the add-on's own stylesheet.
 
 Full token and primitive reference: `docs/design-system.md`.
 
-## Agent context: array in, text out
+## Agent context
 
-`site` is **built** as a structured array and **rendered** to a compact labeled
-text block at the MCP boundary. The array is the API, filters run on it, tests
-assert its keys, the screen prices its sections. The text is the wire format,
-and it is what the Context screen's payload preview shows, byte for byte: the
-preview is `Payload::segments()`, and the wire fields are the join of those same
-segments. Never emit the array as nested JSON, and never render the payload a
-second time for display, a screen with its own opinion of what gets sent stops
-being a preview.
-
-The token estimate is script-aware, not characters ÷ 4; that shortcut was
-measured at −67% on Japanese. See `docs/context-token-budget.md` and re-check any
-change with `php bin/calibrate-token-estimator.php`.
+Filters run on the structured array; the wire text and the Context screen's preview are both built from `Payload::segments()`. The rules are in `.claude/rules/agent-context.md`.
 
 JS (client-side) seams for the Abilities DataViews screen (`@wordpress/hooks` filters):
 `albert.abilities.permissions_section` replaces the fly-in's Permissions section (its `api` exposes
