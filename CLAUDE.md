@@ -772,16 +772,6 @@ proof.
 #### 3. OAuth 2.0 Server
 Full OAuth 2.0 implementation using `league/oauth2-server`.
 
-**Endpoints:**
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /wp-json/albert/v1/oauth/authorize` | Authorization request |
-| `POST /wp-json/albert/v1/oauth/authorize` | User consent submission |
-| `POST /wp-json/albert/v1/oauth/token` | Token exchange |
-| `POST /wp-json/albert/v1/oauth/register` | Dynamic client registration |
-| `GET /.well-known/oauth-authorization-server` | Server metadata (RFC 8414) |
-| `GET /wp-json/albert/v1/oauth/metadata` | Alternative metadata endpoint |
-
 **Token Validation:**
 ```php
 use Albert\OAuth\Server\TokenValidator;

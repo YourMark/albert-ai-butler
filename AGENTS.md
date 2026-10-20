@@ -28,6 +28,7 @@ Shared (submodule — `git@github.com:YourMark/albert-agent-rules`):
 Product-specific:
 - [Patterns](.claude/rules/patterns.md) - Albert class patterns, bounded contexts, testing stubs
 - [Hooks & extension reference](.claude/rules/hooks-reference.md) - full hook table, admin asset/menu contracts, agent-context model
+- [OAuth](.claude/rules/oauth.md) - how the OAuth endpoints are served
 
 ## Enforcement (run once per clone)
 
