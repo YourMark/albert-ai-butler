@@ -429,6 +429,41 @@ class AuthorizationPage implements Hookable {
 	}
 
 	/**
+	 * Header lines every page this endpoint renders sends, besides no-cache.
+	 *
+	 * DENY rather than core's send_frame_options_header() (SAMEORIGIN): nothing
+	 * frames the consent page, and a framed Authorize button is a clickjack.
+	 *
+	 * @return string[] Raw header lines, for header().
+	 * @since 1.6.0
+	 */
+	public static function page_headers(): array {
+		return [
+			'Content-Type: text/html; charset=utf-8',
+			'X-Frame-Options: DENY',
+			"Content-Security-Policy: frame-ancestors 'none'",
+		];
+	}
+
+	/**
+	 * Send page_headers(), no-cache and the status. Call before any output.
+	 *
+	 * @param int $status HTTP status code. Default 200.
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	private function send_page_headers( int $status = 200 ): void {
+		nocache_headers();
+
+		foreach ( self::page_headers() as $header ) {
+			header( $header );
+		}
+
+		status_header( $status );
+	}
+
+	/**
 	 * Render the consent page.
 	 *
 	 * @param \Albert\OAuth\Entities\ClientEntity $client                The client entity.
@@ -449,9 +484,7 @@ class AuthorizationPage implements Hookable {
 		$destination  = $this->format_redirect_destination( $redirect_uri );
 		$age_notice   = $this->format_client_age_notice( $client );
 
-		// Start output.
-		nocache_headers();
-		header( 'Content-Type: text/html; charset=utf-8' );
+		$this->send_page_headers();
 
 		$this->enqueue_oauth_styles();
 
@@ -551,9 +584,7 @@ class AuthorizationPage implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function render_error_page( string $title, string $message ): void {
-		nocache_headers();
-		header( 'Content-Type: text/html; charset=utf-8' );
-		status_header( 400 );
+		$this->send_page_headers( 400 );
 
 		$this->enqueue_oauth_styles();
 
@@ -593,9 +624,7 @@ class AuthorizationPage implements Hookable {
 	 * @since 1.5.0 Takes the client, names it, and offers a way back to it.
 	 */
 	private function render_access_denied_page( \WP_User $user, $client, string $redirect_uri, string $state ): void {
-		nocache_headers();
-		header( 'Content-Type: text/html; charset=utf-8' );
-		status_header( 403 );
+		$this->send_page_headers( 403 );
 
 		$this->enqueue_oauth_styles();
 
@@ -779,8 +808,7 @@ class AuthorizationPage implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function render_success_page( string $redirect_url, string $client_name ): void {
-		nocache_headers();
-		header( 'Content-Type: text/html; charset=utf-8' );
+		$this->send_page_headers();
 
 		$this->enqueue_oauth_styles();
 
