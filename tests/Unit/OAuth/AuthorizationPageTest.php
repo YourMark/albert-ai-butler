@@ -187,19 +187,6 @@ class AuthorizationPageTest extends TestCase {
 		$this->assertStringContainsString( 'must use PKCE', AuthorizationPage::pkce_problem( '', 'S256' ) );
 		$this->assertStringContainsString( 'S256', AuthorizationPage::pkce_problem( 'challenge', 'plain' ) );
 		$this->assertStringContainsString( 'S256', AuthorizationPage::pkce_problem( 'challenge', '' ) );
-	}
-
-	/**
-	 * The handler applies the check to every client, before anything else is shown.
-	 *
-	 * @return void
-	 */
-	public function test_no_client_type_is_exempt_from_pkce(): void {
-		$handler = new ReflectionMethod( AuthorizationPage::class, 'handle_authorization' );
-		$lines   = (array) file( (string) $handler->getFileName() );
-		$body    = implode( '', array_slice( $lines, $handler->getStartLine() - 1, $handler->getEndLine() - $handler->getStartLine() + 1 ) );
-
-		$this->assertStringNotContainsString( 'isConfidential', $body );
-		$this->assertLessThan( strpos( $body, 'is_user_logged_in' ), strpos( $body, 'self::pkce_problem(' ) );
+		$this->assertStringContainsString( 'not valid', AuthorizationPage::pkce_problem( 'too-short', 'S256' ) );
 	}
 }

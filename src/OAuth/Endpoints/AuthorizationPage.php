@@ -260,7 +260,60 @@ class AuthorizationPage implements Hookable {
 			return __( 'This site requires PKCE using the S256 code challenge method.', 'albert-ai-butler' );
 		}
 
+		// RFC 7636 §4.2. League checks this too, but only once the person has consented.
+		if ( preg_match( '/^[A-Za-z0-9\-._~]{43,128}$/', $code_challenge ) !== 1 ) {
+			return __( 'The code challenge is not valid.', 'albert-ai-butler' );
+		}
+
 		return '';
+	}
+
+	/**
+	 * Issue an authorization code for an approved request.
+	 *
+	 * The PKCE rule is checked again on what league parsed, so it holds here
+	 * whatever the caller checked: league itself accepts a confidential client
+	 * with no challenge, or with `plain`.
+	 *
+	 * @param \Albert\OAuth\Entities\ClientEntity $client                The client entity.
+	 * @param string                              $redirect_uri          The redirect URI.
+	 * @param string                              $state                 The state parameter.
+	 * @param string                              $scope                 The requested scope.
+	 * @param string                              $code_challenge        PKCE code challenge.
+	 * @param string                              $code_challenge_method PKCE challenge method.
+	 * @param int                                 $user_id               The approving user.
+	 *
+	 * @return \Psr\Http\Message\ResponseInterface The redirect carrying the code.
+	 * @throws OAuthServerException When the request is invalid or its PKCE parameters are refused.
+	 * @since 1.6.0
+	 */
+	public static function issue_code( $client, string $redirect_uri, string $state, string $scope, string $code_challenge, string $code_challenge_method, int $user_id ): \Psr\Http\Message\ResponseInterface {
+		$server = AuthorizationServerFactory::create();
+
+		$psr_request = Psr7Bridge::create_server_request( 'GET', home_url( '/oauth/authorize' ) )
+			->withQueryParams(
+				[
+					'response_type'         => 'code',
+					'client_id'             => $client->getIdentifier(),
+					'redirect_uri'          => $redirect_uri,
+					'scope'                 => $scope,
+					'state'                 => $state,
+					'code_challenge'        => $code_challenge,
+					'code_challenge_method' => $code_challenge_method,
+				]
+			);
+
+		$auth_request = $server->validateAuthorizationRequest( $psr_request );
+
+		$pkce_problem = self::pkce_problem( (string) $auth_request->getCodeChallenge(), (string) $auth_request->getCodeChallengeMethod() );
+		if ( $pkce_problem !== '' ) {
+			throw OAuthServerException::invalidRequest( 'code_challenge', $pkce_problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Escaped where it is rendered.
+		}
+
+		$auth_request->setUser( new UserEntity( $user_id ) );
+		$auth_request->setAuthorizationApproved( true );
+
+		return $server->completeAuthorizationRequest( $auth_request, Psr7Bridge::create_response() );
 	}
 
 	/**
@@ -371,31 +424,7 @@ class AuthorizationPage implements Hookable {
 
 		// User approved - generate authorization code.
 		try {
-			$server = AuthorizationServerFactory::create();
-
-			// Create a PSR-7 request with the OAuth parameters.
-			$query_params = [
-				'response_type'         => 'code',
-				'client_id'             => $client->getIdentifier(),
-				'redirect_uri'          => $redirect_uri,
-				'scope'                 => $scope,
-				'state'                 => $state,
-				'code_challenge'        => $code_challenge,
-				'code_challenge_method' => $code_challenge_method,
-			];
-
-			$psr_request = Psr7Bridge::create_server_request( 'GET', home_url( '/oauth/authorize' ) )
-				->withQueryParams( $query_params );
-
-			// Validate and complete the authorization request.
-			$auth_request = $server->validateAuthorizationRequest( $psr_request );
-			$auth_request->setUser( new UserEntity( get_current_user_id() ) );
-			$auth_request->setAuthorizationApproved( true );
-
-			$psr_response = $server->completeAuthorizationRequest(
-				$auth_request,
-				Psr7Bridge::create_response()
-			);
+			$psr_response = self::issue_code( $client, $redirect_uri, $state, $scope, $code_challenge, $code_challenge_method, get_current_user_id() );
 
 			// Record the address this connection was authorised against.
 			// Recording only: suspending a connection when the site's address
