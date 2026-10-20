@@ -145,7 +145,7 @@ albert-ai-butler/
 │   │   ├── Database/
 │   │   │   └── Installer.php           # Creates OAuth database tables
 │   │   ├── Endpoints/
-│   │   │   ├── OAuthController.php     # /oauth/token, metadata, .well-known, resource, jwks
+│   │   │   ├── OAuthController.php     # /oauth/authorize, /oauth/token
 │   │   │   ├── OAuthDiscovery.php      # .well-known endpoints
 │   │   │   ├── AuthorizationPage.php   # User consent UI
 │   │   │   ├── ClientRegistration.php  # Dynamic client registration
@@ -775,8 +775,8 @@ Full OAuth 2.0 implementation using `league/oauth2-server`.
 **Endpoints:**
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /oauth/authorize` | Authorization request (a rewrite rule, not REST) |
-| `POST /oauth/authorize` | User consent submission |
+| `GET /wp-json/albert/v1/oauth/authorize` | Authorization request |
+| `POST /wp-json/albert/v1/oauth/authorize` | User consent submission |
 | `POST /wp-json/albert/v1/oauth/token` | Token exchange |
 | `POST /wp-json/albert/v1/oauth/register` | Dynamic client registration |
 | `GET /.well-known/oauth-authorization-server` | Server metadata (RFC 8414) |
