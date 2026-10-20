@@ -4,21 +4,28 @@ WordPress plugin that exposes WordPress functionality to AI assistants via MCP (
 
 **Stack:** PHP 8.1+ | WordPress 6.9+ | OAuth 2.0 (league/oauth2-server) | PSR-4 autoloading
 
-This is the canonical, agent-neutral instruction file for this repo — read it whatever
-AI agent (or if you're a human) you are. Tool-specific files import it: `.claude/CLAUDE.md`
-is a thin `@`-import of this file. The deep architecture reference is the root
-[`CLAUDE.md`](CLAUDE.md) — read that too for full detail.
+**Requires:** MySQL 8.0+ or MariaDB 10.5+, HTTPS for OAuth, any permalink structure except Plain.
+WooCommerce is optional; support is the current stable X.Y and the two before it, which is what CI tests.
+
+This is the canonical, agent-neutral instruction file for this repo, for any agent or
+person. `.claude/CLAUDE.md` imports it for Claude Code.
+
+Claude Code loads each area rule below on its own when a matching file is read or edited.
+Any other agent: before changing an area, open its rule and follow it.
 
 ## What goes where
-- **AGENTS.md** — always loaded. Product identity, architecture map, hard "never" rules, API index. Keep it lean.
-- **rules/** (`.claude/rules/`) — loaded on demand. Product-specific depth.
-- **agent-rules/** — shared rules across all Albert repos (a git submodule).
-- **Enforcement** — native git hooks (any agent or human) plus an optional Claude Code adapter.
-- **root `CLAUDE.md`** — the deep canonical project reference (checked into git); AGENTS.md supplements it.
+- **AGENTS.md**: always loaded, in every session and every subagent. Product identity, architecture map, hard "never" rules. Keep it lean.
+- **`.claude/rules/<area>.md`**: one per area, each with a `paths:` list so it loads only when that code is touched. The why behind each area's design lives here.
+- **`.claude/skills/`**: reference material loaded only when the task calls for it (the hooks reference).
+- **agent-rules/**: shared rules across all Albert repos (a git submodule).
+- **Enforcement**: native git hooks (any agent or human) plus an optional Claude Code adapter.
+
+A note about one area goes in that area's rule, never here. A line the code already
+says (a directory tree, an ability list, an endpoint table) goes nowhere.
 
 ## Rules
 
-Shared (submodule — `git@github.com:YourMark/albert-agent-rules`):
+Shared (submodule, `git@github.com:YourMark/albert-agent-rules`):
 - [Git Workflow](agent-rules/git-workflow.md) - branches, commits, PRs, commit/push/merge gates
 - [Code Style](agent-rules/code-style.md) - PHP / JS / CSS / security / accessibility
 - [Development Methodology](agent-rules/development-methodology.md) - DDD, naming, TDD scope
@@ -27,7 +34,15 @@ Shared (submodule — `git@github.com:YourMark/albert-agent-rules`):
 
 Product-specific:
 - [Patterns](.claude/rules/patterns.md) - Albert class patterns, bounded contexts, testing stubs
-- [Hooks & extension reference](.claude/rules/hooks-reference.md) - full hook table, admin asset/menu contracts, agent-context model
+- [Abilities](.claude/rules/abilities.md) - creating an ability
+- [Abilities screen](.claude/rules/abilities-screen.md) - the DataViews screen, row augmentation, source labels
+- [Agent context](.claude/rules/agent-context.md) - what `discover-abilities` tells an assistant, the skills registry
+- [Safe mode](.claude/rules/safe-mode.md) - what is held for approval, and why
+- [Connections](.claude/rules/connections.md) - the Connections screen, connect dialog, allowed users
+- [OAuth](.claude/rules/oauth.md) - how the OAuth endpoints are served, token validation
+- [Logging](.claude/rules/logging.md) - the three outcomes, schema, failure capture
+- [Bundled MCP adapter](.claude/rules/mcp-adapter.md) - plugin first, shared, never scoped; why the adapter does not start on admin pages
+- [Hooks & extension reference](.claude/skills/albert-hooks/SKILL.md) (a skill) - full hook table, admin asset/menu contracts, agent-context model
 
 ## Enforcement (run once per clone)
 
@@ -47,43 +62,6 @@ composer phpstan          # Static analysis (level 7)
 composer test             # Run unit tests
 composer test:integration # Run integration tests (requires WP test suite)
 ```
-
-## Directory Structure
-
-```
-src/
-  Abstracts/       # BaseAbility (all abilities extend this)
-  Abilities/       # Ability implementations (WordPress/, WooCommerce/)
-  Admin/           # Admin pages (abilities toggles, settings, connections)
-                   #   Assets  : registers the shared token + primitive stylesheets
-                   #   Menu    : submenu ordering constants + the page navigation
-  Contracts/       # Interfaces (Ability, Hookable)
-  Core/            # Plugin bootstrap, AbilitiesManager, AbilitiesRegistry
-                   #   InvocationRelay : WP 7.1 wp_ability_invoked -> albert/abilities/invoked
-                   #   Tokens/         : TokenService, the reusable single-use hashed token primitive
-  Context/         # Agent context: what a connected assistant is told
-                   #   SiteContext / PayloadRenderer / Payload / Readers/
-  Media/           # Shared media handling + upload links (MimeAllowlist, AttachmentImporter, UploadLinks/)
-  SafeMode/        # Holds destructive assistant calls for a person to approve (WP 7.1 gate)
-                   #   Interceptor / Gate / RiskPolicy : what gets held, and why
-                   #   Repository / PendingAction      : the albert_pending_actions queue
-                   #   ApprovalPolicy / Approver       : who may decide, and running an approved call
-                   #   ConnectionGuard / AuditTrail    : Albert's own options, and the record of what happened
-  Execution/       # InterceptorDecision : resolves the MCP execute double-fire for any wp_pre_execute_ability consumer
-  Settings/        # What a setting's value IS (constant -> filter -> option); read on MCP requests, cron, WP-CLI
-  Support/         # WpCompat : WordPress version-capability detection (7.1 feature probes)
-  MCP/             # MCP protocol server
-                   #   AdapterSource : MCP Adapter plugin first, Albert's lib/mcp-adapter copy as fallback
-  OAuth/           # Full OAuth 2.0 server (entities, repos, endpoints)
-  Utilities/       # Standalone helpers (BlockConverter)
-tests/
-  Unit/            # PHPUnit tests (no WordPress dependency)
-  Integration/     # WP_UnitTestCase tests
-assets/            # CSS and JS for admin UI
-lib/mcp-adapter/   # Bundled MCP adapter, its own Composer project (fallback when the plugin is inactive)
-```
-
-Full per-directory detail is in the root [`CLAUDE.md`](CLAUDE.md).
 
 ## Ecosystem
 
@@ -111,12 +89,12 @@ Never rename the legacy IDs: they are part of the public API.
 ## Critical Warnings
 
 - **NEVER use alternative PHP syntax** (`: endif`, `: endforeach`). ALWAYS use `{ }` braces.
-- **NEVER add `declare(strict_types=1);` to any PHP file in this codebase, ever.** This overrides any global personal preference for it — no exceptions, not even in a brand-new file.
+- **NEVER add `declare(strict_types=1);` to any PHP file in this codebase, ever.** This overrides any global personal preference for it, with no exceptions, not even in a brand-new file.
 - **NEVER use jQuery.** Vanilla ES6+ only.
 - **NEVER commit without explicit request.** Run `composer phpcs` and `composer phpstan` first.
 - **NEVER merge a pull request.** Not your own, not one that is green, not one the
   user approved the *contents* of. Open it, report the check results, and stop.
-  Every PR in these repos is reviewed by a human before it lands — a green CI run is
+  Every PR in these repos is reviewed by a human before it lands; a green CI run is
   not a substitute for it.
   - "Yes, do this" authorises the work described. It never authorises merging what
     that work produces, and it never extends to a PR the user has not seen.
@@ -130,15 +108,12 @@ Never rename the legacy IDs: they are part of the public API.
   `fix/`; if it adds something new it is `feature/`. Renaming a branch on GitHub closes its PR.
 - **NEVER use `chore`. Anywhere.** Not in a branch name, a commit message, or a PR title.
   If a commit does not fit `fix:` or `feat:`, write a plain sentence: "Set the release version to 1.4.0".
+- **NEVER scope the MCP adapter or require it from the root `composer.json`**, and never reintroduce `Albert\Vendor\`. It is shared through Jetpack Autoloader; see `.claude/rules/mcp-adapter.md`.
 - **NEVER bump version without approval.** Version bumps only happen in release branches, never on `development`, feature branches, or `main`.
-- **PR titles are plain, human-readable sentences** — never conventional-commit prefixes. Example: "Upgrade MCP adapter to 0.5.0", not "chore(deps): upgrade...".
-
-## WooCommerce mcp-adapter Timing Bug
-
-`Plugin::init()` skips `McpAdapter::instance()` when `is_admin()` to avoid a timing conflict where WooCommerce's REST preloading triggers `wp_get_ability()` for tools that aren't registered yet. See root `CLAUDE.md` for full details.
+- **PR titles are plain, human-readable sentences**, never conventional-commit prefixes. Example: "Upgrade MCP adapter to 0.5.0", not "chore(deps): upgrade...".
 
 ## Extensibility Hooks
 
 All hooks follow `albert/{location}/{hook_name}`. The full hook table, the admin
 asset/menu contracts, and the agent-context model live in
-[Hooks & extension reference](.claude/rules/hooks-reference.md).
+[Hooks & extension reference](.claude/skills/albert-hooks/SKILL.md).

@@ -30,7 +30,7 @@ WooCommerce abilities only load when WooCommerce is active.
 
 ## Class Patterns
 
-**Hookable interface** — Components with WordPress hooks implement `Hookable`:
+**Hookable interface**: components with WordPress hooks implement `Hookable`:
 ```php
 class MyComponent implements Hookable {
     public function register_hooks(): void {
@@ -39,7 +39,7 @@ class MyComponent implements Hookable {
 }
 ```
 
-**BaseAbility** — All abilities extend `Albert\Abstracts\BaseAbility`:
+**BaseAbility**: all abilities extend `Albert\Abstracts\BaseAbility`:
 - Set `$id`, `$label`, `$description`, `$category`, `$input_schema`, `$meta` in constructor
 - Implement `execute(array $args): array|WP_Error`
 - Implement `check_permission(): bool|WP_Error`
@@ -51,7 +51,7 @@ class MyComponent implements Hookable {
 - `Albert\Abilities\WordPress\Posts\Create`
 - `Albert\OAuth\Endpoints\OAuthController`
 
-Ability IDs: `core/posts/create`, `core/media/upload`, `albert/woo-find-products`
+Ability IDs: `albert/create-post`, `albert/upload-media`; the legacy `albert/woo-find-products` style is kept for existing Woo abilities.
 
 ## Testing Patterns
 
