@@ -12,8 +12,8 @@ use Albert\OAuth\AllowedUsers;
 use Albert\OAuth\Entities\AccessTokenEntity;
 use Albert\OAuth\Entities\ClientEntity;
 use Albert\OAuth\Entities\ScopeEntity;
-use Albert\OAuth\PasswordChange;
 use Albert\OAuth\Repositories\AccessTokenRepository;
+use Albert\OAuth\Repositories\AuthCodeRepository;
 use Albert\OAuth\Repositories\ClientRepository;
 use Albert\OAuth\Server\ConnectionContext;
 use Albert\OAuth\Server\KeyManager;
@@ -61,7 +61,7 @@ class AccessEndsTest extends TestCase {
 
 		global $wpdb;
 
-		foreach ( [ 'clients', 'access_tokens', 'refresh_tokens' ] as $key ) {
+		foreach ( [ 'clients', 'access_tokens', 'refresh_tokens', 'auth_codes' ] as $key ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test reset.
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', Tables::oauth()[ $key ] ) );
 		}
@@ -180,15 +180,64 @@ class AccessEndsTest extends TestCase {
 	}
 
 	public function test_a_rehash_at_login_keeps_the_tokens(): void {
-		// What core does when a stored hash needs upgrading during sign-in.
-		wp_set_password( 'old-password', $this->user_id );
+		global $wpdb;
 
+		// An old phpass hash, which core upgrades during a successful sign-in.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$legacy = ( new \PasswordHash( 8, true ) )->HashPassword( 'old-password' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test setup.
+		$wpdb->update( $wpdb->users, [ 'user_pass' => $legacy ], [ 'ID' => $this->user_id ] );
+		clean_user_cache( $this->user_id );
+
+		$user = wp_authenticate( get_userdata( $this->user_id )->user_login, 'old-password' );
+
+		$this->assertInstanceOf( WP_User::class, $user );
+		$this->assertNotSame( $legacy, get_userdata( $this->user_id )->user_pass, 'The sign-in did not rehash.' );
 		$this->assertSame( 1, $this->live_tokens() );
 	}
 
-	public function test_the_hooks_are_registered(): void {
-		$this->assertNotFalse( has_action( 'after_password_reset' ) );
-		$this->assertNotFalse( has_action( 'profile_update' ) );
-		$this->assertTrue( class_exists( PasswordChange::class ) );
+	public function test_an_expired_invitation_is_refused(): void {
+		update_option(
+			AllowedUsers::OPTION,
+			[
+				$this->user_id => [
+					'added_at'      => time() - DAY_IN_SECONDS,
+					'authorised_at' => null,
+					'expires_at'    => time() - 60,
+				],
+			]
+		);
+
+		$result = $this->validate();
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'oauth_user_not_allowed', $result->get_error_code() );
+	}
+
+	public function test_a_password_change_revokes_an_unexchanged_code(): void {
+		global $wpdb;
+
+		$codes = Tables::oauth()['auth_codes'];
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Test setup.
+		$wpdb->insert(
+			$codes,
+			[
+				'code_id'    => 'code_1',
+				'client_id'  => 'client_1',
+				'user_id'    => $this->user_id,
+				'scopes'     => '["default"]',
+				'revoked'    => 0,
+				'expires_at' => gmdate( 'Y-m-d H:i:s', time() + 600 ),
+			]
+		);
+
+		wp_update_user(
+			[
+				'ID'        => $this->user_id,
+				'user_pass' => 'new-password',
+			]
+		);
+
+		$this->assertTrue( ( new AuthCodeRepository() )->isAuthCodeRevoked( 'code_1' ) );
 	}
 }

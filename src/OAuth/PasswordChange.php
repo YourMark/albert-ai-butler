@@ -22,6 +22,8 @@ use WP_User;
  * token would otherwise outlive it by up to its refresh token's lifetime.
  * Deliberately not on `wp_set_password`: core calls that when it rehashes a
  * password at login, which would disconnect every assistant on each sign-in.
+ * So only core's flows are covered (profile, `wp_update_user()`, password
+ * reset); code that calls `wp_set_password()` directly is not.
  *
  * @since 1.6.0
  */
