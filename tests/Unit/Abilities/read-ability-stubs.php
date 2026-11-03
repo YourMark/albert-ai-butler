@@ -3,7 +3,7 @@
  * Stubs for the read-ability `format` selector tests (view/find posts & pages).
  *
  * Provides a controllable get_post() plus the small helpers the view abilities
- * call (get_permalink, get_post_thumbnail_id). REST plumbing for the find
+ * call (get_permalink, get_post_thumbnail_id, the term readers). REST plumbing for the find
  * abilities is shared with the write-ability gate tests via block-write-rest-stubs.php.
  *
  * Drive get_post() with $GLOBALS['albert_test_posts'][ $id ] = (object) [ ... ].
@@ -34,6 +34,32 @@ if ( ! function_exists( 'get_post_thumbnail_id' ) ) {
 	 */
 	function get_post_thumbnail_id( $post = null ) {
 		return 0;
+	}
+}
+
+if ( ! function_exists( 'is_object_in_taxonomy' ) ) {
+	/**
+	 * Stub is_object_in_taxonomy(): posts use categories and tags, nothing else does.
+	 *
+	 * @param string $object_type Post type.
+	 * @param string $taxonomy    Taxonomy.
+	 * @return bool
+	 */
+	function is_object_in_taxonomy( $object_type, $taxonomy ) {
+		return 'post' === $object_type && in_array( $taxonomy, [ 'category', 'post_tag' ], true );
+	}
+}
+
+if ( ! function_exists( 'get_the_terms' ) ) {
+	/**
+	 * Stub get_the_terms(): no terms assigned.
+	 *
+	 * @param object|int $post     Post or ID.
+	 * @param string     $taxonomy Taxonomy.
+	 * @return false
+	 */
+	function get_the_terms( $post, $taxonomy ) {
+		return false;
 	}
 }
 

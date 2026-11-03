@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+use Albert\Abilities\WordPress\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
@@ -165,6 +166,7 @@ class ViewPage extends BaseAbility {
 								],
 							],
 						],
+						...PostTerms::schema(),
 					],
 				],
 			],
@@ -237,7 +239,8 @@ class ViewPage extends BaseAbility {
 					'parent_id'      => (int) $page->post_parent,
 					'menu_order'     => (int) $page->menu_order,
 					'featured_image' => get_post_thumbnail_id( $page ) ? get_post_thumbnail_id( $page ) : null,
-				]
+				],
+				PostTerms::for_post( $page )
 			),
 		];
 	}

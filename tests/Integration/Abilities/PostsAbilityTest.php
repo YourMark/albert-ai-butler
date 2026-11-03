@@ -197,6 +197,58 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * ViewPost returns the assigned categories and tags as id and name.
+	 *
+	 * @return void
+	 */
+	public function test_view_post_returns_categories_and_tags(): void {
+		$post_id = self::factory()->post->create();
+		$cat_id  = self::factory()->term->create(
+			[
+				'taxonomy' => 'category',
+				'name'     => 'ViewCat',
+			]
+		);
+		wp_set_post_categories( $post_id, [ $cat_id ] );
+		wp_set_post_tags( $post_id, [ 'view-tag' ] );
+		$tag = get_term_by( 'name', 'view-tag', 'post_tag' );
+
+		$result = ( new ViewPost() )->execute( [ 'id' => $post_id ] );
+
+		$this->assertSame(
+			[
+				[
+					'id'   => $cat_id,
+					'name' => 'ViewCat',
+				],
+			],
+			$result['post']['categories']
+		);
+		$this->assertSame(
+			[
+				[
+					'id'   => $tag->term_id,
+					'name' => 'view-tag',
+				],
+			],
+			$result['post']['tags']
+		);
+	}
+
+	/**
+	 * ViewPost returns an empty tag list for a post without tags.
+	 *
+	 * @return void
+	 */
+	public function test_view_post_returns_empty_tags(): void {
+		$post_id = self::factory()->post->create();
+
+		$result = ( new ViewPost() )->execute( [ 'id' => $post_id ] );
+
+		$this->assertSame( [], $result['post']['tags'] );
+	}
+
+	/**
 	 * ViewPost returns error for non-existent post.
 	 *
 	 * @return void
@@ -367,6 +419,52 @@ class PostsAbilityTest extends TestCase {
 
 		$post_tags = wp_get_post_tags( $post_id );
 		$this->assertSame( 'update-tag', $post_tags[0]->name );
+	}
+
+	/**
+	 * UpdatePost clears categories and tags when sent an empty array.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_empty_arrays_clear_terms(): void {
+		$post_id = self::factory()->post->create();
+		$cat_id  = self::factory()->term->create( [ 'taxonomy' => 'category' ] );
+		wp_set_post_categories( $post_id, [ $cat_id ] );
+		wp_set_post_tags( $post_id, [ 'clear-me' ] );
+
+		$result = ( new UpdatePost() )->execute(
+			[
+				'id'         => $post_id,
+				'categories' => [],
+				'tags'       => [],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertNotContains( $cat_id, wp_get_post_categories( $post_id ) );
+		$this->assertSame( [], wp_get_post_tags( $post_id ) );
+	}
+
+	/**
+	 * UpdatePost leaves categories and tags alone when they are not sent.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_without_terms_keeps_them(): void {
+		$post_id = self::factory()->post->create();
+		$cat_id  = self::factory()->term->create( [ 'taxonomy' => 'category' ] );
+		wp_set_post_categories( $post_id, [ $cat_id ] );
+		wp_set_post_tags( $post_id, [ 'keep-me' ] );
+
+		( new UpdatePost() )->execute(
+			[
+				'id'    => $post_id,
+				'title' => 'Renamed',
+			]
+		);
+
+		$this->assertContains( $cat_id, wp_get_post_categories( $post_id ) );
+		$this->assertSame( 'keep-me', wp_get_post_tags( $post_id )[0]->name );
 	}
 
 	/**
