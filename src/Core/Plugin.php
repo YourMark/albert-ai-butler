@@ -170,6 +170,14 @@ class Plugin {
 	private ?AbilitiesManager $abilities_manager = null;
 
 	/**
+	 * Whether the abilities have been built for this request.
+	 *
+	 * @since 1.6.0
+	 * @var bool
+	 */
+	private bool $abilities_built = false;
+
+	/**
 	 * Get the singleton instance of the plugin.
 	 *
 	 * @return Plugin The plugin instance.
@@ -359,14 +367,47 @@ class Plugin {
 	}
 
 	/**
-	 * Register built-in abilities.
+	 * Set up the abilities manager and defer building the abilities.
+	 *
+	 * The manager and its hooks are cheap and must be in place before the
+	 * Abilities API initialises. The ability objects are not: autoloading their
+	 * classes is the cost, so they are built on the Abilities API's own init
+	 * hook (see {@see self::ensure_abilities_built()}), which a plain frontend
+	 * request never fires.
 	 *
 	 * @return void
 	 * @since 1.0.0
+	 * @since 1.6.0 Builds no abilities; they are built on `wp_abilities_api_init`.
 	 */
 	public function register_abilities(): void {
-		// Initialize abilities manager.
+		if ( $this->abilities_manager !== null ) {
+			return;
+		}
+
 		$this->abilities_manager = new AbilitiesManager();
+		$this->abilities_manager->register_hooks();
+
+		// Before the manager's register_abilities() at 10, which pushes the
+		// built abilities into the WordPress registry.
+		add_action( 'abilities_api_init', [ $this, 'ensure_abilities_built' ], 5 );
+		add_action( 'wp_abilities_api_init', [ $this, 'ensure_abilities_built' ], 5 );
+	}
+
+	/**
+	 * Build the built-in abilities and let add-ons add theirs, once.
+	 *
+	 * Runs on the Abilities API's init hook, or earlier when something asks
+	 * for the manager (see {@see self::get_abilities_manager()}).
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	public function ensure_abilities_built(): void {
+		if ( $this->abilities_built || $this->abilities_manager === null ) {
+			return;
+		}
+
+		$this->abilities_built = true;
 
 		// Posts abilities.
 		$this->abilities_manager->add_ability( new FindPosts() );
@@ -441,34 +482,35 @@ class Plugin {
 		}
 
 		/**
-		 * Fires after built-in abilities are registered.
+		 * Fires after built-in abilities are added to the manager.
 		 *
 		 * Addon plugins hook here to register their own abilities by calling
-		 * $manager->add_ability() with a BaseAbility subclass.
+		 * $manager->add_ability() with a BaseAbility subclass. Fires once per
+		 * request, on `wp_abilities_api_init` or when the manager is first
+		 * asked for, never on a request that needs neither.
 		 *
 		 * @since 1.1.0
+		 * @since 1.6.0 Fires on `wp_abilities_api_init` instead of `init`.
 		 *
 		 * @param AbilitiesManager $manager The abilities manager instance.
 		 */
 		do_action( 'albert/abilities/register', $this->abilities_manager );
-
-		// Register abilities manager hooks.
-		$this->abilities_manager->register_hooks();
 	}
 
 	/**
-	 * Get the abilities manager instance.
+	 * Get the abilities manager, populated with every ability.
 	 *
-	 * Returns null until built-in abilities have been registered on the `init`
-	 * hook (see {@see self::register_abilities()}). Callers that run during
-	 * admin page render — well after `init` — can rely on the manager being
-	 * populated, and use it to resolve ability labels without touching the
-	 * WordPress Abilities API.
+	 * Returns null before `init`. After it, the abilities are built on demand,
+	 * so callers (admin screens resolving labels) get a populated manager
+	 * without touching the WordPress Abilities API.
 	 *
-	 * @return AbilitiesManager|null The abilities manager, or null if not yet built.
+	 * @return AbilitiesManager|null The abilities manager, or null before `init`.
 	 * @since 1.2.0
+	 * @since 1.6.0 Builds the abilities if they are not built yet.
 	 */
 	public function get_abilities_manager(): ?AbilitiesManager {
+		$this->ensure_abilities_built();
+
 		return $this->abilities_manager;
 	}
 
