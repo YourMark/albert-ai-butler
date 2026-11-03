@@ -1709,7 +1709,11 @@ class Connections implements Hookable {
 						<div class="albert-setup-menu__popover" id="<?php echo esc_attr( $menu_id ); ?>-popover" popover style="position-anchor: --<?php echo esc_attr( $menu_id ); ?>">
 							<p class="albert-setup-menu__help" id="<?php echo esc_attr( $menu_id ); ?>-help"><?php esc_html_e( 'Opens the steps to connect their assistant.', 'albert-ai-butler' ); ?></p>
 							<div class="albert-setup-menu__list" id="<?php echo esc_attr( $menu_id ); ?>-menu" role="menu" aria-labelledby="<?php echo esc_attr( $menu_id ); ?>-toggle">
-								<?php if ( SetupInvite::can_send_to( $user ) ) { ?>
+								<?php
+								// Not can_send_to(): an expired invitation is when resending matters
+								// most, and the handler restarts it before sending.
+								if ( $user->user_email !== '' ) {
+									?>
 									<button type="button" class="albert-setup-menu__item albert-setup-menu__item--email" role="menuitem" tabindex="-1" data-albert-setup-email data-nonce="<?php echo esc_attr( wp_create_nonce( self::EMAIL_SETUP_ACTION . '_' . $user_id ) ); ?>">
 										<span class="dashicons dashicons-email-alt" aria-hidden="true"></span>
 										<span data-albert-setup-label>
