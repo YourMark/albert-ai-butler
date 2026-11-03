@@ -234,6 +234,10 @@ class ViewPost extends BaseAbility {
 					'modified'       => $post->post_modified,
 					'slug'           => $post->post_name,
 					'permalink'      => get_permalink( $post ),
+					'template'       => get_page_template_slug( $post ),
+					'comment_status' => $post->comment_status,
+					'sticky'         => is_sticky( $post->ID ),
+					'format'         => get_post_format( $post ) ? get_post_format( $post ) : 'standard',
 					'featured_image' => get_post_thumbnail_id( $post ) ? get_post_thumbnail_id( $post ) : null,
 				]
 			),

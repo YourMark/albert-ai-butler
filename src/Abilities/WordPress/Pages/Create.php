@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+use Albert\Abilities\WordPress\PostFields;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
@@ -93,12 +94,7 @@ class Create extends BaseAbility {
 					'description' => 'Optional page excerpt',
 					'default'     => '',
 				],
-				'parent'  => [
-					'type'        => 'integer',
-					'description' => 'Parent page ID for hierarchical pages',
-					'default'     => 0,
-				],
-			],
+			] + PostFields::input_schema( PostFields::PAGE ),
 			'required'   => [ 'title' ],
 		];
 	}
@@ -118,6 +114,14 @@ class Create extends BaseAbility {
 				'status'       => [ 'type' => 'string' ],
 				'permalink'    => [ 'type' => 'string' ],
 				'edit_url'     => [ 'type' => 'string' ],
+				'slug'         => [
+					'type'        => 'string',
+					'description' => 'The slug that was saved, which may carry a number WordPress added to keep it unique.',
+				],
+				'date'         => [
+					'type'        => 'string',
+					'description' => 'The publish date in the site\'s timezone. With status "future" this is when it will be published.',
+				],
 				'block_issues' => [
 					'type'        => 'array',
 					'description' => 'Optional, non-fatal block validation warnings (the page was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the page is not created.',
@@ -150,12 +154,18 @@ class Create extends BaseAbility {
 	 *     @type string $content Page content.
 	 *     @type string $status  Page status.
 	 *     @type string $excerpt Page excerpt.
-	 *     @type int    $parent  Parent page ID.
+	 *
+	 *     Plus the fields in PostFields::PAGE.
 	 * }
 	 * @return array<string, mixed>|WP_Error Page data on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
+		$fields = PostFields::to_rest( $args, PostFields::PAGE, 'page' );
+		if ( is_wp_error( $fields ) ) {
+			return $fields;
+		}
+
 		// Resolve the content to store from the content/blocks input (classic
 		// rejection, block serialization, allowed-block enforcement, issues).
 		$resolved = ( new WriteContentResolver() )->resolve( $args, 'page' );
@@ -171,12 +181,7 @@ class Create extends BaseAbility {
 			'content' => $resolved['content'],
 			'status'  => sanitize_key( $args['status'] ?? 'draft' ),
 			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
-		];
-
-		// Add parent if provided.
-		if ( ! empty( $args['parent'] ) ) {
-			$request_data['parent'] = absint( $args['parent'] );
-		}
+		] + $fields;
 
 		// Create REST request.
 		$request = new WP_REST_Request( 'POST', '/wp/v2/pages' );
@@ -211,6 +216,8 @@ class Create extends BaseAbility {
 			'status'    => $data['status'],
 			'permalink' => $data['link'] ?? '',
 			'edit_url'  => admin_url( 'post.php?post=' . $page_id . '&action=edit' ),
+			'slug'      => $data['slug'] ?? '',
+			'date'      => $data['date'] ?? '',
 		];
 
 		if ( ! empty( $block_issues ) ) {

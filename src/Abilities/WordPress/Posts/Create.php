@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+use Albert\Abilities\WordPress\PostFields;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
@@ -105,7 +106,7 @@ class Create extends BaseAbility {
 					'description' => 'Array of tag names',
 					'default'     => [],
 				],
-			],
+			] + PostFields::input_schema( PostFields::POST ),
 			'required'   => [ 'title' ],
 		];
 	}
@@ -125,6 +126,14 @@ class Create extends BaseAbility {
 				'status'       => [ 'type' => 'string' ],
 				'permalink'    => [ 'type' => 'string' ],
 				'edit_url'     => [ 'type' => 'string' ],
+				'slug'         => [
+					'type'        => 'string',
+					'description' => 'The slug that was saved, which may carry a number WordPress added to keep it unique.',
+				],
+				'date'         => [
+					'type'        => 'string',
+					'description' => 'The publish date in the site\'s timezone. With status "future" this is when it will be published.',
+				],
 				'block_issues' => [
 					'type'        => 'array',
 					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the post is not created.',
@@ -159,11 +168,18 @@ class Create extends BaseAbility {
 	 *     @type string $excerpt    Post excerpt.
 	 *     @type array  $categories Category IDs.
 	 *     @type array  $tags       Tag names.
+	 *
+	 *     Plus the fields in PostFields::POST.
 	 * }
 	 * @return array<string, mixed>|WP_Error Post data on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
+		$fields = PostFields::to_rest( $args, PostFields::POST, 'post' );
+		if ( is_wp_error( $fields ) ) {
+			return $fields;
+		}
+
 		// Resolve the content to store from the content/blocks input (classic
 		// rejection, block serialization, allowed-block enforcement, issues).
 		$resolved = ( new WriteContentResolver() )->resolve( $args, 'post' );
@@ -179,7 +195,7 @@ class Create extends BaseAbility {
 			'content' => $resolved['content'],
 			'status'  => sanitize_key( $args['status'] ?? 'draft' ),
 			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
-		];
+		] + $fields;
 
 		// Add categories if provided.
 		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
@@ -236,6 +252,8 @@ class Create extends BaseAbility {
 			'status'    => $data['status'],
 			'permalink' => $data['link'] ?? get_permalink( $data['id'] ),
 			'edit_url'  => admin_url( 'post.php?post=' . $data['id'] . '&action=edit' ),
+			'slug'      => $data['slug'] ?? '',
+			'date'      => $data['date'] ?? '',
 		];
 
 		if ( ! empty( $block_issues ) ) {
