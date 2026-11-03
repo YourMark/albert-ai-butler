@@ -13,6 +13,7 @@ namespace Albert\Tests\Integration;
 use Albert\Abstracts\BaseAbility;
 use Albert\Admin\AbilitiesPage;
 use Albert\Core\AbilitiesManager;
+use Albert\Core\AbilitiesState;
 use Albert\Tests\TestCase;
 
 /**
@@ -197,11 +198,11 @@ class EnforceDisabledTest extends TestCase {
 	// ─── Albert-managed abilities ───────────────────────────────────
 
 	/**
-	 * Disabled Albert-managed abilities are unregistered.
+	 * A switched-off Albert ability stays registered; it is off for assistants only.
 	 *
 	 * @return void
 	 */
-	public function test_disabled_albert_ability_is_unregistered(): void {
+	public function test_disabled_albert_ability_stays_registered(): void {
 		$this->register_albert_ability( 'albert/test-disabled-target' );
 
 		update_option(
@@ -211,7 +212,8 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->manager->enforce_disabled();
 
-		$this->assertFalse( wp_has_ability( 'albert/test-disabled-target' ) );
+		$this->assertTrue( wp_has_ability( 'albert/test-disabled-target' ) );
+		$this->assertFalse( AbilitiesState::is_enabled( 'albert/test-disabled-target' ) );
 	}
 
 	/**
@@ -230,11 +232,12 @@ class EnforceDisabledTest extends TestCase {
 	// ─── Third-party abilities ──────────────────────────────────────
 
 	/**
-	 * A third-party ability listed in the disabled option is unregistered.
+	 * A switched-off third-party ability stays registered, so the plugin that
+	 * owns it (and anything else using it) keeps working.
 	 *
 	 * @return void
 	 */
-	public function test_third_party_ability_is_unregistered_when_disabled(): void {
+	public function test_third_party_ability_stays_registered_when_disabled(): void {
 		$this->register_third_party_ability( 'thirdparty/test-disabled' );
 
 		update_option(
@@ -244,7 +247,8 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->manager->enforce_disabled();
 
-		$this->assertFalse( wp_has_ability( 'thirdparty/test-disabled' ) );
+		$this->assertTrue( wp_has_ability( 'thirdparty/test-disabled' ) );
+		$this->assertFalse( AbilitiesState::is_enabled( 'thirdparty/test-disabled' ) );
 	}
 
 	/**
@@ -354,11 +358,11 @@ class EnforceDisabledTest extends TestCase {
 	// ─── disabled_list filter ───────────────────────────────────────
 
 	/**
-	 * The disabled_list filter unregisters Albert-managed abilities at runtime.
+	 * The disabled_list filter switches an Albert ability off without unregistering it.
 	 *
 	 * @return void
 	 */
-	public function test_disabled_list_filter_unregisters_albert_ability(): void {
+	public function test_disabled_list_filter_switches_off_albert_ability(): void {
 		$this->register_albert_ability( 'albert/test-runtime-albert' );
 
 		add_filter(
@@ -371,15 +375,16 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->manager->enforce_disabled();
 
-		$this->assertFalse( wp_has_ability( 'albert/test-runtime-albert' ) );
+		$this->assertTrue( wp_has_ability( 'albert/test-runtime-albert' ) );
+		$this->assertFalse( AbilitiesState::is_enabled( 'albert/test-runtime-albert' ) );
 	}
 
 	/**
-	 * The disabled_list filter unregisters third-party abilities at runtime.
+	 * The disabled_list filter switches a third-party ability off without unregistering it.
 	 *
 	 * @return void
 	 */
-	public function test_disabled_list_filter_unregisters_third_party_ability(): void {
+	public function test_disabled_list_filter_switches_off_third_party_ability(): void {
 		$this->register_third_party_ability( 'thirdparty/test-runtime' );
 
 		add_filter(
@@ -392,7 +397,8 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->manager->enforce_disabled();
 
-		$this->assertFalse( wp_has_ability( 'thirdparty/test-runtime' ) );
+		$this->assertTrue( wp_has_ability( 'thirdparty/test-runtime' ) );
+		$this->assertFalse( AbilitiesState::is_enabled( 'thirdparty/test-runtime' ) );
 	}
 
 	// ─── is_executable filter ───────────────────────────────────────
