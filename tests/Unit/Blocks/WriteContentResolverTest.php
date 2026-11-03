@@ -223,6 +223,54 @@ class WriteContentResolverTest extends TestCase {
 		$this->assertStringContainsString( '<!-- wp:paragraph', $result['content'] );
 	}
 
+	public function test_update_that_drops_a_tag_is_refused(): void {
+		$GLOBALS['albert_test_posts'][7] = (object) [
+			'ID'           => 7,
+			'post_type'    => 'post',
+			'post_content' => '<!-- wp:paragraph --><p>Buy <ta linkid="1">here</ta>.</p><!-- /wp:paragraph -->',
+		];
+
+		$result = ( new WriteContentResolver() )->resolve(
+			[
+				'blocks' => [
+					[
+						'name'       => 'core/paragraph',
+						'attributes' => [ 'content' => 'Buy here.' ],
+					],
+				],
+			],
+			'post',
+			7
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'tags_removed', $result->get_error_code() );
+	}
+
+	public function test_update_that_drops_a_tag_resolves_when_remove_tags_confirms_it(): void {
+		$GLOBALS['albert_test_posts'][7] = (object) [
+			'ID'           => 7,
+			'post_type'    => 'post',
+			'post_content' => '<!-- wp:paragraph --><p>Buy <ta linkid="1">here</ta>.</p><!-- /wp:paragraph -->',
+		];
+
+		$result = ( new WriteContentResolver() )->resolve(
+			[
+				'remove_tags' => [ 'ta' ],
+				'blocks'      => [
+					[
+						'name'       => 'core/paragraph',
+						'attributes' => [ 'content' => 'Buy here.' ],
+					],
+				],
+			],
+			'post',
+			7
+		);
+
+		$this->assertIsArray( $result );
+	}
+
 	public function test_update_does_not_exempt_a_new_disallowed_block(): void {
 		// Existing content uses core/heading; the new submission adds a disallowed
 		// core/quote that is NOT in the existing content, so it is still rejected.

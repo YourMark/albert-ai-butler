@@ -82,11 +82,11 @@ class WriteContentResolver {
 	public function resolve( array $args, string $post_type, ?int $post_id = null ): array|WP_Error {
 		$has_blocks_input = ! empty( $args['blocks'] ) && is_array( $args['blocks'] );
 
-		if ( ! EditorMode::is_block_editor( $post_type, $post_id ) ) {
-			return $this->resolve_classic( $args, $post_type, $has_blocks_input );
-		}
+		$resolved = EditorMode::is_block_editor( $post_type, $post_id )
+			? $this->resolve_block( $args, $post_type, $post_id, $has_blocks_input )
+			: $this->resolve_classic( $args, $post_type, $has_blocks_input );
 
-		return $this->resolve_block( $args, $post_type, $post_id, $has_blocks_input );
+		return $this->refuse_tag_loss( $resolved, $args, $post_id );
 	}
 
 	/**
@@ -107,7 +107,35 @@ class WriteContentResolver {
 	public function resolve_pattern( array $args, ?int $post_id = null ): array|WP_Error {
 		$has_blocks_input = ! empty( $args['blocks'] ) && is_array( $args['blocks'] );
 
-		return $this->resolve_block( $args, null, $post_id, $has_blocks_input );
+		return $this->refuse_tag_loss( $this->resolve_block( $args, null, $post_id, $has_blocks_input ), $args, null );
+	}
+
+	/**
+	 * Refuse resolved content that would lose a tag silently: one KSES would strip
+	 * for this user, or, on Update, one the old content had and `remove_tags` does
+	 * not confirm.
+	 *
+	 * @param array{content: string, block_issues: array<int, string>}|WP_Error $resolved Resolved content.
+	 * @param array<string, mixed>                                              $args     Ability input.
+	 * @param int|null                                                          $post_id  Post whose content is replaced, or null to skip the drop check.
+	 *
+	 * @return array{content: string, block_issues: array<int, string>}|WP_Error The resolved content, or a WP_Error.
+	 * @since 1.6.0
+	 */
+	private function refuse_tag_loss( array|WP_Error $resolved, array $args, ?int $post_id ): array|WP_Error {
+		if ( $resolved instanceof WP_Error ) {
+			return $resolved;
+		}
+
+		$post = $post_id ? get_post( $post_id ) : null;
+		if ( $post ) {
+			$dropped = MarkupTags::refuse_unconfirmed_drop( (string) $post->post_content, $resolved['content'], $args );
+			if ( $dropped instanceof WP_Error ) {
+				return $dropped;
+			}
+		}
+
+		return MarkupTags::refuse_kses_loss( $resolved['content'] ) ?? $resolved;
 	}
 
 	/**

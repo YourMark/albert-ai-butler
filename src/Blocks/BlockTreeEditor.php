@@ -127,6 +127,32 @@ class BlockTreeEditor {
 	}
 
 	/**
+	 * The block at a logical path, or null when there is none.
+	 *
+	 * @param array<int, mixed> $tree Parsed block tree.
+	 * @param array<int, int>   $path Logical path.
+	 * @return array<string, mixed>|null The node.
+	 *
+	 * @since 1.6.0
+	 */
+	public function find( array $tree, array $path ): ?array {
+		$node     = null;
+		$siblings = array_values( $tree );
+
+		foreach ( $path as $logical ) {
+			$actual = self::logical_to_actual( $siblings, $logical );
+			if ( $actual === null || ! is_array( $siblings[ $actual ] ) ) {
+				return null;
+			}
+
+			$node     = $siblings[ $actual ];
+			$siblings = isset( $node['innerBlocks'] ) && is_array( $node['innerBlocks'] ) ? array_values( $node['innerBlocks'] ) : [];
+		}
+
+		return $node;
+	}
+
+	/**
 	 * Remove the block at a path.
 	 *
 	 * @param array<int, array<string, mixed>> $tree   Parsed block tree.
