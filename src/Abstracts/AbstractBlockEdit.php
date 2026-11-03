@@ -5,10 +5,10 @@
  * Shared base for the granular per-block edit abilities (edit/add/remove/move,
  * for both posts and pages). It centralises the per-op flow so each concrete
  * ability stays tiny: resolve the target post, reject classic-editor targets,
- * parse the stored content, apply the operation to the block tree, enforce the
- * allowed-block policy on any new/changed block, fold the resulting issues
- * through BlockIssues (errors abort, warnings ride along), serialize, persist via
- * the capability-aware REST POST path, and return the refreshed block tree so the
+ * parse the stored content, apply the operation (or each item of `edits`) to the
+ * block tree, enforce the allowed-block policy on any new/changed block, fold
+ * the resulting issues through BlockIssues (errors abort, warnings ride along),
+ * serialize, persist once via the capability-aware REST POST path, and return the refreshed block tree so the
  * model always has current paths for the next edit.
  *
  * @package    Albert
@@ -176,31 +176,34 @@ abstract class AbstractBlockEdit extends BaseAbility {
 			);
 		}
 
-		$tree        = array_values( parse_blocks( (string) $post->post_content ) );
-		$result_tree = $this->apply( new BlockTreeEditor(), $tree, $args );
-
-		if ( is_wp_error( $result_tree ) ) {
-			return $result_tree;
+		$operations = $this->operations( $args );
+		if ( $operations instanceof WP_Error ) {
+			return $operations;
 		}
 
-		// Enforce the allowed-block set + serializer issues for ops that introduce
-		// a new/changed block (edit/add/move). Remove introduces nothing.
+		$batched      = array_key_exists( 'edits', $args );
+		$tree         = array_values( parse_blocks( (string) $post->post_content ) );
 		$block_issues = [];
-		if ( $this->enforces_policy() ) {
-			$issues = $this->collect_issues( $args, $post_id );
-			$error  = BlockIssues::to_wp_error( $issues );
-			if ( $error instanceof WP_Error ) {
-				return $error;
+
+		foreach ( $operations as $index => $op_args ) {
+			$applied = $this->apply_operation( $tree, $op_args, $post_id );
+
+			if ( $applied instanceof WP_Error ) {
+				return $batched ? $this->edit_failed( $index, $applied ) : $applied;
 			}
 
-			$block_issues = BlockIssues::warning_messages( $issues );
+			$tree = $applied['tree'];
+			foreach ( $applied['warnings'] as $warning ) {
+				$block_issues[] = $batched ? sprintf( 'edits[%1$d]: %2$s', $index, $warning ) : $warning;
+			}
 		}
 
-		$markup = serialize_blocks( $result_tree );
+		$markup = serialize_blocks( $tree );
 
-		$tag_error = $this->refuse_tag_loss( $tree, $result_tree, $args, $markup );
-		if ( $tag_error instanceof WP_Error ) {
-			return $tag_error;
+		// Once, on the final markup: that is what core's KSES sees on save.
+		$kses_error = MarkupTags::refuse_kses_loss( $markup );
+		if ( $kses_error instanceof WP_Error ) {
+			return $kses_error;
 		}
 
 		$persisted = $this->persist( $post_id, $markup );
@@ -209,6 +212,87 @@ abstract class AbstractBlockEdit extends BaseAbility {
 		}
 
 		return $this->build_result( $post_id, $markup, $persisted, $block_issues );
+	}
+
+	/**
+	 * The operations one call performs, each with its own ability input.
+	 *
+	 * One by default. An ability that takes a list returns one entry per item,
+	 * applied in order to the tree and saved once.
+	 *
+	 * @param array<string, mixed> $args Ability input.
+	 * @return array<int, array<string, mixed>>|WP_Error Operation inputs, or an error to return without saving.
+	 * @since 1.6.0
+	 */
+	protected function operations( array $args ): array|WP_Error {
+		return [ $args ];
+	}
+
+	/**
+	 * Apply one operation to the tree and run its checks: the allowed-block
+	 * policy, serializer issues and the tag-drop confirmation.
+	 *
+	 * @param array<int, mixed>    $tree    Tree as the earlier operations left it.
+	 * @param array<string, mixed> $args    This operation's input.
+	 * @param int                  $post_id Target post ID.
+	 * @return array{tree: array<int, mixed>, warnings: array<int, string>}|WP_Error New tree and warnings, or an error.
+	 * @since 1.6.0
+	 */
+	private function apply_operation( array $tree, array $args, int $post_id ): array|WP_Error {
+		$result_tree = $this->apply( new BlockTreeEditor(), $tree, $args );
+		if ( is_wp_error( $result_tree ) ) {
+			return $result_tree;
+		}
+
+		$warnings = [];
+		if ( $this->enforces_policy() ) {
+			$issues = $this->collect_issues( $args, $post_id );
+			$error  = BlockIssues::to_wp_error( $issues );
+			if ( $error instanceof WP_Error ) {
+				return $error;
+			}
+
+			$warnings = BlockIssues::warning_messages( $issues );
+		}
+
+		$changed = $this->changed_markup( $tree, $result_tree, $args );
+		if ( $changed !== null ) {
+			$dropped = MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args );
+			if ( $dropped instanceof WP_Error ) {
+				return $dropped;
+			}
+		}
+
+		return [
+			'tree'     => $result_tree,
+			'warnings' => $warnings,
+		];
+	}
+
+	/**
+	 * Say which item of `edits` failed; the code and data stay the original's.
+	 *
+	 * @param int      $index Zero-based position in `edits`.
+	 * @param WP_Error $error The item's error.
+	 * @return WP_Error The error, naming the item.
+	 * @since 1.6.0
+	 */
+	private function edit_failed( int $index, WP_Error $error ): WP_Error {
+		$data = $error->get_error_data();
+		$data = is_array( $data ) ? $data : [ 'status' => 400 ];
+
+		$data['edit_index'] = $index;
+
+		return new WP_Error(
+			(string) $error->get_error_code(),
+			sprintf(
+				/* translators: 1: zero-based position in the edits list, 2: the error message. */
+				__( 'edits[%1$d] failed, so nothing was saved: %2$s', 'albert-ai-butler' ),
+				$index,
+				$error->get_error_message()
+			),
+			$data
+		);
 	}
 
 	/**
@@ -241,29 +325,6 @@ abstract class AbstractBlockEdit extends BaseAbility {
 		}
 
 		return array_merge( $policy_issues, $serializer_issues );
-	}
-
-	/**
-	 * Refuse a save that would lose a tag silently: one the edit drops without
-	 * `remove_tags`, or one KSES would strip from the post for this user.
-	 *
-	 * @param array<int, mixed>    $tree        Parsed tree before the op.
-	 * @param array<int, mixed>    $result_tree Tree after the op.
-	 * @param array<string, mixed> $args        Ability input.
-	 * @param string               $markup      The post content about to be saved.
-	 * @return WP_Error|null Error to return without saving, or null.
-	 * @since 1.6.0
-	 */
-	private function refuse_tag_loss( array $tree, array $result_tree, array $args, string $markup ): ?WP_Error {
-		$changed = $this->changed_markup( $tree, $result_tree, $args );
-		if ( $changed !== null ) {
-			$dropped = MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args );
-			if ( $dropped instanceof WP_Error ) {
-				return $dropped;
-			}
-		}
-
-		return MarkupTags::refuse_kses_loss( $markup );
 	}
 
 	/**
