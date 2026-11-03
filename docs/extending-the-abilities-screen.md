@@ -158,7 +158,8 @@ add_filter(
 
 - **`$row`** — `{ id, label, description, category, categoryLabel, source, sourceLabel,
   operation, enabled, capability, capabilityRoles, lastUsed, badges, inputs, output, annotations }`.
-  Free always sets `badges` to `[]`. `supplier`/`supplierLabel` are still present too, holding the
+  Free always sets `badges` to `[]`. `operation` is `read`, `write`, `delete`, or (since 1.6.0)
+  `undeclared` for an ability whose annotations set neither `readonly` nor `destructive`. `supplier`/`supplierLabel` are still present too, holding the
   same values as `source`/`sourceLabel` — deprecated since 1.4.0 in favour of the latter, kept for
   any add-on already reading them, and scheduled for removal in a future major version.
 - **Badge shape** — `{ id, label, tone, title? }`; `tone` maps to the `albert-badge--{tone}` pill.

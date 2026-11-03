@@ -26,6 +26,7 @@ const OPERATION_OPTIONS = [
 	{ value: 'read', label: __( 'Read', 'albert-ai-butler' ) },
 	{ value: 'write', label: __( 'Write', 'albert-ai-butler' ) },
 	{ value: 'delete', label: __( 'Delete', 'albert-ai-butler' ) },
+	{ value: 'undeclared', label: __( 'Not declared', 'albert-ai-butler' ) },
 ];
 
 const SORT_OPTIONS = [

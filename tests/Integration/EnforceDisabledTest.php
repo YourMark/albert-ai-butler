@@ -14,6 +14,7 @@ use Albert\Abstracts\BaseAbility;
 use Albert\Admin\AbilitiesPage;
 use Albert\Core\AbilitiesManager;
 use Albert\Core\AbilitiesState;
+use Albert\Core\AnnotationPresenter;
 use Albert\Tests\TestCase;
 
 /**
@@ -249,6 +250,23 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->assertTrue( wp_has_ability( 'thirdparty/test-disabled' ) );
 		$this->assertFalse( AbilitiesState::is_enabled( 'thirdparty/test-disabled' ) );
+	}
+
+	/**
+	 * A third-party ability without annotations is "Not declared" and starts off
+	 * on a fresh install. Core fills its annotations with nulls, which is the case
+	 * the unit doubles cannot reproduce.
+	 *
+	 * @return void
+	 */
+	public function test_undeclared_third_party_ability_starts_off_on_fresh_install(): void {
+		delete_option( 'albert_abilities_saved' );
+		$this->register_third_party_ability( 'thirdparty/test-find-things' );
+
+		$annotations = (array) wp_get_ability( 'thirdparty/test-find-things' )->get_meta_item( 'annotations', [] );
+
+		$this->assertSame( 'undeclared', AnnotationPresenter::chips_for( $annotations )[0]['key'] );
+		$this->assertFalse( AbilitiesState::is_enabled( 'thirdparty/test-find-things' ) );
 	}
 
 	/**
