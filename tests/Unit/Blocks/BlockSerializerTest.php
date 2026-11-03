@@ -185,7 +185,7 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( '<!-- wp:paragraph --><p>Hello world</p><!-- /wp:paragraph -->', $markup );
+		$this->assertSame( "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->", $markup );
 		$this->assert_round_trip(
 			[
 				[
@@ -504,7 +504,7 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( '<!-- wp:paragraph --><p>Aliased</p><!-- /wp:paragraph -->', $markup );
+		$this->assertSame( "<!-- wp:paragraph -->\n<p>Aliased</p>\n<!-- /wp:paragraph -->", $markup );
 	}
 
 	// Unknown block fallback
@@ -1307,5 +1307,32 @@ class BlockSerializerTest extends TestCase {
 		);
 
 		$this->assertStringContainsString( 'style="flex-basis:33.33%;"', $markup );
+	}
+
+	public function test_blocks_are_laid_out_with_the_editors_line_breaks(): void {
+		$markup = $this->serializer->serialize(
+			[
+				[
+					'name'        => 'core/group',
+					'innerBlocks' => [
+						[
+							'name'      => 'core/paragraph',
+							'plaintext' => 'One',
+						],
+						[
+							'name'      => 'core/paragraph',
+							'plaintext' => 'Two',
+						],
+					],
+				],
+				[ 'name' => 'core/separator' ],
+			]
+		);
+
+		$this->assertSame(
+			"<!-- wp:group -->\n<div class=\"wp-block-group\"><!-- wp:paragraph -->\n<p>One</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Two</p>\n<!-- /wp:paragraph --></div>\n<!-- /wp:group -->\n\n"
+				. "<!-- wp:separator -->\n<hr class=\"wp-block-separator has-alpha-channel-opacity\"/>\n<!-- /wp:separator -->",
+			$markup
+		);
 	}
 }

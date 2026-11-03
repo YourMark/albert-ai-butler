@@ -187,7 +187,7 @@ class BlockSerializer {
 
 		$issues = [];
 		$blocks = $this->build_blocks( $input, 'content', $issues );
-		$markup = serialize_blocks( $blocks );
+		$markup = implode( "\n\n", array_map( 'serialize_block', $blocks ) );
 
 		// Round-trip self-check: confirm every top-level block name survived.
 		$this->verify_round_trip( $blocks, $markup, $issues );
@@ -874,6 +874,9 @@ class BlockSerializer {
 			}
 		}
 
+		$inner_content   = $this->editor_line_breaks( $inner_content );
+		$flat_inner_html = implode( '', array_filter( $inner_content, 'is_string' ) );
+
 		// Core validates comment-JSON attributes on every render and raises a
 		// notice for a type it doesn't know ('rich-text'). Narrower than the
 		// editor, which drops every sourced attribute: BlockReader reads only the
@@ -887,6 +890,54 @@ class BlockSerializer {
 			'innerHTML'    => $flat_inner_html,
 			'innerContent' => $inner_content,
 		];
+	}
+
+	/**
+	 * Lay out a block's content with the line breaks the editor's serializer
+	 * writes, so a diff against content the editor saved shows only real changes:
+	 * a newline inside each delimiter, a blank line between sibling blocks.
+	 *
+	 * @param array<int, string|null> $inner_content innerContent chunks.
+	 * @return array<int, string|null>
+	 *
+	 * @since 1.6.0
+	 */
+	private function editor_line_breaks( array $inner_content ): array {
+		if ( $inner_content === [] ) {
+			return [];
+		}
+
+		$spaced      = [];
+		$after_block = false;
+
+		foreach ( $inner_content as $chunk ) {
+			if ( $chunk === null ) {
+				if ( $after_block ) {
+					$spaced[] = "\n\n";
+				}
+				$spaced[]    = null;
+				$after_block = true;
+				continue;
+			}
+
+			if ( $chunk !== '' ) {
+				$after_block = false;
+			}
+			$spaced[] = $chunk;
+		}
+
+		if ( ! is_string( $spaced[0] ) ) {
+			array_unshift( $spaced, '' );
+		}
+		if ( ! is_string( $spaced[ count( $spaced ) - 1 ] ) ) {
+			$spaced[] = '';
+		}
+
+		$last            = count( $spaced ) - 1;
+		$spaced[0]       = "\n" . $spaced[0];
+		$spaced[ $last ] = $spaced[ $last ] . "\n";
+
+		return $spaced;
 	}
 
 	/**
