@@ -20,8 +20,10 @@ use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
+use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
+use Albert\Abilities\WordPress\Media\UpdateMedia;
 use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Pages\Create as CreatePage;
@@ -447,6 +449,39 @@ class ExecuteSchemaTest extends TestCase {
 			new ViewMedia(),
 			[ 'id' => $attachment_id ],
 			'ViewMedia'
+		);
+	}
+
+	/**
+	 * UpdateMedia returns the saved media matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_update_media_output_matches_schema(): void {
+		$attachment_id = self::factory()->attachment->create( [ 'post_mime_type' => 'image/jpeg' ] );
+
+		$this->assert_execute_matches_schema(
+			new UpdateMedia(),
+			[
+				'id'       => $attachment_id,
+				'alt_text' => 'A test image',
+			],
+			'UpdateMedia'
+		);
+	}
+
+	/**
+	 * DeleteMedia returns a deletion result matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_delete_media_output_matches_schema(): void {
+		$attachment_id = self::factory()->attachment->create( [ 'post_mime_type' => 'image/jpeg' ] );
+
+		$this->assert_execute_matches_schema(
+			new DeleteMedia(),
+			[ 'id' => $attachment_id ],
+			'DeleteMedia'
 		);
 	}
 
