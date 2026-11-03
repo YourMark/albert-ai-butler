@@ -268,6 +268,47 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * CreatePost refuses Markdown content and saves nothing.
+	 *
+	 * @return void
+	 */
+	public function test_create_post_refuses_markdown_content(): void {
+		$before = wp_count_posts()->draft;
+
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'   => 'Markdown Post',
+				'content' => "## Intro\n\nSome **bold** text.\n\n- one\n- two",
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'content_is_markdown', $result->get_error_code() );
+		wp_cache_flush();
+		$this->assertSame( $before, wp_count_posts()->draft );
+	}
+
+	/**
+	 * UpdatePost refuses Markdown content and leaves the body untouched.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_refuses_markdown_content(): void {
+		$post_id = self::factory()->post->create( [ 'post_content' => '<p>Original</p>' ] );
+
+		$result = ( new UpdatePost() )->execute(
+			[
+				'id'      => $post_id,
+				'content' => "# Heading\n\nBody.",
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'content_is_markdown', $result->get_error_code() );
+		$this->assertSame( '<p>Original</p>', get_post( $post_id )->post_content );
+	}
+
+	/**
 	 * CreatePost defaults to draft status.
 	 *
 	 * @return void
