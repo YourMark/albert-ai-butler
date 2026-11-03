@@ -9,11 +9,11 @@
 
 ## Safe by default
 
-- **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request. Needs WordPress 7.1.
+- **Deletions wait for you.** Safe mode is on from the start. Deleting content, creating or changing a user account, or changing a key site setting waits for your approval, and the assistant cannot approve its own request. Edits to posts and pages are not held. Needs WordPress 7.1.
 - **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 - **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 - **No tracking.** Albert sends nothing about your site or your usage anywhere.
-- **Personal data hidden by default.** Names, email addresses, phone numbers and postal addresses are masked before an assistant sees them. New sites start on Strict.
+- **Personal data hidden by default.** When an assistant looks up users, customers or orders, names, email addresses, phone numbers and postal addresses are masked. New sites start on Strict.
 
 What Albert stores and for how long is listed under Privacy Policy in [readme.txt](readme.txt).
 
@@ -26,7 +26,7 @@ Connect your AI assistant to your site once, and it writes, edits and files your
 - **Guided setup.** Click Connect an assistant, say where your site runs and which app you use, and Albert shows that app's exact steps, then tells you the moment the connection works. Sites that only run on your computer work too.
 - **A proper sign-in.** OAuth 2.0 with short-lived tokens you can revoke.
 - **You choose who may connect.** Only the people on your list can approve an assistant, and Send setup link emails them a link to the steps.
-- **Nothing destructive without your approval.** Safe mode holds deletes, role changes and key settings until you approve them.
+- **Approval before anything is deleted.** Safe mode holds deletes, new or changed user accounts, and key settings until you approve them.
 - **Real blocks, block patterns and your site's own context**, so the assistant's work fits your site.
 
 ## Works with your plugins
