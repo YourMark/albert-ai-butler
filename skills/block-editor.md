@@ -27,9 +27,8 @@ you are allowed to save. Use `albert/get-block-type` to inspect a single block's
 attributes. Composing a block that is not in your allowed set returns a
 `block_validation_failed` error naming it, and nothing is saved.
 
-Allowed-block enforcement applies only to the structured `blocks` field. The raw
-`content` string path is not allow-list-enforced, so prefer `blocks` whenever you want
-the allowed set honoured.
+Allowed-block enforcement applies to the structured `blocks` field and to block markup
+(`<!-- wp:... -->`) in `content`. Plain HTML in `content` is not checked.
 
 The `albert://blocks/types` resource returns the site-wide (post-less) allowed list. For
 a specific target, the `list-block-types` tool with a `post_type` is authoritative, since
@@ -57,6 +56,14 @@ not use a block missing from that list: either case comes back as a
 `block_validation_failed` error naming the block, so you can fix it and retry. If you need
 arbitrary HTML that has no matching block, use `core/html` and put the markup in its
 `html` attribute.
+
+Every attribute you send must be one Albert writes into the block's HTML: the block's
+own (see `albert/get-block-type`), its supports (colour, typography, spacing, border,
+align, `anchor`, `className`), or one kept in the block comment only (`lock`, `metadata`,
+`layout`). Anything else returns `block_validation_failed` naming the attribute, because
+the editor would flag the block as invalid. To keep a block's markup exactly, send it in
+`html`: the markup inside the block's delimiters, as the editor stores it. Block markup
+nested in it becomes the block's inner blocks, so do not also send `innerBlocks`.
 
 Text attributes (`content`, a button's `text`, a quote's `citation`) accept inline HTML
 (`<strong>`, `<em>`, `<a href="…">`, `<code>`), which Albert sanitizes. Use them for inline
@@ -228,6 +235,8 @@ edits apply to block-editor targets only. On a classic post they return
   returns a `block_validation_failed` error. Use `core/html` for raw HTML; never invent names.
 - Do not hand-write block comments (`<!-- wp:... -->`) or inner HTML. Send attributes
   and `innerBlocks` and let Albert serialize the markup.
+- Block markup you read from a site (a pattern, a post's `content`) can be written back in
+  `content` unchanged: Albert stores it exactly as sent.
 - Put child blocks in `innerBlocks`, not in attributes.
 
 ## Self-correction

@@ -76,14 +76,77 @@ class BlockSerializer {
 	private BlockSchema $schema;
 
 	/**
+	 * Builds the HTML a block's supports put on its markup.
+	 *
+	 * @var BlockSupports
+	 *
+	 * @since 1.6.0
+	 */
+	private BlockSupports $supports;
+
+	/**
+	 * The block delimiter pattern WP_Block_Parser uses.
+	 *
+	 * @var string
+	 *
+	 * @since 1.6.0
+	 */
+	private const DELIMITER = '/<!--\s+(?P<closer>\/)?wp:(?P<namespace>[a-z][a-z0-9_-]*\/)?(?P<name>[a-z][a-z0-9_-]*)\s+(?P<attrs>{(?:(?:[^}]+|}+(?=})|(?!}\s+\/?-->).)*+)?}\s+)?(?P<void>\/)?-->/s';
+
+	/**
+	 * Attributes each template writes into the HTML, or knows the block keeps in
+	 * its comment only. Supports are checked against the registry instead.
+	 *
+	 * @var array<string, array<int, string>>
+	 *
+	 * @since 1.6.0
+	 */
+	private const TEMPLATE_ATTRIBUTES = [
+		'core/paragraph' => [ 'content', 'dropCap', 'direction', 'placeholder' ],
+		'core/heading'   => [ 'content', 'level', 'levelOptions', 'placeholder' ],
+		'core/list'      => [ 'ordered', 'type', 'start', 'reversed', 'placeholder' ],
+		'core/list-item' => [ 'content', 'placeholder' ],
+		'core/quote'     => [ 'citation' ],
+		'core/image'     => [ 'url', 'alt', 'caption', 'align', 'href', 'rel', 'linkClass', 'linkTarget', 'width', 'height', 'aspectRatio', 'scale', 'focalPoint', 'id', 'sizeSlug', 'title', 'isDecorative', 'linkDestination', 'lightbox', 'borderColor', 'style.border', 'style.shadow' ],
+		'core/columns'   => [ 'verticalAlignment', 'isStackedOnMobile' ],
+		'core/column'    => [ 'verticalAlignment', 'width' ],
+		'core/group'     => [ 'tagName' ],
+		'core/buttons'   => [],
+		'core/button'    => [ 'tagName', 'type', 'url', 'title', 'text', 'linkTarget', 'rel', 'placeholder', 'backgroundColor', 'textColor', 'gradient', 'fontSize', 'fontFamily', 'borderColor', 'style.color', 'style.border', 'style.spacing', 'style.shadow', 'style.typography', 'style.dimensions' ],
+		'core/separator' => [ 'opacity', 'tagName', 'backgroundColor', 'gradient', 'style.color' ],
+		'core/spacer'    => [ 'height', 'width' ],
+		'core/code'      => [ 'content' ],
+		'core/pullquote' => [ 'value', 'citation' ],
+	];
+
+	/**
+	 * Attributes a template writes only on WordPress versions whose block declares
+	 * them (WordPress 6.9: text alignment as an attribute, a button's width).
+	 *
+	 * @var array<string, array<int, string>>
+	 *
+	 * @since 1.6.0
+	 */
+	private const DECLARED_TEMPLATE_ATTRIBUTES = [
+		'core/paragraph' => [ 'align' ],
+		'core/heading'   => [ 'textAlign' ],
+		'core/quote'     => [ 'textAlign' ],
+		'core/pullquote' => [ 'textAlign' ],
+		'core/button'    => [ 'width' ],
+	];
+
+	/**
 	 * Construct the serializer.
 	 *
-	 * @param BlockSchema|null $schema Optional registry reader (defaults to a fresh instance).
+	 * @param BlockSchema|null   $schema   Optional registry reader (defaults to a fresh instance).
+	 * @param BlockSupports|null $supports Optional supports builder.
 	 *
 	 * @since 1.2.0
+	 * @since 1.6.0 Added $supports.
 	 */
-	public function __construct( ?BlockSchema $schema = null ) {
-		$this->schema = $schema ?? new BlockSchema();
+	public function __construct( ?BlockSchema $schema = null, ?BlockSupports $supports = null ) {
+		$this->schema   = $schema ?? new BlockSchema();
+		$this->supports = $supports ?? new BlockSupports( $this->schema );
 	}
 
 	/**
@@ -111,10 +174,11 @@ class BlockSerializer {
 	 * @since 1.2.0
 	 */
 	public function serialize_with_issues( $input ): array {
-		// Defensive fallback: a string is routed through BlockConverter, which
-		// turns HTML/Markdown into block markup (and passes existing block
-		// markup through untouched).
 		if ( is_string( $input ) ) {
+			if ( has_blocks( $input ) ) {
+				return $this->pass_through( $input );
+			}
+
 			return [
 				'markup' => ( new BlockConverter( $input ) )->convert(),
 				'issues' => [],
@@ -162,6 +226,151 @@ class BlockSerializer {
 			'block'  => $block,
 			'issues' => $issues,
 		];
+	}
+
+	/**
+	 * Keep block markup as sent.
+	 *
+	 * The editor wrote this markup; any rebuild from attributes would lose what
+	 * PHP cannot regenerate (a block's save() runs in JavaScript only). It is
+	 * checked, not changed: unregistered names and unbalanced delimiters are
+	 * errors, and only HTML outside every block is converted to blocks.
+	 *
+	 * @param string $markup Content containing block delimiters.
+	 * @return array{markup: string, issues: array<int, Issue>}
+	 *
+	 * @since 1.6.0
+	 */
+	private function pass_through( string $markup ): array {
+		$issues = [];
+		$spans  = $this->top_level_spans( $markup, 'content', $issues );
+		$output = '';
+		$cursor = 0;
+		$stray  = false;
+
+		foreach ( $spans as [ $start, $end ] ) {
+			$output .= $this->convert_stray( substr( $markup, $cursor, $start - $cursor ), $stray );
+			$output .= substr( $markup, $start, $end - $start );
+			$cursor  = $end;
+		}
+
+		$output .= $this->convert_stray( substr( $markup, $cursor ), $stray );
+
+		if ( $stray ) {
+			$issues[] = $this->issue( self::SEVERITY_WARNING, 'content had HTML outside any block; it was converted to blocks. The block markup was kept as sent.' );
+		}
+
+		return [
+			'markup' => $output,
+			'issues' => $issues,
+		];
+	}
+
+	/**
+	 * Convert HTML found between top-level blocks; whitespace is kept as is.
+	 *
+	 * @param string $html  Text between two blocks.
+	 * @param bool   $stray Set to true when anything was converted.
+	 * @return string
+	 *
+	 * @since 1.6.0
+	 */
+	private function convert_stray( string $html, bool &$stray ): string {
+		if ( trim( $html ) === '' ) {
+			return $html;
+		}
+
+		$stray = true;
+
+		return "\n" . ( new BlockConverter( $html ) )->convert() . "\n";
+	}
+
+	/**
+	 * Check every block delimiter in markup and find the top-level blocks.
+	 *
+	 * Flags a closer without its opener, an opener never closed, and a block
+	 * name the site has not registered.
+	 *
+	 * @param string            $markup Block markup.
+	 * @param string            $path   Field name for issue messages.
+	 * @param array<int, Issue> $issues Issues collector (by reference).
+	 * @return array<int, array{0: int, 1: int}> Byte offsets [ start, end ) of each top-level block.
+	 *
+	 * @since 1.6.0
+	 */
+	private function top_level_spans( string $markup, string $path, array &$issues ): array {
+		preg_match_all( self::DELIMITER, $markup, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+
+		$spans      = [];
+		$stack      = [];
+		$unknown    = [];
+		$span_start = 0;
+
+		foreach ( $matches as $match ) {
+			$offset = (int) $match[0][1];
+			$end    = $offset + strlen( $match[0][0] );
+			$name   = ( $match['namespace'][0] !== '' ? $match['namespace'][0] : 'core/' ) . $match['name'][0];
+			$closer = $match['closer'][0] === '/';
+			$void   = isset( $match['void'] );
+
+			if ( $closer ) {
+				if ( $stack === [] || end( $stack ) !== $name ) {
+					$issues[] = $this->issue(
+						self::SEVERITY_ERROR,
+						sprintf( "%s has a closing <!-- /wp:%s --> that does not match an open block. Check that every block's delimiters are balanced.", $path, $this->short_name( $name ) )
+					);
+					continue;
+				}
+
+				array_pop( $stack );
+				if ( $stack === [] ) {
+					$spans[] = [ $span_start, $end ];
+				}
+				continue;
+			}
+
+			if ( ! $this->schema->is_registered( $name ) && ! isset( $unknown[ $name ] ) ) {
+				$unknown[ $name ] = true;
+				$issues[]         = $this->issue(
+					self::SEVERITY_ERROR,
+					"{$path} contains block '{$name}', which is not registered on this site. Call albert/list-block-types to see the blocks you may use."
+				);
+			}
+
+			if ( $stack === [] ) {
+				$span_start = $offset;
+			}
+
+			if ( $void ) {
+				if ( $stack === [] ) {
+					$spans[] = [ $offset, $end ];
+				}
+				continue;
+			}
+
+			$stack[] = $name;
+		}
+
+		foreach ( array_reverse( $stack ) as $name ) {
+			$issues[] = $this->issue(
+				self::SEVERITY_ERROR,
+				sprintf( '%1$s opens <!-- wp:%2$s --> but never closes it. Add <!-- /wp:%2$s -->.', $path, $this->short_name( $name ) )
+			);
+		}
+
+		return $stack === [] ? $spans : [];
+	}
+
+	/**
+	 * A block name as it is written in a delimiter (core/ is left out).
+	 *
+	 * @param string $name Block name.
+	 * @return string
+	 *
+	 * @since 1.6.0
+	 */
+	private function short_name( string $name ): string {
+		return str_starts_with( $name, 'core/' ) ? substr( $name, 5 ) : $name;
 	}
 
 	/**
@@ -252,6 +461,17 @@ class BlockSerializer {
 			$inner_specs = [];
 		}
 
+		$html = isset( $spec['html'] ) && is_string( $spec['html'] ) && trim( $spec['html'] ) !== '' ? $spec['html'] : null;
+
+		if ( $html !== null && $name !== 'core/html' && $this->schema->is_registered( $name ) ) {
+			if ( $inner_specs !== [] ) {
+				$issues[] = $this->issue( self::SEVERITY_ERROR, "{$path} has both 'html' and 'innerBlocks'. Send one: 'html' already holds the inner blocks' markup." );
+				return null;
+			}
+
+			return $this->block_from_html( $name, $attributes, $html, $path, $issues );
+		}
+
 		$plaintext    = isset( $spec['plaintext'] ) ? (string) $spec['plaintext'] : '';
 		$inner_blocks = $this->build_blocks( $inner_specs, "{$path}.innerBlocks", $issues );
 
@@ -274,6 +494,13 @@ class BlockSerializer {
 			$issues[] = $this->issue( self::SEVERITY_WARNING, $message );
 		}
 
+		foreach ( $this->supports->unwritten( $name, $attributes, $this->template_attributes( $name ) ) as $attribute ) {
+			$issues[] = $this->issue(
+				self::SEVERITY_ERROR,
+				"{$path}.attributes.{$attribute} is not written into {$name}'s HTML by this server, so the editor would flag the block as invalid. Remove it, or send the block's saved markup in 'html'."
+			);
+		}
+
 		// Inner blocks under a leaf template (no %children% slot): make_block()
 		// keeps them, but the block's save() won't nest them, so the editor may
 		// drop them on next save. Warn.
@@ -290,6 +517,91 @@ class BlockSerializer {
 		}
 
 		return $this->make_block( $name, $attrs, $inner_html, $inner_blocks );
+	}
+
+	/**
+	 * Attributes a block's template writes, including those only some WordPress
+	 * versions declare.
+	 *
+	 * @param string $name Block name.
+	 * @return array<int, string>
+	 *
+	 * @since 1.6.0
+	 */
+	private function template_attributes( string $name ): array {
+		$written = self::TEMPLATE_ATTRIBUTES[ $name ] ?? [];
+
+		foreach ( self::DECLARED_TEMPLATE_ATTRIBUTES[ $name ] ?? [] as $attribute ) {
+			if ( $this->declares( $name, $attribute ) ) {
+				$written[] = $attribute;
+			}
+		}
+
+		return $written;
+	}
+
+	/**
+	 * Whether a block's registered schema declares an attribute.
+	 *
+	 * @param string $name      Block name.
+	 * @param string $attribute Attribute name.
+	 * @return bool
+	 *
+	 * @since 1.6.0
+	 */
+	private function declares( string $name, string $attribute ): bool {
+		$schema = $this->schema->block_schema( $name );
+
+		return is_array( $schema['attributes'] ?? null ) && array_key_exists( $attribute, $schema['attributes'] );
+	}
+
+	/**
+	 * Build a block whose saved markup the caller sent in `html`.
+	 *
+	 * The markup is the block's inner HTML as the editor stores it. Nested block
+	 * delimiters become real inner blocks, so the block stays editable and the
+	 * allowed-block check sees them.
+	 *
+	 * @param string               $name       Block name.
+	 * @param array<string, mixed> $attributes Comment attributes.
+	 * @param string               $html       The block's inner HTML.
+	 * @param string               $path       Dotted path for issue messages.
+	 * @param array<int, Issue>    $issues     Issues collector (by reference).
+	 * @return ParsedBlock|null
+	 *
+	 * @since 1.6.0
+	 */
+	private function block_from_html( string $name, array $attributes, string $html, string $path, array &$issues ): ?array {
+		$html_issues = [];
+		$this->top_level_spans( $html, "{$path}.html", $html_issues );
+		$issues = array_merge( $issues, $html_issues );
+
+		if ( $html_issues !== [] ) {
+			return null;
+		}
+
+		$inner_blocks  = [];
+		$inner_content = [];
+
+		foreach ( parse_blocks( $html ) as $parsed ) {
+			if ( $parsed['blockName'] === null ) {
+				$inner_content[] = (string) $parsed['innerHTML'];
+				continue;
+			}
+
+			$inner_blocks[]  = $parsed;
+			$inner_content[] = null;
+		}
+
+		$attributes = array_diff_key( $attributes, array_flip( $this->schema->unvalidatable_sourced_attributes( $name ) ) );
+
+		return [
+			'blockName'    => $name,
+			'attrs'        => $attributes,
+			'innerBlocks'  => $inner_blocks,
+			'innerHTML'    => implode( '', array_filter( $inner_content, 'is_string' ) ),
+			'innerContent' => $inner_content,
+		];
 	}
 
 	/**
@@ -659,6 +971,8 @@ class BlockSerializer {
 	// [ array $attrs, string $inner_html, array $issues ]. Wrapper blocks place
 	// a literal "%children%" marker where their inner blocks are spliced in.
 	// Template issues are recoverable, so the caller records them as warnings.
+	// Each mirrors that block's save(): the wrapper's supports come from
+	// BlockSupports, the block's own attributes are written here.
 
 	/**
 	 * Template: core/paragraph.
@@ -669,9 +983,25 @@ class BlockSerializer {
 	 * @since 1.2.0
 	 */
 	private function tpl_paragraph( BlockContext $context ): array {
-		$content = $this->text_content( $context->attributes, [ 'content' ], $context->plaintext );
+		$attributes = $context->attributes;
+		$content    = $this->text_content( $attributes, [ 'content' ], $context->plaintext );
+		$text_align = $attributes['style']['typography']['textAlign'] ?? null;
+		$end        = function_exists( 'is_rtl' ) && is_rtl() ? 'left' : 'right';
+		$classes    = $this->declared_text_align( 'core/paragraph', 'align', $attributes );
 
-		return [ $context->attributes, '<p>' . $content . '</p>', [] ];
+		if ( ! empty( $attributes['dropCap'] ) && $text_align !== 'center' && $text_align !== $end ) {
+			$classes[] = 'has-drop-cap';
+		}
+
+		$wrapper = $this->supports->wrapper(
+			'core/paragraph',
+			$attributes,
+			$classes,
+			[],
+			[ 'dir' => $this->string_attribute( $attributes, 'direction' ) ]
+		);
+
+		return [ $attributes, '<p' . $wrapper . '>' . $content . '</p>', [] ];
 	}
 
 	/**
@@ -695,8 +1025,9 @@ class BlockSerializer {
 
 		$attributes['level'] = $level;
 		$content             = $this->text_content( $attributes, [ 'content' ], $context->plaintext );
+		$wrapper             = $this->supports->wrapper( 'core/heading', $attributes, $this->declared_text_align( 'core/heading', 'textAlign', $attributes ) );
 
-		return [ $attributes, sprintf( '<h%1$d class="wp-block-heading">%2$s</h%1$d>', $level, $content ), $issues ];
+		return [ $attributes, sprintf( '<h%1$d%2$s>%3$s</h%1$d>', $level, $wrapper, $content ), $issues ];
 	}
 
 	/**
@@ -708,19 +1039,28 @@ class BlockSerializer {
 	 * @since 1.2.0
 	 */
 	private function tpl_list( BlockContext $context ): array {
-		$ordered = ! empty( $context->attributes['ordered'] );
-		$tag     = $ordered ? 'ol' : 'ul';
+		$attributes = $context->attributes;
+		$ordered    = ! empty( $attributes['ordered'] );
+		$tag        = $ordered ? 'ol' : 'ul';
+		$type       = $this->string_attribute( $attributes, 'type' );
+		$start      = isset( $attributes['start'] ) && is_numeric( $attributes['start'] ) ? (string) (int) $attributes['start'] : null;
 
-		// core/list is a dynamic block: its render_callback injects the
-		// `wp-block-list` class at render time, so the stored markup must be a
-		// bare <ul>/<ol> without that class. Emitting it here would make the
-		// editor flag the block as having invalid content.
-		// NOTE: still warrants a manual "invalid content" check in the editor.
-		return [ $context->attributes, sprintf( '<%1$s>%%children%%</%1$s>', $tag ), [] ];
+		$wrapper = $this->supports->wrapper(
+			'core/list',
+			$attributes,
+			[],
+			[ 'list-style-type' => $ordered && $type !== 'decimal' ? (string) $type : '' ],
+			[
+				'reversed' => ! empty( $attributes['reversed'] ) ? true : null,
+				'start'    => $start,
+			]
+		);
+
+		return [ $attributes, sprintf( '<%1$s%2$s>%%children%%</%1$s>', $tag, $wrapper ), [] ];
 	}
 
 	/**
-	 * Template: core/list-item.
+	 * Template: core/list-item; a nested list goes after its text.
 	 *
 	 * @param BlockContext $context Block context.
 	 * @return array{0: array<string, mixed>, 1: string, 2: array<int, string>}
@@ -730,7 +1070,7 @@ class BlockSerializer {
 	private function tpl_list_item( BlockContext $context ): array {
 		$content = $this->text_content( $context->attributes, [ 'content' ], $context->plaintext );
 
-		return [ $context->attributes, '<li>' . $content . '</li>', [] ];
+		return [ $context->attributes, '<li' . $this->supports->wrapper( 'core/list-item', $context->attributes ) . '>' . $content . '%children%</li>', [] ];
 	}
 
 	/**
@@ -743,13 +1083,9 @@ class BlockSerializer {
 	 */
 	private function tpl_quote( BlockContext $context ): array {
 		$attributes = $context->attributes;
+		$wrapper    = $this->supports->wrapper( 'core/quote', $attributes, $this->declared_text_align( 'core/quote', 'textAlign', $attributes ) );
 
-		$citation = '';
-		if ( isset( $attributes['citation'] ) && (string) $attributes['citation'] !== '' ) {
-			$citation = '<cite>' . (string) $attributes['citation'] . '</cite>';
-		}
-
-		return [ $attributes, '<blockquote class="wp-block-quote">%children%' . $citation . '</blockquote>', [] ];
+		return [ $attributes, '<blockquote' . $wrapper . '>%children%' . $this->citation( $attributes ) . '</blockquote>', [] ];
 	}
 
 	/**
@@ -765,30 +1101,79 @@ class BlockSerializer {
 		$issues     = [];
 
 		$url = isset( $attributes['url'] ) ? (string) $attributes['url'] : '';
-		$alt = isset( $attributes['alt'] ) ? (string) $attributes['alt'] : '';
-
 		if ( $url === '' ) {
 			$issues[] = "{$context->path}.attributes.url is required for core/image.";
 		}
 
-		$id_class = '';
-		if ( isset( $attributes['id'] ) && (int) $attributes['id'] > 0 ) {
-			$id_class = ' class="wp-image-' . (int) $attributes['id'] . '"';
+		// Width and height are strings in the block's schema; the editor drops a number.
+		foreach ( [ 'width', 'height' ] as $dimension ) {
+			if ( isset( $attributes[ $dimension ] ) && ( is_int( $attributes[ $dimension ] ) || is_float( $attributes[ $dimension ] ) ) ) {
+				$attributes[ $dimension ] = $attributes[ $dimension ] . 'px';
+			}
 		}
 
-		$img = sprintf(
-			'<img src="%s" alt="%s"%s/>',
-			esc_url( $url ),
-			esc_attr( $alt ),
-			$id_class
-		);
+		$border = $this->supports->element( $attributes, [ 'border' ] );
+		$shadow = $this->supports->element( $attributes, [ 'shadow' ] );
+		$width  = $this->string_attribute( $attributes, 'width' );
+		$height = $this->string_attribute( $attributes, 'height' );
+		$scale  = $this->string_attribute( $attributes, 'scale' );
+
+		$img_style = [
+			'aspect-ratio' => (string) $this->string_attribute( $attributes, 'aspectRatio' ),
+			'object-fit'   => (string) $scale,
+		];
+
+		$focal = $attributes['focalPoint'] ?? null;
+		if ( $scale !== null && is_array( $focal ) && isset( $focal['x'], $focal['y'] ) ) {
+			$img_style['object-position'] = sprintf( '%d%% %d%%', round( (float) $focal['x'] * 100 ), round( (float) $focal['y'] * 100 ) );
+		}
+
+		if ( $width !== null || $height !== null ) {
+			$img_style['width']  = (string) $width;
+			$img_style['height'] = $height ?? 'auto';
+		}
+
+		$id        = isset( $attributes['id'] ) ? (int) $attributes['id'] : 0;
+		$img_class = array_merge( $border['class'], $id > 0 ? [ 'wp-image-' . $id ] : [] );
+
+		// alt is always written, empty or not, as the editor does.
+		$img = sprintf( '<img src="%s" alt="%s"', esc_url( $url ), esc_attr( (string) ( $attributes['alt'] ?? '' ) ) )
+			. $this->supports->html_attributes(
+				[
+					'class' => implode( ' ', $img_class ),
+					'style' => $border['style'] . $shadow['style'] . $this->declarations( $img_style ),
+					'title' => $this->string_attribute( $attributes, 'title' ),
+					'role'  => ! empty( $attributes['isDecorative'] ) ? 'none' : null,
+				]
+			) . '/>';
+
+		$href = $this->string_attribute( $attributes, 'href' );
+		if ( $href !== null ) {
+			$img = '<a' . $this->supports->html_attributes(
+				[
+					'class'  => $this->string_attribute( $attributes, 'linkClass' ),
+					'href'   => esc_url( $href ),
+					'target' => $this->string_attribute( $attributes, 'linkTarget' ),
+					'rel'    => $this->string_attribute( $attributes, 'rel' ),
+				]
+			) . '>' . $img . '</a>';
+		}
 
 		$caption = '';
-		if ( isset( $attributes['caption'] ) && (string) $attributes['caption'] !== '' ) {
-			$caption = '<figcaption class="wp-element-caption">' . esc_html( (string) $attributes['caption'] ) . '</figcaption>';
+		if ( isset( $attributes['caption'] ) && is_scalar( $attributes['caption'] ) && (string) $attributes['caption'] !== '' ) {
+			$caption = '<figcaption class="wp-element-caption">' . (string) $attributes['caption'] . '</figcaption>';
 		}
 
-		return [ $attributes, '<figure class="wp-block-image">' . $img . $caption . '</figure>', $issues ];
+		$figure_classes = [
+			( $attributes['align'] ?? null ) === 'none' ? 'alignnone' : '',
+			$this->string_attribute( $attributes, 'sizeSlug' ) !== null ? 'size-' . $attributes['sizeSlug'] : '',
+			$width !== null || $height !== null ? 'is-resized' : '',
+			$border['class'] !== [] || $border['style'] !== '' ? 'has-custom-border' : '',
+		];
+
+		$wrapper = $this->supports->wrapper( 'core/image', $attributes, $figure_classes );
+
+		return [ $attributes, '<figure' . $wrapper . '>' . $img . $caption . '</figure>', $issues ];
 	}
 
 	/**
@@ -800,7 +1185,14 @@ class BlockSerializer {
 	 * @since 1.2.0
 	 */
 	private function tpl_wrapper_columns( BlockContext $context ): array {
-		return [ $context->attributes, '<div class="wp-block-columns">%children%</div>', [] ];
+		$attributes = $context->attributes;
+		$align      = $this->string_attribute( $attributes, 'verticalAlignment' );
+		$classes    = [
+			$align !== null ? 'are-vertically-aligned-' . $align : '',
+			( $attributes['isStackedOnMobile'] ?? true ) === false ? 'is-not-stacked-on-mobile' : '',
+		];
+
+		return [ $attributes, '<div' . $this->supports->wrapper( 'core/columns', $attributes, $classes ) . '>%children%</div>', [] ];
 	}
 
 	/**
@@ -812,7 +1204,25 @@ class BlockSerializer {
 	 * @since 1.2.0
 	 */
 	private function tpl_wrapper_column( BlockContext $context ): array {
-		return [ $context->attributes, '<div class="wp-block-column">%children%</div>', [] ];
+		$attributes = $context->attributes;
+		$align      = $this->string_attribute( $attributes, 'verticalAlignment' );
+		$width      = $attributes['width'] ?? null;
+		$basis      = '';
+
+		if ( is_int( $width ) || is_float( $width ) ) {
+			$basis = $width . '%';
+		} elseif ( is_string( $width ) && preg_match( '/\d/', $width ) ) {
+			$basis = str_ends_with( $width, '%' ) ? round( (float) $width, 12 ) . '%' : $width;
+		}
+
+		$wrapper = $this->supports->wrapper(
+			'core/column',
+			$attributes,
+			[ $align !== null ? 'is-vertically-aligned-' . $align : '' ],
+			[ 'flex-basis' => $basis ]
+		);
+
+		return [ $attributes, '<div' . $wrapper . '>%children%</div>', [] ];
 	}
 
 	/**
@@ -835,7 +1245,7 @@ class BlockSerializer {
 			$tag = 'div';
 		}
 
-		return [ $attributes, sprintf( '<%1$s class="wp-block-group">%%children%%</%1$s>', $tag ), [] ];
+		return [ $attributes, sprintf( '<%1$s%2$s>%%children%%</%1$s>', $tag, $this->supports->wrapper( 'core/group', $attributes ) ), [] ];
 	}
 
 	/**
@@ -847,11 +1257,15 @@ class BlockSerializer {
 	 * @since 1.2.0
 	 */
 	private function tpl_wrapper_buttons( BlockContext $context ): array {
-		return [ $context->attributes, '<div class="wp-block-buttons">%children%</div>', [] ];
+		$attributes = $context->attributes;
+		$classes    = [ $this->has_custom_font_size( $attributes ) ? 'has-custom-font-size' : '' ];
+
+		return [ $attributes, '<div' . $this->supports->wrapper( 'core/buttons', $attributes, $classes ) . '>%children%</div>', [] ];
 	}
 
 	/**
-	 * Template: core/button.
+	 * Template: core/button. Colour, border, spacing, shadow and typography go on
+	 * the link, not the wrapper.
 	 *
 	 * @param BlockContext $context Block context.
 	 * @return array{0: array<string, mixed>, 1: string, 2: array<int, string>}
@@ -860,23 +1274,46 @@ class BlockSerializer {
 	 */
 	private function tpl_button( BlockContext $context ): array {
 		$attributes = $context->attributes;
+		$text       = $this->text_content( $attributes, [ 'text' ], $context->plaintext );
+		$is_button  = ( $attributes['tagName'] ?? 'a' ) === 'button';
+		$element    = $this->supports->element( $attributes, [ 'border', 'color', 'spacing', 'shadow', 'typography' ] );
+		$url        = $this->string_attribute( $attributes, 'url' );
 
-		$text = $this->text_content( $attributes, [ 'text' ], $context->plaintext );
-		$url  = isset( $attributes['url'] ) ? (string) $attributes['url'] : '';
-
-		$href = $url !== '' ? sprintf( ' href="%s"', esc_url( $url ) ) : '';
-
-		$link = sprintf(
-			'<a class="wp-block-button__link wp-element-button"%s>%s</a>',
-			$href,
-			$text
+		$classes = array_merge(
+			[ 'wp-block-button__link' ],
+			$element['class'],
+			[
+				( $attributes['style']['border']['radius'] ?? null ) === 0 ? 'no-border-radius' : '',
+				$this->has_custom_font_size( $attributes ) ? 'has-custom-font-size' : '',
+				'wp-element-button',
+			]
 		);
 
-		return [ $attributes, '<div class="wp-block-button">' . $link . '</div>', [] ];
+		$link = $this->supports->html_attributes(
+			[
+				'type'   => $is_button ? ( $this->string_attribute( $attributes, 'type' ) ?? 'button' ) : null,
+				'class'  => implode( ' ', array_filter( $classes ) ),
+				'href'   => ! $is_button && $url !== null ? esc_url( $url ) : null,
+				'title'  => $this->string_attribute( $attributes, 'title' ),
+				'style'  => $element['style'],
+				'target' => $is_button ? null : $this->string_attribute( $attributes, 'linkTarget' ),
+				'rel'    => $is_button ? null : $this->string_attribute( $attributes, 'rel' ),
+			]
+		);
+
+		$tag     = $is_button ? 'button' : 'a';
+		$width   = $this->declares( 'core/button', 'width' ) && is_numeric( $attributes['width'] ?? null ) ? (string) $attributes['width'] : null;
+		$wrapper = $this->supports->wrapper(
+			'core/button',
+			$attributes,
+			$width !== null ? [ 'has-custom-width', 'wp-block-button__width-' . $width ] : []
+		);
+
+		return [ $attributes, '<div' . $wrapper . '><' . $tag . $link . '>' . $text . '</' . $tag . '></div>', [] ];
 	}
 
 	/**
-	 * Template: core/separator.
+	 * Template: core/separator. Its colour is written by hand, as its save() does.
 	 *
 	 * @param BlockContext $context Block context.
 	 * @return array{0: array<string, mixed>, 1: string, 2: array<int, string>}
@@ -884,7 +1321,35 @@ class BlockSerializer {
 	 * @since 1.2.0
 	 */
 	private function tpl_separator( BlockContext $context ): array {
-		return [ $context->attributes, '<hr class="wp-block-separator has-alpha-channel-opacity"/>', [] ];
+		$attributes = $context->attributes;
+		$background = $this->string_attribute( $attributes, 'backgroundColor' );
+		$custom     = $attributes['style']['color']['background'] ?? null;
+		$custom     = is_string( $custom ) && $custom !== '' ? $this->css_value( $custom ) : null;
+		$opacity    = $attributes['opacity'] ?? 'alpha-channel';
+		$color      = $this->supports->element( $attributes, [ 'color' ] );
+		$tag        = ( $attributes['tagName'] ?? 'hr' ) === 'div' ? 'div' : 'hr';
+
+		$classes = array_merge(
+			[
+				$background !== null || $custom !== null ? 'has-text-color' : '',
+				$background !== null ? 'has-' . $background . '-color' : '',
+				$opacity === 'css' ? 'has-css-opacity' : '',
+				$opacity === 'alpha-channel' ? 'has-alpha-channel-opacity' : '',
+			],
+			$color['class']
+		);
+
+		$wrapper = $this->supports->wrapper(
+			'core/separator',
+			$attributes,
+			$classes,
+			[
+				'background-color' => (string) $custom,
+				'color'            => $background === null ? (string) $custom : '',
+			]
+		);
+
+		return [ $attributes, '<' . $tag . $wrapper . ( $tag === 'hr' ? '/>' : '></div>' ), [] ];
 	}
 
 	/**
@@ -897,17 +1362,22 @@ class BlockSerializer {
 	 */
 	private function tpl_spacer( BlockContext $context ): array {
 		$attributes = $context->attributes;
+		$stretch    = $attributes['style']['layout']['selfStretch'] ?? null;
+		$height     = isset( $attributes['height'] ) ? (string) $attributes['height'] : '100px';
+		$width      = isset( $attributes['width'] ) ? (string) $attributes['width'] : '';
 
-		$height = isset( $attributes['height'] ) ? (string) $attributes['height'] : '100px';
-
-		return [
+		$wrapper = $this->supports->wrapper(
+			'core/spacer',
 			$attributes,
-			sprintf(
-				'<div style="height:%s" aria-hidden="true" class="wp-block-spacer"></div>',
-				esc_attr( $height )
-			),
 			[],
-		];
+			[
+				'height' => $stretch === 'fill' || $stretch === 'fit' ? '' : $this->css_value( $height ),
+				'width'  => $this->css_value( $width ),
+			],
+			[ 'aria-hidden' => 'true' ]
+		);
+
+		return [ $attributes, '<div' . $wrapper . '></div>', [] ];
 	}
 
 	/**
@@ -924,7 +1394,7 @@ class BlockSerializer {
 		// inline HTML is shown verbatim rather than interpreted.
 		$content = $this->plain_text( $context->attributes, [ 'content' ], $context->plaintext );
 
-		return [ $context->attributes, '<pre class="wp-block-code"><code>' . esc_html( $content ) . '</code></pre>', [] ];
+		return [ $context->attributes, '<pre' . $this->supports->wrapper( 'core/code', $context->attributes ) . '><code>' . esc_html( $content ) . '</code></pre>', [] ];
 	}
 
 	/**
@@ -937,19 +1407,118 @@ class BlockSerializer {
 	 */
 	private function tpl_pullquote( BlockContext $context ): array {
 		$attributes = $context->attributes;
-
-		$value = $this->text_content( $attributes, [ 'value' ], $context->plaintext );
-
-		$citation = '';
-		if ( isset( $attributes['citation'] ) && (string) $attributes['citation'] !== '' ) {
-			$citation = '<cite>' . (string) $attributes['citation'] . '</cite>';
-		}
+		$value      = $this->text_content( $attributes, [ 'value' ], $context->plaintext );
+		$wrapper    = $this->supports->wrapper( 'core/pullquote', $attributes, $this->declared_text_align( 'core/pullquote', 'textAlign', $attributes ) );
 
 		return [
 			$attributes,
-			'<figure class="wp-block-pullquote"><blockquote><p>' . $value . '</p>' . $citation . '</blockquote></figure>',
+			'<figure' . $wrapper . '><blockquote><p>' . $value . '</p>' . $this->citation( $attributes ) . '</blockquote></figure>',
 			[],
 		];
+	}
+
+	/**
+	 * A quote's citation element, or ''.
+	 *
+	 * @param array<string, mixed> $attributes Attributes.
+	 * @return string
+	 *
+	 * @since 1.6.0
+	 */
+	private function citation( array $attributes ): string {
+		$citation = $attributes['citation'] ?? null;
+
+		return is_scalar( $citation ) && (string) $citation !== '' ? '<cite>' . (string) $citation . '</cite>' : '';
+	}
+
+	/**
+	 * The `has-text-align-*` class for a text alignment the block declares as
+	 * its own attribute (WordPress 6.9; later versions use a support).
+	 *
+	 * @param string               $name       Block name.
+	 * @param string               $attribute  Attribute holding the alignment.
+	 * @param array<string, mixed> $attributes Attributes.
+	 * @return array<int, string>
+	 *
+	 * @since 1.6.0
+	 */
+	private function declared_text_align( string $name, string $attribute, array $attributes ): array {
+		$align = $this->string_attribute( $attributes, $attribute );
+
+		if ( $align === null || ! $this->declares( $name, $attribute ) ) {
+			return [];
+		}
+
+		// Paragraph `align` is text alignment only where no align support exists.
+		$type = $this->schema->block_type( $name );
+		if ( $attribute === 'align' && is_object( $type ) && ! empty( $type->supports['align'] ) ) {
+			return [];
+		}
+
+		return [ 'has-text-align-' . $align ];
+	}
+
+	/**
+	 * Whether the editor marks a block as having a custom font size.
+	 *
+	 * @param array<string, mixed> $attributes Attributes.
+	 * @return bool
+	 *
+	 * @since 1.6.0
+	 */
+	private function has_custom_font_size( array $attributes ): bool {
+		return ! empty( $attributes['fontSize'] ) || ! empty( $attributes['style']['typography']['fontSize'] );
+	}
+
+	/**
+	 * A non-empty scalar attribute as a string, or null.
+	 *
+	 * @param array<string, mixed> $attributes Attributes.
+	 * @param string               $key        Attribute name.
+	 * @return string|null
+	 *
+	 * @since 1.6.0
+	 */
+	private function string_attribute( array $attributes, string $key ): ?string {
+		$value = $attributes[ $key ] ?? null;
+
+		return is_scalar( $value ) && ! is_bool( $value ) && (string) $value !== '' ? (string) $value : null;
+	}
+
+	/**
+	 * A CSS value, with a `var:preset|kind|slug` reference turned into its custom property.
+	 *
+	 * @param string $value Raw value.
+	 * @return string
+	 *
+	 * @since 1.6.0
+	 */
+	private function css_value( string $value ): string {
+		if ( preg_match( '/^var:preset\|([a-z0-9-]+)\|([a-zA-Z0-9-]+)$/', $value, $match ) ) {
+			return 'var(--wp--preset--' . $match[1] . '--' . $match[2] . ')';
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Render CSS declarations, skipping empty values.
+	 *
+	 * @param array<string, string> $declarations Property => value.
+	 * @return string
+	 *
+	 * @since 1.6.0
+	 */
+	private function declarations( array $declarations ): string {
+		$css = '';
+
+		foreach ( $declarations as $property => $value ) {
+			if ( $value !== '' ) {
+				$css .= $property . ':' . $value . ';';
+			}
+		}
+
+		return $css;
 	}
 
 	/**

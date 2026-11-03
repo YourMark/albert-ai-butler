@@ -79,7 +79,7 @@ class CreatePattern extends BaseAbility {
 				],
 				'content'    => [
 					'type'        => 'string',
-					'description' => 'The pattern content as block markup or HTML. Ignored when "blocks" is provided.',
+					'description' => 'The pattern content as block markup (stored as sent) or HTML. Ignored when "blocks" is provided.',
 				],
 				'synced'     => [
 					'type'        => 'boolean',

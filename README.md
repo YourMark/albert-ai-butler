@@ -148,6 +148,8 @@ composer phpcbf
 composer test
 ```
 
+Block markup is checked in the real editor with `WP_CLI="herd php ~/bin/wp-cli.phar" npm run test:editor` (`WP_CLI` defaults to `wp`): it serializes `tests/Editor/cases.php` on the local site and requires `wp.blocks.parse()` to find every block valid.
+
 ## Architecture
 
 The plugin uses a modern, modular architecture:
