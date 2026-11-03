@@ -98,12 +98,12 @@ class Update extends BaseAbility {
 				'categories' => [
 					'type'        => 'array',
 					'items'       => [ 'type' => 'integer' ],
-					'description' => 'Array of category IDs',
+					'description' => 'Category IDs. Replaces the post\'s categories; [] removes them all. Omit to leave them unchanged.',
 				],
 				'tags'       => [
 					'type'        => 'array',
 					'items'       => [ 'type' => 'string' ],
-					'description' => 'Array of tag names',
+					'description' => 'Tag names, created when missing. Replaces the post\'s tags; [] removes them all. Omit to leave them unchanged.',
 				],
 			],
 			'required'   => [ 'id' ],
@@ -213,15 +213,15 @@ class Update extends BaseAbility {
 			$request_data['excerpt'] = sanitize_textarea_field( $args['excerpt'] );
 		}
 
-		// Add categories if provided.
-		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
+		// An absent field leaves the terms alone; a supplied [] clears them.
+		if ( isset( $args['categories'] ) && is_array( $args['categories'] ) ) {
 			$request_data['categories'] = array_map( 'absint', $args['categories'] );
 		}
 
-		// Add tags if provided (convert tag names to IDs using REST API).
-		if ( ! empty( $args['tags'] ) && is_array( $args['tags'] ) ) {
+		if ( isset( $args['tags'] ) && is_array( $args['tags'] ) ) {
 			$tag_ids = $this->get_or_create_tag_ids( $args['tags'] );
-			if ( ! empty( $tag_ids ) ) {
+			// Names that all fail to resolve must not wipe the existing tags.
+			if ( $args['tags'] === [] || $tag_ids !== [] ) {
 				$request_data['tags'] = $tag_ids;
 			}
 		}

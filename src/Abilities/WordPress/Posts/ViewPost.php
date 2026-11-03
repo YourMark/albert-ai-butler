@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+use Albert\Abilities\WordPress\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
@@ -165,6 +166,7 @@ class ViewPost extends BaseAbility {
 								],
 							],
 						],
+						...PostTerms::schema(),
 					],
 				],
 			],
@@ -235,7 +237,8 @@ class ViewPost extends BaseAbility {
 					'slug'           => $post->post_name,
 					'permalink'      => get_permalink( $post ),
 					'featured_image' => get_post_thumbnail_id( $post ) ? get_post_thumbnail_id( $post ) : null,
-				]
+				],
+				PostTerms::for_post( $post )
 			),
 		];
 	}
