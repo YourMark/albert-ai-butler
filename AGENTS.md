@@ -61,6 +61,7 @@ composer phpcbf           # Auto-fix coding standards
 composer phpstan          # Static analysis (level 7)
 composer test             # Run unit tests
 composer test:integration # Run integration tests (requires WP test suite)
+composer make-pot         # Regenerate languages/albert-ai-butler.pot (needs WP-CLI as `wp`)
 ```
 
 ## Ecosystem
