@@ -439,6 +439,9 @@ class AbilitiesRegistry {
 		if ( str_contains( $action, 'user' ) ) {
 			return $is_read ? 'list_users' : ( $is_delete ? 'delete_users' : 'edit_users' );
 		}
+		if ( str_contains( $action, 'site-health' ) ) {
+			return 'view_site_health_checks';
+		}
 		// Setting a featured image edits the target post, not the media library.
 		if ( str_contains( $action, 'featured-image' ) ) {
 			return $is_read ? 'read' : 'edit_posts';
