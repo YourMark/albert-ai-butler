@@ -14,6 +14,7 @@ namespace Albert\Admin;
 use Albert\Core\AbilitiesRegistry;
 use Albert\Core\AbilitiesState;
 use Albert\Core\AnnotationPresenter;
+use Albert\Core\EnvironmentPolicy;
 use Albert\Logging\Repository as LoggingRepository;
 
 defined( 'ABSPATH' ) || exit;
@@ -37,7 +38,8 @@ class AbilitiesPayload {
 	 *     abilities: array<int, array<string, mixed>>,
 	 *     categories: array<int, array{value: string, label: string}>,
 	 *     sources: array<int, array{value: string, label: string}>,
-	 *     counts: array{total: int, enabled: int}
+	 *     counts: array{total: int, enabled: int},
+	 *     policy: array{environment: string, policy: string, source: string}|null
 	 * }
 	 * @since 1.3.0
 	 */
@@ -105,6 +107,7 @@ class AbilitiesPayload {
 				'total'   => count( $abilities ),
 				'enabled' => $enabled_count,
 			],
+			'policy'     => EnvironmentPolicy::is_active() ? EnvironmentPolicy::current() : null,
 		];
 	}
 
