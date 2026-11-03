@@ -18,6 +18,9 @@ use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\Revisions\FindRevisions;
+use Albert\Abilities\WordPress\Revisions\RestoreRevision;
+use Albert\Abilities\WordPress\Revisions\ViewRevision;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
@@ -78,6 +81,11 @@ class DirectCapabilityTest extends TestCase {
 			// Posts/Pages (read-only).
 			'view-post'          => [ ViewPost::class, 'read' ],
 			'view-page'          => [ ViewPage::class, 'read' ],
+
+			// Revisions (the per-post edit_post check runs in execute()).
+			'find-revisions'     => [ FindRevisions::class, 'edit_posts' ],
+			'view-revision'      => [ ViewRevision::class, 'edit_posts' ],
+			'restore-revision'   => [ RestoreRevision::class, 'edit_posts' ],
 
 			// Users.
 			'view-user'          => [ ViewUser::class, 'list_users' ],
