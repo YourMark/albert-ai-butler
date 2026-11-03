@@ -135,4 +135,49 @@ class AdapterStatus {
 
 		return str_replace( $plugins, '', wp_normalize_path( $file ) );
 	}
+
+	/**
+	 * The version of the resolved adapter copy.
+	 *
+	 * @return string|null Version, or null when nothing is loaded or the copy predates the constant.
+	 * @since 1.6.0
+	 */
+	public static function adapter_version(): ?string {
+		$constant = McpAdapter::class . '::VERSION';
+
+		return class_exists( McpAdapter::class ) && defined( $constant ) ? (string) constant( $constant ) : null;
+	}
+
+	/**
+	 * Which plugin supplied the resolved adapter copy.
+	 *
+	 * @return string|null `albert` for Albert's bundled copy, another plugin's folder name, or null when
+	 *                     nothing is loaded or it lives outside the plugins folder (a path we would rather not send).
+	 * @since 1.6.0
+	 */
+	public static function adapter_source(): ?string {
+		if ( ! class_exists( McpAdapter::class ) ) {
+			return null;
+		}
+
+		$file = ( new \ReflectionClass( McpAdapter::class ) )->getFileName();
+		if ( ! is_string( $file ) ) {
+			return null;
+		}
+
+		$file    = str_replace( '\\', '/', $file );
+		$bundled = str_replace( '\\', '/', dirname( __DIR__, 2 ) . '/' . AdapterSource::FALLBACK_DIR . '/' );
+		if ( str_starts_with( $file, $bundled ) ) {
+			return 'albert';
+		}
+
+		$plugins = str_replace( '\\', '/', rtrim( WP_PLUGIN_DIR, '/\\' ) . '/' );
+		if ( ! str_starts_with( $file, $plugins ) ) {
+			return null;
+		}
+
+		$folder = strstr( substr( $file, strlen( $plugins ) ), '/', true );
+
+		return is_string( $folder ) && $folder !== '' ? $folder : null;
+	}
 }

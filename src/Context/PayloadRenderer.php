@@ -318,6 +318,26 @@ class PayloadRenderer {
 			$lines[] = implode( ' · ', $platform );
 		}
 
+		$plugin = [];
+		if ( ! empty( $environment['albert'] ) ) {
+			$plugin[] = 'Albert ' . $this->flatten( $environment['albert'] );
+		}
+		$adapter = isset( $environment['mcp_adapter'] ) && is_array( $environment['mcp_adapter'] ) ? $environment['mcp_adapter'] : [];
+		if ( ! empty( $adapter['version'] ) ) {
+			$label = 'MCP Adapter ' . $this->flatten( $adapter['version'] );
+
+			if ( ! empty( $adapter['loaded_from'] ) ) {
+				$label .= $adapter['loaded_from'] === 'albert'
+					? ' (bundled with Albert)'
+					: ' (from the ' . $this->flatten( $adapter['loaded_from'] ) . ' plugin)';
+			}
+
+			$plugin[] = $label;
+		}
+		if ( $plugin !== [] ) {
+			$lines[] = implode( ' · ', $plugin );
+		}
+
 		$locale = [];
 		if ( ! empty( $environment['locale'] ) ) {
 			$locale[] = 'Language: ' . $this->flatten( $environment['locale'] );
