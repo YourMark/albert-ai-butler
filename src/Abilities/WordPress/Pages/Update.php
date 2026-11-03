@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+use Albert\Abilities\WordPress\RegisteredMeta;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
@@ -99,7 +100,7 @@ class Update extends BaseAbility {
 					'type'        => 'integer',
 					'description' => 'Parent page ID for hierarchical pages',
 				],
-			],
+			] + RegisteredMeta::input_schema(),
 			'required'   => [ 'id' ],
 		];
 	}
@@ -119,6 +120,10 @@ class Update extends BaseAbility {
 				'status'       => [ 'type' => 'string' ],
 				'permalink'    => [ 'type' => 'string' ],
 				'edit_url'     => [ 'type' => 'string' ],
+				'meta'         => [
+					'type'        => 'object',
+					'description' => 'The custom fields that were sent, as saved. Present only when "meta" was sent.',
+				],
 				'block_issues' => [
 					'type'        => 'array',
 					'description' => 'Optional, non-fatal block validation warnings (the page was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the page is not updated.',
@@ -210,6 +215,17 @@ class Update extends BaseAbility {
 			$request_data['parent'] = absint( $args['parent'] );
 		}
 
+		if ( isset( $args['meta'] ) ) {
+			$meta = RegisteredMeta::check_write( $args['meta'], $page_id, 'page' );
+			if ( is_wp_error( $meta ) ) {
+				return $meta;
+			}
+
+			if ( $meta !== [] ) {
+				$request_data['meta'] = $meta;
+			}
+		}
+
 		// Create REST request.
 		$request = new WP_REST_Request( 'POST', '/wp/v2/pages/' . $page_id );
 		foreach ( $request_data as $key => $value ) {
@@ -244,6 +260,10 @@ class Update extends BaseAbility {
 			'permalink' => $data['link'] ?? '',
 			'edit_url'  => admin_url( 'post.php?post=' . $page_id . '&action=edit' ),
 		];
+
+		if ( isset( $request_data['meta'] ) && is_array( $data['meta'] ?? null ) ) {
+			$result['meta'] = array_intersect_key( $data['meta'], $request_data['meta'] );
+		}
 
 		if ( ! empty( $block_issues ) ) {
 			$result['block_issues'] = $block_issues;

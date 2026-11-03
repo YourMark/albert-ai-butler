@@ -94,6 +94,39 @@ class RiskPolicyTest extends TestCase {
 	}
 
 	/**
+	 * Overwriting custom fields on a post or page is held: nothing can undo it yet.
+	 *
+	 * @return void
+	 */
+	public function test_holds_a_meta_overwrite_on_posts_and_pages(): void {
+		$input = [
+			'id'   => 5,
+			'meta' => [ 'subtitle' => 'New' ],
+		];
+
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/update-post' ), $input ) );
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/update-page' ), $input ) );
+	}
+
+	/**
+	 * An empty `meta` writes nothing, and another ability's `meta` is not Albert's field.
+	 *
+	 * @return void
+	 */
+	public function test_does_not_hold_empty_meta_or_other_abilities_meta(): void {
+		$this->assertFalse(
+			$this->risk->must_hold(
+				$this->ability( 'albert/update-post' ),
+				[
+					'id'   => 5,
+					'meta' => [],
+				]
+			)
+		);
+		$this->assertFalse( $this->risk->must_hold( $this->ability( 'thirdparty/save-thing' ), [ 'meta' => [ 'a' => 1 ] ] ) );
+	}
+
+	/**
 	 * Any ability granting an admin-capability role is held, by input.
 	 *
 	 * @return void
