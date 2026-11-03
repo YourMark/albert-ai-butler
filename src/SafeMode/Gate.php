@@ -148,24 +148,47 @@ class Gate {
 	 * Held when safe mode is on and the call is either high-risk by its input
 	 * ({@see RiskPolicy}) or destructive/unannotated by its annotation. The risk
 	 * axis is what catches a privilege change or an option write that the
-	 * annotation preset marks `destructive: false`.
+	 * annotation preset marks `destructive: false`. An add-on can then add a
+	 * hold of its own through `albert/safe_mode/holds_call`.
 	 *
 	 * @param WP_Ability           $ability The ability about to execute.
-	 * @param array<string, mixed> $input   Its resolved input.
+	 * @param array<string, mixed> $input   Its captured input.
 	 *
 	 * @return bool
 	 * @since 1.5.0
+	 * @since 1.6.0 Add-ons can hold a call through `albert/safe_mode/holds_call`.
 	 */
 	public function must_gate( WP_Ability $ability, array $input = [] ): bool {
 		if ( ! $this->is_enabled() ) {
 			return false;
 		}
 
-		if ( $this->is_exempt( $ability->get_name() ) ) {
+		$name = $ability->get_name();
+
+		if ( $this->is_exempt( $name ) ) {
 			return false;
 		}
 
-		return $this->risk->must_hold( $ability, $input ) || $this->is_gated_ability( $ability );
+		$hold = $this->risk->must_hold( $ability, $input ) || $this->is_gated_ability( $ability );
+
+		/**
+		 * Filters whether safe mode holds this call for approval.
+		 *
+		 * Runs after both of Albert's axes, so an add-on can hold a call on its
+		 * input. It can add a hold, never release one: Albert's own decision is
+		 * OR-ed with the result. Not called when safe mode is off or the ability
+		 * is exempt.
+		 *
+		 * @since 1.6.0
+		 *
+		 * @param bool                 $hold    Whether Albert's own policy holds the call.
+		 * @param string               $ability The ability id.
+		 * @param array<string, mixed> $input   The call's captured input.
+		 * @param int                  $user_id The user making the call.
+		 */
+		$filtered = apply_filters( 'albert/safe_mode/holds_call', $hold, $name, $input, get_current_user_id() );
+
+		return $hold || (bool) $filtered;
 	}
 
 	/**

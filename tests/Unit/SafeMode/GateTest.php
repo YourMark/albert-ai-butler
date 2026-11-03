@@ -39,10 +39,12 @@ class GateTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		parent::setUp();
-		$GLOBALS['albert_test_options']        = [];
-		$GLOBALS['albert_test_hooks']          = [];
-		$GLOBALS['albert_test_filter_returns'] = [];
-		$this->gate                            = new Gate();
+		$GLOBALS['albert_test_options']          = [];
+		$GLOBALS['albert_test_hooks']            = [];
+		$GLOBALS['albert_test_filter_returns']   = [];
+		$GLOBALS['albert_test_filter_callbacks'] = [];
+		unset( $GLOBALS['albert_test_user_id'] );
+		$this->gate = new Gate();
 	}
 
 	/**
@@ -151,5 +153,73 @@ class GateTest extends TestCase {
 	 */
 	public function test_enabled_by_default(): void {
 		$this->assertTrue( $this->gate->is_enabled() );
+	}
+
+	/**
+	 * An add-on can hold a call that Albert's policy lets through, on its input.
+	 *
+	 * @return void
+	 */
+	public function test_an_add_on_can_hold_a_call_on_its_input(): void {
+		$GLOBALS['albert_test_filter_callbacks']['albert/safe_mode/holds_call'] = static function ( bool $hold, string $ability, array $input ): bool {
+			return $hold || ( $input['status'] ?? '' ) === 'publish';
+		};
+
+		$ability = $this->ability( [ 'destructive' => false ] );
+
+		$this->assertTrue( $this->gate->must_gate( $ability, [ 'status' => 'publish' ] ) );
+		$this->assertFalse( $this->gate->must_gate( $ability, [ 'status' => 'draft' ] ) );
+	}
+
+	/**
+	 * A filter returning false cannot release a hold Albert's policy made.
+	 *
+	 * @return void
+	 */
+	public function test_a_filter_cannot_release_a_policy_hold(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/holds_call'] = false;
+
+		$this->assertTrue( $this->gate->must_gate( $this->ability( [ 'destructive' => true ] ) ) );
+	}
+
+	/**
+	 * The filter receives the policy decision, ability id, input and user id.
+	 *
+	 * @return void
+	 */
+	public function test_the_filter_receives_the_call(): void {
+		$GLOBALS['albert_test_user_id'] = 42;
+		$input                          = [ 'id' => 7 ];
+
+		$this->gate->must_gate( $this->ability( [ 'destructive' => true ] ), $input );
+
+		$calls = array_values(
+			array_filter(
+				$GLOBALS['albert_test_hooks'],
+				static fn( array $call ): bool => $call['hook'] === 'albert/safe_mode/holds_call'
+			)
+		);
+
+		$this->assertCount( 1, $calls );
+		$this->assertSame( [ true, 'test/ability', $input, 42 ], $calls[0]['args'] );
+	}
+
+	/**
+	 * The filter is not asked when safe mode is off or the ability is exempt.
+	 *
+	 * Otherwise an add-on hold would override the owner's off switch or exemption.
+	 *
+	 * @return void
+	 */
+	public function test_the_filter_is_skipped_when_off_or_exempt(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/holds_call']       = true;
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/exempt_abilities'] = [ 'test/ability' ];
+
+		$this->assertFalse( $this->gate->must_gate( $this->ability( [ 'destructive' => false ] ) ) );
+
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/exempt_abilities'] = [];
+		$GLOBALS['albert_test_options']['albert_safe_mode']                         = 'off';
+
+		$this->assertFalse( $this->gate->must_gate( $this->ability( [ 'destructive' => false ] ) ) );
 	}
 }
