@@ -192,6 +192,10 @@ class Suggestions {
 				'requires' => [ 'albert/find-users' ],
 			],
 			[
+				'text'     => __( 'What can an editor do on this site that an author can\'t?', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-roles' ],
+			],
+			[
 				'text'     => __( 'Summarise what this site is about.', 'albert-ai-butler' ),
 				'requires' => [ 'albert/find-pages' ],
 			],
