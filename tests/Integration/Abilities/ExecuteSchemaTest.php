@@ -20,6 +20,15 @@ use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
+use Albert\Abilities\WordPress\Menus\AddMenuItem;
+use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
+use Albert\Abilities\WordPress\Menus\CreateMenu;
+use Albert\Abilities\WordPress\Menus\DeleteMenu;
+use Albert\Abilities\WordPress\Menus\FindMenus;
+use Albert\Abilities\WordPress\Menus\MoveMenuItem;
+use Albert\Abilities\WordPress\Menus\RemoveMenuItem;
+use Albert\Abilities\WordPress\Menus\UpdateMenuItem;
+use Albert\Abilities\WordPress\Menus\ViewMenu;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
 use Albert\Abilities\WordPress\Media\UploadMedia;
@@ -448,6 +457,68 @@ class ExecuteSchemaTest extends TestCase {
 			[ 'id' => $attachment_id ],
 			'ViewMedia'
 		);
+	}
+
+	/**
+	 * The menu abilities return results matching their output schemas.
+	 *
+	 * @return void
+	 */
+	public function test_menu_abilities_output_matches_schema(): void {
+		global $_wp_registered_nav_menus;
+		$registered = $_wp_registered_nav_menus;
+		register_nav_menus( [ 'albert-test' => 'Albert test' ] );
+
+		$this->assert_execute_matches_schema( new FindMenus(), [], 'FindMenus' );
+
+		$menu = $this->assert_execute_matches_schema( new CreateMenu(), [ 'name' => 'Schema menu' ], 'CreateMenu' );
+		$this->assert_execute_matches_schema( new ViewMenu(), [ 'id' => $menu['id'] ], 'ViewMenu' );
+
+		$first  = $this->assert_execute_matches_schema(
+			new AddMenuItem(),
+			[
+				'menu_id' => $menu['id'],
+				'title'   => 'One',
+				'url'     => 'https://example.com/one',
+			],
+			'AddMenuItem'
+		);
+		$second = ( new AddMenuItem() )->execute(
+			[
+				'menu_id' => $menu['id'],
+				'title'   => 'Two',
+				'url'     => 'https://example.com/two',
+			]
+		);
+
+		$this->assert_execute_matches_schema(
+			new UpdateMenuItem(),
+			[
+				'id'    => $first['id'],
+				'title' => 'First',
+			],
+			'UpdateMenuItem'
+		);
+		$this->assert_execute_matches_schema(
+			new MoveMenuItem(),
+			[
+				'id'       => $first['id'],
+				'position' => 2,
+			],
+			'MoveMenuItem'
+		);
+		$this->assert_execute_matches_schema(
+			new AssignMenuLocation(),
+			[
+				'location' => 'albert-test',
+				'menu_id'  => $menu['id'],
+			],
+			'AssignMenuLocation'
+		);
+		$this->assert_execute_matches_schema( new RemoveMenuItem(), [ 'id' => $second['id'] ], 'RemoveMenuItem' );
+		$this->assert_execute_matches_schema( new DeleteMenu(), [ 'id' => $menu['id'] ], 'DeleteMenu' );
+
+		$_wp_registered_nav_menus = $registered;
 	}
 
 	/**
