@@ -165,6 +165,22 @@ class AnnotationPresenterTest extends TestCase {
 	}
 
 	/**
+	 * A non-boolean readonly is not read-only, matching the fresh-install default and safe mode.
+	 *
+	 * @return void
+	 */
+	public function test_non_boolean_readonly_is_not_read(): void {
+		$chips = AnnotationPresenter::chips_for(
+			[
+				'readonly'    => 1,
+				'destructive' => false,
+			]
+		);
+
+		$this->assertSame( [ 'write' ], array_column( $chips, 'key' ) );
+	}
+
+	/**
 	 * Only a boolean flag declares anything.
 	 *
 	 * @return void

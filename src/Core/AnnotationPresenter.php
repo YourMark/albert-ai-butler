@@ -29,7 +29,7 @@ class AnnotationPresenter {
 	 * Build chip DTOs for an ability.
 	 *
 	 * Each chip is an array with:
-	 *  - 'key'         string — stable identifier ('read', 'write', 'delete').
+	 *  - 'key'         string — stable identifier ('read', 'write', 'delete', 'undeclared').
 	 *  - 'label'       string — short translated label shown on the chip.
 	 *  - 'description' string — one-sentence explanation used for tooltips.
 	 *  - 'icon'        string — Dashicon class name.
@@ -49,8 +49,9 @@ class AnnotationPresenter {
 			return [ self::not_declared_chip() ];
 		}
 
+		// Strict, as everywhere else (defaults, safe mode): `readonly => 1` is not read-only.
+		$readonly = ( $annotations['readonly'] ?? null ) === true;
 		$chips    = [];
-		$readonly = ! empty( $annotations['readonly'] );
 
 		if ( $readonly ) {
 			$chips[] = self::read_only_chip();
