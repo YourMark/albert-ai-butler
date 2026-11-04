@@ -7,7 +7,10 @@
 
 namespace Albert\Tests\Integration\MCP;
 
+use Albert\Database\Installer;
 use Albert\Database\Tables;
+use Albert\Logging\ExecutionLogMarker;
+use Albert\Logging\Repository;
 use Albert\MCP\DisabledAbilities;
 use Albert\MCP\Server;
 use Albert\OAuth\AllowedUsers;
@@ -104,6 +107,78 @@ class DisabledAbilitiesTest extends TestCase {
 			$this->assertSame( 'ability_disabled', $result->get_error_code() );
 			$this->assertStringContainsString( 'switched off on this site', $result->get_error_message() );
 		}
+	}
+
+	/**
+	 * Discovery is filtered in the slash spelling too.
+	 *
+	 * @return void
+	 */
+	public function test_discovery_is_filtered_in_the_slash_spelling(): void {
+		$result = [ 'abilities' => [ [ 'name' => 'other/switched-off' ] ] ];
+
+		$filtered = $this->gate->hide_from_discovery( $result, [], 'mcp-adapter/discover-abilities', null, $this->server() );
+
+		$this->assertSame( [], $filtered['abilities'] );
+	}
+
+	/**
+	 * Malformed arguments are left for the adapter to reject.
+	 *
+	 * @return void
+	 */
+	public function test_a_malformed_ability_name_passes_through(): void {
+		foreach ( [ [ 'ability_name' => [ 'other/switched-off' ] ], [ 'ability_name' => 42 ], [] ] as $args ) {
+			$this->assertSame( $args, $this->gate->refuse( $args, 'mcp-adapter/execute-ability', null, $this->server() ) );
+		}
+	}
+
+	/**
+	 * A refused execute is logged as Blocked; a refused get-info is not logged.
+	 *
+	 * The refusal ends the call before the adapter's result filter, where
+	 * logging would otherwise happen.
+	 *
+	 * @return void
+	 */
+	public function test_a_refused_execute_is_logged_as_blocked(): void {
+		Installer::install();
+		$repository = new Repository();
+		$repository->truncate();
+		ExecutionLogMarker::reset();
+
+		$args = [
+			'ability_name' => 'other/switched-off',
+			'parameters'   => [ 'id' => 7 ],
+		];
+
+		$this->gate->refuse( $args, 'mcp-adapter-get-ability-info', null, $this->server() );
+		$this->assertNull( $repository->latest_for_ability( 'other/switched-off' ), 'get-info is not an execution.' );
+
+		$this->gate->refuse( $args, 'mcp-adapter/execute-ability', null, $this->server() );
+		$row = $repository->latest_for_ability( 'other/switched-off' );
+
+		$this->assertNotNull( $row );
+		$this->assertSame( 'warning', $row->status );
+		$this->assertSame( 'ability_disabled', $row->error_code );
+	}
+
+	/**
+	 * Albert's server wires the gate onto the adapter's filter.
+	 *
+	 * @return void
+	 */
+	public function test_the_server_registers_the_gate(): void {
+		( new Server() )->register_hooks();
+
+		$args   = [
+			'ability_name' => 'other/switched-off',
+			'parameters'   => [],
+		];
+		$result = apply_filters( 'mcp_adapter_pre_tool_call', $args, 'mcp-adapter/execute-ability', null, $this->server() );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_disabled', $result->get_error_code() );
 	}
 
 	/**

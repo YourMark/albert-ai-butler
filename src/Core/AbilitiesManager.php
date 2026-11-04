@@ -240,7 +240,7 @@ class AbilitiesManager implements Hookable {
 		}
 
 		// Counted before unregistering, while the registry is still whole.
-		$this->ability_counts = $this->count_registry( $this->get_effective_disabled_list() );
+		$this->ability_counts = $this->count_registry( AbilitiesState::effective() );
 
 		foreach ( $this->abilities as $id => $ability ) {
 			// The transport meta-tools are never unregistered: MCP depends on them.
@@ -449,16 +449,6 @@ class AbilitiesManager implements Hookable {
 			</p>
 		</div>
 		<?php
-	}
-
-	/**
-	 * The abilities switched off for assistants in this request.
-	 *
-	 * @return array<int, string>
-	 * @since 1.2.0
-	 */
-	private function get_effective_disabled_list(): array {
-		return AbilitiesState::effective();
 	}
 
 	/**
@@ -672,7 +662,7 @@ class AbilitiesManager implements Hookable {
 		// Still nothing means enforcement did not run (the Abilities page, or
 		// a WordPress without wp_unregister_ability), so the registry is whole
 		// and safe to count directly.
-		return $this->count_registry( $this->get_effective_disabled_list() );
+		return $this->count_registry( AbilitiesState::effective() );
 	}
 
 	/**

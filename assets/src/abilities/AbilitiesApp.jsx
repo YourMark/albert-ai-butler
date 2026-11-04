@@ -36,6 +36,7 @@ import { viewFromUrl, syncViewToUrl, openIdFromUrl } from './url';
 import Toolbar from './Toolbar';
 import useNarrowLayout from '../shared/useNarrowLayout';
 import FlyInPanel from './FlyInPanel';
+import InfoPopover from '../shared/InfoPopover';
 
 const DEFAULT_VIEW = {
 	type: 'table',
@@ -323,9 +324,28 @@ export default function AbilitiesApp() {
 					</h1>
 					<p className="albert-page__description">
 						{ __(
-							'Capabilities exposed to apps and agents through the WordPress Abilities API. Enable an ability to make it callable, or open one to review its schema and permissions.',
+							'Choose which abilities are available through Albert’s MCP endpoint. Open an ability to review its schema and permissions.',
 							'albert-ai-butler'
-						) }
+						) }{ ' ' }
+						<InfoPopover
+							label={ __(
+								'About what these switches change',
+								'albert-ai-butler'
+							) }
+						>
+							<p>
+								{ __(
+									'A switched-off ability is left out of Albert’s MCP endpoint, and refused there if an assistant calls it anyway.',
+									'albert-ai-butler'
+								) }
+							</p>
+							<p>
+								{ __(
+									'The ability stays registered in WordPress. Other plugins, the MCP Adapter default server and other MCP servers on this site can still use it.',
+									'albert-ai-butler'
+								) }
+							</p>
+						</InfoPopover>
 					</p>
 				</div>
 			</header>
@@ -470,7 +490,7 @@ export default function AbilitiesApp() {
 								'albert-ai-butler'
 						  )
 						: __(
-								'Disable every ability? Apps and agents won’t be able to call any ability until you re-enable them.',
+								'Disable every ability? None will be available through Albert’s MCP endpoint until you enable them again.',
 								'albert-ai-butler'
 						  ) }
 				</ConfirmDialog>

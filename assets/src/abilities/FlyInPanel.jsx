@@ -378,11 +378,11 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 						help={
 							ability.enabled
 								? __(
-										'Assistants connected through Albert can use it.',
+										'Available through Albert’s MCP endpoint.',
 										'albert-ai-butler'
 								  )
 								: __(
-										"Assistants connected through Albert can't use it. Other plugins on this site are not affected.",
+										'Not available through Albert’s MCP endpoint.',
 										'albert-ai-butler'
 								  )
 						}

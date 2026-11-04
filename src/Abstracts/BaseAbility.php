@@ -265,6 +265,10 @@ abstract class BaseAbility implements Ability {
 	 * meet an add-on's refusal. Albert's MCP server refuses a switched-off
 	 * ability before it gets here; this is the second layer.
 	 *
+	 * "Through an Albert connection" means {@see ConnectionContext} has a client.
+	 * Every route into Albert's server must set it (today `TokenValidator` and
+	 * `Approver`), or this layer skips the switch.
+	 *
 	 * @param array<string, mixed> $args Input parameters.
 	 *
 	 * @return array<string, mixed>|WP_Error The result or error if not executable.
