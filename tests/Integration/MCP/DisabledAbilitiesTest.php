@@ -136,9 +136,10 @@ class DisabledAbilitiesTest extends TestCase {
 		try {
 			$this->assertSame( 0, (int) apply_filters( 'determine_current_user', false ), 'A Bearer token must not log anybody in site-wide.' );
 
-			$response = rest_do_request( new \WP_REST_Request( 'POST', '/wp-abilities/v1/abilities/other/switched-off/run' ) );
+			// The list route: a lookup of an unregistered ability raises a core notice on some versions.
+			$response = rest_do_request( new \WP_REST_Request( 'GET', '/wp-abilities/v1/abilities' ) );
 
-			$this->assertContains( $response->get_status(), [ 401, 403, 404 ] );
+			$this->assertContains( $response->get_status(), [ 401, 403 ] );
 			$this->assertNull( ConnectionContext::client_id(), 'Core routes never set a connection.' );
 		} finally {
 			unset( $_SERVER['HTTP_AUTHORIZATION'] );
