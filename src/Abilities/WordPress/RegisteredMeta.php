@@ -113,8 +113,10 @@ class RegisteredMeta {
 				);
 			}
 
-			$capability = $value === null ? 'delete_post_meta' : 'edit_post_meta';
-			if ( ! current_user_can( $capability, $post_id, $keys[ $name ] ) ) {
+			// Core deletes on null, and on an empty list for a multi-value field.
+			$deletes    = $value === null || ( $value === [] && ! $keys[ $name ]['single'] );
+			$capability = $deletes ? 'delete_post_meta' : 'edit_post_meta';
+			if ( ! current_user_can( $capability, $post_id, $keys[ $name ]['key'] ) ) {
 				return new WP_Error(
 					'meta_permission_denied',
 					sprintf(
@@ -126,7 +128,7 @@ class RegisteredMeta {
 				);
 			}
 
-			if ( $value === null ) {
+			if ( $deletes ) {
 				continue;
 			}
 
@@ -140,13 +142,14 @@ class RegisteredMeta {
 	}
 
 	/**
-	 * REST names of the registered, unprotected fields, mapped to their meta keys.
+	 * REST names of the registered, unprotected fields, mapped to their meta key and
+	 * whether the field holds a single value.
 	 *
 	 * The REST name can differ from the key (`show_in_rest.name`); protection and
 	 * capabilities are decided on the key.
 	 *
 	 * @param string $post_type Post type.
-	 * @return array<string, string>
+	 * @return array<string, array{key: string, single: bool}>
 	 * @since 1.6.0
 	 */
 	private static function reachable_keys( string $post_type ): array {
@@ -164,7 +167,10 @@ class RegisteredMeta {
 				? (string) $args['show_in_rest']['name']
 				: $meta_key;
 
-			$keys[ $name ] = $meta_key;
+			$keys[ $name ] = [
+				'key'    => $meta_key,
+				'single' => ! empty( $args['single'] ),
+			];
 		}
 
 		return $keys;

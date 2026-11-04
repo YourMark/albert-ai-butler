@@ -293,6 +293,41 @@ class RegisteredMetaAbilityTest extends TestCase {
 	}
 
 	/**
+	 * An empty list clears a multi-value field, so it needs the delete capability.
+	 *
+	 * @return void
+	 */
+	public function test_empty_list_on_a_multi_value_field_checks_delete(): void {
+		register_post_meta(
+			'post',
+			'related',
+			[
+				'type'         => 'string',
+				'single'       => false,
+				'show_in_rest' => true,
+			]
+		);
+		add_post_meta( $this->post_id, 'related', 'a' );
+		$deny_delete = static fn( array $caps, string $cap ): array => $cap === 'delete_post_meta' ? [ 'do_not_allow' ] : $caps;
+		add_filter( 'map_meta_cap', $deny_delete, 10, 2 );
+
+		$result = ( new UpdatePost() )->execute(
+			[
+				'id'    => $this->post_id,
+				'title' => 'Changed title',
+				'meta'  => [ 'related' => [] ],
+			]
+		);
+
+		remove_filter( 'map_meta_cap', $deny_delete, 10 );
+		unregister_post_meta( 'post', 'related' );
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'meta_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'Meta host', get_post( $this->post_id )->post_title );
+		$this->assertSame( [ 'a' ], get_post_meta( $this->post_id, 'related' ) );
+	}
+
+	/**
 	 * Pages read and write their own registered fields; a post's field is not a page's.
 	 *
 	 * @return void
