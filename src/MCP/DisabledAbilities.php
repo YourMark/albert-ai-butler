@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\AbilitiesState;
+use Albert\Logging\ExecutionLogMarker;
 use WP_Error;
 
 /**
@@ -22,6 +23,10 @@ use WP_Error;
  * plugins using it. It now stays registered, and this class is the switch:
  * left out of discovery, refused by get-info and execute. Through the
  * adapter's own filters, so it works below WordPress 7.1.
+ *
+ * Needs an adapter with `McpServer::get_server_id()` and the 0.5.0 tool-call
+ * filters. Without them it does nothing, and only the execute backstop in
+ * {@see \Albert\Abstracts\BaseAbility::guarded_execute()} still refuses.
  *
  * @since 1.6.0
  */
@@ -77,7 +82,18 @@ class DisabledAbilities implements Hookable {
 			return $args;
 		}
 
-		return AbilitiesState::switched_off_error( $ability_name );
+		$error = AbilitiesState::switched_off_error( $ability_name );
+
+		// A WP_Error here ends the call before `mcp_adapter_tool_call_result`, where
+		// {@see ToolCallObserver} would log it, so a refused execute logs here.
+		if ( self::normalise( $tool_name ) === self::normalise( 'mcp-adapter/execute-ability' ) && ! ExecutionLogMarker::has( $ability_name ) ) {
+			$parameters = $args['parameters'] ?? [];
+
+			/** This action is documented in src/Abstracts/BaseAbility.php */
+			do_action( 'albert/abilities/after_execute', $ability_name, is_array( $parameters ) ? $parameters : [], $error, get_current_user_id() );
+		}
+
+		return $error;
 	}
 
 	/**

@@ -14,6 +14,7 @@ use Albert\Abstracts\BaseAbility;
 use Albert\Admin\AbilitiesPage;
 use Albert\Core\AbilitiesManager;
 use Albert\Core\AbilitiesState;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
 
 /**
@@ -214,6 +215,28 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->assertTrue( wp_has_ability( 'albert/test-disabled-target' ) );
 		$this->assertFalse( AbilitiesState::is_enabled( 'albert/test-disabled-target' ) );
+	}
+
+	/**
+	 * The switch applies to a call through an Albert connection, and to no other.
+	 *
+	 * @return void
+	 */
+	public function test_guarded_execute_applies_the_switch_only_through_a_connection(): void {
+		$ability = $this->register_albert_ability( 'albert/test-guarded-target' );
+		update_option( AbilitiesPage::DISABLED_ABILITIES_OPTION, [ 'albert/test-guarded-target' ] );
+
+		$this->assertSame( [ 'ok' => true ], $ability->guarded_execute( [] ), 'Without a connection the switch does not apply.' );
+
+		ConnectionContext::set( 'client-1' );
+		try {
+			$result = $ability->guarded_execute( [] );
+		} finally {
+			ConnectionContext::reset();
+		}
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( 'ability_disabled', $result->get_error_code() );
 	}
 
 	/**
