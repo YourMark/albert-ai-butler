@@ -228,6 +228,30 @@ class CommentsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A refused reply leaves the held comment held.
+	 *
+	 * @return void
+	 */
+	public function test_refused_reply_does_not_approve(): void {
+		wp_update_post(
+			[
+				'ID'             => $this->post_id,
+				'comment_status' => 'closed',
+			]
+		);
+
+		$result = ( new ReplyToComment() )->execute(
+			[
+				'id'      => $this->held_id,
+				'content' => 'Thanks!',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( '0', get_comment( $this->held_id )->comment_approved );
+	}
+
+	/**
 	 * View shows the parent and replies.
 	 *
 	 * @return void

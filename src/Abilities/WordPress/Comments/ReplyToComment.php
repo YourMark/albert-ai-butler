@@ -143,15 +143,6 @@ class ReplyToComment extends BaseAbility {
 			);
 		}
 
-		// wp-admin approves a held comment when a moderator replies to it; do the
-		// same, or the reply would be public under an invisible comment.
-		if ( $status === 'hold' ) {
-			$approved = $this->approve( $parent );
-			if ( is_wp_error( $approved ) ) {
-				return $approved;
-			}
-		}
-
 		$request = new WP_REST_Request( 'POST', '/wp/v2/comments' );
 		$request->set_param( 'post', (int) $parent->comment_post_ID );
 		$request->set_param( 'parent', (int) $parent->comment_ID );
@@ -166,6 +157,16 @@ class ReplyToComment extends BaseAbility {
 
 		if ( $response->is_error() ) {
 			return CommentPresenter::rest_failure( $data, $response->get_status(), __( 'The reply could not be saved.', 'albert-ai-butler' ) );
+		}
+
+		// wp-admin approves a held comment when a moderator replies to it; do the
+		// same, or the reply would be public under an invisible comment. After the
+		// reply, as wp-admin does, so a refused reply leaves the comment untouched.
+		if ( $status === 'hold' ) {
+			$approved = $this->approve( $parent );
+			if ( is_wp_error( $approved ) ) {
+				return $approved;
+			}
 		}
 
 		$reply = get_comment( (int) ( $data['id'] ?? 0 ) );
@@ -196,7 +197,7 @@ class ReplyToComment extends BaseAbility {
 			return CommentPresenter::rest_failure(
 				rest_get_server()->response_to_data( $response, false ),
 				$response->get_status(),
-				__( 'The comment could not be approved before replying.', 'albert-ai-butler' )
+				__( 'The reply was saved, but the comment it answers could not be approved.', 'albert-ai-butler' )
 			);
 		}
 
