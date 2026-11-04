@@ -40,11 +40,12 @@ const SORT_OPTIONS = [
  * The custom toolbar.
  *
  * @param {Object}   props              Props.
- * @param {Object}   props.view         The current DataViews view.
- * @param {Function} props.onChangeView View setter.
- * @param {Array}    props.categories   Category filter elements.
- * @param {Array}    props.sources      Source filter elements.
- * @param {Array}    props.badges       Badge filter elements.
+ * @param {Object}   props.view          The current DataViews view.
+ * @param {Function} props.onChangeView  View setter.
+ * @param {Array}    props.categories    Category filter elements.
+ * @param {Array}    props.sources       Source filter elements.
+ * @param {Array}    props.badges        Badge filter elements.
+ * @param {boolean}  props.hasUndeclared Whether any ability is "Not declared".
  * @return {Element} The toolbar.
  */
 export default function Toolbar( {
@@ -53,7 +54,15 @@ export default function Toolbar( {
 	categories,
 	sources,
 	badges,
+	hasUndeclared,
 } ) {
+	// "Not declared" only when a row has it, or when it is the active filter
+	// (from the URL), so the select never loses its selected value.
+	const operationOptions =
+		hasUndeclared || filterValue( view, 'operation' ) === 'undeclared'
+			? OPERATION_OPTIONS
+			: OPERATION_OPTIONS.filter( ( option ) => option.value !== 'undeclared' );
+
 	// Badges live in an array on each row, so they use DataViews' `isAny`
 	// operator (array filter value), unlike the single-value ("is") filters
 	// {@see FilterSelect} handles. Read back the single selected id and write
@@ -93,7 +102,7 @@ export default function Toolbar( {
 					onChangeView={ onChangeView }
 					label={ __( 'Filter by operation', 'albert-ai-butler' ) }
 					field="operation"
-					options={ OPERATION_OPTIONS }
+					options={ operationOptions }
 				/>
 				<FilterSelect
 					view={ view }
