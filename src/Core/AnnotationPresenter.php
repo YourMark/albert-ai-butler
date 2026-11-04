@@ -183,7 +183,7 @@ class AnnotationPresenter {
 	 * Whether the ability should trigger a confirmation prompt when enabled.
 	 *
 	 * Without a `destructive` flag, only a declared read-only ability is safe;
-	 * an undeclared one is treated as destructive, as safe mode does.
+	 * an undeclared one is treated as destructive.
 	 *
 	 * @param array<string, mixed> $annotations Raw annotations.
 	 * @param string               $ability_id  Unused since 1.6.0, kept for callers that pass it.

@@ -13,6 +13,7 @@ namespace Albert\Tests\Integration;
 use Albert\Abstracts\BaseAbility;
 use Albert\Admin\AbilitiesPage;
 use Albert\Core\AbilitiesManager;
+use Albert\Core\AbilitiesRegistry;
 use Albert\Core\AbilitiesState;
 use Albert\Core\AnnotationPresenter;
 use Albert\OAuth\Server\ConnectionContext;
@@ -290,6 +291,19 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->assertSame( 'undeclared', AnnotationPresenter::chips_for( $annotations )[0]['key'] );
 		$this->assertFalse( AbilitiesState::is_enabled( 'thirdparty/test-find-things' ) );
+	}
+
+	/**
+	 * The transport tools never enter the fresh-install list a first save persists.
+	 *
+	 * @return void
+	 */
+	public function test_transport_tools_are_not_in_the_fresh_install_defaults(): void {
+		if ( ! wp_has_ability( 'mcp-adapter/execute-ability' ) ) {
+			$this->register_third_party_ability( 'mcp-adapter/execute-ability' );
+		}
+
+		$this->assertNotContains( 'mcp-adapter/execute-ability', AbilitiesRegistry::get_default_disabled_abilities() );
 	}
 
 	/**
