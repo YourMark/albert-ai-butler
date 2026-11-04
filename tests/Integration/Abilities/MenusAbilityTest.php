@@ -330,6 +330,45 @@ class MenusAbilityTest extends TestCase {
 	}
 
 	/**
+	 * With several header parts in use, the header is the one the front page shows.
+	 *
+	 * @return void
+	 */
+	public function test_the_front_page_header_wins_over_another_header_part(): void {
+		$this->use_block_theme();
+		$nav = $this->navigation( 'Main' );
+
+		// A second header part, saved in the Site Editor and used only by the single template.
+		$part = self::factory()->post->create(
+			[
+				'post_type'    => 'wp_template_part',
+				'post_name'    => 'header-single',
+				'post_title'   => 'Single header',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:navigation {"ref":' . $nav . '} /-->',
+			]
+		);
+		wp_set_post_terms( $part, 'albert-block-test', 'wp_theme' );
+		wp_set_post_terms( $part, 'header', 'wp_template_part_area' );
+
+		$template = self::factory()->post->create(
+			[
+				'post_type'    => 'wp_template',
+				'post_name'    => 'single',
+				'post_title'   => 'Single',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:template-part {"slug":"header-single"} /-->',
+			]
+		);
+		wp_set_post_terms( $template, 'albert-block-test', 'wp_theme' );
+
+		$header = ( new FindMenus() )->execute( [] )['header'];
+
+		$this->assertSame( 'header', $header['source'] );
+		$this->assertTrue( $header['fallback'] );
+	}
+
+	/**
 	 * A navigation block inside a draft synced pattern is not rendered, so it does not count.
 	 *
 	 * @return void

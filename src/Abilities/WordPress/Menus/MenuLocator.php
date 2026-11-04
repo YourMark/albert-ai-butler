@@ -56,6 +56,14 @@ class MenuLocator {
 	private WP_Post|false|null $recent_navigation = null;
 
 	/**
+	 * Template part slugs the front page's template shows, set by {@see self::placements()}.
+	 *
+	 * @since 1.6.0
+	 * @var list<string>
+	 */
+	private array $front_parts = [];
+
+	/**
 	 * Whether the active theme is a block theme.
 	 *
 	 * @return bool
@@ -82,13 +90,15 @@ class MenuLocator {
 		$templates = function_exists( 'get_block_templates' ) ? get_block_templates( [], 'wp_template' ) : [];
 		$parts     = function_exists( 'get_block_templates' ) ? get_block_templates( [], 'wp_template_part' ) : [];
 
-		$found      = [];
-		$used_parts = [];
-		$part_scans = [];
+		$found          = [];
+		$used_parts     = [];
+		$part_scans     = [];
+		$template_parts = [];
 
 		foreach ( $templates as $template ) {
-			$scan       = $this->scan( (string) $template->content );
-			$used_parts = array_merge( $used_parts, $scan['parts'] );
+			$scan                                       = $this->scan( (string) $template->content );
+			$used_parts                                 = array_merge( $used_parts, $scan['parts'] );
+			$template_parts[ (string) $template->slug ] = $scan['parts'];
 
 			foreach ( $scan['navs'] as $nav ) {
 				$found[] = [ $this->surface( 'template', $template ), true, $nav ];
@@ -99,17 +109,16 @@ class MenuLocator {
 			$part_scans[ (string) $part->slug ] = $this->scan( (string) $part->content );
 		}
 
-		// A part can sit inside another part, so follow the parts in use until no new one turns up.
-		$queue = array_unique( $used_parts );
-		while ( $queue !== [] ) {
-			$slug = (string) array_shift( $queue );
-			foreach ( $part_scans[ $slug ]['parts'] ?? [] as $nested ) {
-				if ( ! in_array( $nested, $used_parts, true ) ) {
-					$used_parts[] = $nested;
-					$queue[]      = $nested;
-				}
+		$used_parts = $this->with_nested_parts( $used_parts, $part_scans );
+
+		$front_template = '';
+		foreach ( $this->front_template_candidates() as $candidate ) {
+			if ( isset( $template_parts[ $candidate ] ) ) {
+				$front_template = $candidate;
+				break;
 			}
 		}
+		$this->front_parts = $this->with_nested_parts( $template_parts[ $front_template ] ?? [], $part_scans );
 
 		foreach ( $parts as $part ) {
 			if ( $this->is_block_theme() ) {
@@ -246,19 +255,28 @@ class MenuLocator {
 	}
 
 	/**
-	 * The header on a block theme: the first navigation block in a header part a template shows.
+	 * The header on a block theme: the first navigation block in a header part in use, the front page's first.
 	 *
 	 * @return array{type: string, id: int, name: string, source: string, fallback: bool, description: string}
 	 * @since 1.6.0
 	 */
 	private function block_theme_header(): array {
-		foreach ( $this->placements() as $placement ) {
-			if ( ! $placement['in_use'] || $placement['surface']['area'] !== 'header' ) {
-				continue;
-			}
+		$headers = array_values(
+			array_filter(
+				$this->placements(),
+				static fn( array $placement ): bool => $placement['in_use'] && $placement['surface']['area'] === 'header'
+			)
+		);
 
-			$renders = $placement['renders'];
-			$source  = $placement['surface']['slug'];
+		// Several header parts can be in use; the one the front page shows is the header people mean.
+		usort(
+			$headers,
+			fn( array $a, array $b ): int => (int) ! in_array( $a['surface']['slug'], $this->front_parts, true ) <=> (int) ! in_array( $b['surface']['slug'], $this->front_parts, true )
+		);
+
+		if ( $headers !== [] ) {
+			$renders = $headers[0]['renders'];
+			$source  = $headers[0]['surface']['slug'];
 
 			return [
 				'type'        => $renders['type'],
@@ -278,6 +296,44 @@ class MenuLocator {
 			'fallback'    => false,
 			'description' => __( 'No navigation block was found in a header template part this theme shows.', 'albert-ai-butler' ),
 		];
+	}
+
+	/**
+	 * Template slugs that may render the front page, in core's order of precedence.
+	 *
+	 * @return list<string>
+	 * @since 1.6.0
+	 */
+	private function front_template_candidates(): array {
+		$middle = get_option( 'show_on_front' ) === 'page' && (int) get_option( 'page_on_front' ) > 0 ? [ 'page', 'singular' ] : [ 'home' ];
+
+		return array_merge( [ 'front-page' ], $middle, [ 'index' ] );
+	}
+
+	/**
+	 * Part slugs plus every part nested inside them.
+	 *
+	 * @param list<string>                              $parts      Starting part slugs.
+	 * @param array<string, array{parts: list<string>}> $part_scans Each part's scan, by slug.
+	 *
+	 * @return list<string>
+	 * @since 1.6.0
+	 */
+	private function with_nested_parts( array $parts, array $part_scans ): array {
+		$parts = array_values( array_unique( $parts ) );
+		$queue = $parts;
+
+		while ( $queue !== [] ) {
+			$slug = (string) array_shift( $queue );
+			foreach ( $part_scans[ $slug ]['parts'] ?? [] as $nested ) {
+				if ( ! in_array( $nested, $parts, true ) ) {
+					$parts[] = $nested;
+					$queue[] = $nested;
+				}
+			}
+		}
+
+		return $parts;
 	}
 
 	/**
