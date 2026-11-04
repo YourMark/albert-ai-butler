@@ -177,6 +177,7 @@ class PostFieldsTest extends TestCase {
 		$this->assertSame( [ 'date' => '2026-12-01 09:00:00' ], $this->post( [ 'date' => '2026-12-01 09:00:00' ] ) );
 		$this->assertSame( [ 'date' => '2026-12-01T09:00:00+02:00' ], $this->post( [ 'date' => '2026-12-01T09:00:00+02:00' ] ) );
 		$this->assertSame( [ 'date' => '2026-12-01T07:00:00Z' ], $this->post( [ 'date' => '2026-12-01T07:00:00Z' ] ) );
+		$this->assertSame( [ 'date' => '2026-12-01T09:00:00+02' ], $this->post( [ 'date' => '2026-12-01T09:00:00+02' ] ) );
 	}
 
 	/**
@@ -186,13 +187,14 @@ class PostFieldsTest extends TestCase {
 	 */
 	public static function invalid_dates(): array {
 		return [
-			'words'          => [ 'next tuesday' ],
-			'date only'      => [ '2026-12-01' ],
-			'no such day'    => [ '2026-02-30T09:00:00' ],
-			'no such hour'   => [ '2026-12-01T24:00:00' ],
-			'no such minute' => [ '2026-12-01T09:60:00' ],
-			'day first'      => [ '01-12-2026 09:00:00' ],
-			'not a string'   => [ 1764579600 ],
+			'words'           => [ 'next tuesday' ],
+			'date only'       => [ '2026-12-01' ],
+			'no such day'     => [ '2026-02-30T09:00:00' ],
+			'no such hour'    => [ '2026-12-01T24:00:00' ],
+			'no such minute'  => [ '2026-12-01T09:60:00' ],
+			'day first'       => [ '01-12-2026 09:00:00' ],
+			'offset no colon' => [ '2026-12-01T09:00:00+0200' ],
+			'not a string'    => [ 1764579600 ],
 		];
 	}
 

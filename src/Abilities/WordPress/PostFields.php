@@ -37,9 +37,9 @@ class PostFields {
 	public const PAGE = [ 'slug', 'date', 'author', 'parent', 'menu_order', 'template', 'comment_status' ];
 
 	/**
-	 * `Y-m-d H:i:s` or `Y-m-d\TH:i:s`, with an optional UTC offset.
+	 * The shapes `rest_parse_date()` accepts, so nothing passes here that the endpoint refuses.
 	 */
-	private const DATE_PATTERN = '/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(Z|[+-]\d{2}:?\d{2})?$/i';
+	private const DATE_PATTERN = '/^(\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}(?::\d{2})?)?$/';
 
 	/**
 	 * Input schema properties for the given fields.
