@@ -27,17 +27,12 @@ defined( 'ABSPATH' ) || exit;
 class UpdateMedia extends BaseAbility {
 
 	/**
-	 * The writable fields, each mapped to its parameter on `/wp/v2/media`.
+	 * The writable fields, named as `/wp/v2/media` names them.
 	 *
 	 * @since 1.6.0
-	 * @var array<string, string>
+	 * @var string[]
 	 */
-	private const FIELDS = [
-		'alt_text'    => 'alt_text',
-		'title'       => 'title',
-		'caption'     => 'caption',
-		'description' => 'description',
-	];
+	private const FIELDS = [ 'alt_text', 'title', 'caption', 'description' ];
 
 	/**
 	 * Constructor.
@@ -165,7 +160,7 @@ class UpdateMedia extends BaseAbility {
 		$request->set_param( 'context', 'edit' );
 		$changed = false;
 
-		foreach ( self::FIELDS as $field => $param ) {
+		foreach ( self::FIELDS as $field ) {
 			if ( ! array_key_exists( $field, $args ) || ! is_string( $args[ $field ] ) ) {
 				continue;
 			}
@@ -176,7 +171,7 @@ class UpdateMedia extends BaseAbility {
 				? sanitize_text_field( $args[ $field ] )
 				: $args[ $field ];
 
-			$request->set_param( $param, $value );
+			$request->set_param( $field, $value );
 			$changed = true;
 		}
 
