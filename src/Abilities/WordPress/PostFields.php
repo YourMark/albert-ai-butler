@@ -258,6 +258,9 @@ class PostFields {
 	/**
 	 * Validate a template against those the theme offers for this type.
 	 *
+	 * The item's current template is always accepted, as the REST API does, so
+	 * sending back what view-post returned never fails.
+	 *
 	 * @param mixed  $value     Supplied template.
 	 * @param string $post_type Post type being written.
 	 * @param int    $post_id   Post being updated, 0 on create.
@@ -269,7 +272,11 @@ class PostFields {
 			return '';
 		}
 
-		$post      = $post_id > 0 ? get_post( $post_id ) : null;
+		$post = $post_id > 0 ? get_post( $post_id ) : null;
+		if ( $post && $template === get_page_template_slug( $post ) ) {
+			return $template;
+		}
+
 		$available = array_map( 'strval', array_keys( wp_get_theme()->get_page_templates( $post, $post_type ) ) );
 
 		if ( $template !== null && in_array( $template, $available, true ) ) {

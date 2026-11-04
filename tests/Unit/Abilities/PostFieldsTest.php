@@ -278,6 +278,13 @@ class PostFieldsTest extends TestCase {
 		$this->assertStringContainsString( 'offers no templates', $result->get_error_message() );
 	}
 
+	public function test_the_current_template_is_accepted_after_the_theme_drops_it(): void {
+		$GLOBALS['albert_test_posts'][20]->page_template = 'templates/old.php';
+
+		$this->assertSame( [ 'template' => 'templates/old.php' ], $this->post( [ 'template' => 'templates/old.php' ], 20 ) );
+		$this->assertRefused( 'invalid_template', $this->post( [ 'template' => 'templates/old.php' ] ) );
+	}
+
 	public function test_comment_status_is_open_or_closed(): void {
 		$this->assertSame( [ 'comment_status' => 'open' ], $this->page( [ 'comment_status' => 'open' ] ) );
 		$this->assertRefused( 'invalid_comment_status', $this->page( [ 'comment_status' => 'registered_only' ] ) );
