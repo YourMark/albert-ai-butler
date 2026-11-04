@@ -180,6 +180,8 @@ class PostFields {
 	 * Validate an author: a real user who can edit this type, assignable by the caller.
 	 *
 	 * The REST API checks only that the user exists, so it would accept a subscriber.
+	 * The permission check runs first so a caller who may not assign others cannot
+	 * probe user IDs for display names.
 	 *
 	 * @param mixed  $value     Supplied user ID.
 	 * @param string $post_type Post type being written.
@@ -187,7 +189,17 @@ class PostFields {
 	 */
 	private static function author( mixed $value, string $post_type ): int|WP_Error {
 		$user_id = is_int( $value ) || ( is_string( $value ) && ctype_digit( $value ) ) ? (int) $value : 0;
-		$user    = $user_id > 0 ? get_userdata( $user_id ) : false;
+		$caps    = self::caps( $post_type );
+
+		if ( $user_id !== get_current_user_id() && ! current_user_can( $caps['edit_others_posts'] ) ) {
+			return self::refuse(
+				'author_permission_denied',
+				__( 'You can only set yourself as the author: assigning someone else needs permission to edit others\' content.', 'albert-ai-butler' ),
+				403
+			);
+		}
+
+		$user = $user_id > 0 ? get_userdata( $user_id ) : false;
 
 		if ( ! $user ) {
 			return self::refuse(
@@ -197,21 +209,11 @@ class PostFields {
 			);
 		}
 
-		$caps = self::caps( $post_type );
-
 		if ( ! user_can( $user, $caps['edit_posts'] ) ) {
 			return self::refuse(
 				'author_cannot_edit',
 				/* translators: %s: user display name. */
 				sprintf( __( '%s cannot edit this kind of content, so they cannot be its author. Pick a user with an author, editor or administrator role.', 'albert-ai-butler' ), $user->display_name )
-			);
-		}
-
-		if ( $user_id !== get_current_user_id() && ! current_user_can( $caps['edit_others_posts'] ) ) {
-			return self::refuse(
-				'author_permission_denied',
-				__( 'You can only set yourself as the author: assigning someone else needs permission to edit others\' content.', 'albert-ai-butler' ),
-				403
 			);
 		}
 

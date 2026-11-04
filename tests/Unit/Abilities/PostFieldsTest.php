@@ -229,6 +229,7 @@ class PostFieldsTest extends TestCase {
 		$GLOBALS['albert_test_caps'] = [ 'edit_posts' ];
 
 		$this->assertRefused( 'author_permission_denied', $this->post( [ 'author' => 2 ] ) );
+		$this->assertRefused( 'author_permission_denied', $this->post( [ 'author' => 3 ] ) );
 		$this->assertSame( [ 'author' => 1 ], $this->post( [ 'author' => 1 ] ) );
 	}
 
