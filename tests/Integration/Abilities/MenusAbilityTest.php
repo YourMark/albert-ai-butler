@@ -309,11 +309,56 @@ class MenusAbilityTest extends TestCase {
 	public function test_block_theme_without_navigation_reports_the_classic_copy(): void {
 		$this->use_block_theme();
 		$menu = $this->classic_menu( 'Legacy' );
+		$this->link( $menu, 'Home' );
 
 		$header = ( new FindMenus() )->execute( [] )['header'];
 
 		$this->assertSame( 'classic_copy', $header['type'] );
 		$this->assertSame( $menu, $header['id'] );
+	}
+
+	/**
+	 * Core does not copy an empty classic menu; it lists the pages instead.
+	 *
+	 * @return void
+	 */
+	public function test_an_empty_classic_menu_is_not_copied(): void {
+		$this->use_block_theme();
+		$this->classic_menu( 'Empty' );
+
+		$this->assertSame( 'page_list', ( new FindMenus() )->execute( [] )['header']['type'] );
+	}
+
+	/**
+	 * A navigation block inside a draft synced pattern is not rendered, so it does not count.
+	 *
+	 * @return void
+	 */
+	public function test_a_draft_synced_pattern_is_not_followed(): void {
+		$this->use_block_theme();
+		$nav    = $this->navigation( 'Main' );
+		$synced = self::factory()->post->create(
+			[
+				'post_type'    => 'wp_block',
+				'post_status'  => 'draft',
+				'post_content' => '<!-- wp:navigation {"ref":' . $nav . '} /-->',
+			]
+		);
+
+		$template = self::factory()->post->create(
+			[
+				'post_type'    => 'wp_template',
+				'post_name'    => 'page',
+				'post_title'   => 'Page',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:block {"ref":' . $synced . '} /-->',
+			]
+		);
+		wp_set_post_terms( $template, 'albert-block-test', 'wp_theme' );
+
+		$used = array_column( ( new FindMenus() )->execute( [] )['navigation_menus'], null, 'id' )[ $nav ]['used_in'];
+
+		$this->assertNotContains( 'page', array_column( $used, 'slug' ) );
 	}
 
 	/**

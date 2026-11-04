@@ -499,7 +499,8 @@ class MenuLocator {
 		if ( apply_filters( 'wp_navigation_should_create_fallback', true ) ) {
 			$classic = $this->fallback_classic_menu();
 
-			if ( $classic instanceof WP_Term ) {
+			// Core copies only a menu with published items, and lists the pages otherwise.
+			if ( $classic instanceof WP_Term && ! empty( wp_get_nav_menu_items( $classic->term_id, [ 'update_post_term_cache' => false ] ) ) ) {
 				return [
 					'type'     => 'classic_copy',
 					'id'       => (int) $classic->term_id,
@@ -662,15 +663,17 @@ class MenuLocator {
 			switch ( $block['blockName'] ) {
 				case 'core/navigation':
 					$found['navs'][] = [
-						// Older blocks saved the reference as `navigationMenuId`; core still reads it.
-						'ref'      => (int) ( $attrs['ref'] ?? $attrs['navigationMenuId'] ?? 0 ),
+						// Older blocks saved the reference as `navigationMenuId`; core still reads it, ahead of `ref`.
+						'ref'      => (int) ( $attrs['navigationMenuId'] ?? $attrs['ref'] ?? 0 ),
 						'inline'   => $this->has_blocks_in( $inner ),
 						'location' => is_string( $attrs['__unstableLocation'] ?? null ) ? $attrs['__unstableLocation'] : '',
 					];
 					continue 2;
 
 				case 'core/template-part':
-					if ( is_string( $attrs['slug'] ?? null ) && $attrs['slug'] !== '' ) {
+					// Core renders nothing for a part that names another theme.
+					$theme = $attrs['theme'] ?? get_stylesheet();
+					if ( is_string( $attrs['slug'] ?? null ) && $attrs['slug'] !== '' && $theme === get_stylesheet() ) {
 						$found['parts'][] = $attrs['slug'];
 					}
 					continue 2;
@@ -687,7 +690,8 @@ class MenuLocator {
 
 				case 'core/block':
 					$synced = get_post( (int) ( $attrs['ref'] ?? 0 ) );
-					if ( $synced instanceof WP_Post && $synced->post_type === 'wp_block' && $depth < self::MAX_DEPTH ) {
+					// Core renders a synced pattern only when it is published without a password.
+					if ( $synced instanceof WP_Post && $synced->post_type === 'wp_block' && $synced->post_status === 'publish' && $synced->post_password === '' && $depth < self::MAX_DEPTH ) {
 						$this->walk( parse_blocks( $synced->post_content ), $depth + 1, $found );
 					}
 					continue 2;
