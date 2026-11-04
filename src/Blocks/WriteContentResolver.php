@@ -186,8 +186,8 @@ class WriteContentResolver {
 	 * go through {@see BlockSerializer::serialize_with_issues()} (specs → markup;
 	 * block markup kept as sent; HTML/Markdown through BlockConverter).
 	 * Allowed-block enforcement runs on submitted specs and on block markup,
-	 * exempting block names already present in the post on Update. Enforcement and serializer errors both abort the
-	 * save; only warnings ride along.
+	 * exempting block names already present in the post on Update. Enforcement
+	 * and serializer errors both abort the save; only warnings ride along.
 	 *
 	 * @param array<string, mixed> $args             Ability input.
 	 * @param string|null          $post_type        Post type slug for the editor context, or null for the site-wide (pattern) scope.

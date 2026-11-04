@@ -152,7 +152,7 @@ class BlockSerializer {
 	/**
 	 * Convert block specs (or a string) into block markup.
 	 *
-	 * @param array<int, array<string, mixed>>|string $input Block specs or an HTML/Markdown string.
+	 * @param array<int, array<string, mixed>>|string $input Block specs, or a string: block markup is kept as sent, HTML/Markdown is converted.
 	 * @return string Comment-delimited block markup.
 	 *
 	 * @since 1.2.0
@@ -168,7 +168,7 @@ class BlockSerializer {
 	 * message is actionable and path-qualified for an LLM to self-correct, e.g.
 	 * "content[0].attributes.level must be between 1 and 6".
 	 *
-	 * @param array<int, array<string, mixed>>|string $input Block specs or an HTML/Markdown string.
+	 * @param array<int, array<string, mixed>>|string $input Block specs, or a string: block markup is kept as sent, HTML/Markdown is converted.
 	 * @return array{markup: string, issues: array<int, Issue>} Markup plus a list of issues.
 	 *
 	 * @since 1.2.0
