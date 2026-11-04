@@ -19,7 +19,7 @@
 
 /* Page header. */
 .albert-abilities__header {
-	margin: 4px 0 0;
+	margin-block-start: 4px;
 }
 
 /**

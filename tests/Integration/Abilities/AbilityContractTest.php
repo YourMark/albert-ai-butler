@@ -18,6 +18,7 @@ namespace Albert\Tests\Integration\Abilities;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\AbilitiesRegistry;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
 use Albert\Tests\Traits\ProvidesAbilities;
 use WP_Error;
@@ -70,7 +71,17 @@ class AbilityContractTest extends TestCase {
 	}
 
 	/**
-	 * Adding the ability to the disabled option makes guarded_execute refuse.
+	 * Clear the connection a test set.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		ConnectionContext::reset();
+		parent::tear_down();
+	}
+
+	/**
+	 * Over an Albert connection, a switched-off ability is refused.
 	 *
 	 * @dataProvider provideAbilities
 	 *
@@ -81,6 +92,7 @@ class AbilityContractTest extends TestCase {
 	public function test_disabled_ability_returns_403_wp_error( string $ability_class ): void {
 		$ability = new $ability_class();
 		update_option( 'albert_disabled_abilities', [ $ability->get_id() ] );
+		ConnectionContext::set( 'contract-test-client' );
 
 		$result = $ability->guarded_execute( [] );
 

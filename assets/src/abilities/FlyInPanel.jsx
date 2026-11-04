@@ -367,10 +367,17 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 					<ToggleControl
 						__nextHasNoMarginBottom
 						label={ __( 'Enabled', 'albert-ai-butler' ) }
-						help={ __(
-							'Allow apps and agents to invoke this ability.',
-							'albert-ai-butler'
-						) }
+						help={
+							ability.enabled
+								? __(
+										'Available through Albert’s MCP endpoint.',
+										'albert-ai-butler'
+								  )
+								: __(
+										'Not available through Albert’s MCP endpoint.',
+										'albert-ai-butler'
+								  )
+						}
 						checked={ ability.enabled }
 						onChange={ ( value ) => onToggle( ability, value ) }
 					/>
