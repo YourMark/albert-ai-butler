@@ -117,7 +117,7 @@ class AllowedUsersCommandTest extends TestCase {
 	 * @return void
 	 */
 	public function test_bad_input_changes_nothing(): void {
-		foreach ( [ [ [ 'jan' ], [ 'expires' => 'soon' ] ], [ [ 'jan', 'nobody' ], [] ] ] as [ $args, $assoc ] ) {
+		foreach ( [ [ [ 'jan' ], [ 'expires' => 'soon' ] ], [ [ 'jan' ], [ 'expires' => '3651' ] ], [ [ 'jan', 'nobody' ], [] ] ] as [ $args, $assoc ] ) {
 			try {
 				$this->command->add( $args, $assoc );
 				$this->fail( 'Expected an error.' );

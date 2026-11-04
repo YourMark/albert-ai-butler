@@ -122,8 +122,8 @@ class AllowedUsersCommand {
 	 * : User ID, login or email address.
 	 *
 	 * [--expires=<days>]
-	 * : Days the invitation stays open if they do not connect. 0 means it never
-	 * lapses. Defaults to the site's setting.
+	 * : Days the invitation stays open if they do not connect, up to 3650. 0
+	 * means it never lapses. Defaults to the site's setting.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -142,8 +142,9 @@ class AllowedUsersCommand {
 		if ( isset( $assoc_args['expires'] ) ) {
 			$expires = (string) $assoc_args['expires'];
 
-			if ( ! ctype_digit( $expires ) ) {
-				WP_CLI::error( '--expires takes a whole number of days, 0 for never.' );
+			// The Settings screen's limit; far beyond it the stored date no longer round-trips.
+			if ( ! ctype_digit( $expires ) || (int) $expires > 3650 ) {
+				WP_CLI::error( '--expires takes a whole number of days up to 3650, 0 for never.' );
 			}
 
 			$expiry_days = (int) $expires;
