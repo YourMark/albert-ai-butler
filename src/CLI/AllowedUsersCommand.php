@@ -58,7 +58,7 @@ class AllowedUsersCommand {
 	 *
 	 * Status is `authorised` (has connected at least once, never lapses),
 	 * `invited` (not connected yet) or `expired` (the invitation lapsed unused;
-	 * add them again or send a setup link from the Connections screen).
+	 * sending a setup link from the Connections screen restarts it).
 	 *
 	 * ## OPTIONS
 	 *
