@@ -265,6 +265,34 @@ class RegisteredMetaAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A field limited to the "edit" context is shown only to users who can edit the post.
+	 *
+	 * @return void
+	 */
+	public function test_edit_context_field_is_hidden_from_readers(): void {
+		register_post_meta(
+			'post',
+			'editor_note',
+			[
+				'type'         => 'string',
+				'single'       => true,
+				'show_in_rest' => [ 'schema' => [ 'context' => [ 'edit' ] ] ],
+			]
+		);
+		update_post_meta( $this->post_id, 'editor_note', 'internal' );
+		wp_publish_post( $this->post_id );
+
+		$this->assertSame( 'internal', ( new ViewPost() )->execute( [ 'id' => $this->post_id ] )['post']['meta']['editor_note'] );
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
+		$meta = ( new ViewPost() )->execute( [ 'id' => $this->post_id ] )['post']['meta'];
+
+		unregister_post_meta( 'post', 'editor_note' );
+		$this->assertArrayNotHasKey( 'editor_note', $meta );
+		$this->assertSame( 'Old subtitle', $meta['subtitle'] );
+	}
+
+	/**
 	 * Pages read and write their own registered fields; a post's field is not a page's.
 	 *
 	 * @return void

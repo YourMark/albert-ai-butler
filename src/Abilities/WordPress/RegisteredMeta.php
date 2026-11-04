@@ -56,9 +56,21 @@ class RegisteredMeta {
 	 * @since 1.6.0
 	 */
 	public static function read( int $post_id, string $post_type ): array {
-		$values = ( new WP_REST_Post_Meta_Fields( $post_type ) )->get_value( $post_id, new WP_REST_Request() );
+		$fields = new WP_REST_Post_Meta_Fields( $post_type );
+		$values = array_intersect_key( $fields->get_value( $post_id, new WP_REST_Request() ), self::reachable_keys( $post_type ) );
 
-		return array_intersect_key( $values, self::reachable_keys( $post_type ) );
+		if ( $values === [] || current_user_can( 'edit_post', $post_id ) ) {
+			return $values;
+		}
+
+		// Core's REST API only shows an "edit"-context field to users who can edit the post.
+		$schemas = $fields->get_field_schema()['properties'] ?? [];
+
+		return array_filter(
+			$values,
+			static fn( $name ): bool => ! isset( $schemas[ $name ]['context'] ) || in_array( 'view', (array) $schemas[ $name ]['context'], true ),
+			ARRAY_FILTER_USE_KEY
+		);
 	}
 
 	/**
