@@ -167,6 +167,67 @@ class CommentsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A review or note asked for by ID is not found, by any ability.
+	 *
+	 * @return void
+	 */
+	public function test_reviews_and_notes_are_not_found_by_id(): void {
+		foreach ( [ 'review', 'note' ] as $type ) {
+			$id = $this->comment( [ 'comment_type' => $type ] );
+
+			foreach ( [ new ViewComment(), new DeleteComment() ] as $ability ) {
+				$result = $ability->execute( [ 'id' => $id ] );
+				$this->assertInstanceOf( WP_Error::class, $result, $type );
+				$this->assertSame( 'comment_not_found', $result->get_error_code(), $type );
+			}
+
+			$moderated = ( new ModerateComment() )->execute(
+				[
+					'id'     => $id,
+					'status' => 'spam',
+				]
+			);
+			$this->assertInstanceOf( WP_Error::class, $moderated, $type );
+			$this->assertNotNull( get_comment( $id ), $type );
+		}
+	}
+
+	/**
+	 * A moderator who cannot edit a post does not see or touch its comments.
+	 *
+	 * @return void
+	 */
+	public function test_comments_on_posts_the_user_cannot_edit_are_hidden(): void {
+		$private = self::factory()->post->create( [ 'post_status' => 'private' ] );
+		$hidden  = (int) self::factory()->comment->create(
+			[
+				'comment_post_ID'  => $private,
+				'comment_approved' => '0',
+			]
+		);
+
+		$user = self::factory()->user->create( [ 'role' => 'author' ] );
+		get_user_by( 'id', $user )->add_cap( 'moderate_comments' );
+		wp_set_current_user( $user );
+
+		$found = ( new FindComments() )->execute( [ 'status' => 'all' ] );
+		$this->assertIsArray( $found );
+		$this->assertNotContains( $hidden, array_column( $found['comments'], 'id' ) );
+
+		$viewed = ( new ViewComment() )->execute( [ 'id' => $hidden ] );
+		$this->assertInstanceOf( WP_Error::class, $viewed );
+
+		$replied = ( new ReplyToComment() )->execute(
+			[
+				'id'      => $hidden,
+				'content' => 'Thanks!',
+			]
+		);
+		$this->assertInstanceOf( WP_Error::class, $replied );
+		$this->assertSame( '0', get_comment( $hidden )->comment_approved );
+	}
+
+	/**
 	 * View shows the parent and replies.
 	 *
 	 * @return void

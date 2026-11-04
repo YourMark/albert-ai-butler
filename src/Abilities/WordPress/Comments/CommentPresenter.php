@@ -127,7 +127,25 @@ class CommentPresenter {
 	}
 
 	/**
+	 * Whether the current user may see and handle this comment.
+	 *
+	 * `moderate_comments` alone is not enough: like wp-admin, each comment needs
+	 * `edit_comment`, which maps to editing its post (private and others' posts included).
+	 *
+	 * @param WP_Comment $comment The comment.
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	public static function can_access( WP_Comment $comment ): bool {
+		return ! in_array( $comment->comment_type, self::EXCLUDED_TYPES, true )
+			&& current_user_can( 'edit_comment', (int) $comment->comment_ID );
+	}
+
+	/**
 	 * The comment with this ID, or a not-found error.
+	 *
+	 * Reviews, notes and comments the user may not edit are reported as not found,
+	 * so their existence is not confirmed either.
 	 *
 	 * @param int $comment_id Comment ID.
 	 * @return WP_Comment|WP_Error
@@ -136,7 +154,7 @@ class CommentPresenter {
 	public static function find( int $comment_id ): WP_Comment|WP_Error {
 		$comment = $comment_id > 0 ? get_comment( $comment_id ) : null;
 
-		if ( ! $comment instanceof WP_Comment ) {
+		if ( ! $comment instanceof WP_Comment || ! self::can_access( $comment ) ) {
 			return new WP_Error(
 				'comment_not_found',
 				sprintf(

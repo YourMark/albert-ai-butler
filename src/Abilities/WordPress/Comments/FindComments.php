@@ -186,9 +186,11 @@ class FindComments extends BaseAbility {
 		$comments = $query->query( $query_args );
 		$comments = is_array( $comments ) ? $comments : [];
 
+		// Filtered after the query, as core's endpoint does, so `total` may count
+		// comments on posts this user cannot edit.
 		$items = [];
 		foreach ( $comments as $comment ) {
-			if ( $comment instanceof WP_Comment ) {
+			if ( $comment instanceof WP_Comment && CommentPresenter::can_access( $comment ) ) {
 				$items[] = CommentPresenter::format( $comment );
 			}
 		}

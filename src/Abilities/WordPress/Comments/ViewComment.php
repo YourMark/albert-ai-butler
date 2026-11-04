@@ -125,20 +125,24 @@ class ViewComment extends BaseAbility {
 		}
 
 		$parent = $comment->comment_parent ? get_comment( (int) $comment->comment_parent ) : null;
+		if ( $parent instanceof WP_Comment && ! CommentPresenter::can_access( $parent ) ) {
+			$parent = null;
+		}
 
 		$replies = get_comments(
 			[
-				'parent'  => (int) $comment->comment_ID,
-				'status'  => 'all',
-				'orderby' => 'comment_date_gmt',
-				'order'   => 'ASC',
-				'number'  => self::MAX_REPLIES,
+				'parent'       => (int) $comment->comment_ID,
+				'status'       => 'all',
+				'type__not_in' => CommentPresenter::EXCLUDED_TYPES,
+				'orderby'      => 'comment_date_gmt',
+				'order'        => 'ASC',
+				'number'       => self::MAX_REPLIES,
 			]
 		);
 
 		$reply_items = [];
 		foreach ( is_array( $replies ) ? $replies : [] as $reply ) {
-			if ( $reply instanceof WP_Comment ) {
+			if ( $reply instanceof WP_Comment && CommentPresenter::can_access( $reply ) ) {
 				$reply_items[] = CommentPresenter::format( $reply );
 			}
 		}
