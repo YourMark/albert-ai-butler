@@ -85,6 +85,17 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
+	 * Site Health shows what core shows on its screen, to those who may see that screen.
+	 *
+	 * @return void
+	 */
+	public function test_site_health_requires_view_site_health_checks(): void {
+		$ability = new WP_Ability( 'albert/view-site-health', [ 'annotations' => [ 'readonly' => true ] ] );
+
+		$this->assertSame( 'view_site_health_checks', AbilitiesRegistry::resolve_required_capability( $ability ) );
+	}
+
+	/**
 	 * Uploading media requires upload_files.
 	 *
 	 * @return void
