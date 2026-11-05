@@ -164,8 +164,9 @@ class BlockPolicy {
 	/**
 	 * Collect every distinct block name from a tree of submitted block specs.
 	 *
-	 * Walks innerBlocks recursively. Block names are read from the `name` (or
-	 * legacy `blockName`) key; blank or non-string names are ignored — the
+	 * Walks innerBlocks, and block markup in `html`, recursively. Block names are
+	 * read from the `name` (or legacy `blockName`) key, so a parse_blocks() tree
+	 * walks too; blank or non-string names are ignored: the
 	 * serializer already reports those as their own errors.
 	 *
 	 * @param array<int, mixed> $specs Block specs.
@@ -206,6 +207,12 @@ class BlockPolicy {
 			$inner = $spec['innerBlocks'] ?? [];
 			if ( is_array( $inner ) ) {
 				$this->walk_specs( $inner, $names );
+			}
+
+			// Block markup sent in `html` becomes inner blocks too.
+			$html = $spec['html'] ?? null;
+			if ( is_string( $html ) && has_blocks( $html ) ) {
+				$this->walk_specs( array_values( parse_blocks( $html ) ), $names );
 			}
 		}
 	}

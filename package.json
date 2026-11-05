@@ -8,7 +8,8 @@
     "start": "wp-scripts start",
     "build": "wp-scripts build",
     "lint:js": "wp-scripts lint-js assets/src",
-    "format:js": "wp-scripts format assets/src"
+    "format:js": "wp-scripts format assets/src",
+    "test:editor": "node tests/Editor/block-validity.mjs"
   },
   "devDependencies": {
     "@wordpress/api-fetch": "^7.48.1",

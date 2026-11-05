@@ -73,7 +73,7 @@ class Create extends BaseAbility {
 				],
 				'content'    => [
 					'type'        => 'string',
-					'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
+					'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
 					'default'     => '',
 				],
 				'blocks'     => [

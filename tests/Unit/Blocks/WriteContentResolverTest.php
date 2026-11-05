@@ -174,6 +174,18 @@ class WriteContentResolverTest extends TestCase {
 		$this->assertStringContainsString( 'core/heading', $result->get_error_message() );
 	}
 
+	public function test_block_markup_in_content_is_checked_against_the_allowed_blocks(): void {
+		$GLOBALS['albert_test_allowed_block_types'] = [ 'core/paragraph' ];
+
+		$result = ( new WriteContentResolver() )->resolve(
+			[ 'content' => '<!-- wp:heading --><h2 class="wp-block-heading">Nope</h2><!-- /wp:heading -->' ],
+			'post'
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertStringContainsString( 'core/heading', $result->get_error_message() );
+	}
+
 	public function test_block_string_content_is_converted_to_block_markup(): void {
 		$result = ( new WriteContentResolver() )->resolve(
 			[ 'content' => '<!-- wp:paragraph --><p>Existing block markup.</p><!-- /wp:paragraph -->' ],

@@ -83,7 +83,7 @@ final class BlockSpecSchema {
 					]
 					: [ 'type' => 'array' ],
 				'plaintext'   => $describe( [ 'type' => 'string' ], 'Text content, when the block\'s own text attribute is not set.' ),
-				'html'        => $describe( [ 'type' => 'string' ], 'Raw HTML, for core/html and for preserving a block this server cannot regenerate.' ),
+				'html'        => $describe( [ 'type' => 'string' ], 'The block\'s saved markup inside its delimiters, as the editor stores it; nested block markup becomes inner blocks. Use it to keep markup exactly, or for an attribute this server cannot write. Not with innerBlocks. For core/html, the raw HTML.' ),
 				'blockName'   => $describe( [ 'type' => 'string' ], 'Alias of `name`, the spelling the WordPress block parser uses.' ),
 				'attrs'       => $describe( [ 'type' => 'object' ], 'Alias of `attributes`, the spelling the WordPress block parser uses.' ),
 				'path'        => $describe(
