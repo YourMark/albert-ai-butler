@@ -95,7 +95,7 @@ Choose **Strict**, **Balanced** or **Off**. New sites start on Strict. On Balanc
 
 ### See what happened
 
-* **Recent activity on the dashboard**: for each action, its latest results, who ran it and when, and any error. Albert Premium keeps a full log.
+* **Recent activity on the dashboard**: which action ran, who ran it, when, and how it ended. The Abilities screen shows when each action last ran. Albert Premium keeps a full log.
 * **Blocked is not Failed.** A request your own rules refused reads differently from one that broke.
 * **Needs your attention** surfaces standing problems on the dashboard, and stays quiet when there are none.
 
