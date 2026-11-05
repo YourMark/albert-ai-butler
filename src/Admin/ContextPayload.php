@@ -181,7 +181,7 @@ class ContextPayload {
 	private static function description( string $key ): string {
 		switch ( $key ) {
 			case 'environment':
-				return __( 'WordPress, Albert and theme versions, site language and timezone.', 'albert-ai-butler' );
+				return __( 'WordPress, Albert, MCP Adapter and theme versions, site language and timezone.', 'albert-ai-butler' );
 			case 'design':
 				return __( 'The colours and fonts your theme declares, including anything you changed in the Styles editor.', 'albert-ai-butler' );
 			case 'content_model':
