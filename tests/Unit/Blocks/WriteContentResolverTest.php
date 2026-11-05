@@ -223,7 +223,7 @@ class WriteContentResolverTest extends TestCase {
 		$this->assertStringContainsString( '<!-- wp:paragraph', $result['content'] );
 	}
 
-	public function test_update_that_drops_a_tag_is_refused(): void {
+	public function test_update_that_drops_a_tag_saves_as_core_does(): void {
 		$GLOBALS['albert_test_posts'][7] = (object) [
 			'ID'           => 7,
 			'post_type'    => 'post',
@@ -243,57 +243,8 @@ class WriteContentResolverTest extends TestCase {
 			7
 		);
 
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'tags_removed', $result->get_error_code() );
-	}
-
-	public function test_update_that_drops_a_tag_resolves_when_remove_tags_confirms_it(): void {
-		$GLOBALS['albert_test_posts'][7] = (object) [
-			'ID'           => 7,
-			'post_type'    => 'post',
-			'post_content' => '<!-- wp:paragraph --><p>Buy <ta linkid="1">here</ta>.</p><!-- /wp:paragraph -->',
-		];
-
-		$result = ( new WriteContentResolver() )->resolve(
-			[
-				'remove_tags' => [ 'ta' ],
-				'blocks'      => [
-					[
-						'name'       => 'core/paragraph',
-						'attributes' => [ 'content' => 'Buy here.' ],
-					],
-				],
-			],
-			'post',
-			7
-		);
-
-		$this->assertIsArray( $result );
-	}
-
-	public function test_update_of_a_post_the_user_cannot_edit_names_no_tags(): void {
-		$GLOBALS['albert_test_posts'][7] = (object) [
-			'ID'           => 7,
-			'post_type'    => 'post',
-			'post_content' => '<!-- wp:paragraph --><p>Buy <ta linkid="1">here</ta>.</p><!-- /wp:paragraph -->',
-		];
-		$GLOBALS['albert_test_caps']     = [ 'edit_posts', 'unfiltered_html' ];
-
-		$result = ( new WriteContentResolver() )->resolve(
-			[
-				'blocks' => [
-					[
-						'name'       => 'core/paragraph',
-						'attributes' => [ 'content' => 'Buy here.' ],
-					],
-				],
-			],
-			'post',
-			7
-		);
-		unset( $GLOBALS['albert_test_caps'] );
-
-		$this->assertIsArray( $result );
+		$this->assertIsArray( $result, 'A full rewrite replaces the content; dropping a tag is the request.' );
+		$this->assertStringNotContainsString( '<ta', $result['content'] );
 	}
 
 	public function test_update_does_not_exempt_a_new_disallowed_block(): void {

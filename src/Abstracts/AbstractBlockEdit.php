@@ -269,7 +269,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 			}
 		}
 
-		return MarkupTags::refuse_kses_loss( $markup );
+		return MarkupTags::refuse_kses_loss( $markup, $args );
 	}
 
 	/**

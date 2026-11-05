@@ -86,7 +86,7 @@ class WriteContentResolver {
 			? $this->resolve_block( $args, $post_type, $post_id, $has_blocks_input )
 			: $this->resolve_classic( $args, $post_type, $has_blocks_input );
 
-		return $this->refuse_tag_loss( $resolved, $args, $post_id );
+		return $this->refuse_kses_loss( $resolved, $args );
 	}
 
 	/**
@@ -107,41 +107,28 @@ class WriteContentResolver {
 	public function resolve_pattern( array $args, ?int $post_id = null ): array|WP_Error {
 		$has_blocks_input = ! empty( $args['blocks'] ) && is_array( $args['blocks'] );
 
-		return $this->refuse_tag_loss( $this->resolve_block( $args, null, $post_id, $has_blocks_input ), $args, null );
+		return $this->refuse_kses_loss( $this->resolve_block( $args, null, $post_id, $has_blocks_input ), $args );
 	}
 
 	/**
-	 * Refuse resolved content that would lose a tag silently: one KSES would strip
-	 * for this user, or, on Update, one the old content had and `remove_tags` does
-	 * not confirm.
+	 * Refuse resolved content from which KSES would strip a tag for this user,
+	 * unless `remove_tags` confirms it.
+	 *
+	 * A full rewrite is not checked for dropped tags: replacing the content is
+	 * the request, as in core.
 	 *
 	 * @param array{content: string, block_issues: array<int, string>}|WP_Error $resolved Resolved content.
 	 * @param array<string, mixed>                                              $args     Ability input.
-	 * @param int|null                                                          $post_id  Post whose content is replaced, or null to skip the drop check.
 	 *
 	 * @return array{content: string, block_issues: array<int, string>}|WP_Error The resolved content, or a WP_Error.
 	 * @since 1.6.0
 	 */
-	private function refuse_tag_loss( array|WP_Error $resolved, array $args, ?int $post_id ): array|WP_Error {
+	private function refuse_kses_loss( array|WP_Error $resolved, array $args ): array|WP_Error {
 		if ( $resolved instanceof WP_Error ) {
 			return $resolved;
 		}
 
-		// The messages name tags in the post, so leave a post this user can't edit to
-		// the REST save, which refuses it without revealing its content.
-		if ( $post_id && ! current_user_can( 'edit_post', $post_id ) ) {
-			return $resolved;
-		}
-
-		$post = $post_id ? get_post( $post_id ) : null;
-		if ( $post ) {
-			$dropped = MarkupTags::refuse_unconfirmed_drop( (string) $post->post_content, $resolved['content'], $args );
-			if ( $dropped instanceof WP_Error ) {
-				return $dropped;
-			}
-		}
-
-		return MarkupTags::refuse_kses_loss( $resolved['content'] ) ?? $resolved;
+		return MarkupTags::refuse_kses_loss( $resolved['content'], $args ) ?? $resolved;
 	}
 
 	/**

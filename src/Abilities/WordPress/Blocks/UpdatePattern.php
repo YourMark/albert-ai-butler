@@ -14,6 +14,7 @@ namespace Albert\Abilities\WordPress\Blocks;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
+use Albert\Blocks\MarkupTags;
 use Albert\Blocks\PatternCatalog;
 use Albert\Blocks\WriteContentResolver;
 use Albert\Core\Annotations;
@@ -80,28 +81,29 @@ class UpdatePattern extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'name'       => [
+				'name'        => [
 					'type'        => 'string',
 					'description' => 'The user pattern\'s name (slug), as returned by find-patterns.',
 				],
-				'title'      => [
+				'title'       => [
 					'type'        => 'string',
 					'description' => 'New title. Omit to leave unchanged.',
 				],
-				'blocks'     => [
+				'blocks'      => [
 					'type'        => 'array',
 					'description' => 'New block specs for the pattern body. Omit to leave the content unchanged.',
 					'items'       => BlockSpecSchema::spec(),
 				],
-				'content'    => [
+				'remove_tags' => MarkupTags::input_schema(),
+				'content'     => [
 					'type'        => 'string',
 					'description' => 'New content as block markup or HTML. Ignored when "blocks" is provided.',
 				],
-				'synced'     => [
+				'synced'      => [
 					'type'        => 'boolean',
 					'description' => 'Set the sync status: true for synced (reused by reference), false for an unsynced copy. Omit to leave unchanged.',
 				],
-				'categories' => [
+				'categories'  => [
 					'type'        => 'array',
 					'description' => 'Replace the pattern\'s categories with these names. Omit to leave unchanged.',
 					'items'       => [ 'type' => 'string' ],
