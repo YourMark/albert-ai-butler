@@ -200,12 +200,6 @@ abstract class AbstractBlockEdit extends BaseAbility {
 
 		$markup = serialize_blocks( $tree );
 
-		// Once, on the final markup: that is what core's KSES sees on save.
-		$kses_error = $this->can_edit( $post_id ) ? MarkupTags::refuse_kses_loss( $markup, $args ) : null;
-		if ( $kses_error instanceof WP_Error ) {
-			return $kses_error;
-		}
-
 		$persisted = $this->persist( $post_id, $markup );
 		if ( is_wp_error( $persisted ) ) {
 			return $persisted;
@@ -270,8 +264,8 @@ abstract class AbstractBlockEdit extends BaseAbility {
 	}
 
 	/**
-	 * Whether the tag checks may run: their messages name tags in the post, so a
-	 * post this user can't edit is left to the REST save, which refuses it
+	 * Whether the tag-drop check may run: its message names tags in the post, so
+	 * a post this user can't edit is left to the REST save, which refuses it
 	 * without revealing its content.
 	 *
 	 * @param int $post_id Target post ID.

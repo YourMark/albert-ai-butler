@@ -133,34 +133,16 @@ class MarkupTagsTest extends TestCase {
 	}
 
 	/**
-	 * A script tag KSES would strip is refused, and nothing is saved.
+	 * A tag the user may not store is stripped on save without an error, as in the editor.
 	 *
 	 * @return void
 	 */
-	public function test_script_is_refused_without_unfiltered_html(): void {
-		$this->log_in( 'author' );
-		$before = wp_count_posts()->draft;
-
-		$result = $this->create_paragraph( 'Hi <script>alert(1)</script>' );
-
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'tags_not_allowed', $result->get_error_code() );
-		$this->assertStringContainsString( '`<script>`', $result->get_error_message() );
-		$this->assertSame( $before, wp_count_posts()->draft );
-	}
-
-	/**
-	 * A plugin tag the user may not store is refused on a block edit, naming it.
-	 *
-	 * @return void
-	 */
-	public function test_plugin_tag_is_refused_on_block_edit_without_unfiltered_html(): void {
+	public function test_plugin_tag_is_stripped_on_block_edit_without_unfiltered_html(): void {
 		$author  = $this->log_in( 'author' );
-		$stored  = '<!-- wp:paragraph --><p>Old</p><!-- /wp:paragraph -->';
 		$post_id = self::factory()->post->create(
 			[
 				'post_author'  => $author,
-				'post_content' => $stored,
+				'post_content' => '<!-- wp:paragraph --><p>Old</p><!-- /wp:paragraph -->',
 			]
 		);
 
@@ -175,40 +157,8 @@ class MarkupTagsTest extends TestCase {
 			]
 		);
 
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'tags_not_allowed', $result->get_error_code() );
-		$this->assertSame( [ 'ta' ], $result->get_error_data()['tags'] );
-		$this->assertSame( $stored, get_post( $post_id )->post_content );
-	}
-
-	/**
-	 * With `remove_tags`, a tag the user may not store is stripped on save, as core does.
-	 *
-	 * @return void
-	 */
-	public function test_remove_tags_lets_kses_strip_a_plugin_tag(): void {
-		$author  = $this->log_in( 'author' );
-		$post_id = self::factory()->post->create(
-			[
-				'post_author'  => $author,
-				'post_content' => '<!-- wp:paragraph --><p>Old</p><!-- /wp:paragraph -->',
-			]
-		);
-
-		$result = ( new EditPostBlock() )->execute(
-			[
-				'id'          => $post_id,
-				'path'        => [ 0 ],
-				'remove_tags' => [ 'ta' ],
-				'block'       => [
-					'name'       => 'core/paragraph',
-					'attributes' => [ 'content' => 'New ' . self::TA_LINK ],
-				],
-			]
-		);
-
 		$this->assertIsArray( $result );
 		$this->assertStringNotContainsString( '<ta', get_post( $post_id )->post_content );
-		$this->assertStringContainsString( 'New ', get_post( $post_id )->post_content );
+		$this->assertStringContainsString( 'this deal', get_post( $post_id )->post_content );
 	}
 }
