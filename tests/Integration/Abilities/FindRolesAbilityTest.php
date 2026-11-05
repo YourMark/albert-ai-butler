@@ -11,6 +11,7 @@ namespace Albert\Tests\Integration\Abilities;
 
 use Albert\Abilities\WordPress\Users\FindRoles;
 use Albert\SafeMode\Gate;
+use Albert\Support\WpCompat;
 use Albert\Tests\TestCase;
 use WP_Error;
 
@@ -71,13 +72,27 @@ class FindRolesAbilityTest extends TestCase {
 		$this->assertArrayNotHasKey( 'capabilities', $roles['editor'], 'The full list is only sent for one role.' );
 
 		$this->assertStringContainsString( 'change site settings', $roles['administrator']['summary'] );
-		$this->assertTrue( $roles['administrator']['assigning_is_held'] );
+		$this->assertSame( WpCompat::supports_execution_lifecycle(), $roles['administrator']['assigning_is_held'] );
 
 		$this->assertSame( 'Can write posts, but not publish them.', $roles['contributor']['summary'] );
 		$this->assertSame( 'Can only read the site and edit their own profile.', $roles['subscriber']['summary'] );
 		$this->assertStringContainsString( 'Has 2 capabilities', $roles['albert_booking_manager']['summary'] );
 
 		$this->assertSame( get_option( 'default_role' ), $result['default_role'] );
+	}
+
+	/**
+	 * With safe mode off nothing is held, so no role says it is.
+	 *
+	 * @return void
+	 */
+	public function test_nothing_is_held_with_safe_mode_off(): void {
+		update_option( Gate::OPTION, 'off' );
+
+		$result = ( new FindRoles() )->execute( [ 'slug' => 'administrator' ] );
+
+		$this->assertIsArray( $result );
+		$this->assertFalse( $result['roles'][0]['assigning_is_held'] );
 	}
 
 	/**

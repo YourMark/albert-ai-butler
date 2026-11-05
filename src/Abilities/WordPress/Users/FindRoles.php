@@ -11,6 +11,8 @@ namespace Albert\Abilities\WordPress\Users;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
+use Albert\SafeMode\Gate;
+use Albert\Support\WpCompat;
 use WP_Error;
 use WP_Role;
 
@@ -92,7 +94,7 @@ class FindRoles extends BaseAbility {
 							'capability_count'  => [ 'type' => 'integer' ],
 							'assigning_is_held' => [
 								'type'        => 'boolean',
-								'description' => 'The role can manage the site, so giving it to someone over Albert waits for approval.',
+								'description' => 'Giving this role to someone over Albert waits for approval: it can manage the site and safe mode is on.',
 							],
 							'capabilities'      => [
 								'type'        => 'array',
@@ -150,6 +152,8 @@ class FindRoles extends BaseAbility {
 
 		$counts = count_users();
 		$roles  = [];
+		// Below WordPress 7.1, or with safe mode off, nothing is held.
+		$gate_active = WpCompat::supports_execution_lifecycle() && ( new Gate() )->is_enabled();
 
 		foreach ( $wp_roles->role_objects as $slug => $role ) {
 			if ( ! $role instanceof WP_Role || ( $only !== '' && $slug !== $only ) ) {
@@ -165,7 +169,7 @@ class FindRoles extends BaseAbility {
 				'summary'           => self::summarise( $role ),
 				'user_count'        => (int) ( $counts['avail_roles'][ $slug ] ?? 0 ),
 				'capability_count'  => count( $capabilities ),
-				'assigning_is_held' => $role->has_cap( 'manage_options' ),
+				'assigning_is_held' => $gate_active && $role->has_cap( 'manage_options' ),
 			];
 
 			if ( $only !== '' ) {
