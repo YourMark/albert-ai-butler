@@ -156,7 +156,7 @@ class WriteContentResolver {
 	 *
 	 * Structured `blocks` take precedence over the `content` string; both routes
 	 * go through {@see BlockSerializer::serialize_with_issues()} (specs → markup,
-	 * or a string → BlockConverter fallback for HTML/Markdown). Allowed-block
+	 * or a string → BlockConverter fallback for HTML; Markdown is refused). Allowed-block
 	 * enforcement runs on submitted specs, exempting block names already present
 	 * in the post on Update. Enforcement and serializer errors both abort the
 	 * save; only warnings ride along.
@@ -177,7 +177,16 @@ class WriteContentResolver {
 			$policy_issues = $this->policy->enforce( $args['blocks'], $post_type, $post_id, $exempt );
 			$serialized    = $this->serializer->serialize_with_issues( $args['blocks'] );
 		} else {
-			$serialized = $this->serializer->serialize_with_issues( (string) ( $args['content'] ?? '' ) );
+			$content = (string) ( $args['content'] ?? '' );
+			// The converter does not read Markdown: it would store the whole text as one paragraph.
+			if ( MarkdownDetector::looks_like_markdown( $content ) ) {
+				return new WP_Error(
+					'content_is_markdown',
+					__( "This looks like Markdown, which isn't converted. Send it as `blocks` instead.", 'albert-ai-butler' ),
+					[ 'status' => 400 ]
+				);
+			}
+			$serialized = $this->serializer->serialize_with_issues( $content );
 		}
 
 		// Enforcement errors and serializer errors both abort the save; only
