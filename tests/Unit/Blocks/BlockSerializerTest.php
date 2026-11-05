@@ -952,7 +952,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertStringContainsString( '&lt;', $markup );
 	}
 
-	// Rich-text attributes (FIX 1): inline formatting preserved, scripts stripped
+	// Rich-text attributes: stored as sent; the REST save filters them
 
 	public function test_rich_text_paragraph_attribute_preserves_inline_formatting(): void {
 		$markup = $this->serializer->serialize(
@@ -986,29 +986,19 @@ class BlockSerializerTest extends TestCase {
 		$this->assertStringContainsString( '<em>emphasis</em>', $markup );
 	}
 
-	public function test_rich_text_attribute_strips_script_and_event_handlers(): void {
-		$markup = $this->serializer->serialize(
+	public function test_rich_text_attribute_goes_into_the_markup_as_sent(): void {
+		$content = 'See <ta href="https://example.com/go" linkid="1">this deal</ta> and <mark class="x">more</mark>';
+		$markup  = $this->serializer->serialize(
 			[
 				[
 					'name'       => 'core/paragraph',
-					'attributes' => [ 'content' => 'Safe <strong>text</strong><script>alert(1)</script> <a href="javascript:evil()" onclick="evil()">x</a>' ],
+					'attributes' => [ 'content' => $content ],
 				],
 			]
 		);
 
-		// Assert against the rendered innerHTML body (the block comment legitimately
-		// stores the raw attribute JSON; only the visible HTML must be sanitised).
-		$this->assertSame( 1, preg_match( '/-->(.*)<!--/s', $markup, $m ) );
-		$body = $m[1];
-
-		// The script payload and its contents are gone from the rendered body.
-		$this->assertStringNotContainsString( '<script>', $body );
-		$this->assertStringNotContainsString( 'alert(1)', $body );
-
-		// Event handlers and javascript: URLs are dropped, but the safe parts stay.
-		$this->assertStringNotContainsString( 'onclick', $body );
-		$this->assertStringNotContainsString( 'javascript:', $body );
-		$this->assertStringContainsString( '<strong>text</strong>', $body );
+		// Filtering is left to the REST save, which applies the user's KSES.
+		$this->assertStringContainsString( '<p>' . $content . '</p>', $markup );
 	}
 
 	public function test_rich_text_button_text_preserves_inline_formatting(): void {
