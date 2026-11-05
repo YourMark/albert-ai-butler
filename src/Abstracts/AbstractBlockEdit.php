@@ -24,6 +24,7 @@ use Albert\Blocks\BlockSerializer;
 use Albert\Blocks\BlockTreeEditor;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
+use Albert\Blocks\MarkupTags;
 use WP_Error;
 use WP_REST_Request;
 
@@ -108,6 +109,22 @@ abstract class AbstractBlockEdit extends BaseAbility {
 	}
 
 	/**
+	 * The markup of the changed block before and after this op, to catch a dropped tag.
+	 *
+	 * Null for ops that add, move or remove whole blocks: removing a block is the
+	 * request, not a side effect.
+	 *
+	 * @param array<int, mixed>    $tree        Parsed tree before the op.
+	 * @param array<int, mixed>    $result_tree Tree after the op.
+	 * @param array<string, mixed> $args        Ability input.
+	 * @return array{0: string, 1: string}|null [ before, after ] markup, or null to skip.
+	 * @since 1.6.0
+	 */
+	protected function changed_markup( array $tree, array $result_tree, array $args ): ?array {
+		return null;
+	}
+
+	/**
 	 * Check if the current user may perform this edit via the REST endpoint.
 	 *
 	 * @return bool|WP_Error True if permitted, WP_Error otherwise.
@@ -181,6 +198,11 @@ abstract class AbstractBlockEdit extends BaseAbility {
 
 		$markup = serialize_blocks( $result_tree );
 
+		$tag_error = $this->refuse_tag_drop( $tree, $result_tree, $args );
+		if ( $tag_error instanceof WP_Error ) {
+			return $tag_error;
+		}
+
 		$persisted = $this->persist( $post_id, $markup );
 		if ( is_wp_error( $persisted ) ) {
 			return $persisted;
@@ -219,6 +241,27 @@ abstract class AbstractBlockEdit extends BaseAbility {
 		}
 
 		return array_merge( $policy_issues, $serializer_issues );
+	}
+
+	/**
+	 * Refuse an edit that drops a tag the block had, unless `remove_tags` confirms it.
+	 *
+	 * @param array<int, mixed>    $tree        Parsed tree before the op.
+	 * @param array<int, mixed>    $result_tree Tree after the op.
+	 * @param array<string, mixed> $args        Ability input.
+	 * @return WP_Error|null Error to return without saving, or null.
+	 * @since 1.6.0
+	 */
+	private function refuse_tag_drop( array $tree, array $result_tree, array $args ): ?WP_Error {
+		// The message names tags in the post, so leave a post this user can't edit to
+		// the REST save, which refuses it without revealing its content.
+		if ( ! current_user_can( 'edit_post', absint( $args['id'] ?? 0 ) ) ) {
+			return null;
+		}
+
+		$changed = $this->changed_markup( $tree, $result_tree, $args );
+
+		return $changed === null ? null : MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args );
 	}
 
 	/**

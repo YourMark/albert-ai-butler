@@ -144,13 +144,15 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 
 ## Admin asset and menu contracts (1.4.0+)
 
-Add-ons that render a screen under the Albert menu depend on two published
-handles and one set of constants. All three are part of the public contract.
+Add-ons that render a screen under the Albert menu, or extend one, depend on
+these published handles and constants. All are part of the public contract.
 
 | Handle / constant | What it is |
 |---|---|
 | `albert-tokens` (`Admin\Assets::TOKENS_HANDLE`) | The design tokens. Colour, spacing, type, radius, motion. |
 | `albert-primitives` (`Admin\Assets::PRIMITIVES_HANDLE`) | The shared components. Depends on the tokens, so naming this one alone is enough. |
+| `albert-abilities-app`, `albert-skills-app`, `albert-context-app` | Each React screen's script. Depend on `albert-abilities-app` to run before the Abilities screen renders (the JS seams below). |
+| `albert-dataviews` (`Admin\Assets::DATAVIEWS_HANDLE`, 1.6.0+) | Script and stylesheet: the one shared @wordpress/dataviews build, loaded ahead of the Abilities and Skills scripts. The script is a chunk of Albert's webpack build that runs only under the `albert-runtime` script, so an add-on cannot import DataViews from it; depend on the screen script instead. The stylesheet handle predates 1.6.0. |
 | `Admin\Menu::POSITION_*` | `admin_menu` priorities that fix submenu order. Add-ons use `POSITION_ADDONS` or later so a future core screen cannot be pushed below third-party entries. |
 
 ```php

@@ -19,7 +19,7 @@
 
 /* Page header. */
 .albert-abilities__header {
-	margin: 4px 0 0;
+	margin-block-start: 4px;
 }
 
 /**
@@ -131,7 +131,7 @@
 	line-clamp: 3;
 }
 
-/* Operation badge — read (green) / write (amber) / delete (red). */
+/* Operation badge: read (green), write (amber), delete (red), not declared (grey). */
 .albert-op-badge {
 	display: inline-flex;
 	align-items: center;
@@ -164,6 +164,11 @@
 .albert-op-badge--delete {
 	background: var(--albert-color-danger-surface);
 	color: var(--albert-color-danger);
+}
+
+.albert-op-badge--undeclared {
+	background: var(--albert-color-neutral-surface);
+	color: var(--albert-color-neutral);
 }
 
 /* Generic add-on badges — appended to rows via the

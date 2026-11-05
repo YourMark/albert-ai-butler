@@ -53,7 +53,7 @@ class AbilitiesPayload {
 		// The MCP adapter's own tools (discover / get-info / execute) are protocol
 		// infrastructure, not user-manageable abilities — never surface them on the
 		// screen. They can't be disabled regardless (see
-		// AbilitiesManager::get_effective_disabled_list()).
+		// AbilitiesState::effective()).
 		$protected = AbilitiesRegistry::get_protected_abilities();
 		$all       = array_filter(
 			$all,
@@ -172,7 +172,7 @@ class AbilitiesPayload {
 			// an add-on already reading them must keep working.
 			'supplier'        => $source['slug'],
 			'supplierLabel'   => $source['label'],
-			'operation'       => $chips[0]['key'] ?? 'read',
+			'operation'       => $chips[0]['key'] ?? 'undeclared',
 			'enabled'         => ! in_array( $id, $disabled, true ),
 			'capability'      => $capability,
 			'capabilityRoles' => self::roles_with_capability( $capability, $roles ),

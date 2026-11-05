@@ -11,6 +11,7 @@ namespace Albert\Abstracts;
 
 use Albert\Contracts\Interfaces\Ability;
 use Albert\Core\AbilitiesState;
+use Albert\OAuth\Server\ConnectionContext;
 use WP_Error;
 use WP_REST_Request;
 
@@ -259,12 +260,14 @@ abstract class BaseAbility implements Ability {
 	/**
 	 * Execute the ability with an executability check.
 	 *
-	 * Wraps the actual execute() call with the is_executable() pipeline.
-	 * Disabled and otherwise-gated abilities should already be unregistered
-	 * by AbilitiesManager::enforce_disabled() before this point, but the
-	 * check is kept here as defence-in-depth — if anything routes to this
-	 * callback for a non-executable ability, the assistant gets the
-	 * pipeline's reasoned WP_Error instead of an opaque failure.
+	 * The on/off switch applies only to a call made through an Albert
+	 * connection; other callers (WP-CLI, other plugins, core's REST API) only
+	 * meet an add-on's refusal. Albert's MCP server refuses a switched-off
+	 * ability before it gets here; this is the second layer.
+	 *
+	 * "Through an Albert connection" means {@see ConnectionContext} has a client.
+	 * Every route into Albert's server must set it (today `TokenValidator` and
+	 * `Approver`), or this layer skips the switch.
 	 *
 	 * @param array<string, mixed> $args Input parameters.
 	 *
@@ -272,7 +275,7 @@ abstract class BaseAbility implements Ability {
 	 * @since 1.0.0
 	 */
 	public function guarded_execute( array $args ): array|WP_Error {
-		$check = $this->is_executable();
+		$check = ConnectionContext::client_id() !== null ? $this->is_executable() : $this->is_available();
 		if ( is_wp_error( $check ) ) {
 			return $check;
 		}
@@ -532,10 +535,9 @@ abstract class BaseAbility implements Ability {
 	}
 
 	/**
-	 * Check if this ability is enabled.
+	 * Whether assistants connected through Albert may use this ability.
 	 *
-	 * Uses a blocklist approach: all abilities are enabled unless explicitly disabled.
-	 * On fresh install (before first save), Albert write abilities are disabled by default.
+	 * On a fresh install (before first save), write abilities start off.
 	 *
 	 * @return bool True if enabled, false otherwise.
 	 * @since 1.2.0
@@ -560,40 +562,33 @@ abstract class BaseAbility implements Ability {
 	}
 
 	/**
-	 * Determine whether this ability is executable in the current request.
+	 * Whether an assistant connected through Albert may run this ability now.
 	 *
-	 * Runs a chain of global executability checks. The ability is executable
-	 * only if every check passes; the first failing check's WP_Error is
-	 * returned so callers receive a meaningful reason.
-	 *
-	 * Used at two seams:
-	 *  - Registration phase: AbilitiesManager unregisters Albert-managed
-	 *    abilities whose is_executable() returns a WP_Error, so disabled or
-	 *    licence-blocked abilities never appear in wp_get_abilities().
-	 *  - Execution phase: guarded_execute() short-circuits with the same
-	 *    WP_Error as defence-in-depth when an ability somehow gets called
-	 *    despite not being registered.
-	 *
-	 * Per-user gating (capability checks) lives in check_permission() and is
-	 * intentionally NOT part of this pipeline — per-user state must never
-	 * decide whether an ability is registered globally.
+	 * Switched on, and not refused by an add-on ({@see self::is_available()}).
+	 * Per-user gating lives in check_permission().
 	 *
 	 * @return bool|WP_Error True when executable, WP_Error otherwise.
 	 * @since 1.2.0
 	 */
 	public function is_executable(): bool|WP_Error {
 		if ( ! $this->is_enabled() ) {
-			return new WP_Error(
-				'ability_disabled',
-				sprintf(
-					/* translators: %s: ability name */
-					__( 'The ability "%s" is currently disabled.', 'albert-ai-butler' ),
-					$this->label
-				),
-				[ 'status' => 403 ]
-			);
+			return AbilitiesState::switched_off_error( $this->label );
 		}
 
+		return $this->is_available();
+	}
+
+	/**
+	 * Whether this ability may run on this site at all, for any caller.
+	 *
+	 * Only add-ons decide, through `albert/abilities/is_executable` (a lapsed
+	 * licence, a plan tier). A refused ability is unregistered by
+	 * {@see \Albert\Core\AbilitiesManager::enforce_disabled()}.
+	 *
+	 * @return bool|WP_Error True when available, WP_Error otherwise.
+	 * @since 1.6.0
+	 */
+	public function is_available(): bool|WP_Error {
 		/**
 		 * Filters whether an ability is executable.
 		 *
