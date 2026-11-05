@@ -201,7 +201,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 		$markup = serialize_blocks( $tree );
 
 		// Once, on the final markup: that is what core's KSES sees on save.
-		$kses_error = $this->can_edit( $post_id ) ? MarkupTags::refuse_kses_loss( $markup ) : null;
+		$kses_error = $this->can_edit( $post_id ) ? MarkupTags::refuse_kses_loss( $markup, $args ) : null;
 		if ( $kses_error instanceof WP_Error ) {
 			return $kses_error;
 		}

@@ -122,4 +122,5 @@ class MarkupTagsTest extends TestCase {
 
 		unset( $GLOBALS['albert_test_caps'] );
 	}
+
 }
