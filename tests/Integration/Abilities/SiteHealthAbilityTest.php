@@ -45,7 +45,7 @@ class SiteHealthAbilityTest extends TestCase {
 	}
 
 	/**
-	 * One real core test, one callable, and one async test.
+	 * One real core test, one callable, one that needs the browser's login, and one async test.
 	 *
 	 * @return array<string, array<string, array<string, mixed>>>
 	 */
@@ -74,6 +74,11 @@ class SiteHealthAbilityTest extends TestCase {
 					'label' => 'Not callable',
 					'test'  => 'no_such_test_method',
 				],
+				'rest_availability'    => [
+					'label'     => 'REST API availability',
+					'test'      => 'rest_availability',
+					'skip_cron' => true,
+				],
 			],
 			'async'  => [
 				'dotorg_communication' => [
@@ -86,7 +91,7 @@ class SiteHealthAbilityTest extends TestCase {
 	}
 
 	/**
-	 * Direct tests run, critical first, as plain text; async ones are listed as not run.
+	 * Direct tests run, critical first, as plain text; login-bound and async ones are listed as not run.
 	 *
 	 * @return void
 	 */
@@ -109,6 +114,10 @@ class SiteHealthAbilityTest extends TestCase {
 
 		$this->assertSame(
 			[
+				[
+					'test'  => 'rest_availability',
+					'label' => 'REST API availability',
+				],
 				[
 					'test'  => 'dotorg_communication',
 					'label' => 'Communication with WordPress.org',

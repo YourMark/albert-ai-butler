@@ -17,7 +17,7 @@ use WP_Site_Health;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Runs core's direct Site Health tests the way the Site Health screen does, and lists the async ones it did not run.
+ * Runs core's direct Site Health tests the way the Site Health screen does, and lists the ones that need the browser as not run.
  *
  * @since 1.6.0
  */
@@ -42,7 +42,7 @@ class ViewSiteHealth extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/view-site-health';
 		$this->label       = __( 'View Site Health', 'albert-ai-butler' );
-		$this->description = __( 'Run WordPress\'s Site Health checks and report each result as the Site Health screen shows it: status (critical, recommended or good), label, category and explanation. Checks that need a background request are listed as not run.', 'albert-ai-butler' );
+		$this->description = __( 'Run WordPress\'s Site Health checks and report each result as the Site Health screen shows it: status (critical, recommended or good), label, category and explanation. Checks that need a background request or the browser\'s login are listed as not run.', 'albert-ai-butler' );
 		$this->category    = 'maintenance';
 		$this->group       = 'site-health';
 
@@ -121,7 +121,7 @@ class ViewSiteHealth extends BaseAbility {
 				],
 				'not_run'         => [
 					'type'        => 'array',
-					'description' => 'Checks the Site Health screen runs in the background from the browser. Their result is unknown.',
+					'description' => 'Checks that only the Site Health screen can run, in the background or with the browser\'s login. Their result is unknown.',
 					'items'       => [
 						'type'       => 'object',
 						'properties' => [
@@ -170,9 +170,18 @@ class ViewSiteHealth extends BaseAbility {
 			'good'        => 0,
 		];
 		$results = [];
+		$not_run = [];
 
 		foreach ( (array) ( $tests['direct'] ?? [] ) as $slug => $test ) {
-			$result = $this->run_direct_test( $site_health, is_array( $test ) ? $test : [] );
+			$test = is_array( $test ) ? $test : [];
+
+			// Core skips these outside the browser too: they need the viewer's login cookie, which an MCP call lacks.
+			if ( ! empty( $test['skip_cron'] ) ) {
+				$not_run[] = $this->not_run_entry( (string) $slug, $test );
+				continue;
+			}
+
+			$result = $this->run_direct_test( $site_health, $test );
 			if ( $result === null ) {
 				continue;
 			}
@@ -199,13 +208,8 @@ class ViewSiteHealth extends BaseAbility {
 			$results = array_values( array_filter( $results, static fn( array $r ): bool => $r['status'] !== 'good' ) );
 		}
 
-		$not_run = [];
 		foreach ( (array) ( $tests['async'] ?? [] ) as $slug => $test ) {
-			$not_run[] = [
-				// The key, not `test`: for REST-run tests that is a URL.
-				'test'  => (string) $slug,
-				'label' => $this->plain_text( is_array( $test ) ? ( $test['label'] ?? '' ) : '' ),
-			];
+			$not_run[] = $this->not_run_entry( (string) $slug, is_array( $test ) ? $test : [] );
 		}
 
 		return [
@@ -213,6 +217,21 @@ class ViewSiteHealth extends BaseAbility {
 			'results'         => $results,
 			'not_run'         => $not_run,
 			'site_health_url' => admin_url( 'site-health.php' ),
+		];
+	}
+
+	/**
+	 * Describe a check that was not run.
+	 *
+	 * @param string               $slug The test's key. Not its `test` value: for REST-run tests that is a URL.
+	 * @param array<string, mixed> $test The test definition.
+	 * @return array{test: string, label: string}
+	 * @since 1.6.0
+	 */
+	private function not_run_entry( string $slug, array $test ): array {
+		return [
+			'test'  => $slug,
+			'label' => $this->plain_text( $test['label'] ?? '' ),
 		];
 	}
 
