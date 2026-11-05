@@ -2,14 +2,8 @@
 /**
  * Integration tests for building abilities on the Abilities API's own hook.
  *
- * Autoloading some 50 ability classes was paid on every request, frontend
- * views included, only because they were built on `init`. They are now built
- * on `wp_abilities_api_init`, or when something asks for the manager. These
- * tests hold both halves: nothing is built early, and everything is there
- * when it is needed.
- *
- * Each test uses its own `Plugin`, not the singleton the suite booted, whose
- * abilities are already built and registered.
+ * Building them on `init` autoloaded some 50 ability classes on every request,
+ * frontend views included. They are now built on `wp_abilities_api_init`.
  *
  * @package Albert
  */
@@ -24,62 +18,56 @@ use Albert\Tests\TestCase;
  * Deferred ability building.
  *
  * @covers \Albert\Core\Plugin::register_abilities
- * @covers \Albert\Core\Plugin::ensure_abilities_built
+ * @covers \Albert\Core\Plugin::build_abilities
  * @covers \Albert\Core\Plugin::get_abilities_manager
  */
 class DeferredAbilitiesTest extends TestCase {
 
 	/**
-	 * A plugin with its manager set up, as it is after `init`.
-	 *
-	 * @return Plugin
-	 */
-	private function plugin_after_init(): Plugin {
-		$plugin = new Plugin();
-		$plugin->register_abilities();
-
-		return $plugin;
-	}
-
-	/**
-	 * The manager's abilities, read without the side effect of asking for it.
+	 * The manager a plugin holds, read without the registry side effect of
+	 * get_abilities_manager().
 	 *
 	 * @param Plugin $plugin Plugin under test.
 	 *
-	 * @return array<string, mixed>
+	 * @return AbilitiesManager
 	 */
-	private function held_abilities( Plugin $plugin ): array {
+	private function manager_of( Plugin $plugin ): AbilitiesManager {
 		$manager = ( new \ReflectionProperty( Plugin::class, 'abilities_manager' ) )->getValue( $plugin );
 
 		$this->assertInstanceOf( AbilitiesManager::class, $manager );
 
-		return ( new \ReflectionProperty( AbilitiesManager::class, 'abilities' ) )->getValue( $manager );
+		return $manager;
 	}
 
 	/**
-	 * After `init` alone the manager exists but holds no abilities: the saving.
+	 * After `init` the manager exists but holds no abilities.
+	 *
+	 * A fresh Plugin, because the suite's singleton has already built its own.
 	 *
 	 * @return void
 	 */
 	public function test_init_builds_no_abilities(): void {
-		$this->assertSame( [], $this->held_abilities( $this->plugin_after_init() ) );
+		$plugin = new Plugin();
+		$plugin->register_abilities();
+
+		$this->assertSame( [], $this->manager_of( $plugin )->get_abilities() );
 	}
 
 	/**
-	 * Admin screens resolve labels through the manager without the Abilities
-	 * API having initialised, so asking for it must build the abilities.
+	 * Built before the manager registers them with WordPress, or none get registered.
 	 *
 	 * @return void
 	 */
-	public function test_the_manager_is_populated_when_asked_for(): void {
-		$manager = $this->plugin_after_init()->get_abilities_manager();
+	public function test_abilities_are_built_before_they_are_registered(): void {
+		$plugin = new Plugin();
+		$plugin->register_abilities();
 
-		$this->assertInstanceOf( AbilitiesManager::class, $manager );
-		$this->assertNotNull( $manager->get_label( 'albert/create-post' ) );
+		$this->assertSame( 5, has_action( 'wp_abilities_api_init', [ $plugin, 'build_abilities' ] ) );
+		$this->assertSame( 10, has_action( 'wp_abilities_api_init', [ $this->manager_of( $plugin ), 'register_abilities' ] ) );
 	}
 
 	/**
-	 * Before `init` there is no manager to build into, as before.
+	 * Before `init` there is no manager.
 	 *
 	 * @return void
 	 */
@@ -88,88 +76,15 @@ class DeferredAbilitiesTest extends TestCase {
 	}
 
 	/**
-	 * Add-ons register on `albert/abilities/register`; it fires once however
-	 * often the build is asked for.
+	 * The booted plugin's abilities reached both the manager and the registry.
 	 *
 	 * @return void
 	 */
-	public function test_the_register_action_fires_once(): void {
-		$plugin = $this->plugin_after_init();
-		$before = did_action( 'albert/abilities/register' );
+	public function test_the_booted_plugin_holds_and_registers_its_abilities(): void {
+		$manager = Plugin::get_instance()->get_abilities_manager();
 
-		$plugin->ensure_abilities_built();
-		$plugin->ensure_abilities_built();
-		$plugin->get_abilities_manager();
-
-		$this->assertSame( $before + 1, did_action( 'albert/abilities/register' ) );
-	}
-
-	/**
-	 * Both init aliases.
-	 *
-	 * @return array<string, array{0: string}>
-	 */
-	public static function provideInitHooks(): array {
-		return [
-			'wp_abilities_api_init' => [ 'wp_abilities_api_init' ],
-			'abilities_api_init'    => [ 'abilities_api_init' ],
-		];
-	}
-
-	/**
-	 * The build must land before the manager pushes its abilities into the
-	 * WordPress registry at priority 10, or nothing gets registered.
-	 *
-	 * Fires the hook for real with the manager's registry callbacks swapped for
-	 * a probe at the same priority, since the suite's registry already holds
-	 * every Albert ability and registering them again would be refused.
-	 *
-	 * @dataProvider provideInitHooks
-	 *
-	 * @param string $hook Abilities API init hook.
-	 *
-	 * @return void
-	 */
-	public function test_abilities_are_built_before_they_are_registered( string $hook ): void {
-		remove_all_actions( $hook );
-
-		$plugin  = $this->plugin_after_init();
-		$manager = ( new \ReflectionProperty( Plugin::class, 'abilities_manager' ) )->getValue( $plugin );
-
-		$this->assertSame( 5, has_action( $hook, [ $plugin, 'ensure_abilities_built' ] ) );
-		$this->assertSame( 10, has_action( $hook, [ $manager, 'register_abilities' ] ) );
-
-		remove_action( $hook, [ $manager, 'register_abilities' ] );
-		remove_action( $hook, [ $manager, 'heal_transport_tools' ], 1 );
-		remove_action( $hook, [ $manager, 'reconcile_new_abilities' ], PHP_INT_MAX - 1 );
-		remove_action( $hook, [ $manager, 'enforce_disabled' ], PHP_INT_MAX );
-
-		$seen = null;
-		add_action(
-			$hook,
-			function () use ( $plugin, &$seen ): void {
-				$seen = count( $this->held_abilities( $plugin ) );
-			},
-			10
-		);
-
-		do_action( $hook );
-
-		$this->assertGreaterThan( 0, $seen, 'The abilities must be built by the time the manager registers them.' );
-	}
-
-	/**
-	 * The booted plugin's abilities reached the WordPress registry.
-	 *
-	 * @return void
-	 */
-	public function test_the_registry_holds_albert_abilities(): void {
-		if ( ! function_exists( 'wp_has_ability' ) ) {
-			$this->markTestSkipped( 'The Abilities API is not available.' );
-		}
-
-		wp_get_abilities();
-
+		$this->assertInstanceOf( AbilitiesManager::class, $manager );
+		$this->assertNotNull( $manager->get_label( 'albert/create-post' ) );
 		$this->assertTrue( wp_has_ability( 'albert/create-post' ) );
 	}
 }

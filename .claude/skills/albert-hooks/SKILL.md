@@ -11,7 +11,7 @@ Albert provides hooks for addon plugins or themes to register custom abilities, 
 
 ### Registering Custom Abilities (`albert/abilities/register`)
 
-**Action**: Fires once per request after built-in abilities are added to the manager, on `wp_abilities_api_init` (since 1.6.0; `init` before) or when `Plugin::get_abilities_manager()` is first called. A request that needs neither, such as a frontend view, never fires it. Addons (or themes via `functions.php`) hook here to register their own abilities by extending `BaseAbility` directly, the same pattern built-in abilities use.
+**Action**: Fires after built-in abilities are added to the manager, on `wp_abilities_api_init` (since 1.6.0; `init` before). A request that never reads the abilities registry, such as a plain frontend view, never fires it. Addons (or themes via `functions.php`) hook here to register their own abilities by extending `BaseAbility` directly, the same pattern built-in abilities use.
 
 ```php
 // In an addon plugin or theme functions.php:

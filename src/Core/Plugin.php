@@ -170,14 +170,6 @@ class Plugin {
 	private ?AbilitiesManager $abilities_manager = null;
 
 	/**
-	 * Whether the abilities have been built for this request.
-	 *
-	 * @since 1.6.0
-	 * @var bool
-	 */
-	private bool $abilities_built = false;
-
-	/**
 	 * Get the singleton instance of the plugin.
 	 *
 	 * @return Plugin The plugin instance.
@@ -367,48 +359,31 @@ class Plugin {
 	}
 
 	/**
-	 * Set up the abilities manager and defer building the abilities.
+	 * Set up the abilities manager; the abilities themselves wait for the Abilities API.
 	 *
-	 * The manager and its hooks are cheap and must be in place before the
-	 * Abilities API initialises. The ability objects are not: autoloading their
-	 * classes is the cost, so they are built on the Abilities API's own init
-	 * hook (see {@see self::ensure_abilities_built()}), which a plain frontend
-	 * request never fires.
+	 * Autoloading some 50 ability classes is the cost, so they are built on
+	 * `wp_abilities_api_init`, which WordPress fires once, on the first read of
+	 * the registry. A plain frontend request never reads it.
 	 *
 	 * @return void
 	 * @since 1.0.0
-	 * @since 1.6.0 Builds no abilities; they are built on `wp_abilities_api_init`.
+	 * @since 1.6.0 Builds no abilities; see {@see self::build_abilities()}.
 	 */
 	public function register_abilities(): void {
-		if ( $this->abilities_manager !== null ) {
-			return;
-		}
-
 		$this->abilities_manager = new AbilitiesManager();
 		$this->abilities_manager->register_hooks();
 
-		// Before the manager's register_abilities() at 10, which pushes the
-		// built abilities into the WordPress registry.
-		add_action( 'abilities_api_init', [ $this, 'ensure_abilities_built' ], 5 );
-		add_action( 'wp_abilities_api_init', [ $this, 'ensure_abilities_built' ], 5 );
+		// Before the manager hands them to WordPress at 10.
+		add_action( 'wp_abilities_api_init', [ $this, 'build_abilities' ], 5 );
 	}
 
 	/**
-	 * Build the built-in abilities and let add-ons add theirs, once.
-	 *
-	 * Runs on the Abilities API's init hook, or earlier when something asks
-	 * for the manager (see {@see self::get_abilities_manager()}).
+	 * Build the built-in abilities and let add-ons add theirs.
 	 *
 	 * @return void
 	 * @since 1.6.0
 	 */
-	public function ensure_abilities_built(): void {
-		if ( $this->abilities_built || $this->abilities_manager === null ) {
-			return;
-		}
-
-		$this->abilities_built = true;
-
+	public function build_abilities(): void {
 		// Posts abilities.
 		$this->abilities_manager->add_ability( new FindPosts() );
 		$this->abilities_manager->add_ability( new ViewPost() );
@@ -485,9 +460,9 @@ class Plugin {
 		 * Fires after built-in abilities are added to the manager.
 		 *
 		 * Addon plugins hook here to register their own abilities by calling
-		 * $manager->add_ability() with a BaseAbility subclass. Fires once per
-		 * request, on `wp_abilities_api_init` or when the manager is first
-		 * asked for, never on a request that needs neither.
+		 * $manager->add_ability() with a BaseAbility subclass. Fires on
+		 * `wp_abilities_api_init`, so not on a request that never reads the
+		 * abilities registry.
 		 *
 		 * @since 1.1.0
 		 * @since 1.6.0 Fires on `wp_abilities_api_init` instead of `init`.
@@ -500,16 +475,17 @@ class Plugin {
 	/**
 	 * Get the abilities manager, populated with every ability.
 	 *
-	 * Returns null before `init`. After it, the abilities are built on demand,
-	 * so callers (admin screens resolving labels) get a populated manager
-	 * without touching the WordPress Abilities API.
+	 * Reads the registry first, which fires `wp_abilities_api_init` if it has
+	 * not fired yet and so builds the abilities.
 	 *
 	 * @return AbilitiesManager|null The abilities manager, or null before `init`.
 	 * @since 1.2.0
-	 * @since 1.6.0 Builds the abilities if they are not built yet.
+	 * @since 1.6.0 Initialises the Abilities API if it has not run yet.
 	 */
 	public function get_abilities_manager(): ?AbilitiesManager {
-		$this->ensure_abilities_built();
+		if ( $this->abilities_manager !== null ) {
+			wp_get_abilities();
+		}
 
 		return $this->abilities_manager;
 	}
