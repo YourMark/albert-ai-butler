@@ -290,6 +290,11 @@ export default function AbilitiesApp() {
 
 	const onCloseFlyIn = useCallback( () => setOpenId( null ), [] );
 
+	const hasUndeclared = useMemo(
+		() => items.some( ( item ) => item.operation === 'undeclared' ),
+		[ items ]
+	);
+
 	const enabledCount = useMemo(
 		() => items.filter( ( item ) => item.enabled ).length,
 		[ items ]
@@ -452,6 +457,7 @@ export default function AbilitiesApp() {
 							categories={ categories }
 							sources={ sources }
 							badges={ badges }
+							hasUndeclared={ hasUndeclared }
 						/>
 						{ selection.length > 0 && (
 							<div className="albert-abilities__bulkbar">

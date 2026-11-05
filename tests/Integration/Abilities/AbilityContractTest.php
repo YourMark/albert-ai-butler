@@ -18,6 +18,7 @@ namespace Albert\Tests\Integration\Abilities;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\AbilitiesRegistry;
+use Albert\Core\AnnotationPresenter;
 use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
 use Albert\Tests\Traits\ProvidesAbilities;
@@ -243,6 +244,29 @@ class AbilityContractTest extends TestCase {
 				'%s is not exposed to MCP — set meta.mcp.public (or meta.public) so it is discoverable.',
 				$ability_class
 			)
+		);
+	}
+
+	/**
+	 * Every Albert ability declares what it does, so none shows "Not declared".
+	 *
+	 * @dataProvider provideAbilities
+	 *
+	 * @param class-string<BaseAbility> $ability_class Ability class.
+	 *
+	 * @return void
+	 */
+	public function test_ability_declares_its_behaviour( string $ability_class ): void {
+		$ability = new $ability_class();
+
+		$reflection = new \ReflectionClass( $ability );
+		$prop       = $reflection->getProperty( 'meta' );
+		$prop->setAccessible( true );
+		$meta = (array) $prop->getValue( $ability );
+
+		$this->assertTrue(
+			AnnotationPresenter::is_declared( (array) ( $meta['annotations'] ?? [] ) ),
+			sprintf( '%s declares neither readonly nor destructive.', $ability_class )
 		);
 	}
 

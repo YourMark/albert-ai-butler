@@ -24,7 +24,7 @@ import { __, _n, sprintf } from '@wordpress/i18n';
 import { chevronRight } from '@wordpress/icons';
 import FlyInShell, { Section } from '../shared/FlyInShell';
 import InfoPopover from '../shared/InfoPopover';
-import { OPERATION_LABELS } from './constants';
+import { OPERATION_LABELS, operationTitle } from './constants';
 import { Badges } from './fields';
 import AdvancedPermissionsUpsell from './AdvancedPermissionsUpsell';
 
@@ -321,6 +321,14 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 				<span className="albert-op-badge__dot" aria-hidden="true" />
 				{ OPERATION_LABELS[ ability.operation ] || ability.operation }
 			</span>
+			{ operationTitle( ability ) && (
+				<InfoPopover
+					inline
+					label={ __( 'About "Not declared"', 'albert-ai-butler' ) }
+				>
+					<p>{ operationTitle( ability ) }</p>
+				</InfoPopover>
+			) }
 			<Badges badges={ ability.badges } />
 			<h2 id="albert-flyin-title" className="albert-flyin__title">
 				{ ability.label }
