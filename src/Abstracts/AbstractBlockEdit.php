@@ -198,7 +198,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 
 		$markup = serialize_blocks( $result_tree );
 
-		$tag_error = $this->refuse_tag_loss( $tree, $result_tree, $args, $markup );
+		$tag_error = $this->refuse_tag_drop( $tree, $result_tree, $args );
 		if ( $tag_error instanceof WP_Error ) {
 			return $tag_error;
 		}
@@ -244,32 +244,24 @@ abstract class AbstractBlockEdit extends BaseAbility {
 	}
 
 	/**
-	 * Refuse a save that would lose a tag silently: one the edit drops without
-	 * `remove_tags`, or one KSES would strip from the post for this user.
+	 * Refuse an edit that drops a tag the block had, unless `remove_tags` confirms it.
 	 *
 	 * @param array<int, mixed>    $tree        Parsed tree before the op.
 	 * @param array<int, mixed>    $result_tree Tree after the op.
 	 * @param array<string, mixed> $args        Ability input.
-	 * @param string               $markup      The post content about to be saved.
 	 * @return WP_Error|null Error to return without saving, or null.
 	 * @since 1.6.0
 	 */
-	private function refuse_tag_loss( array $tree, array $result_tree, array $args, string $markup ): ?WP_Error {
-		// The messages name tags in the post, so leave a post this user can't edit to
+	private function refuse_tag_drop( array $tree, array $result_tree, array $args ): ?WP_Error {
+		// The message names tags in the post, so leave a post this user can't edit to
 		// the REST save, which refuses it without revealing its content.
 		if ( ! current_user_can( 'edit_post', absint( $args['id'] ?? 0 ) ) ) {
 			return null;
 		}
 
 		$changed = $this->changed_markup( $tree, $result_tree, $args );
-		if ( $changed !== null ) {
-			$dropped = MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args );
-			if ( $dropped instanceof WP_Error ) {
-				return $dropped;
-			}
-		}
 
-		return MarkupTags::refuse_kses_loss( $markup, $args );
+		return $changed === null ? null : MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args );
 	}
 
 	/**

@@ -11,7 +11,6 @@ namespace Albert\Abilities\WordPress\Pages;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
-use Albert\Blocks\MarkupTags;
 use Albert\Blocks\WriteContentResolver;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -70,34 +69,33 @@ class Update extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'          => [
+				'id'      => [
 					'type'        => 'integer',
 					'description' => 'The page ID to update',
 				],
-				'title'       => [
+				'title'   => [
 					'type'        => 'string',
 					'description' => 'The page title',
 				],
-				'content'     => [
+				'content' => [
 					'type'        => 'string',
 					'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire page body when set.',
 				],
-				'blocks'      => [
+				'blocks'  => [
 					'type'        => 'array',
 					'description' => 'Structured block specs (preferred over "content"). Replaces the entire page body. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
 					'items'       => BlockSpecSchema::spec(),
 				],
-				'remove_tags' => MarkupTags::input_schema(),
-				'status'      => [
+				'status'  => [
 					'type'        => 'string',
 					'enum'        => $post_statuses,
 					'description' => 'Page status',
 				],
-				'excerpt'     => [
+				'excerpt' => [
 					'type'        => 'string',
 					'description' => 'Optional page excerpt',
 				],
-				'parent'      => [
+				'parent'  => [
 					'type'        => 'integer',
 					'description' => 'Parent page ID for hierarchical pages',
 				],
