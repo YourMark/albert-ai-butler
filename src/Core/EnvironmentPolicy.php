@@ -150,11 +150,13 @@ class EnvironmentPolicy {
 	/**
 	 * Whether an ability declares it is read-only or not destructive.
 	 *
-	 * Annotations only, no slug guessing: an ability that says nothing keeps its toggle.
+	 * Annotations only, strict booleans: an undeclared ability, or a write that
+	 * leaves `destructive` unset, keeps its toggle.
 	 *
 	 * @param \WP_Ability $ability The registered ability.
 	 *
 	 * @return bool
+	 * @since 1.6.0
 	 */
 	private static function deletes_nothing( \WP_Ability $ability ): bool {
 		$meta        = (array) $ability->get_meta();
@@ -171,6 +173,7 @@ class EnvironmentPolicy {
 	 * @param mixed $policy Candidate policy.
 	 *
 	 * @return bool
+	 * @since 1.6.0
 	 */
 	private static function is_known( mixed $policy ): bool {
 		return in_array( $policy, [ self::TOGGLES, self::READ_WRITE, self::ALL ], true );

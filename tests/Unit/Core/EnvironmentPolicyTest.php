@@ -139,6 +139,21 @@ class EnvironmentPolicyTest extends TestCase {
 	}
 
 	/**
+	 * A write that leaves `destructive` unset may delete, so `read-write` leaves its toggle.
+	 *
+	 * @return void
+	 */
+	public function test_read_write_keeps_a_write_without_destructive_off(): void {
+		$GLOBALS['albert_test_options'][ AbilitiesState::OPTION ] = [ 'other/update-things' ];
+		$GLOBALS['albert_test_abilities']                         = [
+			new WP_Ability( 'other/update-things', [ 'annotations' => [ 'readonly' => false ] ] ),
+		];
+		$this->filter_policy( EnvironmentPolicy::READ_WRITE );
+
+		$this->assertSame( [ 'other/update-things' ], AbilitiesState::effective() );
+	}
+
+	/**
 	 * An ability that is not registered cannot be classified, so it keeps its toggle.
 	 *
 	 * @return void

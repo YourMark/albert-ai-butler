@@ -32,6 +32,8 @@ function environmentLabel( environment ) {
 }
 
 /**
+ * The notice shown while an environment policy is in force.
+ *
  * @param {Object}                                                   props
  * @param {{environment: string, policy: string, source: string}|null} props.policy
  * @param {boolean}                                                  props.hidden Hidden while the fly-in is open.
