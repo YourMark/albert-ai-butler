@@ -85,6 +85,19 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
+	 * Menu abilities, reads included, need edit_theme_options, as core's menu routes do.
+	 *
+	 * @return void
+	 */
+	public function test_menu_abilities_require_edit_theme_options(): void {
+		foreach ( [ 'albert/find-menus', 'albert/add-menu-item', 'albert/delete-menu' ] as $id ) {
+			$ability = new WP_Ability( $id, [ 'annotations' => [ 'readonly' => $id === 'albert/find-menus' ] ] );
+
+			$this->assertSame( 'edit_theme_options', AbilitiesRegistry::resolve_required_capability( $ability ), $id );
+		}
+	}
+
+	/**
 	 * Uploading media requires upload_files.
 	 *
 	 * @return void

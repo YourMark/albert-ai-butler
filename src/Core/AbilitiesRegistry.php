@@ -439,6 +439,10 @@ class AbilitiesRegistry {
 		if ( str_contains( $action, 'user' ) ) {
 			return $is_read ? 'list_users' : ( $is_delete ? 'delete_users' : 'edit_users' );
 		}
+		// Core's menu routes check edit_theme_options for reads as well.
+		if ( str_contains( $action, 'menu' ) ) {
+			return 'edit_theme_options';
+		}
 		// Setting a featured image edits the target post, not the media library.
 		if ( str_contains( $action, 'featured-image' ) ) {
 			return $is_read ? 'read' : 'edit_posts';
