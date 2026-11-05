@@ -134,6 +134,15 @@ class RestoreRevision extends BaseAbility {
 			);
 		}
 
+		// As core's revision.php: with revisions off, the restore would leave no revision to undo it.
+		if ( ! wp_revisions_enabled( $post ) && ! wp_is_post_autosave( $revision ) ) {
+			return new WP_Error(
+				'revisions_disabled',
+				__( 'Revisions are turned off for this post, so restoring one would leave no way back.', 'albert-ai-butler' ),
+				[ 'status' => 409 ]
+			);
+		}
+
 		$changed = RevisionDiff::changed_fields( $revision, $post );
 		$before  = $this->latest_revision_id( $post->ID );
 

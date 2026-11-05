@@ -242,6 +242,23 @@ class RevisionsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * With revisions turned off, a restore is refused: nothing would record it.
+	 *
+	 * @return void
+	 */
+	public function test_restore_refuses_when_revisions_are_off(): void {
+		add_filter( 'wp_revisions_to_keep', '__return_zero' );
+
+		$result = ( new RestoreRevision() )->execute( [ 'id' => $this->first_revision ] );
+
+		remove_filter( 'wp_revisions_to_keep', '__return_zero' );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'revisions_disabled', $result->get_error_code() );
+		$this->assertSame( 'Opening times', get_post( $this->post_id )->post_title );
+	}
+
+	/**
 	 * Unknown revisions and posts are reported as not found; a post ID is not a revision ID.
 	 *
 	 * @return void
