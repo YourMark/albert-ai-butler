@@ -85,6 +85,20 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
+	 * Revision abilities, reads included, need edit_posts: core shows a post's
+	 * revisions only to those who may edit it.
+	 *
+	 * @return void
+	 */
+	public function test_revision_abilities_require_edit_posts(): void {
+		foreach ( [ 'albert/find-revisions', 'albert/view-revision', 'albert/restore-revision' ] as $id ) {
+			$ability = new WP_Ability( $id, [ 'annotations' => [ 'readonly' => $id !== 'albert/restore-revision' ] ] );
+
+			$this->assertSame( 'edit_posts', AbilitiesRegistry::resolve_required_capability( $ability ), $id );
+		}
+	}
+
+	/**
 	 * Uploading media requires upload_files.
 	 *
 	 * @return void
