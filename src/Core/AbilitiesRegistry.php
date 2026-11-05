@@ -449,6 +449,9 @@ class AbilitiesRegistry {
 		if ( str_contains( $action, 'term' ) || str_contains( $action, 'taxonom' ) ) {
 			return $is_read ? 'read' : 'manage_categories';
 		}
+		if ( str_contains( $action, 'comment' ) ) {
+			return 'moderate_comments';
+		}
 		if ( str_contains( $action, 'page' ) ) {
 			return $is_read ? 'read' : ( $is_delete ? 'delete_pages' : 'edit_pages' );
 		}

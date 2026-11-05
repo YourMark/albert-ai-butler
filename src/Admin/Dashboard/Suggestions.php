@@ -188,6 +188,10 @@ class Suggestions {
 				'requires' => [ 'albert/find-posts', 'albert/create-post' ],
 			],
 			[
+				'text'     => __( 'Are any comments waiting for approval? Tell me which look like spam.', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-comments' ],
+			],
+			[
 				'text'     => __( 'Who has administrator access to this site?', 'albert-ai-butler' ),
 				'requires' => [ 'albert/find-users' ],
 			],

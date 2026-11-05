@@ -19,6 +19,11 @@ namespace Albert\Tests\Integration\Abilities;
 use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
+use Albert\Abilities\WordPress\Comments\DeleteComment;
+use Albert\Abilities\WordPress\Comments\FindComments;
+use Albert\Abilities\WordPress\Comments\ModerateComment;
+use Albert\Abilities\WordPress\Comments\ReplyToComment;
+use Albert\Abilities\WordPress\Comments\ViewComment;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
@@ -448,6 +453,41 @@ class ExecuteSchemaTest extends TestCase {
 			[ 'id' => $attachment_id ],
 			'ViewMedia'
 		);
+	}
+
+	/**
+	 * The comment abilities return results matching their output schemas.
+	 *
+	 * @return void
+	 */
+	public function test_comment_abilities_output_matches_schema(): void {
+		$post_id    = self::factory()->post->create();
+		$comment_id = (int) self::factory()->comment->create(
+			[
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '0',
+			]
+		);
+
+		$this->assert_execute_matches_schema( new FindComments(), [], 'FindComments' );
+		$this->assert_execute_matches_schema( new ViewComment(), [ 'id' => $comment_id ], 'ViewComment' );
+		$this->assert_execute_matches_schema(
+			new ReplyToComment(),
+			[
+				'id'      => $comment_id,
+				'content' => 'Thanks.',
+			],
+			'ReplyToComment'
+		);
+		$this->assert_execute_matches_schema(
+			new ModerateComment(),
+			[
+				'id'     => $comment_id,
+				'status' => 'spam',
+			],
+			'ModerateComment'
+		);
+		$this->assert_execute_matches_schema( new DeleteComment(), [ 'id' => $comment_id ], 'DeleteComment' );
 	}
 
 	/**

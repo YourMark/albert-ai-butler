@@ -50,6 +50,8 @@ class RiskPolicy {
 		'albert/update-user',
 		'albert/create-user',
 		'albert/delete-user',
+		// Public the moment it is saved, and it speaks for the site.
+		'albert/reply-to-comment',
 	];
 
 	/**
