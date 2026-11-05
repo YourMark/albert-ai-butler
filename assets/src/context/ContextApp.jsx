@@ -142,7 +142,7 @@ export default function ContextApp() {
 					{ /* Saving cannot reach a conversation already open, and the "Saved" beside it reads as if it did. */ }
 					<p className="albert-page__description albert-context__reach-note">
 						{ __(
-							'Changes reach an assistant the next time it asks what this site can do. An open conversation keeps what it started with.',
+							'Changes reach an assistant the next time it asks what this site can do. An open conversation keeps what it started with, so start a new one to use them.',
 							'albert-ai-butler'
 						) }
 					</p>
