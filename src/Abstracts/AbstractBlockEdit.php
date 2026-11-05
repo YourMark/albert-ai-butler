@@ -8,8 +8,8 @@
  * parse the stored content, apply the operation (or each item of `edits`) to the
  * block tree, enforce the allowed-block policy on any new/changed block, fold
  * the resulting issues through BlockIssues (errors abort, warnings ride along),
- * serialize, persist once via the capability-aware REST POST path, and return the refreshed block tree so the
- * model always has current paths for the next edit.
+ * serialize, persist once via the capability-aware REST POST path, and return
+ * the refreshed block tree so the model always has current paths for the next edit.
  *
  * @package    Albert
  * @subpackage Abstracts
