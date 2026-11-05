@@ -1659,8 +1659,8 @@ class Dashboard implements Hookable {
 	/**
 	 * Resolve a logged ability slug to its human-readable label.
 	 *
-	 * Prefers the in-memory abilities manager, whose label data is populated
-	 * during bootstrap and is therefore available even on this admin page,
+	 * Prefers the in-memory abilities manager, which builds its abilities when
+	 * asked and is therefore available even on this admin page,
 	 * where the WordPress Abilities API registry is not yet populated and
 	 * calling wp_get_ability() would emit PHP notices. Abilities the manager
 	 * does not hold (e.g. third-party abilities registered directly with
