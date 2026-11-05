@@ -210,7 +210,7 @@ you only need to change one block, that is wasteful and risks degrading blocks y
 did not mean to touch. Instead use the granular block-edit abilities, which change
 exactly one block and preserve every other block **byte-for-byte**:
 
-- `albert/edit-post-block`: replace one block with a new spec.
+- `albert/edit-post-block`: replace one block with a new spec, or several in one call.
 - `albert/add-post-block`: insert one block before/after another, or inside it.
 - `albert/remove-post-block`: delete one block.
 - `albert/move-post-block`: reorder one block among its siblings.
@@ -222,6 +222,12 @@ plus an `expect` guard so a post that changed under you is rejected rather than
 overwritten. The exact arguments differ per operation and each ability carries its own
 instructions: call `get-ability-info` on the one you are about to use and follow what it
 says there. That is where the detail is kept current.
+
+**Changing several blocks of one post:** send them all in one `edit-post-block` call as
+`edits`, a list of `{ path, block, expect }`, rather than one call per block. Every call
+saves a revision, and a site that keeps only a few loses its history fast. The edits
+apply in order and save once; each path points into the tree as the earlier edits left
+it. If one edit fails, nothing is saved and the error names it as `edits[index]`.
 
 **When to use which:** prefer granular ops for large posts or single-block changes;
 use whole-content `update-*` when you are rewriting most of the body. Granular block
