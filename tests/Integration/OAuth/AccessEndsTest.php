@@ -66,12 +66,7 @@ class AccessEndsTest extends TestCase {
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', Tables::oauth()[ $key ] ) );
 		}
 
-		$this->user_id = self::factory()->user->create(
-			[
-				'role'      => 'editor',
-				'user_pass' => 'old-password',
-			]
-		);
+		$this->user_id = self::factory()->user->create( [ 'role' => 'editor', 'user_pass' => 'old-password' ] );
 		AllowedUsers::add( $this->user_id );
 		AllowedUsers::mark_authorised( $this->user_id );
 

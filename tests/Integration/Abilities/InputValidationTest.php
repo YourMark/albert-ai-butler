@@ -150,7 +150,7 @@ class InputValidationTest extends TestCase {
 		$properties = $schema['properties'] ?? [];
 		$required   = $schema['required'] ?? [];
 
-		$args                           = $this->build_valid_args_from_schema( $properties, $required );
+		$args = $this->build_valid_args_from_schema( $properties, $required );
 		$args['albert_not_a_parameter'] = 'anything';
 
 		$result = $ability->execute( $args );

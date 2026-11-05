@@ -54,6 +54,7 @@ class ConnectControllerTest extends TestCase {
 			]
 		);
 		wp_set_current_user( $this->admin_id );
+
 	}
 
 	/**
