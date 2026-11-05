@@ -111,7 +111,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 	/**
 	 * The markup of the changed block before and after this op, to catch a dropped tag.
 	 *
-	 * Null for ops that only move or remove whole blocks: removing a block is the
+	 * Null for ops that add, move or remove whole blocks: removing a block is the
 	 * request, not a side effect.
 	 *
 	 * @param array<int, mixed>    $tree        Parsed tree before the op.
@@ -255,6 +255,12 @@ abstract class AbstractBlockEdit extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	private function refuse_tag_loss( array $tree, array $result_tree, array $args, string $markup ): ?WP_Error {
+		// The messages name tags in the post, so leave a post this user can't edit to
+		// the REST save, which refuses it without revealing its content.
+		if ( ! current_user_can( 'edit_post', absint( $args['id'] ?? 0 ) ) ) {
+			return null;
+		}
+
 		$changed = $this->changed_markup( $tree, $result_tree, $args );
 		if ( $changed !== null ) {
 			$dropped = MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args );
