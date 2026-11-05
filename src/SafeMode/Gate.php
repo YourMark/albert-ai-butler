@@ -149,14 +149,14 @@ class Gate {
 	 * ({@see RiskPolicy}) or destructive/unannotated by its annotation. The risk
 	 * axis is what catches a privilege change or an option write that the
 	 * annotation preset marks `destructive: false`. An add-on can then add a
-	 * hold of its own through `albert/safe_mode/holds_call`.
+	 * hold of its own through `albert/safe_mode/should_hold`.
 	 *
 	 * @param WP_Ability           $ability The ability about to execute.
 	 * @param array<string, mixed> $input   Its captured input.
 	 *
 	 * @return bool
 	 * @since 1.5.0
-	 * @since 1.6.0 Add-ons can hold a call through `albert/safe_mode/holds_call`.
+	 * @since 1.6.0 Add-ons can hold a call through `albert/safe_mode/should_hold`.
 	 */
 	public function must_gate( WP_Ability $ability, array $input = [] ): bool {
 		if ( ! $this->is_enabled() ) {
@@ -186,7 +186,7 @@ class Gate {
 		 * @param array<string, mixed> $input   The call's captured input.
 		 * @param int                  $user_id The user making the call.
 		 */
-		$filtered = apply_filters( 'albert/safe_mode/holds_call', $hold, $name, $input, get_current_user_id() );
+		$filtered = apply_filters( 'albert/safe_mode/should_hold', $hold, $name, $input, get_current_user_id() );
 
 		return $hold || (bool) $filtered;
 	}

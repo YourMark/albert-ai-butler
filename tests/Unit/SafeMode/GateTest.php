@@ -161,7 +161,7 @@ class GateTest extends TestCase {
 	 * @return void
 	 */
 	public function test_an_add_on_can_hold_a_call_on_its_input(): void {
-		$GLOBALS['albert_test_filter_callbacks']['albert/safe_mode/holds_call'] = static function ( bool $hold, string $ability, array $input ): bool {
+		$GLOBALS['albert_test_filter_callbacks']['albert/safe_mode/should_hold'] = static function ( bool $hold, string $ability, array $input ): bool {
 			return $hold || ( $input['status'] ?? '' ) === 'publish';
 		};
 
@@ -177,7 +177,7 @@ class GateTest extends TestCase {
 	 * @return void
 	 */
 	public function test_a_filter_cannot_release_a_policy_hold(): void {
-		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/holds_call'] = false;
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/should_hold'] = false;
 
 		$this->assertTrue( $this->gate->must_gate( $this->ability( [ 'destructive' => true ] ) ) );
 	}
@@ -196,7 +196,7 @@ class GateTest extends TestCase {
 		$calls = array_values(
 			array_filter(
 				$GLOBALS['albert_test_hooks'],
-				static fn( array $call ): bool => $call['hook'] === 'albert/safe_mode/holds_call'
+				static fn( array $call ): bool => $call['hook'] === 'albert/safe_mode/should_hold'
 			)
 		);
 
@@ -212,7 +212,7 @@ class GateTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_filter_is_skipped_when_off_or_exempt(): void {
-		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/holds_call']       = true;
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/should_hold']      = true;
 		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/exempt_abilities'] = [ 'test/ability' ];
 
 		$this->assertFalse( $this->gate->must_gate( $this->ability( [ 'destructive' => false ] ) ) );
