@@ -384,7 +384,7 @@ Uninstalling Albert removes its tables and settings. On a multisite network this
 
 Developed by Mark Jansen, Your Mark Media
 Website: https://yourmark.nl
-Plugin URL: https://wordpress.org/plugins/albert/
+Plugin URL: https://wordpress.org/plugins/albert-ai-butler/
 
 Built with:
 * league/oauth2-server for OAuth 2.0 implementation
