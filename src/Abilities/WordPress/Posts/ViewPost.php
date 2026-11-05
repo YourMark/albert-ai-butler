@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+use Albert\Abilities\WordPress\RegisteredMeta;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
@@ -131,6 +132,10 @@ class ViewPost extends BaseAbility {
 							'type'        => 'boolean',
 							'description' => 'Whether the stored content actually contains block markup. May differ from "editor" (e.g. classic content saved on a block-editor type).',
 						],
+						'meta'       => [
+							'type'        => 'object',
+							'description' => 'Custom fields registered for the REST API, as { "key": value }. These are the fields update-post accepts in "meta"; other custom fields are not shown.',
+						],
 						'_meta'      => [
 							'type'        => 'object',
 							'description' => 'Block-window pagination metadata. The returned content/blocks/plaintext/html/markdown reflect only the requested window of top-level blocks. When "truncated" is true, fetch the rest by re-requesting with the suggested "next_offset".',
@@ -235,6 +240,7 @@ class ViewPost extends BaseAbility {
 					'slug'           => $post->post_name,
 					'permalink'      => get_permalink( $post ),
 					'featured_image' => get_post_thumbnail_id( $post ) ? get_post_thumbnail_id( $post ) : null,
+					'meta'           => RegisteredMeta::read( $post->ID, 'post' ),
 				]
 			),
 		];

@@ -53,6 +53,20 @@ class RiskPolicy {
 	];
 
 	/**
+	 * Input fields that hold an otherwise ordinary write of Albert's.
+	 *
+	 * Overwriting a custom field has no way back until Revert ships (1.7.0): core
+	 * keeps no revision of meta. Creating content with them overwrites nothing.
+	 *
+	 * @since 1.6.0
+	 * @var array<string, list<string>>
+	 */
+	private const HELD_FIELDS = [
+		'albert/update-post' => [ 'meta' ],
+		'albert/update-page' => [ 'meta' ],
+	];
+
+	/**
 	 * Option names whose value being written is high-risk.
 	 *
 	 * @since 1.5.0
@@ -120,6 +134,7 @@ class RiskPolicy {
 	 */
 	public function must_hold( WP_Ability $ability, array $input ): bool {
 		return $this->is_held_ability( $ability->get_name() )
+			|| $this->writes_held_field( $ability->get_name(), $input )
 			|| $this->grants_admin_role( $input )
 			|| $this->writes_high_risk_option( $input );
 	}
@@ -168,6 +183,27 @@ class RiskPolicy {
 		$held = apply_filters( 'albert/safe_mode/high_risk_abilities', self::HELD_ABILITIES );
 
 		return is_array( $held ) && in_array( $ability_name, $held, true );
+	}
+
+	/**
+	 * Whether the call sets one of the fields {@see self::HELD_FIELDS} lists for it.
+	 *
+	 * An empty value writes nothing, so it does not hold.
+	 *
+	 * @param string               $ability_name The ability id.
+	 * @param array<string, mixed> $input        Resolved input.
+	 *
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	private function writes_held_field( string $ability_name, array $input ): bool {
+		foreach ( self::HELD_FIELDS[ $ability_name ] ?? [] as $field ) {
+			if ( ! empty( $input[ $field ] ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
