@@ -436,7 +436,7 @@ class AbilitiesRegistry {
 		$is_read   = $operation === 'read';
 		$is_delete = $operation === 'delete';
 
-		if ( str_contains( $action, 'user' ) ) {
+		if ( str_contains( $action, 'user' ) || str_contains( $action, 'role' ) ) {
 			return $is_read ? 'list_users' : ( $is_delete ? 'delete_users' : 'edit_users' );
 		}
 		// Setting a featured image edits the target post, not the media library.
