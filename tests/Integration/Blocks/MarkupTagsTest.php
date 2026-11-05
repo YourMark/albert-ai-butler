@@ -161,4 +161,40 @@ class MarkupTagsTest extends TestCase {
 		$this->assertStringNotContainsString( '<ta', get_post( $post_id )->post_content );
 		$this->assertStringContainsString( 'this deal', get_post( $post_id )->post_content );
 	}
+
+	/**
+	 * An author who edits a block that already holds a plugin tag loses it on save without an
+	 * error, as in the editor: the drop check reads the edit, not what survives KSES.
+	 *
+	 * @return void
+	 */
+	public function test_existing_plugin_tag_is_stripped_when_an_author_edits_its_block(): void {
+		$this->log_in( 'administrator' );
+		$author  = self::factory()->user->create( [ 'role' => 'author' ] );
+		$post_id = self::factory()->post->create(
+			[
+				'post_author'  => $author,
+				'post_content' => '<!-- wp:paragraph --><p>See ' . self::TA_LINK . '.</p><!-- /wp:paragraph -->',
+			]
+		);
+		$this->assertStringContainsString( self::TA_LINK, get_post( $post_id )->post_content );
+
+		wp_set_current_user( $author );
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => $post_id,
+				'path'  => [ 0 ],
+				'block' => [
+					'name'       => 'core/paragraph',
+					'attributes' => [ 'content' => 'Read ' . self::TA_LINK . '.' ],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$content = get_post( $post_id )->post_content;
+		$this->assertStringNotContainsString( '<ta', $content );
+		$this->assertStringContainsString( 'Read', $content );
+		$this->assertStringContainsString( 'this deal', $content );
+	}
 }
