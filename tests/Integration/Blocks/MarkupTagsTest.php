@@ -180,4 +180,35 @@ class MarkupTagsTest extends TestCase {
 		$this->assertSame( [ 'ta' ], $result->get_error_data()['tags'] );
 		$this->assertSame( $stored, get_post( $post_id )->post_content );
 	}
+
+	/**
+	 * With `remove_tags`, a tag the user may not store is stripped on save, as core does.
+	 *
+	 * @return void
+	 */
+	public function test_remove_tags_lets_kses_strip_a_plugin_tag(): void {
+		$author  = $this->log_in( 'author' );
+		$post_id = self::factory()->post->create(
+			[
+				'post_author'  => $author,
+				'post_content' => '<!-- wp:paragraph --><p>Old</p><!-- /wp:paragraph -->',
+			]
+		);
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'          => $post_id,
+				'path'        => [ 0 ],
+				'remove_tags' => [ 'ta' ],
+				'block'       => [
+					'name'       => 'core/paragraph',
+					'attributes' => [ 'content' => 'New ' . self::TA_LINK ],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertStringNotContainsString( '<ta', get_post( $post_id )->post_content );
+		$this->assertStringContainsString( 'New ', get_post( $post_id )->post_content );
+	}
 }
