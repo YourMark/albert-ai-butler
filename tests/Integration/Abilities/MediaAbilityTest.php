@@ -2,8 +2,8 @@
 /**
  * Parameter-level integration tests for Media abilities.
  *
- * Verifies that every input parameter on FindMedia, ViewMedia, and
- * SetFeaturedImage actually works as documented. UploadMedia is excluded
+ * Verifies that every input parameter on FindMedia, ViewMedia,
+ * SetFeaturedImage, UpdateMedia and DeleteMedia actually works as documented. UploadMedia is excluded
  * because it sideloads from an external URL, making it slow and flaky
  * in a test environment.
  *
@@ -12,8 +12,10 @@
 
 namespace Albert\Tests\Integration\Abilities;
 
+use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
+use Albert\Abilities\WordPress\Media\UpdateMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Tests\TestCase;
 use WP_Error;
@@ -145,6 +147,222 @@ class MediaAbilityTest extends TestCase {
 		$this->assertCount( 2, $page1['media'] );
 		$this->assertGreaterThanOrEqual( 1, count( $page2['media'] ) );
 		$this->assertNotSame( $page1['media'][0]['id'], $page2['media'][0]['id'] );
+	}
+
+	/**
+	 * FindMedia returns each item's alt text.
+	 *
+	 * @return void
+	 */
+	public function test_find_media_returns_alt_text(): void {
+		$attachment_id = $this->create_test_attachment();
+		update_post_meta( $attachment_id, '_wp_attachment_image_alt', 'A canola field' );
+
+		$result = ( new FindMedia() )->execute( [] );
+		$item   = array_values( wp_list_filter( $result['media'], [ 'id' => $attachment_id ] ) )[0];
+
+		$this->assertSame( 'A canola field', $item['alt_text'] );
+	}
+
+	/**
+	 * Missing_alt_text lists images with no alt row or an empty one, and nothing else.
+	 *
+	 * @return void
+	 */
+	public function test_find_media_missing_alt_text(): void {
+		$with_alt  = $this->create_test_attachment();
+		$no_row    = $this->create_test_attachment();
+		$empty_alt = $this->create_test_attachment();
+		update_post_meta( $with_alt, '_wp_attachment_image_alt', 'A canola field' );
+		delete_post_meta( $no_row, '_wp_attachment_image_alt' );
+		update_post_meta( $empty_alt, '_wp_attachment_image_alt', '' );
+
+		$document = self::factory()->attachment->create(
+			[
+				'post_mime_type' => 'application/pdf',
+				'post_title'     => 'A PDF',
+			]
+		);
+
+		$result = ( new FindMedia() )->execute(
+			[
+				'missing_alt_text' => true,
+				'per_page'         => 100,
+			]
+		);
+		$ids    = array_column( $result['media'], 'id' );
+
+		$this->assertContains( $no_row, $ids );
+		$this->assertContains( $empty_alt, $ids );
+		$this->assertNotContains( $with_alt, $ids );
+		$this->assertNotContains( $document, $ids, 'Only images need alt text.' );
+	}
+
+	// UpdateMedia.
+
+	/**
+	 * UpdateMedia saves alt text, title, caption and description, and view-media reads them back.
+	 *
+	 * @return void
+	 */
+	public function test_update_media_sets_all_four_fields(): void {
+		$attachment_id = $this->create_test_attachment();
+
+		$result = ( new UpdateMedia() )->execute(
+			[
+				'id'          => $attachment_id,
+				'alt_text'    => 'A yellow canola field under a blue sky',
+				'title'       => 'Canola field',
+				'caption'     => 'Spring in the north.',
+				'description' => 'Taken in April.',
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertTrue( $result['updated'] );
+		$this->assertSame( 'A yellow canola field under a blue sky', $result['media']['alt_text'] );
+		$this->assertSame( 'Canola field', $result['media']['title'] );
+
+		$view = ( new ViewMedia() )->execute( [ 'id' => $attachment_id ] )['media'];
+		$this->assertSame( 'A yellow canola field under a blue sky', $view['alt_text'] );
+		$this->assertSame( 'Canola field', $view['title'] );
+		$this->assertSame( 'Spring in the north.', $view['caption'] );
+		$this->assertSame( 'Taken in April.', $view['description'] );
+	}
+
+	/**
+	 * Omitted fields stay as they were; an empty string clears one.
+	 *
+	 * @return void
+	 */
+	public function test_update_media_leaves_omitted_fields_and_clears_empty_ones(): void {
+		$attachment_id = $this->create_test_attachment();
+		update_post_meta( $attachment_id, '_wp_attachment_image_alt', 'Old alt' );
+		wp_update_post(
+			[
+				'ID'           => $attachment_id,
+				'post_title'   => 'Keep me',
+				'post_excerpt' => 'Old caption',
+			]
+		);
+
+		( new UpdateMedia() )->execute(
+			[
+				'id'      => $attachment_id,
+				'caption' => '',
+			]
+		);
+
+		$this->assertSame( 'Old alt', get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) );
+		$this->assertSame( 'Keep me', get_post_field( 'post_title', $attachment_id ) );
+		$this->assertSame( '', get_post_field( 'post_excerpt', $attachment_id ) );
+	}
+
+	/**
+	 * UpdateMedia refuses an ID that is a post, not an attachment.
+	 *
+	 * @return void
+	 */
+	public function test_update_media_rejects_post_id(): void {
+		$post_id = self::factory()->post->create( [ 'post_title' => 'Untouched' ] );
+
+		$result = ( new UpdateMedia() )->execute(
+			[
+				'id'    => $post_id,
+				'title' => 'Changed',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'media_not_found', $result->get_error_code() );
+		$this->assertSame( 'Untouched', get_post_field( 'post_title', $post_id ) );
+	}
+
+	/**
+	 * Core's per-attachment check refuses an author editing someone else's file.
+	 *
+	 * @return void
+	 */
+	public function test_update_media_refuses_another_users_attachment(): void {
+		$attachment_id = $this->create_test_attachment();
+		update_post_meta( $attachment_id, '_wp_attachment_image_alt', 'Admin alt' );
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'author' ] ) );
+
+		$ability = new UpdateMedia();
+		$this->assertTrue( $ability->check_permission(), 'An author may use the ability on their own files.' );
+
+		$result = $ability->execute(
+			[
+				'id'       => $attachment_id,
+				'alt_text' => 'Hijacked',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'media_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'Admin alt', get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) );
+	}
+
+	/**
+	 * A user without upload_files cannot use the ability at all.
+	 *
+	 * @return void
+	 */
+	public function test_update_media_needs_upload_files(): void {
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
+
+		$this->assertInstanceOf( WP_Error::class, ( new UpdateMedia() )->check_permission() );
+		$this->assertInstanceOf( WP_Error::class, ( new DeleteMedia() )->check_permission() );
+	}
+
+	// DeleteMedia.
+
+	/**
+	 * DeleteMedia removes the attachment permanently.
+	 *
+	 * @return void
+	 */
+	public function test_delete_media_removes_it_permanently(): void {
+		$attachment_id = $this->create_test_attachment();
+
+		$result = ( new DeleteMedia() )->execute( [ 'id' => $attachment_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertTrue( $result['deleted'] );
+		$this->assertNull( get_post( $attachment_id ) );
+	}
+
+	/**
+	 * DeleteMedia refuses an ID that is a post, and leaves the post alone.
+	 *
+	 * @return void
+	 */
+	public function test_delete_media_rejects_post_id(): void {
+		$post_id = self::factory()->post->create();
+
+		$result = ( new DeleteMedia() )->execute( [ 'id' => $post_id ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'media_not_found', $result->get_error_code() );
+		$this->assertNotNull( get_post( $post_id ) );
+	}
+
+	/**
+	 * Core refuses an author deleting someone else's file.
+	 *
+	 * @return void
+	 */
+	public function test_delete_media_refuses_another_users_attachment(): void {
+		$attachment_id = $this->create_test_attachment();
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'author' ] ) );
+
+		$result = ( new DeleteMedia() )->execute( [ 'id' => $attachment_id ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'media_permission_denied', $result->get_error_code() );
+		$this->assertNotNull( get_post( $attachment_id ) );
 	}
 
 	// ─── ViewMedia ──────────────────────────────────────────────────
