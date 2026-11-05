@@ -127,6 +127,12 @@ class WriteContentResolver {
 			return $resolved;
 		}
 
+		// The messages name tags in the post, so leave a post this user can't edit to
+		// the REST save, which refuses it without revealing its content.
+		if ( $post_id && ! current_user_can( 'edit_post', $post_id ) ) {
+			return $resolved;
+		}
+
 		$post = $post_id ? get_post( $post_id ) : null;
 		if ( $post ) {
 			$dropped = MarkupTags::refuse_unconfirmed_drop( (string) $post->post_content, $resolved['content'], $args );
@@ -186,8 +192,8 @@ class WriteContentResolver {
 	 * go through {@see BlockSerializer::serialize_with_issues()} (specs → markup;
 	 * block markup kept as sent; HTML/Markdown through BlockConverter).
 	 * Allowed-block enforcement runs on submitted specs and on block markup,
-	 * exempting block names already present in the post on Update. Enforcement and serializer errors both abort the
-	 * save; only warnings ride along.
+	 * exempting block names already present in the post on Update. Enforcement
+	 * and serializer errors both abort the save; only warnings ride along.
 	 *
 	 * @param array<string, mixed> $args             Ability input.
 	 * @param string|null          $post_type        Post type slug for the editor context, or null for the site-wide (pattern) scope.

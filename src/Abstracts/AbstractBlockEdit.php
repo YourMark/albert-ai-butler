@@ -111,7 +111,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 	/**
 	 * The markup of the changed block before and after this op, to catch a dropped tag.
 	 *
-	 * Null for ops that only move or remove whole blocks: removing a block is the
+	 * Null for ops that add, move or remove whole blocks: removing a block is the
 	 * request, not a side effect.
 	 *
 	 * @param array<int, mixed>    $tree        Parsed tree before the op.
@@ -201,7 +201,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 		$markup = serialize_blocks( $tree );
 
 		// Once, on the final markup: that is what core's KSES sees on save.
-		$kses_error = MarkupTags::refuse_kses_loss( $markup );
+		$kses_error = $this->can_edit( $post_id ) ? MarkupTags::refuse_kses_loss( $markup ) : null;
 		if ( $kses_error instanceof WP_Error ) {
 			return $kses_error;
 		}
@@ -255,7 +255,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 			$warnings = BlockIssues::warning_messages( $issues );
 		}
 
-		$changed = $this->changed_markup( $tree, $result_tree, $args );
+		$changed = $this->can_edit( $post_id ) ? $this->changed_markup( $tree, $result_tree, $args ) : null;
 		if ( $changed !== null ) {
 			$dropped = MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args );
 			if ( $dropped instanceof WP_Error ) {
@@ -267,6 +267,19 @@ abstract class AbstractBlockEdit extends BaseAbility {
 			'tree'     => $result_tree,
 			'warnings' => $warnings,
 		];
+	}
+
+	/**
+	 * Whether the tag checks may run: their messages name tags in the post, so a
+	 * post this user can't edit is left to the REST save, which refuses it
+	 * without revealing its content.
+	 *
+	 * @param int $post_id Target post ID.
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	private function can_edit( int $post_id ): bool {
+		return current_user_can( 'edit_post', $post_id );
 	}
 
 	/**
