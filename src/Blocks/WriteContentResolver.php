@@ -82,11 +82,11 @@ class WriteContentResolver {
 	public function resolve( array $args, string $post_type, ?int $post_id = null ): array|WP_Error {
 		$has_blocks_input = ! empty( $args['blocks'] ) && is_array( $args['blocks'] );
 
-		$resolved = EditorMode::is_block_editor( $post_type, $post_id )
-			? $this->resolve_block( $args, $post_type, $post_id, $has_blocks_input )
-			: $this->resolve_classic( $args, $post_type, $has_blocks_input );
+		if ( ! EditorMode::is_block_editor( $post_type, $post_id ) ) {
+			return $this->resolve_classic( $args, $post_type, $has_blocks_input );
+		}
 
-		return $this->refuse_kses_loss( $resolved, $args );
+		return $this->resolve_block( $args, $post_type, $post_id, $has_blocks_input );
 	}
 
 	/**
@@ -107,28 +107,7 @@ class WriteContentResolver {
 	public function resolve_pattern( array $args, ?int $post_id = null ): array|WP_Error {
 		$has_blocks_input = ! empty( $args['blocks'] ) && is_array( $args['blocks'] );
 
-		return $this->refuse_kses_loss( $this->resolve_block( $args, null, $post_id, $has_blocks_input ), $args );
-	}
-
-	/**
-	 * Refuse resolved content from which KSES would strip a tag for this user,
-	 * unless `remove_tags` confirms it.
-	 *
-	 * A full rewrite is not checked for dropped tags: replacing the content is
-	 * the request, as in core.
-	 *
-	 * @param array{content: string, block_issues: array<int, string>}|WP_Error $resolved Resolved content.
-	 * @param array<string, mixed>                                              $args     Ability input.
-	 *
-	 * @return array{content: string, block_issues: array<int, string>}|WP_Error The resolved content, or a WP_Error.
-	 * @since 1.6.0
-	 */
-	private function refuse_kses_loss( array|WP_Error $resolved, array $args ): array|WP_Error {
-		if ( $resolved instanceof WP_Error ) {
-			return $resolved;
-		}
-
-		return MarkupTags::refuse_kses_loss( $resolved['content'], $args ) ?? $resolved;
+		return $this->resolve_block( $args, null, $post_id, $has_blocks_input );
 	}
 
 	/**

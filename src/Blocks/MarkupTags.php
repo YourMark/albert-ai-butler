@@ -2,9 +2,9 @@
 /**
  * Markup Tags
  *
- * Refuses a write that would lose an HTML tag without anyone saying so: one
- * KSES strips on save for a user without `unfiltered_html`, or one a block edit
- * drops from content that had it. `remove_tags` confirms either loss.
+ * Refuses a block edit that drops an HTML tag the block had, such as a plugin's
+ * `<ta>`, unless `remove_tags` confirms it. What a user may store is left to
+ * core's KSES on save, as in the editor.
  *
  * @package    Albert
  * @subpackage Blocks
@@ -45,7 +45,7 @@ class MarkupTags {
 		return [
 			'type'        => 'array',
 			'items'       => [ 'type' => 'string' ],
-			'description' => 'Optional. Tag names the person agreed to lose, e.g. ["ta"]. Without it, a save that would remove a tag is refused.',
+			'description' => 'Optional. Tag names this edit may remove, e.g. ["ta"]. An edit that drops a tag the block had is refused without it; send it only after the person agreed.',
 		];
 	}
 
@@ -80,49 +80,6 @@ class MarkupTags {
 	 */
 	private static function content_names( string $html ): array {
 		return self::names( preg_replace( '/<!--\s+wp:(?!html\s)[^>]*?-->\s*<[a-z][a-z0-9-]*/i', '', $html ) ?? $html );
-	}
-
-	/**
-	 * Refuse markup from which core's KSES would strip a tag on save, unless
-	 * `remove_tags` confirms it.
-	 *
-	 * Users with `unfiltered_html` are not filtered on save, so nothing is checked.
-	 *
-	 * @param string               $markup Content about to be saved.
-	 * @param array<string, mixed> $args   Ability input; `remove_tags` lists confirmed tag names.
-	 * @return WP_Error|null Error naming the tags, or null when nothing would be stripped.
-	 * @since 1.6.0
-	 */
-	public static function refuse_kses_loss( string $markup, array $args = [] ): ?WP_Error {
-		if ( current_user_can( 'unfiltered_html' ) ) {
-			return null;
-		}
-
-		$stripped = array_diff( self::names( $markup ), self::names( wp_kses_post( $markup ) ) );
-		$stripped = array_values( array_diff( $stripped, self::confirmed( $args ) ) );
-
-		if ( $stripped === [] ) {
-			return null;
-		}
-
-		return new WP_Error(
-			'tags_not_allowed',
-			sprintf(
-				/* translators: 1: tag names, e.g. `<ta>`, 2: JSON list, e.g. ["ta"]. */
-				_n(
-					'%1$s is not allowed for your account on this site, so saving would remove it. Ask the person; if they agree, send the call again with remove_tags: %2$s. Nothing was saved.',
-					'%1$s are not allowed for your account on this site, so saving would remove them. Ask the person; if they agree, send the call again with remove_tags: %2$s. Nothing was saved.',
-					count( $stripped ),
-					'albert-ai-butler'
-				),
-				self::format( $stripped ),
-				(string) wp_json_encode( $stripped )
-			),
-			[
-				'status' => 400,
-				'tags'   => $stripped,
-			]
-		);
 	}
 
 	/**

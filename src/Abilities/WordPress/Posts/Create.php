@@ -11,7 +11,6 @@ namespace Albert\Abilities\WordPress\Posts;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
-use Albert\Blocks\MarkupTags;
 use Albert\Blocks\WriteContentResolver;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -68,40 +67,39 @@ class Create extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'title'       => [
+				'title'      => [
 					'type'        => 'string',
 					'description' => 'The post title',
 				],
-				'content'     => [
+				'content'    => [
 					'type'        => 'string',
 					'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
 					'default'     => '',
 				],
-				'blocks'      => [
+				'blocks'     => [
 					'type'        => 'array',
 					'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
 					'items'       => BlockSpecSchema::spec(),
 					'default'     => [],
 				],
-				'remove_tags' => MarkupTags::input_schema(),
-				'status'      => [
+				'status'     => [
 					'type'        => 'string',
 					'enum'        => $post_statuses,
 					'description' => 'Post status',
 					'default'     => 'draft',
 				],
-				'excerpt'     => [
+				'excerpt'    => [
 					'type'        => 'string',
 					'description' => 'Optional post excerpt',
 					'default'     => '',
 				],
-				'categories'  => [
+				'categories' => [
 					'type'        => 'array',
 					'items'       => [ 'type' => 'integer' ],
 					'description' => 'Array of category IDs',
 					'default'     => [],
 				],
-				'tags'        => [
+				'tags'       => [
 					'type'        => 'array',
 					'items'       => [ 'type' => 'string' ],
 					'description' => 'Array of tag names',

@@ -109,18 +109,4 @@ class MarkupTagsTest extends TestCase {
 		$this->assertInstanceOf( WP_Error::class, $error );
 		$this->assertSame( [ 'iframe' ], $error->get_error_data()['tags'] );
 	}
-
-	/**
-	 * A user with unfiltered_html is never checked against KSES.
-	 *
-	 * @return void
-	 */
-	public function test_kses_check_skips_a_user_with_unfiltered_html(): void {
-		$GLOBALS['albert_test_caps'] = [ 'unfiltered_html' ];
-
-		$this->assertNull( MarkupTags::refuse_kses_loss( self::TA_PARAGRAPH ) );
-
-		unset( $GLOBALS['albert_test_caps'] );
-	}
-
 }

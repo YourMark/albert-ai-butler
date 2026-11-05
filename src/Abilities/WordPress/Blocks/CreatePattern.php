@@ -14,7 +14,6 @@ namespace Albert\Abilities\WordPress\Blocks;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
-use Albert\Blocks\MarkupTags;
 use Albert\Blocks\WriteContentResolver;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -69,26 +68,25 @@ class CreatePattern extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'title'       => [
+				'title'      => [
 					'type'        => 'string',
 					'description' => 'The pattern title.',
 				],
-				'blocks'      => [
+				'blocks'     => [
 					'type'        => 'array',
 					'description' => 'Structured block specs for the pattern, same shape as create-post\'s "blocks". Preferred over "content".',
 					'items'       => BlockSpecSchema::spec(),
 				],
-				'remove_tags' => MarkupTags::input_schema(),
-				'content'     => [
+				'content'    => [
 					'type'        => 'string',
 					'description' => 'The pattern content as block markup or HTML. Ignored when "blocks" is provided.',
 				],
-				'synced'      => [
+				'synced'     => [
 					'type'        => 'boolean',
 					'description' => 'True for a synced pattern (one source, reused by reference, edits propagate). Default false: an unsynced copy-on-insert template.',
 					'default'     => false,
 				],
-				'categories'  => [
+				'categories' => [
 					'type'        => 'array',
 					'description' => 'Optional pattern category names to file the pattern under.',
 					'items'       => [ 'type' => 'string' ],
