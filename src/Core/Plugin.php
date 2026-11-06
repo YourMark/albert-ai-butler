@@ -373,6 +373,14 @@ class Plugin {
 		$this->abilities_manager = new AbilitiesManager();
 		$this->abilities_manager->register_hooks();
 
+		// Something read the registry earlier in `init`. WordPress no longer
+		// accepts registrations, but the manager still needs its instances
+		// for labels and counts.
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$this->build_abilities();
+			return;
+		}
+
 		// Before the manager hands them to WordPress at 10.
 		add_action( 'wp_abilities_api_init', [ $this, 'build_abilities' ], 5 );
 	}
@@ -475,16 +483,18 @@ class Plugin {
 	/**
 	 * Get the abilities manager, populated with every ability.
 	 *
-	 * Reads the registry first, which fires `wp_abilities_api_init` if it has
-	 * not fired yet and so builds the abilities.
+	 * Starts the abilities registry first, which fires `wp_abilities_api_init`
+	 * if it has not fired yet and so builds the abilities.
 	 *
 	 * @return AbilitiesManager|null The abilities manager, or null before `init`.
 	 * @since 1.2.0
 	 * @since 1.6.0 Initialises the Abilities API if it has not run yet.
 	 */
 	public function get_abilities_manager(): ?AbilitiesManager {
+		// get_instance(), not wp_get_abilities(): this runs once per log row,
+		// and only the init side effect is wanted.
 		if ( $this->abilities_manager !== null ) {
-			wp_get_abilities();
+			\WP_Abilities_Registry::get_instance();
 		}
 
 		return $this->abilities_manager;
