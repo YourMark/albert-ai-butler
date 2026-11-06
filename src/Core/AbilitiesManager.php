@@ -55,24 +55,19 @@ class AbilitiesManager implements Hookable {
 		// guarantees we run AFTER core in the same turn of the hook — and
 		// wp_has_ability_category() inside register_categories() skips anything
 		// already in place.
-		add_action( 'abilities_api_categories_init', [ $this, 'register_categories' ] );
 		add_action( 'wp_abilities_api_categories_init', [ $this, 'register_categories' ] );
 
-		// Register abilities on WordPress abilities API init hooks.
-		add_action( 'abilities_api_init', [ $this, 'register_abilities' ] );
 		add_action( 'wp_abilities_api_init', [ $this, 'register_abilities' ] );
 
 		// Self-heal the persisted blocklist before anything reads it: strip any MCP
 		// transport meta-tool a past build may have wrongly disabled, so the
 		// transport comes back automatically on update. Runs early (priority 1) so
 		// it lands before reconcile_new_abilities() and enforce_disabled().
-		add_action( 'abilities_api_init', [ $this, 'heal_transport_tools' ], 1 );
 		add_action( 'wp_abilities_api_init', [ $this, 'heal_transport_tools' ], 1 );
 
 		// Switch off abilities first seen after the toggles were saved, so an
 		// upgrade never widens what an assistant can reach. After every
 		// registration, so the set is complete.
-		add_action( 'abilities_api_init', [ $this, 'reconcile_new_abilities' ], PHP_INT_MAX - 1 );
 		add_action( 'wp_abilities_api_init', [ $this, 'reconcile_new_abilities' ], PHP_INT_MAX - 1 );
 
 		// Unregister Albert abilities an add-on refuses (a lapsed licence). Last,
@@ -327,8 +322,7 @@ class AbilitiesManager implements Hookable {
 	 *     option, and flag them in a transient so the admin can be told.
 	 *  6. Fold the new IDs into the known set.
 	 *
-	 * Hooked on `wp_abilities_api_init` / `abilities_api_init` at
-	 * `PHP_INT_MAX - 1`.
+	 * Hooked on `wp_abilities_api_init` at `PHP_INT_MAX - 1`.
 	 *
 	 * @return void
 	 * @since 1.2.0
