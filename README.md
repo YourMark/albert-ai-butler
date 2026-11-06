@@ -1,7 +1,7 @@
 # Albert
 
 ![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.1+-blue)
-![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-6.9+-blue)
+![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-7.1+-blue)
 ![Tested up to](https://img.shields.io/badge/Tested%20up%20to-7.1-blue)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
 
@@ -9,7 +9,7 @@
 
 ## Safe by default
 
-- **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request. Needs WordPress 7.1.
+- **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request.
 - **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 - **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 - **No tracking.** Albert sends nothing about your site or your usage anywhere.
@@ -94,7 +94,7 @@ What an assistant can do with each plugin is decided by that plugin. Albert adds
 
 ## Requirements
 
-- **WordPress**: 6.9 or higher
+- **WordPress**: 7.1 or higher
 - **PHP**: 8.1 or higher (8.3+ recommended)
 - **WooCommerce**: 11.0 or higher (if WooCommerce integration is used)
 - **MySQL**: 8.0+ or MariaDB 10.5+

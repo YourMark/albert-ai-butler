@@ -71,21 +71,13 @@ jobs:
       fail-fast: false
       matrix:
         php: ['8.1', '8.2', '8.3', '8.4']
-        # Support policy: the latest two WordPress versions, plus 6.9 for now.
+        # Support policy: the declared floor (`Requires at least`) up to latest.
         #
-        # `latest` stays dynamic on purpose — it is the policy, not a version.
-        # It tracks whatever wordpress.org is serving (7.1 today) so the newest
-        # supported release is always covered without editing this file.
+        # `latest` stays dynamic on purpose: it tracks whatever wordpress.org is
+        # serving, so the newest release is covered without editing this file.
         #
-        # `7.0` is the pin for the second of the two. That one *does* need a
-        # hand each cycle: when 7.2 ships, `latest` follows it automatically and
-        # this pin must move 7.0 -> 7.1, or the second-newest release silently
-        # stops being tested. It is the only line here that goes stale.
-        #
-        # `6.9` is the declared floor (`Requires at least: 6.9`) and is extra,
-        # beyond the two-version policy — it proves the pre-7.1 fallbacks, since
-        # neither 6.9 nor 7.0 has wp_prepare_json_schema_for_client() or
-        # WP_Filter_Sentinel. Drop it when 6.9 support ends.
+        # `7.1` is the floor. While it is also `latest` the two rows run the
+        # same code; once 7.2 ships, they split and the floor stays covered.
         #
         # `trunk` is early warning for the next one. WordPress 7.1 made the
         # Abilities API validate ability output against the declared
@@ -93,7 +85,7 @@ jobs:
         # rather than during beta.
         #
         # WooCommerce coverage is in its own job below.
-        wordpress: ['latest', '7.0', '6.9', 'trunk']
+        wordpress: ['latest', '7.1', 'trunk']
 
     services:
       mysql:

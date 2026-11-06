@@ -98,8 +98,7 @@ class Server implements Hookable {
 		// ability runs (e.g. input-schema validation).
 		( new ToolCallObserver() )->register_hooks();
 
-		// Strip server-only keys from schemas before they reach the client
-		// (WordPress 7.1+); a no-op on older versions.
+		// Strip server-only keys from schemas before they reach the client.
 		( new SchemaPreparer() )->register_hooks();
 
 		// Switched-off abilities: hidden from discovery, refused on call.

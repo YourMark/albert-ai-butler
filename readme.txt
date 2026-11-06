@@ -1,7 +1,7 @@
 === Albert - Connect AI Assistants to WordPress ===
 Contributors: albertai, mark-jansen
 Tags: ai assistant, chatgpt, claude, ai, mcp
-Requires at least: 6.9
+Requires at least: 7.1
 Tested up to: 7.1
 Requires PHP: 8.1
 Stable tag: 1.5.0
@@ -20,7 +20,7 @@ Albert removes that step. Connect your AI assistant to your site once, and it wr
 
 **The easiest and safest way to use the WordPress MCP Adapter.** The MCP Adapter is WordPress's own way for AI assistants to reach a site, and on its own it leaves setup, sign-in and permissions to you. Albert adds them: a guided setup, a proper sign-in, a list of who may connect, and nothing destructive without your approval.
 
-* **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request. Needs WordPress 7.1.
+* **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request.
 * **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 * **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 * **No tracking.** Albert sends nothing about your site or your usage anywhere.
@@ -80,8 +80,6 @@ Switched on by default. When your assistant asks to delete a post, change someon
 * **Approve what you could do yourself.** Editors approve their own requests; administrators approve anyone's. Nobody gains reach they did not already have.
 * **The assistant cannot approve its own work**, cannot switch safe mode off, and cannot touch the settings that control it.
 * **Requests expire** if nobody decides, so an old intent cannot be approved against today's site.
-
-Needs WordPress 7.1. On older versions Albert tells you plainly that it cannot hold anything, rather than letting the switch imply otherwise.
 
 ---
 
@@ -217,7 +215,7 @@ Albert is built for single-site installations. Multisite support is on the roadm
 
 = What are the requirements? =
 
-WordPress 6.9 or higher, PHP 8.1 or higher (8.3+ recommended), MySQL 8.0+ or MariaDB 10.5+, HTTPS (OAuth 2.0 requires it), and any permalink setting other than Plain.
+WordPress 7.1 or higher, PHP 8.1 or higher (8.3+ recommended), MySQL 8.0+ or MariaDB 10.5+, HTTPS (OAuth 2.0 requires it), and any permalink setting other than Plain.
 
 = Where do I get support? =
 
