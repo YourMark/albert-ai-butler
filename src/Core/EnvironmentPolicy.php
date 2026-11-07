@@ -22,7 +22,12 @@ defined( 'ABSPATH' ) || exit;
  * Resolution: `ALBERT_ENVIRONMENT_ABILITIES` (an array of environment type to
  * policy) wins when it names this environment with a known policy; otherwise
  * `albert/abilities/environment_policy` decides. Production uses the toggles
- * unless one of them says otherwise.
+ * unless one of them says otherwise. An unknown policy is ignored with a
+ * `_doing_it_wrong()`, so a typo cannot pass for a working policy.
+ *
+ * The environment comes from `wp_get_environment_type()`, so anything that sets
+ * it works, Bedrock's `WP_ENV` included. Core reads any value outside its four
+ * types as `production`.
  *
  * @since 1.6.0
  */
@@ -61,6 +66,14 @@ class EnvironmentPolicy {
 	public const CONSTANT = 'ALBERT_ENVIRONMENT_ABILITIES';
 
 	/**
+	 * Sources already reported this request; current() runs on every effective() call.
+	 *
+	 * @since 1.6.0
+	 * @var array<string, true>
+	 */
+	private static array $reported = [];
+
+	/**
 	 * The policy in force on this site, and where it came from.
 	 *
 	 * @return array{environment: string, policy: string, source: string} Source is
@@ -70,13 +83,18 @@ class EnvironmentPolicy {
 	public static function current(): array {
 		$environment = wp_get_environment_type();
 		$map         = defined( self::CONSTANT ) ? constant( self::CONSTANT ) : null;
+		$entry       = is_array( $map ) ? ( $map[ $environment ] ?? null ) : null;
 
-		if ( is_array( $map ) && isset( $map[ $environment ] ) && self::is_known( $map[ $environment ] ) ) {
+		if ( self::is_known( $entry ) ) {
 			return [
 				'environment' => $environment,
-				'policy'      => $map[ $environment ],
+				'policy'      => $entry,
 				'source'      => 'constant',
 			];
+		}
+
+		if ( $entry !== null ) {
+			self::report_unknown( self::CONSTANT, $environment );
 		}
 
 		/**
@@ -93,7 +111,12 @@ class EnvironmentPolicy {
 		 */
 		$policy = apply_filters( 'albert/abilities/environment_policy', self::TOGGLES, $environment );
 
-		if ( ! self::is_known( $policy ) || $policy === self::TOGGLES ) {
+		if ( ! self::is_known( $policy ) ) {
+			self::report_unknown( 'albert/abilities/environment_policy', $environment );
+			$policy = self::TOGGLES;
+		}
+
+		if ( $policy === self::TOGGLES ) {
 			return [
 				'environment' => $environment,
 				'policy'      => self::TOGGLES,
@@ -177,5 +200,33 @@ class EnvironmentPolicy {
 	 */
 	private static function is_known( mixed $policy ): bool {
 		return in_array( $policy, [ self::TOGGLES, self::READ_WRITE, self::ALL ], true );
+	}
+
+	/**
+	 * Report an unknown policy, once per source per request.
+	 *
+	 * @param string $source      The constant or filter that set it.
+	 * @param string $environment The environment it was set for.
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	private static function report_unknown( string $source, string $environment ): void {
+		if ( isset( self::$reported[ $source ] ) ) {
+			return;
+		}
+
+		self::$reported[ $source ] = true;
+
+		_doing_it_wrong(
+			__METHOD__,
+			sprintf(
+				/* translators: 1: constant or filter name, 2: environment type */
+				esc_html__( '%1$s sets an unknown policy for the %2$s environment, so it is ignored. Use toggles, read-write or all.', 'albert-ai-butler' ),
+				esc_html( $source ),
+				esc_html( $environment )
+			),
+			'1.6.0'
+		);
 	}
 }

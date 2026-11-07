@@ -35,6 +35,7 @@ class EnvironmentPolicyTest extends TestCase {
 		$GLOBALS['albert_test_filter_returns']   = [];
 		$GLOBALS['albert_test_filter_callbacks'] = [];
 		$GLOBALS['albert_test_environment_type'] = 'staging';
+		$GLOBALS['albert_test_doing_it_wrong']   = [];
 		$GLOBALS['albert_test_options']          = [
 			AbilitiesState::OPTION       => [ 'albert/find-posts', 'albert/create-post', 'albert/delete-post', 'other/undeclared' ],
 			AbilitiesState::SAVED_OPTION => true,
@@ -261,5 +262,71 @@ class EnvironmentPolicyTest extends TestCase {
 		$this->filter_policy( EnvironmentPolicy::READ_WRITE );
 
 		$this->assertSame( 'filter', EnvironmentPolicy::current()['source'] );
+	}
+
+	/**
+	 * A typo in the constant is reported once, however often the policy is read.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 *
+	 * @return void
+	 */
+	public function test_unknown_constant_entry_is_reported_once(): void {
+		define( 'ALBERT_ENVIRONMENT_ABILITIES', [ 'staging' => 'read_write' ] );
+
+		EnvironmentPolicy::current();
+		EnvironmentPolicy::current();
+
+		$this->assertCount( 1, $GLOBALS['albert_test_doing_it_wrong'] );
+		$this->assertStringContainsString( 'ALBERT_ENVIRONMENT_ABILITIES', $GLOBALS['albert_test_doing_it_wrong'][0] );
+	}
+
+	/**
+	 * An unknown policy from the filter is reported.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 *
+	 * @return void
+	 */
+	public function test_unknown_filter_policy_is_reported(): void {
+		$this->filter_policy( 'everything' );
+
+		EnvironmentPolicy::current();
+
+		$this->assertCount( 1, $GLOBALS['albert_test_doing_it_wrong'] );
+		$this->assertStringContainsString( 'albert/abilities/environment_policy', $GLOBALS['albert_test_doing_it_wrong'][0] );
+	}
+
+	/**
+	 * A valid setup reports nothing, and an environment the constant leaves out is no typo.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 *
+	 * @return void
+	 */
+	public function test_unnamed_environment_is_not_reported(): void {
+		define( 'ALBERT_ENVIRONMENT_ABILITIES', [ 'local' => EnvironmentPolicy::ALL ] );
+
+		EnvironmentPolicy::current();
+
+		$this->assertSame( [], $GLOBALS['albert_test_doing_it_wrong'] );
+	}
+
+	/**
+	 * An array entry keeps the toggles, which leaves that shape free for a per-group config.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 *
+	 * @return void
+	 */
+	public function test_array_entry_keeps_the_toggles(): void {
+		define( 'ALBERT_ENVIRONMENT_ABILITIES', [ 'staging' => [ 'posts' => EnvironmentPolicy::ALL ] ] );
+
+		$this->assertFalse( EnvironmentPolicy::is_active() );
+		$this->assertSame( AbilitiesState::disabled(), AbilitiesState::effective() );
 	}
 }
