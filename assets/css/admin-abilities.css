@@ -58,7 +58,8 @@
 	gap: 8px;
 }
 
-.albert-abilities__error {
+.albert-abilities__error,
+.albert-abilities__policy {
 	margin: 0 0 12px;
 }
 
