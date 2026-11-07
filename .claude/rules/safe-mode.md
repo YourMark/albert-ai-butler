@@ -20,7 +20,7 @@ Holds destructive assistant calls until a person approves them in Albert > Appro
 - The queue holds the input as captured, before core normalises it. Docblocks say "captured", not "resolved".
 
 ## What is held (either axis is enough)
-1. The annotation: `destructive !== false`. Never `=== true`: an undeclared ability must be held, or the gate becomes fail-open.
+1. The annotation: `destructive !== false`. Never `=== true`: an undeclared ability must be held, or the gate becomes fail-open. This is wider than the Destructive group (`AnnotationPresenter::is_destructive()`), which only says what an ability declares.
 2. `RiskPolicy`: Albert's high-risk abilities by name, and any call (third-party too) that grants an administrator-capability role or writes a high-risk option. The option lookup ignores bare `name` and `key`; they are ordinary words.
 
 ## Option tiers

@@ -42,7 +42,7 @@ class EnvironmentPolicy {
 	public const TOGGLES = 'toggles';
 
 	/**
-	 * Switch on every ability that declares it deletes nothing.
+	 * Switch on every ability that declares itself read or write, not destructive.
 	 *
 	 * @since 1.6.0
 	 * @var string
@@ -165,29 +165,9 @@ class EnvironmentPolicy {
 		return array_values(
 			array_filter(
 				$disabled,
-				static fn( string $id ): bool => ! ( ( $registered[ $id ] ?? null ) instanceof \WP_Ability && self::deletes_nothing( $registered[ $id ] ) )
+				static fn( string $id ): bool => ! ( ( $registered[ $id ] ?? null ) instanceof \WP_Ability && AnnotationPresenter::declares_not_destructive( $registered[ $id ] ) )
 			)
 		);
-	}
-
-	/**
-	 * Whether an ability declares it is read-only or not destructive.
-	 *
-	 * Annotations only, strict booleans: an undeclared ability, or a write that
-	 * leaves `destructive` unset, keeps its toggle.
-	 *
-	 * @param \WP_Ability $ability The registered ability.
-	 *
-	 * @return bool
-	 * @since 1.6.0
-	 */
-	private static function deletes_nothing( \WP_Ability $ability ): bool {
-		$meta        = (array) $ability->get_meta();
-		$annotations = isset( $meta['annotations'] ) && is_array( $meta['annotations'] ) ? $meta['annotations'] : [];
-
-		$destructive = $annotations['destructive'] ?? null;
-
-		return $destructive === false || ( $destructive === null && ( $annotations['readonly'] ?? null ) === true );
 	}
 
 	/**

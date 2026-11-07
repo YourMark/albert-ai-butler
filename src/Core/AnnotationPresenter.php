@@ -11,6 +11,8 @@
 
 namespace Albert\Core;
 
+use Albert\SafeMode\RiskPolicy;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -46,25 +48,15 @@ class AnnotationPresenter {
 	 * @since 1.1.0
 	 */
 	public static function chips_for( array $annotations, string $ability_id = '' ): array {
+		if ( self::is_destructive( $annotations, $ability_id ) ) {
+			return [ self::destructive_chip() ];
+		}
+
 		if ( empty( $annotations ) ) {
 			return self::heuristic_chips( $ability_id );
 		}
 
-		$chips    = [];
-		$readonly = ! empty( $annotations['readonly'] );
-
-		if ( $readonly ) {
-			$chips[] = self::read_only_chip();
-		} elseif ( empty( $annotations['destructive'] ) ) {
-			// Non-readonly and non-destructive: ability creates or updates data.
-			$chips[] = self::makes_changes_chip();
-		}
-
-		if ( ! empty( $annotations['destructive'] ) ) {
-			$chips[] = self::deletes_data_chip();
-		}
-
-		return $chips;
+		return [ empty( $annotations['readonly'] ) ? self::makes_changes_chip() : self::read_only_chip() ];
 	}
 
 	/**
@@ -100,16 +92,16 @@ class AnnotationPresenter {
 	}
 
 	/**
-	 * "Delete" chip — ability permanently destroys data.
+	 * "Destructive" chip. Its key stays `delete`: the value is stored in filter URLs and read by add-ons.
 	 *
 	 * @return array{key: string, label: string, description: string, icon: string, tone: string}
 	 * @since 1.1.0
 	 */
-	private static function deletes_data_chip(): array {
+	private static function destructive_chip(): array {
 		return [
 			'key'         => 'delete',
-			'label'       => __( 'Delete', 'albert-ai-butler' ),
-			'description' => __( 'Permanently removes content. Deleted items may not be recoverable.', 'albert-ai-butler' ),
+			'label'       => __( 'Destructive', 'albert-ai-butler' ),
+			'description' => __( 'Can remove or overwrite data in a way that may not be recoverable, or has a wide impact on your site.', 'albert-ai-butler' ),
 			'icon'        => 'dashicons-trash',
 			'tone'        => 'danger',
 		];
@@ -135,7 +127,7 @@ class AnnotationPresenter {
 		$action = $parts[1] ?? $parts[0];
 
 		if ( str_starts_with( $action, 'delete-' ) ) {
-			return [ self::deletes_data_chip() ];
+			return [ self::destructive_chip() ];
 		}
 
 		foreach ( [ 'create-', 'update-', 'upload-', 'set-' ] as $prefix ) {
@@ -148,15 +140,22 @@ class AnnotationPresenter {
 	}
 
 	/**
-	 * Whether the ability should trigger a confirmation prompt when enabled.
+	 * Whether an ability belongs in the Destructive group.
+	 *
+	 * The one answer for the chips and the environment policy. Safe mode holds
+	 * more than this: it also holds what does not declare itself.
 	 *
 	 * @param array<string, mixed> $annotations Raw annotations.
-	 * @param string               $ability_id  Ability id for the fallback heuristic.
+	 * @param string               $ability_id  Ability id for the name list and the fallback heuristic.
 	 *
 	 * @return bool
 	 * @since 1.1.0
 	 */
 	public static function is_destructive( array $annotations, string $ability_id = '' ): bool {
+		if ( RiskPolicy::is_high_risk_ability( $ability_id ) ) {
+			return true;
+		}
+
 		if ( isset( $annotations['destructive'] ) ) {
 			return (bool) $annotations['destructive'];
 		}
@@ -165,5 +164,29 @@ class AnnotationPresenter {
 		$action = $parts[1] ?? $parts[0];
 
 		return str_starts_with( $action, 'delete-' );
+	}
+
+	/**
+	 * Whether an ability declares itself outside the Destructive group.
+	 *
+	 * Strict: an undeclared ability, or a write that leaves `destructive` unset,
+	 * declares nothing.
+	 *
+	 * @param \WP_Ability $ability The registered ability.
+	 *
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	public static function declares_not_destructive( \WP_Ability $ability ): bool {
+		$meta        = (array) $ability->get_meta();
+		$annotations = isset( $meta['annotations'] ) && is_array( $meta['annotations'] ) ? $meta['annotations'] : [];
+
+		if ( self::is_destructive( $annotations, $ability->get_name() ) ) {
+			return false;
+		}
+
+		$destructive = $annotations['destructive'] ?? null;
+
+		return $destructive === false || ( $destructive === null && ( $annotations['readonly'] ?? null ) === true );
 	}
 }

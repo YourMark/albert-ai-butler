@@ -153,6 +153,24 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
+	 * A destructive write keeps the capability of what it does, not a delete capability.
+	 *
+	 * @return void
+	 */
+	public function test_destructive_write_requires_its_edit_capability(): void {
+		$annotations = [
+			'readonly'    => false,
+			'destructive' => true,
+		];
+
+		$user  = new WP_Ability( 'albert/update-user', [ 'annotations' => $annotations ] );
+		$block = new WP_Ability( 'albert/remove-page-block', [ 'annotations' => $annotations ] );
+
+		$this->assertSame( 'edit_users', AbilitiesRegistry::resolve_required_capability( $user ) );
+		$this->assertSame( 'edit_pages', AbilitiesRegistry::resolve_required_capability( $block ) );
+	}
+
+	/**
 	 * The resolved value passes through the required_capability filter, so an
 	 * add-on can correct the best-effort guess.
 	 *

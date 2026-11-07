@@ -129,7 +129,7 @@ class EnvironmentPolicyTest extends TestCase {
 	}
 
 	/**
-	 * `read-write` switches on what declares it deletes nothing; deletes and undeclared keep their toggle.
+	 * `read-write` switches on what declares itself read or write; destructive and undeclared keep their toggle.
 	 *
 	 * @return void
 	 */
@@ -137,6 +137,29 @@ class EnvironmentPolicyTest extends TestCase {
 		$this->filter_policy( EnvironmentPolicy::READ_WRITE );
 
 		$this->assertSame( [ 'albert/delete-post', 'other/undeclared' ], AbilitiesState::effective() );
+	}
+
+	/**
+	 * A high-risk name keeps its toggle even when it annotates itself as a plain write.
+	 *
+	 * @return void
+	 */
+	public function test_read_write_keeps_a_high_risk_name_off(): void {
+		$GLOBALS['albert_test_options'][ AbilitiesState::OPTION ] = [ 'albert/update-user' ];
+		$GLOBALS['albert_test_abilities']                         = [
+			new WP_Ability(
+				'albert/update-user',
+				[
+					'annotations' => [
+						'readonly'    => false,
+						'destructive' => false,
+					],
+				]
+			),
+		];
+		$this->filter_policy( EnvironmentPolicy::READ_WRITE );
+
+		$this->assertSame( [ 'albert/update-user' ], AbilitiesState::effective() );
 	}
 
 	/**

@@ -159,4 +159,43 @@ class AnnotationPresenterTest extends TestCase {
 		$this->assertTrue( AnnotationPresenter::is_destructive( [], 'albert/delete-post' ) );
 		$this->assertFalse( AnnotationPresenter::is_destructive( [], 'albert/create-post' ) );
 	}
+
+	/**
+	 * A name on safe mode's high-risk list is destructive, whatever it annotates.
+	 *
+	 * @return void
+	 */
+	public function test_high_risk_name_is_destructive_over_its_annotation(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/high_risk_abilities'] = [ 'other/grant-access' ];
+
+		$chips = AnnotationPresenter::chips_for( Annotations::update(), 'other/grant-access' );
+
+		unset( $GLOBALS['albert_test_filter_returns']['albert/safe_mode/high_risk_abilities'] );
+
+		$this->assertSame( [ 'delete' ], array_column( $chips, 'key' ) );
+		$this->assertSame( 'Destructive', $chips[0]['label'] );
+	}
+
+	/**
+	 * The destructive preset lands in the Destructive group.
+	 *
+	 * @return void
+	 */
+	public function test_destructive_preset_yields_destructive_chip(): void {
+		$this->assertSame( [ 'delete' ], array_column( AnnotationPresenter::chips_for( Annotations::destructive() ), 'key' ) );
+	}
+
+	/**
+	 * Claiming read-only does not hide a destructive flag.
+	 *
+	 * @return void
+	 */
+	public function test_contradictory_annotations_read_as_destructive(): void {
+		$annotations = [
+			'readonly'    => true,
+			'destructive' => true,
+		];
+
+		$this->assertSame( [ 'delete' ], array_column( AnnotationPresenter::chips_for( $annotations ), 'key' ) );
+	}
 }

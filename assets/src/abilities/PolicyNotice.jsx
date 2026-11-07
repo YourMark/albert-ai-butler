@@ -59,7 +59,7 @@ export default function PolicyNotice( { policy, hidden } ) {
 			: sprintf(
 					/* translators: %s: environment type, e.g. "staging". */
 					__(
-						'This is a %s site, and its environment policy switches on every ability that reads or changes content for assistants connected through Albert. Abilities that delete, or that do not say what they do, follow their toggle.',
+						'This is a %s site, and its environment policy switches on every Read and Write ability for assistants connected through Albert. Destructive abilities, and abilities that do not say what they do, follow their toggle.',
 						'albert-ai-butler'
 					),
 					environment

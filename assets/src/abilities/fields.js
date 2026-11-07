@@ -74,7 +74,7 @@ function AbilityCell( { item } ) {
 }
 
 /**
- * The colored operation badge (read / write / delete).
+ * The colored operation badge (read / write / destructive).
  *
  * @param {Object} props      Render props.
  * @param {Object} props.item The ability row.
