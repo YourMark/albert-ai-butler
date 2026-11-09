@@ -171,6 +171,17 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.6.0
+
+**Features**
+
+- **Schedule posts and fix their details.** Your assistant can now schedule a post or page to publish later, and set its address (slug), author, parent page, page order, template, whether comments are open, whether a post stays at the top of the blog, and its post format. If a request would not work, such as an author who cannot edit that content or a template your theme does not offer, Albert refuses it and says what to send instead.
+
+**Developer**
+
+- `albert/create-post` and `albert/update-post` accept `slug`, `date`, `author`, `template`, `comment_status`, `sticky` and `format`. `albert/create-page` and `albert/update-page` accept `slug`, `date`, `author`, `parent`, `menu_order`, `template` and `comment_status`. A future `date` with status `publish` schedules the post. All four return the saved `slug` and `date`.
+- `albert/view-post` now returns `template`, `comment_status`, `sticky` and `format`; `albert/view-page` returns `template` and `comment_status`.
+
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
