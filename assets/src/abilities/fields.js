@@ -13,7 +13,7 @@ import { SINGLE_SELECT } from '../shared/ToolbarControls';
 const OPERATION_ELEMENTS = [
 	{ value: 'read', label: OPERATION_LABELS.read },
 	{ value: 'write', label: OPERATION_LABELS.write },
-	{ value: 'delete', label: OPERATION_LABELS.delete },
+	{ value: 'destructive', label: OPERATION_LABELS.destructive },
 ];
 
 const STATUS_ELEMENTS = [

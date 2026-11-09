@@ -56,7 +56,7 @@ class AnnotationPresenterTest extends TestCase {
 		$keys  = array_column( $chips, 'key' );
 
 		$this->assertSame( [ 'write' ], $keys );
-		$this->assertNotContains( 'delete', $keys );
+		$this->assertNotContains( 'destructive', $keys );
 	}
 
 	/**
@@ -64,12 +64,12 @@ class AnnotationPresenterTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_delete_annotation_yields_delete_chip(): void {
+	public function test_delete_annotation_yields_destructive_chip(): void {
 		$chips = AnnotationPresenter::chips_for( Annotations::delete() );
 		$keys  = array_column( $chips, 'key' );
 		$tones = array_column( $chips, 'tone' );
 
-		$this->assertSame( [ 'delete' ], $keys );
+		$this->assertSame( [ 'destructive' ], $keys );
 		$this->assertContains( 'danger', $tones );
 	}
 
@@ -109,7 +109,7 @@ class AnnotationPresenterTest extends TestCase {
 		$chips = AnnotationPresenter::chips_for( [], 'albert/delete-post' );
 		$keys  = array_column( $chips, 'key' );
 
-		$this->assertSame( [ 'delete' ], $keys );
+		$this->assertSame( [ 'destructive' ], $keys );
 	}
 
 	/**
@@ -172,7 +172,7 @@ class AnnotationPresenterTest extends TestCase {
 
 		unset( $GLOBALS['albert_test_filter_returns']['albert/safe_mode/high_risk_abilities'] );
 
-		$this->assertSame( [ 'delete' ], array_column( $chips, 'key' ) );
+		$this->assertSame( [ 'destructive' ], array_column( $chips, 'key' ) );
 		$this->assertSame( 'Destructive', $chips[0]['label'] );
 	}
 
@@ -182,7 +182,7 @@ class AnnotationPresenterTest extends TestCase {
 	 * @return void
 	 */
 	public function test_destructive_preset_yields_destructive_chip(): void {
-		$this->assertSame( [ 'delete' ], array_column( AnnotationPresenter::chips_for( Annotations::destructive() ), 'key' ) );
+		$this->assertSame( [ 'destructive' ], array_column( AnnotationPresenter::chips_for( Annotations::destructive() ), 'key' ) );
 	}
 
 	/**
@@ -196,6 +196,6 @@ class AnnotationPresenterTest extends TestCase {
 			'destructive' => true,
 		];
 
-		$this->assertSame( [ 'delete' ], array_column( AnnotationPresenter::chips_for( $annotations ), 'key' ) );
+		$this->assertSame( [ 'destructive' ], array_column( AnnotationPresenter::chips_for( $annotations ), 'key' ) );
 	}
 }

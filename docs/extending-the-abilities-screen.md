@@ -158,6 +158,7 @@ add_filter(
 
 - **`$row`** — `{ id, label, description, category, categoryLabel, source, sourceLabel,
   operation, enabled, capability, capabilityRoles, lastUsed, badges, inputs, output, annotations }`.
+  `operation` is `read`, `write` or `destructive` (`delete` before 1.6.0).
   Free always sets `badges` to `[]`. `supplier`/`supplierLabel` are still present too, holding the
   same values as `source`/`sourceLabel` — deprecated since 1.4.0 in favour of the latter, kept for
   any add-on already reading them, and scheduled for removal in a future major version.

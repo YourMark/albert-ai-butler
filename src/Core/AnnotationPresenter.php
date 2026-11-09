@@ -31,7 +31,7 @@ class AnnotationPresenter {
 	 * Build chip DTOs for an ability.
 	 *
 	 * Each chip is an array with:
-	 *  - 'key'         string — stable identifier ('read', 'write', 'delete').
+	 *  - 'key'         string — stable identifier ('read', 'write', 'destructive').
 	 *  - 'label'       string — short translated label shown on the chip.
 	 *  - 'description' string — one-sentence explanation used for tooltips.
 	 *  - 'icon'        string — Dashicon class name.
@@ -92,14 +92,14 @@ class AnnotationPresenter {
 	}
 
 	/**
-	 * "Destructive" chip. Its key stays `delete`: the value is stored in filter URLs and read by add-ons.
+	 * "Destructive" chip.
 	 *
 	 * @return array{key: string, label: string, description: string, icon: string, tone: string}
 	 * @since 1.1.0
 	 */
 	private static function destructive_chip(): array {
 		return [
-			'key'         => 'delete',
+			'key'         => 'destructive',
 			'label'       => __( 'Destructive', 'albert-ai-butler' ),
 			'description' => __( 'Can remove or overwrite data in a way that may not be recoverable, or has a wide impact on your site.', 'albert-ai-butler' ),
 			'icon'        => 'dashicons-trash',

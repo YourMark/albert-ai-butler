@@ -162,7 +162,7 @@
 	color: var(--albert-color-warning);
 }
 
-.albert-op-badge--delete {
+.albert-op-badge--destructive {
 	background: var(--albert-color-danger-surface);
 	color: var(--albert-color-danger);
 }
