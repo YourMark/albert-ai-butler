@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+use Albert\Abilities\WordPress\RegisteredMeta;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
@@ -105,7 +106,7 @@ class Update extends BaseAbility {
 					'items'       => [ 'type' => 'string' ],
 					'description' => 'Array of tag names',
 				],
-			],
+			] + RegisteredMeta::input_schema(),
 			'required'   => [ 'id' ],
 		];
 	}
@@ -125,6 +126,10 @@ class Update extends BaseAbility {
 				'status'       => [ 'type' => 'string' ],
 				'permalink'    => [ 'type' => 'string' ],
 				'edit_url'     => [ 'type' => 'string' ],
+				'meta'         => [
+					'type'        => 'object',
+					'description' => 'The custom fields that were sent, as saved. Present only when "meta" was sent.',
+				],
 				'block_issues' => [
 					'type'        => 'array',
 					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the post is not updated.',
@@ -226,6 +231,17 @@ class Update extends BaseAbility {
 			}
 		}
 
+		if ( isset( $args['meta'] ) ) {
+			$meta = RegisteredMeta::check_write( $args['meta'], $post_id, 'post' );
+			if ( is_wp_error( $meta ) ) {
+				return $meta;
+			}
+
+			if ( $meta !== [] ) {
+				$request_data['meta'] = $meta;
+			}
+		}
+
 		// Create REST request.
 		$request = new WP_REST_Request( 'POST', '/wp/v2/posts/' . $post_id );
 		foreach ( $request_data as $key => $value ) {
@@ -260,6 +276,10 @@ class Update extends BaseAbility {
 			'permalink' => $data['link'] ?? '',
 			'edit_url'  => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
 		];
+
+		if ( isset( $request_data['meta'] ) && is_array( $data['meta'] ?? null ) ) {
+			$result['meta'] = array_intersect_key( $data['meta'], $request_data['meta'] );
+		}
 
 		if ( ! empty( $block_issues ) ) {
 			$result['block_issues'] = $block_issues;
