@@ -171,6 +171,12 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.6.0
+
+**Improvements**
+
+- The Context screen now says when a saved change takes effect: the next time an assistant asks what your site can do. A conversation that is already open keeps what it started with, so start a new one to use your changes.
+
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
