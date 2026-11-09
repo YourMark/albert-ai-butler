@@ -233,6 +233,12 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.6.0 =
+
+**Fixes**
+
+* Send setup link only offered Copy link once someone's invitation had expired, exactly when emailing them again matters most. It now offers to email anyone on the list who has an email address, and emailing an expired invitation renews it, with the new expiry date in the email.
+
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
 
