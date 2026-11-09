@@ -233,6 +233,16 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.6.0 =
+
+**Features**
+
+* **Comments.** Your assistant can now find comments, read a whole conversation, reply in your name, and approve, hold back, mark as spam, trash or permanently delete comments, one at a time or up to 50 at once. As in wp-admin, replying to a comment that is waiting for approval approves it. With safe mode on, replies, moderation and deletions wait for your approval. Commenters' names, email addresses, websites and IP addresses are hidden according to your privacy mode, and product reviews are left alone. Only people who can moderate comments can use these actions, and only on comments they could handle in wp-admin. The Dashboard suggests asking whether any comments are waiting for approval.
+
+**Developer**
+
+* New abilities: `albert/find-comments`, `albert/view-comment`, `albert/reply-to-comment`, `albert/moderate-comment` and `albert/delete-comment`. All need `moderate_comments`, plus `edit_comment` on each comment. Comments of type `review` and `note` are never listed or acted on.
+
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
 
