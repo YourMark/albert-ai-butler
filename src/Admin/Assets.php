@@ -87,6 +87,29 @@ class Assets implements Hookable {
 	public const POPOVER_HANDLE = 'albert-admin-popover';
 
 	/**
+	 * Script and stylesheet handle for the shared @wordpress/dataviews build.
+	 *
+	 * The script is a chunk of Albert's own webpack build, not a global
+	 * library: it only works under {@see self::RUNTIME_HANDLE}, and an add-on
+	 * cannot import from it. Part of the public contract for add-ons so the
+	 * name stays stable. Treat as frozen.
+	 *
+	 * @since 1.6.0
+	 * @var string
+	 */
+	public const DATAVIEWS_HANDLE = 'albert-dataviews';
+
+	/**
+	 * The webpack runtime script handle every React screen shares.
+	 *
+	 * Not part of the add-on contract.
+	 *
+	 * @since 1.6.0
+	 * @var string
+	 */
+	public const RUNTIME_HANDLE = 'albert-runtime';
+
+	/**
 	 * Register the hook that registers the shared handles.
 	 *
 	 * @return void

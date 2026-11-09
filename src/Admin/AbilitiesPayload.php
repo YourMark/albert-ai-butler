@@ -175,7 +175,7 @@ class AbilitiesPayload {
 			// an add-on already reading them must keep working.
 			'supplier'        => $source['slug'],
 			'supplierLabel'   => $source['label'],
-			'operation'       => $chips[0]['key'] ?? 'read',
+			'operation'       => $chips[0]['key'] ?? 'undeclared',
 			'enabled'         => ! in_array( $id, $disabled, true ),
 			'capability'      => $capability,
 			'capabilityRoles' => self::roles_with_capability( $capability, $roles ),

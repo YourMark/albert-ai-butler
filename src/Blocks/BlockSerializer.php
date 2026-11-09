@@ -365,7 +365,7 @@ class BlockSerializer {
 	 * Preserve a block's markup-sourced attribute content when it has no inner
 	 * blocks or raw html/plaintext.
 	 *
-	 * Returns every populated text-sourced attribute's sanitised value as
+	 * Returns every populated text-sourced attribute's value, as sent, as
 	 * innerHTML (core/verse `content`, …). All of them, not the first: a
 	 * 'rich-text' one is kept out of the comment JSON, so markup is the only
 	 * place it survives. When nothing text-sourced is
@@ -385,7 +385,7 @@ class BlockSerializer {
 			$value = $attributes[ $attribute_name ] ?? null;
 
 			if ( is_scalar( $value ) && (string) $value !== '' ) {
-				$parts[] = $this->rich_text( (string) $value );
+				$parts[] = (string) $value;
 			}
 		}
 
@@ -746,7 +746,7 @@ class BlockSerializer {
 
 		$citation = '';
 		if ( isset( $attributes['citation'] ) && (string) $attributes['citation'] !== '' ) {
-			$citation = '<cite>' . $this->rich_text( (string) $attributes['citation'] ) . '</cite>';
+			$citation = '<cite>' . (string) $attributes['citation'] . '</cite>';
 		}
 
 		return [ $attributes, '<blockquote class="wp-block-quote">%children%' . $citation . '</blockquote>', [] ];
@@ -942,7 +942,7 @@ class BlockSerializer {
 
 		$citation = '';
 		if ( isset( $attributes['citation'] ) && (string) $attributes['citation'] !== '' ) {
-			$citation = '<cite>' . $this->rich_text( (string) $attributes['citation'] ) . '</cite>';
+			$citation = '<cite>' . (string) $attributes['citation'] . '</cite>';
 		}
 
 		return [
@@ -955,14 +955,10 @@ class BlockSerializer {
 	/**
 	 * Resolve and render text content for a block's innerHTML.
 	 *
-	 * Rich-text attributes (core/paragraph|heading|list-item `content`,
-	 * core/button `text`, core/pullquote `value`) legitimately contain inline
-	 * HTML (e.g. <strong>, <em>, <a href>, <code>). When the value comes from such
-	 * an attribute it is sanitised with {@see rich_text()} (a tight inline
-	 * wp_kses allowlist) so that formatting survives the read→write round trip
-	 * while dangerous markup (script tags, on* handlers, javascript: URLs) is
-	 * still stripped. When no attribute is present the plaintext fallback is
-	 * guaranteed plain, so it is escaped with esc_html().
+	 * A rich-text attribute value is HTML and goes in as sent: the REST save
+	 * applies core's capability-aware KSES, as a normal editor save does, so a
+	 * second, stricter filter here would strip tags the user may store (a
+	 * plugin's `<ta>`). The plaintext fallback is plain text, so it is escaped.
 	 *
 	 * @param array<string, mixed> $attributes Attributes.
 	 * @param array<int, string>   $keys       Candidate attribute keys (in priority order).
@@ -970,11 +966,12 @@ class BlockSerializer {
 	 * @return string Render-ready HTML for the block's innerHTML.
 	 *
 	 * @since 1.2.0
+	 * @since 1.6.0 Rich-text values are no longer filtered.
 	 */
 	private function text_content( array $attributes, array $keys, string $plaintext ): string {
 		foreach ( $keys as $key ) {
 			if ( isset( $attributes[ $key ] ) && is_scalar( $attributes[ $key ] ) ) {
-				return $this->rich_text( (string) $attributes[ $key ] );
+				return (string) $attributes[ $key ];
 			}
 		}
 
@@ -1004,46 +1001,5 @@ class BlockSerializer {
 		}
 
 		return $plaintext;
-	}
-
-	/**
-	 * Sanitise a rich-text attribute value against a tight inline HTML allowlist.
-	 *
-	 * Only inline formatting tags are permitted — no block-level tags (unlike
-	 * wp_kses_post) — so the result is safe to splice into a block's innerHTML.
-	 * wp_kses also strips dangerous protocols (javascript:) and on* event
-	 * handlers, which is the security benefit retained here.
-	 *
-	 * @param string $value Raw rich-text attribute value.
-	 * @return string Sanitised inline HTML.
-	 *
-	 * @since 1.2.0
-	 */
-	private function rich_text( string $value ): string {
-		$allowed = [
-			'a'      => [
-				'href'   => true,
-				'title'  => true,
-				'rel'    => true,
-				'target' => true,
-			],
-			'strong' => [],
-			'b'      => [],
-			'em'     => [],
-			'i'      => [],
-			'code'   => [],
-			's'      => [],
-			'del'    => [],
-			'ins'    => [],
-			'sub'    => [],
-			'sup'    => [],
-			'mark'   => [],
-			'kbd'    => [],
-			'abbr'   => [ 'title' => true ],
-			'br'     => [],
-			'span'   => [ 'class' => true ],
-		];
-
-		return wp_kses( $value, $allowed );
 	}
 }

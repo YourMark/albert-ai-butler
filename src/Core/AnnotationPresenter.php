@@ -29,29 +29,29 @@ class AnnotationPresenter {
 	 * Build chip DTOs for an ability.
 	 *
 	 * Each chip is an array with:
-	 *  - 'key'         string — stable identifier ('read', 'write', 'delete').
+	 *  - 'key'         string — stable identifier ('read', 'write', 'delete', 'undeclared').
 	 *  - 'label'       string — short translated label shown on the chip.
 	 *  - 'description' string — one-sentence explanation used for tooltips.
 	 *  - 'icon'        string — Dashicon class name.
 	 *  - 'tone'        string — one of: neutral, warning, danger.
 	 *
-	 * If the ability has no annotations the presenter falls back to the
-	 * slug heuristic ({@see self::heuristic_chips()}) so older custom
-	 * abilities still display something sensible.
+	 * An ability that declares neither `readonly` nor `destructive` gets one
+	 * "Not declared" chip: its name says nothing reliable about what it does.
 	 *
 	 * @param array<string, mixed> $annotations Raw annotations from get_meta()['annotations'].
-	 * @param string               $ability_id  Ability id, used only for the fallback heuristic.
+	 * @param string               $ability_id  Unused since 1.6.0, kept for callers that pass it.
 	 *
 	 * @return array<int, array{key: string, label: string, description: string, icon: string, tone: string}>
 	 * @since 1.1.0
 	 */
-	public static function chips_for( array $annotations, string $ability_id = '' ): array {
-		if ( empty( $annotations ) ) {
-			return self::heuristic_chips( $ability_id );
+	public static function chips_for( array $annotations, string $ability_id = '' ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Kept for callers that pass it.
+		if ( ! self::is_declared( $annotations ) ) {
+			return [ self::not_declared_chip() ];
 		}
 
+		// Strict, as everywhere else (defaults, safe mode): `readonly => 1` is not read-only.
+		$readonly = ( $annotations['readonly'] ?? null ) === true;
 		$chips    = [];
-		$readonly = ! empty( $annotations['readonly'] );
 
 		if ( $readonly ) {
 			$chips[] = self::read_only_chip();
@@ -65,6 +65,37 @@ class AnnotationPresenter {
 		}
 
 		return $chips;
+	}
+
+	/**
+	 * Whether an ability says if it changes anything.
+	 *
+	 * Core fills missing annotations with null, so only a boolean `readonly` or
+	 * `destructive` counts as a declaration.
+	 *
+	 * @param array<string, mixed> $annotations Raw annotations.
+	 *
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	public static function is_declared( array $annotations ): bool {
+		return is_bool( $annotations['readonly'] ?? null ) || is_bool( $annotations['destructive'] ?? null );
+	}
+
+	/**
+	 * "Not declared" chip: the ability does not say what it does.
+	 *
+	 * @return array{key: string, label: string, description: string, icon: string, tone: string}
+	 * @since 1.6.0
+	 */
+	private static function not_declared_chip(): array {
+		return [
+			'key'         => 'undeclared',
+			'label'       => __( 'Not declared', 'albert-ai-butler' ),
+			'description' => __( "This ability doesn't say whether it reads, changes or deletes anything, so Albert treats it as one that can make changes.", 'albert-ai-butler' ),
+			'icon'        => 'dashicons-editor-help',
+			'tone'        => 'neutral',
+		];
 	}
 
 	/**
@@ -118,8 +149,8 @@ class AnnotationPresenter {
 	/**
 	 * Derive chips from the ability id when no annotations are declared.
 	 *
-	 * Uses the same write-prefix heuristic as the previous AbstractAbilitiesPage,
-	 * so existing third-party abilities without annotations still look sensible.
+	 * @deprecated 1.6.0 A name is not a declaration; {@see self::chips_for()} labels
+	 *             an unannotated ability "Not declared".
 	 *
 	 * @param string $ability_id Ability id, e.g. 'albert/create-post'.
 	 *
@@ -127,6 +158,8 @@ class AnnotationPresenter {
 	 * @since 1.1.0
 	 */
 	public static function heuristic_chips( string $ability_id ): array {
+		_deprecated_function( __METHOD__, '1.6.0', __CLASS__ . '::chips_for' );
+
 		if ( $ability_id === '' ) {
 			return [];
 		}
@@ -150,20 +183,20 @@ class AnnotationPresenter {
 	/**
 	 * Whether the ability should trigger a confirmation prompt when enabled.
 	 *
+	 * Without a `destructive` flag, only a declared read-only ability is safe;
+	 * an undeclared one is treated as destructive.
+	 *
 	 * @param array<string, mixed> $annotations Raw annotations.
-	 * @param string               $ability_id  Ability id for the fallback heuristic.
+	 * @param string               $ability_id  Unused since 1.6.0, kept for callers that pass it.
 	 *
 	 * @return bool
 	 * @since 1.1.0
 	 */
-	public static function is_destructive( array $annotations, string $ability_id = '' ): bool {
+	public static function is_destructive( array $annotations, string $ability_id = '' ): bool { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Kept for callers that pass it.
 		if ( isset( $annotations['destructive'] ) ) {
 			return (bool) $annotations['destructive'];
 		}
 
-		$parts  = explode( '/', $ability_id, 2 );
-		$action = $parts[1] ?? $parts[0];
-
-		return str_starts_with( $action, 'delete-' );
+		return ( $annotations['readonly'] ?? null ) !== true;
 	}
 }
