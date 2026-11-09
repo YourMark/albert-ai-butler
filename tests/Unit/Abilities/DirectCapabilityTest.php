@@ -13,6 +13,11 @@ namespace Albert\Tests\Unit\Abilities;
 
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 
+use Albert\Abilities\WordPress\Comments\DeleteComment;
+use Albert\Abilities\WordPress\Comments\FindComments;
+use Albert\Abilities\WordPress\Comments\ModerateComment;
+use Albert\Abilities\WordPress\Comments\ReplyToComment;
+use Albert\Abilities\WordPress\Comments\ViewComment;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
@@ -70,6 +75,13 @@ class DirectCapabilityTest extends TestCase {
 	 */
 	public static function provideAbilitiesWithCaps(): array {
 		return [
+			// Comments.
+			'find-comments'      => [ FindComments::class, 'moderate_comments' ],
+			'view-comment'       => [ ViewComment::class, 'moderate_comments' ],
+			'reply-to-comment'   => [ ReplyToComment::class, 'moderate_comments' ],
+			'moderate-comment'   => [ ModerateComment::class, 'moderate_comments' ],
+			'delete-comment'     => [ DeleteComment::class, 'moderate_comments' ],
+
 			// Media.
 			'find-media'         => [ FindMedia::class, 'upload_files' ],
 			'view-media'         => [ ViewMedia::class, 'upload_files' ],
