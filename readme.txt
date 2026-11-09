@@ -233,6 +233,16 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.6.0 =
+
+**Features**
+
+* **Custom fields on posts and pages.** Your assistant can now read and fill in the custom fields your theme or plugins add to posts and pages, as long as they make those fields available to the block editor. Fields kept private stay out of reach, and a value a field does not accept is refused before anything is saved. With safe mode on, a change to custom fields waits for your approval.
+
+**Developer**
+
+* `albert/view-post` and `albert/view-page` now return `meta`: the post type's fields registered with `show_in_rest`. `albert/update-post` and `albert/update-page` accept `meta` as `{ "key": value }`, where `null` clears a field. Unregistered keys, `_`-protected keys, keys the field's `auth_callback` denies and values its schema rejects are refused before anything is saved. Safe mode holds an update that sends `meta`.
+
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
 
