@@ -233,6 +233,13 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.6.0 =
+
+**Fixes**
+
+* The Documentation link on the Dashboard opened a different plugin's page on WordPress.org. It now opens Albert's own page.
+* The translation template included with Albert was named for an old text domain and dated from its first release, so it listed almost none of the current text. It is now named `albert-ai-butler.pot` and covers everything Albert shows, so translation tools can offer the whole plugin.
+
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
 
