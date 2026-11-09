@@ -171,6 +171,16 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.6.0
+
+**Features**
+
+- **See what changed, and put it back.** Your assistant can now list the saved revisions of a post or page, show what changed in each one line by line, and restore an earlier version. Restoring is switched off until you turn it on, waits for your approval in safe mode, and is saved as a new revision, so it can be undone too. Only people who can edit a post can see or restore its revisions.
+
+**Developer**
+
+- New abilities: `albert/find-revisions`, `albert/view-revision` and `albert/restore-revision`.
+
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
