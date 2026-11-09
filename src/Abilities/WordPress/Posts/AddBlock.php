@@ -50,6 +50,8 @@ class AddBlock extends AbstractAddBlock {
 			),
 		];
 
+		$this->capability = 'edit_posts';
+
 		parent::__construct();
 	}
 
@@ -71,15 +73,5 @@ class AddBlock extends AbstractAddBlock {
 	 */
 	protected function rest_base(): string {
 		return 'posts';
-	}
-
-	/**
-	 * The capability gate.
-	 *
-	 * @return string Capability.
-	 * @since 1.2.0
-	 */
-	protected function edit_capability(): string {
-		return 'edit_posts';
 	}
 }

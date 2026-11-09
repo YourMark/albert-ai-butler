@@ -55,6 +55,8 @@ class CreatePattern extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'edit_posts';
+
 		parent::__construct();
 	}
 
@@ -128,7 +130,7 @@ class CreatePattern extends BaseAbility {
 	 * @since 1.5.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->check_rest_permission( '/wp/v2/blocks', 'POST', 'edit_posts' );
+		return $this->check_rest_permission( '/wp/v2/blocks', 'POST', $this->capability );
 	}
 
 	/**

@@ -83,6 +83,17 @@ abstract class BaseAbility implements Ability {
 	protected array $output_schema = [];
 
 	/**
+	 * The capability check_permission() requires, also shown on the Abilities screen.
+	 *
+	 * Declared once so the check and the screen cannot drift apart. Leave it
+	 * empty only when check_permission() decides on something else.
+	 *
+	 * @since 1.6.0
+	 * @var string
+	 */
+	protected string $capability = '';
+
+	/**
 	 * Additional metadata.
 	 *
 	 * @since 1.0.0
@@ -147,9 +158,43 @@ abstract class BaseAbility implements Ability {
 				'category'            => $this->category !== '' ? $this->category : 'albert',
 				'execute_callback'    => [ $this, 'guarded_execute' ],
 				'permission_callback' => [ $this, 'check_permission' ],
-				'meta'                => $this->meta,
+				'meta'                => $this->registered_meta(),
 			]
 		);
+	}
+
+	/**
+	 * The meta to register, carrying the declared capability unless the meta names one.
+	 *
+	 * @return array<string, mixed>
+	 * @since 1.6.0
+	 */
+	private function registered_meta(): array {
+		$meta       = $this->meta;
+		$capability = $this->get_capability();
+
+		if ( $capability !== '' && ! isset( $meta['capability'] ) ) {
+			$meta['capability'] = $capability;
+		}
+
+		return $meta;
+	}
+
+	/**
+	 * The capability this ability requires, or '' when its own check decides.
+	 *
+	 * @return string
+	 * @since 1.6.0
+	 */
+	public function get_capability(): string {
+		if ( $this->capability !== '' ) {
+			return $this->capability;
+		}
+
+		// The base check requires manage_options, so an ability that keeps it requires that.
+		$declared_in = ( new \ReflectionMethod( $this, 'check_permission' ) )->getDeclaringClass()->getName();
+
+		return $declared_in === self::class ? 'manage_options' : '';
 	}
 
 	/**
@@ -416,15 +461,15 @@ abstract class BaseAbility implements Ability {
 	/**
 	 * Check if current user has permission to execute this ability.
 	 *
-	 * Child classes should override this with specific permission logic.
-	 * Returns a WP_Error with a descriptive message on failure so AI
-	 * clients can communicate the reason to the user.
+	 * Requires the declared {@see self::$capability}, or `manage_options` when
+	 * none is declared. Override it only for logic a capability cannot express,
+	 * and keep `$capability` set to what it requires at least.
 	 *
 	 * @return bool|WP_Error True if permitted, WP_Error with details otherwise.
 	 * @since 1.0.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'manage_options' );
+		return $this->require_capability( $this->capability !== '' ? $this->capability : 'manage_options' );
 	}
 
 	/**

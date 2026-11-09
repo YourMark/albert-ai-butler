@@ -181,7 +181,9 @@ it *means* is the add-on's concern.
 
 ## 4. Correct the displayed capability — `albert/abilities/required_capability`
 
-The screen shows a best-effort "Required capability". Override it precisely:
+The screen shows the capability an ability declares in `meta['capability']` (an Albert ability:
+`$this->capability`, which its permission check also uses). Nothing is guessed: an ability that
+declares none shows "Not declared". Declare it in your ability's meta, or set it here:
 
 ```php
 add_filter(

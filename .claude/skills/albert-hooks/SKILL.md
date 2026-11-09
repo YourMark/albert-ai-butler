@@ -95,7 +95,7 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/context/skills` | filter | The skills index entries, after preconditions have been applied |
 | `albert/skills/registry` | filter | Register a skill: `slug`, `summary`, and either `file` or `body`, plus optional `requires` / `when` preconditions |
 | `albert/abilities/payload_row` | filter | Augment a normalized ability row before it reaches the Abilities screen (e.g. append `badges`). Fires on both the bulk build and single-row paths. See `docs/extending-the-abilities-screen.md` |
-| `albert/abilities/required_capability` | filter | Override the best-effort capability shown on the Abilities screen |
+| `albert/abilities/required_capability` | filter | `( string $cap, string $id, WP_Ability $ability )`. The capability shown on the Abilities screen: the declared `meta['capability']`, or `''` (shown as Not declared). Never guessed since 1.6.0 |
 | `albert/abilities/before_execute` | action | Before any ability runs |
 | `BaseAbility::$sensitive_output_keys` | property | Not a hook, but part of the ability contract (1.4.0). Top-level result keys holding a credential. The caller receives them intact; every `after_execute` observer is handed a copy with them replaced by `[redacted]`. Observers are loggers (Albert's own writes a DB row, Premium captures the whole success payload), so a short-lived secret would otherwise outlive its own expiry in plaintext. Masks rather than drops, so a log still records the field was returned. Top-level keys only |
 | `albert/abilities/after_execute` | action | After any ability runs |

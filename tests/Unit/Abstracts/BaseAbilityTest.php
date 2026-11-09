@@ -854,4 +854,60 @@ final class AbilityDouble {
 	public function get_meta(): array {
 		return $this->meta;
 	}
+
+	/**
+	 * An ability that keeps the base check requires manage_options, and says so.
+	 *
+	 * @return void
+	 */
+	public function test_base_check_declares_manage_options(): void {
+		$this->assertSame( 'manage_options', ( new StubAbility() )->get_capability() );
+	}
+
+	/**
+	 * A declared capability is what the check requires and what is declared.
+	 *
+	 * @return void
+	 */
+	public function test_declared_capability_drives_the_check(): void {
+		$ability = new class() extends StubAbility {
+			/**
+			 * Declare the capability.
+			 */
+			public function __construct() {
+				parent::__construct();
+				$this->capability = 'edit_posts';
+			}
+		};
+
+		$this->assertSame( 'edit_posts', $ability->get_capability() );
+
+		$GLOBALS['albert_test_caps'] = [ 'edit_posts' ];
+		$this->assertTrue( $ability->check_permission() );
+
+		$GLOBALS['albert_test_caps'] = [ 'manage_options' ];
+		$this->assertInstanceOf( WP_Error::class, $ability->check_permission() );
+
+		unset( $GLOBALS['albert_test_caps'] );
+	}
+
+	/**
+	 * An ability with its own check and no declaration declares nothing.
+	 *
+	 * @return void
+	 */
+	public function test_own_check_without_declaration_declares_nothing(): void {
+		$ability = new class() extends StubAbility {
+			/**
+			 * Decide in code.
+			 *
+			 * @return bool
+			 */
+			public function check_permission(): bool|WP_Error {
+				return true;
+			}
+		};
+
+		$this->assertSame( '', $ability->get_capability() );
+	}
 }

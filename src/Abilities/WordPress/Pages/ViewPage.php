@@ -53,6 +53,8 @@ class ViewPage extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'read';
+
 		parent::__construct();
 	}
 
@@ -169,16 +171,6 @@ class ViewPage extends BaseAbility {
 				],
 			],
 		];
-	}
-
-	/**
-	 * Check if the current user has permission to execute this ability.
-	 *
-	 * @return bool|WP_Error True if permitted, WP_Error with details otherwise.
-	 * @since 1.0.0
-	 */
-	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'read' );
 	}
 
 	/**

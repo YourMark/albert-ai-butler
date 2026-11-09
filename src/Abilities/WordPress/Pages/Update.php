@@ -53,6 +53,8 @@ class Update extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'edit_pages';
+
 		parent::__construct();
 	}
 
@@ -138,7 +140,7 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->check_rest_permission( '/wp/v2/pages/(?P<id>[\\d]+)', 'POST', 'edit_pages' );
+		return $this->check_rest_permission( '/wp/v2/pages/(?P<id>[\\d]+)', 'POST', $this->capability );
 	}
 
 	/**

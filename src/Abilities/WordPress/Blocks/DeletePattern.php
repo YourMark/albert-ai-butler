@@ -62,6 +62,8 @@ class DeletePattern extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'delete_posts';
+
 		parent::__construct();
 	}
 
@@ -121,7 +123,7 @@ class DeletePattern extends BaseAbility {
 		// silently fall through to this same capability. Check it directly; the
 		// authoritative per-object delete_post check still runs at execute() via
 		// rest_do_request().
-		return $this->require_capability( 'delete_posts' );
+		return $this->require_capability( $this->capability );
 	}
 
 	/**

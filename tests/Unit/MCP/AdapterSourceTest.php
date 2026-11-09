@@ -43,7 +43,7 @@ class AdapterSourceTest extends TestCase {
 		$GLOBALS['albert_test_site_options']                    = [];
 		$GLOBALS['albert_test_site']                            = [];
 		$GLOBALS['jetpack_autoloader_activating_plugins_paths'] = null;
-		$_REQUEST                                               = [];
+		$_REQUEST = [];
 	}
 
 	/**

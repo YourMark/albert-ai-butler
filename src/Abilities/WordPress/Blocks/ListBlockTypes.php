@@ -72,6 +72,8 @@ class ListBlockTypes extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'edit_posts';
+
 		parent::__construct();
 	}
 
@@ -128,19 +130,6 @@ class ListBlockTypes extends BaseAbility {
 			],
 			'required'   => [ 'blocks', 'total' ],
 		];
-	}
-
-	/**
-	 * Check if the current user may list block types.
-	 *
-	 * Listing the available blocks mirrors the edit-content gate used by the
-	 * find/read abilities — anyone who can edit posts may discover blocks.
-	 *
-	 * @return bool|WP_Error True if permitted, WP_Error otherwise.
-	 * @since 1.2.0
-	 */
-	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'edit_posts' );
 	}
 
 	/**

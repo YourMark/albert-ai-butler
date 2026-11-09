@@ -64,6 +64,8 @@ class FindPatterns extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'edit_posts';
+
 		parent::__construct();
 	}
 
@@ -121,16 +123,6 @@ class FindPatterns extends BaseAbility {
 			],
 			'required'   => [ 'patterns', 'total' ],
 		];
-	}
-
-	/**
-	 * Anyone who may compose content may discover patterns.
-	 *
-	 * @return bool|WP_Error
-	 * @since 1.5.0
-	 */
-	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'edit_posts' );
 	}
 
 	/**

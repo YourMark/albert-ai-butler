@@ -48,6 +48,8 @@ class MoveBlock extends AbstractMoveBlock {
 			),
 		];
 
+		$this->capability = 'edit_posts';
+
 		parent::__construct();
 	}
 
@@ -69,15 +71,5 @@ class MoveBlock extends AbstractMoveBlock {
 	 */
 	protected function rest_base(): string {
 		return 'posts';
-	}
-
-	/**
-	 * The capability gate.
-	 *
-	 * @return string Capability.
-	 * @since 1.2.0
-	 */
-	protected function edit_capability(): string {
-		return 'edit_posts';
 	}
 }

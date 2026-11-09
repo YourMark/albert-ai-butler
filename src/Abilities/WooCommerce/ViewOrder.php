@@ -46,6 +46,8 @@ class ViewOrder extends BaseAbility {
 			'annotations' => Annotations::read(),
 		];
 
+		$this->capability = 'edit_shop_orders';
+
 		parent::__construct();
 	}
 
@@ -90,16 +92,6 @@ class ViewOrder extends BaseAbility {
 				],
 			],
 		];
-	}
-
-	/**
-	 * Check permission.
-	 *
-	 * @return bool|WP_Error
-	 * @since 1.0.0
-	 */
-	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'edit_shop_orders' );
 	}
 
 	/**

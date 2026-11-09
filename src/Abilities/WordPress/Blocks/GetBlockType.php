@@ -64,6 +64,8 @@ class GetBlockType extends BaseAbility {
 			'annotations' => Annotations::read(),
 		];
 
+		$this->capability = 'edit_posts';
+
 		parent::__construct();
 	}
 
@@ -111,16 +113,6 @@ class GetBlockType extends BaseAbility {
 			],
 			'required'   => [ 'name', 'title', 'category', 'isDynamic', 'attributes', 'supports' ],
 		];
-	}
-
-	/**
-	 * Check if the current user may inspect block types.
-	 *
-	 * @return bool|WP_Error True if permitted, WP_Error otherwise.
-	 * @since 1.2.0
-	 */
-	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'edit_posts' );
 	}
 
 	/**

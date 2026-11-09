@@ -48,6 +48,8 @@ class Update extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'edit_users';
+
 		parent::__construct();
 	}
 
@@ -136,7 +138,7 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->check_rest_permission( '/wp/v2/users/(?P<id>[\\d]+)', 'POST', 'edit_users' );
+		return $this->check_rest_permission( '/wp/v2/users/(?P<id>[\\d]+)', 'POST', $this->capability );
 	}
 
 	/**

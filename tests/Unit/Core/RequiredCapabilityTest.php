@@ -50,7 +50,7 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
-	 * An explicit meta capability wins over the heuristic.
+	 * A declared meta capability is what the screen shows.
 	 *
 	 * @return void
 	 */
@@ -67,94 +67,21 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
-	 * Setting a featured image edits the target post, not the media library,
-	 * so it requires edit_posts rather than upload_files.
+	 * Without a declaration nothing is guessed, whatever the id or annotations say.
 	 *
 	 * @return void
 	 */
-	public function test_featured_image_requires_edit_posts(): void {
-		$ability = new WP_Ability(
-			'albert/set-featured-image',
-			[ 'annotations' => $this->write_annotations() ]
-		);
+	public function test_undeclared_capability_is_empty(): void {
+		foreach ( [ 'albert/delete-post', 'woo/find-orders', 'vendor/upload-media' ] as $id ) {
+			$ability = new WP_Ability( $id, [ 'annotations' => $this->write_annotations() ] );
 
-		$this->assertSame(
-			'edit_posts',
-			AbilitiesRegistry::resolve_required_capability( $ability )
-		);
-	}
-
-	/**
-	 * Uploading media requires upload_files.
-	 *
-	 * @return void
-	 */
-	public function test_media_upload_requires_upload_files(): void {
-		$ability = new WP_Ability(
-			'albert/upload-media',
-			[ 'annotations' => $this->write_annotations() ]
-		);
-
-		$this->assertSame(
-			'upload_files',
-			AbilitiesRegistry::resolve_required_capability( $ability )
-		);
-	}
-
-	/**
-	 * WooCommerce-sourced abilities map to manage_woocommerce.
-	 *
-	 * @return void
-	 */
-	public function test_woo_source_requires_manage_woocommerce(): void {
-		$ability = new WP_Ability(
-			'woo/find-products',
-			[ 'annotations' => [ 'readonly' => true ] ]
-		);
-
-		$this->assertSame(
-			'manage_woocommerce',
-			AbilitiesRegistry::resolve_required_capability( $ability )
-		);
-	}
-
-	/**
-	 * A read-only content ability requires only the read capability.
-	 *
-	 * @return void
-	 */
-	public function test_read_ability_requires_read(): void {
-		$ability = new WP_Ability(
-			'albert/find-posts',
-			[ 'annotations' => [ 'readonly' => true ] ]
-		);
-
-		$this->assertSame(
-			'read',
-			AbilitiesRegistry::resolve_required_capability( $ability )
-		);
-	}
-
-	/**
-	 * A destructive content ability requires delete_posts.
-	 *
-	 * @return void
-	 */
-	public function test_delete_ability_requires_delete_posts(): void {
-		$ability = new WP_Ability(
-			'albert/delete-post',
-			[ 'annotations' => [ 'destructive' => true ] ]
-		);
-
-		$this->assertSame(
-			'delete_posts',
-			AbilitiesRegistry::resolve_required_capability( $ability )
-		);
+			$this->assertSame( '', AbilitiesRegistry::resolve_required_capability( $ability ), $id );
+		}
 	}
 
 	/**
 	 * The resolved value passes through the required_capability filter, so an
-	 * add-on can correct the best-effort guess.
+	 * add-on can declare a capability for an ability it does not own.
 	 *
 	 * @return void
 	 */

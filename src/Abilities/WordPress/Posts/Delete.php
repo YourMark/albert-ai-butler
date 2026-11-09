@@ -48,6 +48,8 @@ class Delete extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'delete_posts';
+
 		parent::__construct();
 	}
 
@@ -102,7 +104,7 @@ class Delete extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->check_rest_permission( '/wp/v2/posts/(?P<id>[\\d]+)', 'DELETE', 'delete_posts' );
+		return $this->check_rest_permission( '/wp/v2/posts/(?P<id>[\\d]+)', 'DELETE', $this->capability );
 	}
 
 	/**

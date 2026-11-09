@@ -43,6 +43,8 @@ class ViewMedia extends BaseAbility {
 			'annotations' => Annotations::read(),
 		];
 
+		$this->capability = 'upload_files';
+
 		parent::__construct();
 	}
 
@@ -82,16 +84,6 @@ class ViewMedia extends BaseAbility {
 				],
 			],
 		];
-	}
-
-	/**
-	 * Check if the current user has permission to execute this ability.
-	 *
-	 * @return bool|WP_Error True if permitted, WP_Error with details otherwise.
-	 * @since 1.0.0
-	 */
-	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'upload_files' );
 	}
 
 	/**

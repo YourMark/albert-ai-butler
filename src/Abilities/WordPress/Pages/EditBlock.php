@@ -50,6 +50,8 @@ class EditBlock extends AbstractEditBlock {
 			),
 		];
 
+		$this->capability = 'edit_pages';
+
 		parent::__construct();
 	}
 
@@ -71,15 +73,5 @@ class EditBlock extends AbstractEditBlock {
 	 */
 	protected function rest_base(): string {
 		return 'pages';
-	}
-
-	/**
-	 * The capability gate.
-	 *
-	 * @return string Capability.
-	 * @since 1.2.0
-	 */
-	protected function edit_capability(): string {
-		return 'edit_pages';
 	}
 }
