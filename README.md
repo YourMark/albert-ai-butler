@@ -171,6 +171,20 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.6.0
+
+**Improvements**
+
+- Your assistant now knows which version of Albert and of the MCP Adapter your site runs, and whether the adapter is Albert's own copy or comes from another plugin. When something goes wrong, it can put the right versions in a bug report without you looking them up.
+
+**Developer**
+
+- The environment in the `albert/context/site` filter now carries `albert` (the version) and `mcp_adapter` (`version`, and `loaded_from`: `albert` for the bundled copy or the supplying plugin's folder name).
+
+**Credits**
+
+- [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for asking for the versions in the site context.
+
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
