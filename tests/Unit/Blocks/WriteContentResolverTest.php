@@ -185,6 +185,38 @@ class WriteContentResolverTest extends TestCase {
 		$this->assertSame( [], $result['block_issues'] );
 	}
 
+	public function test_block_markdown_content_is_refused(): void {
+		$result = ( new WriteContentResolver() )->resolve( [ 'content' => "## Intro\n\n- one\n- two" ], 'post' );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'content_is_markdown', $result->get_error_code() );
+		$this->assertStringContainsString( '`blocks`', $result->get_error_message() );
+	}
+
+	public function test_pattern_markdown_content_is_refused(): void {
+		$result = ( new WriteContentResolver() )->resolve_pattern( [ 'content' => '# Pattern title' ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'content_is_markdown', $result->get_error_code() );
+	}
+
+	public function test_blocks_input_skips_the_markdown_check(): void {
+		$result = ( new WriteContentResolver() )->resolve(
+			[
+				'content' => '# Ignored',
+				'blocks'  => [
+					[
+						'name'       => 'core/paragraph',
+						'attributes' => [ 'content' => 'From blocks.' ],
+					],
+				],
+			],
+			'post'
+		);
+
+		$this->assertIsArray( $result );
+	}
+
 	// =====================================================================
 	// Update exemption — a now-disallowed block already in the post is allowed.
 	// =====================================================================

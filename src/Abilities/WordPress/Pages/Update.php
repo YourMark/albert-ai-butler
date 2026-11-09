@@ -79,7 +79,7 @@ class Update extends BaseAbility {
 				],
 				'content' => [
 					'type'        => 'string',
-					'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire page body when set.',
+					'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->) or HTML. Markdown is not converted and is refused: send the structured "blocks" field instead, which is also preferred for multi-block, nested layouts. Ignored when "blocks" is provided. Replaces the entire page body when set.',
 				],
 				'blocks'  => [
 					'type'        => 'array',
