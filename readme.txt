@@ -233,6 +233,16 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.6.0 =
+
+**Features**
+
+* **Search everything at once.** Your assistant can now search all your published content in one go, across posts, pages and your own content types, and find the same results your site search does. It can search categories, tags and other terms too. Drafts and private posts are not included.
+
+**Developer**
+
+* New ability: `albert/search-content`.
+
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
 
