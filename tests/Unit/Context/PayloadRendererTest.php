@@ -84,6 +84,32 @@ class PayloadRendererTest extends TestCase {
 	}
 
 	/**
+	 * Albert's and the MCP Adapter's versions share a line, with where the adapter came from.
+	 *
+	 * @return void
+	 */
+	public function test_environment_names_albert_and_adapter_versions(): void {
+		$context                               = $this->context();
+		$context['environment']['albert']      = '1.6.0';
+		$context['environment']['mcp_adapter'] = [
+			'version'     => '0.7.0',
+			'loaded_from' => 'albert',
+		];
+
+		$this->assertStringContainsString(
+			'Albert 1.6.0 · MCP Adapter 0.7.0 (bundled with Albert)',
+			$this->renderer->render( $context )
+		);
+
+		$context['environment']['mcp_adapter']['loaded_from'] = 'woocommerce';
+
+		$this->assertStringContainsString(
+			'MCP Adapter 0.7.0 (from the woocommerce plugin)',
+			$this->renderer->render( $context )
+		);
+	}
+
+	/**
 	 * The untrusted-data framing is present whenever the payload carries text.
 	 *
 	 * @return void
