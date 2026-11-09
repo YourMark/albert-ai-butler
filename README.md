@@ -178,6 +178,7 @@ Website: https://yourmark.nl
 **Improvements**
 
 - When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
+- When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
 
 **Fixes**
 
@@ -190,6 +191,7 @@ Website: https://yourmark.nl
 - Block markup sent in `content` is stored as sent, and is now checked against the allowed blocks, as `blocks` already was.
 - A `blocks` write with an attribute Albert cannot write into the block's HTML now fails with `block_validation_failed` naming the attribute, for example `textAlign` on a heading in WordPress 7.x. Comment-only attributes (`lock`, `metadata`, `layout`, `templateLock`, `allowedBlocks`) are accepted.
 - `html` works on every block as its saved inner markup, and nested block markup in it becomes inner blocks. Sending `html` together with `innerBlocks` is an error.
+- `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
 
 ### 1.5.0
 
