@@ -430,6 +430,10 @@ class AbilitiesRegistry {
 		if ( str_contains( $action, 'user' ) ) {
 			return $is_read ? 'list_users' : ( $is_delete ? 'delete_users' : 'edit_users' );
 		}
+		// Core shows a post's revisions only to those who may edit it.
+		if ( str_contains( $action, 'revision' ) ) {
+			return 'edit_posts';
+		}
 		// Setting a featured image edits the target post, not the media library.
 		if ( str_contains( $action, 'featured-image' ) ) {
 			return $is_read ? 'read' : 'edit_posts';

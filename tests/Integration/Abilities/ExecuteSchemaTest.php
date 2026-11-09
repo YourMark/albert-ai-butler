@@ -34,6 +34,9 @@ use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
 use Albert\Abilities\WordPress\Posts\FindPosts;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\Revisions\FindRevisions;
+use Albert\Abilities\WordPress\Revisions\RestoreRevision;
+use Albert\Abilities\WordPress\Revisions\ViewRevision;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
@@ -448,6 +451,26 @@ class ExecuteSchemaTest extends TestCase {
 			[ 'id' => $attachment_id ],
 			'ViewMedia'
 		);
+	}
+
+	/**
+	 * The revision abilities return results matching their output schemas.
+	 *
+	 * @return void
+	 */
+	public function test_revision_abilities_output_matches_schema(): void {
+		$post_id = self::factory()->post->create( [ 'post_content' => 'First' ] );
+		wp_update_post(
+			[
+				'ID'           => $post_id,
+				'post_content' => 'Second',
+			]
+		);
+		$revision_id = (int) array_key_last( wp_get_post_revisions( $post_id ) );
+
+		$this->assert_execute_matches_schema( new FindRevisions(), [ 'post_id' => $post_id ], 'FindRevisions' );
+		$this->assert_execute_matches_schema( new ViewRevision(), [ 'id' => $revision_id ], 'ViewRevision' );
+		$this->assert_execute_matches_schema( new RestoreRevision(), [ 'id' => $revision_id ], 'RestoreRevision' );
 	}
 
 	/**
