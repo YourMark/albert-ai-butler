@@ -233,6 +233,16 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.6.0 =
+
+**Features**
+
+* **Ask what Site Health says.** Your assistant can now run WordPress's Site Health checks and report each result as the Site Health screen shows it, most urgent first. Checks that only work from your browser are listed as not run, so the assistant never guesses their result. Only people who can open Site Health can ask, and nothing on your site is changed.
+
+**Developer**
+
+* New ability: `albert/view-site-health`.
+
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
 
