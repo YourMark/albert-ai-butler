@@ -11,6 +11,7 @@ namespace Albert\Core;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\CLI\AllowedUsersCommand;
 use Albert\Abilities\WordPress\Posts\FindPosts;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
@@ -231,6 +232,8 @@ class Plugin {
 		AllowedUserExpiry::schedule();
 
 		( new PasswordChange() )->register_hooks();
+
+		AllowedUsersCommand::register();
 
 		// Daily cleanup of expired OAuth token rows. Same self-healing reason.
 		( new TokenCleanup() )->register_hooks();

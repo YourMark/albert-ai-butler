@@ -296,31 +296,49 @@ class AllowedUsers {
 	/**
 	 * Add a user to the allowed list, if they are not already on it.
 	 *
-	 * `expires_at` is computed now, from whatever the expiry window is at
-	 * this moment, and stored: it does not move if the window changes later
-	 * (see the class docblock).
+	 * `expires_at` is computed now and stored: it does not move if the window
+	 * changes later (see the class docblock). Fires `albert/allowed_users/added`
+	 * on a new entry. Callers are the Connections screen, `wp albert
+	 * allowed-users add` and add-ons; Albert never adds anyone on its own.
 	 *
-	 * @param int $user_id The user id.
+	 * @param int      $user_id     The user id.
+	 * @param int|null $expiry_days Days until a never-used invitation lapses, for
+	 *                              this person only. Null uses the site's window;
+	 *                              0 means it never lapses.
 	 *
-	 * @return bool True if the user was newly added, false if already allowed.
+	 * @return bool True if the user was newly added, false if already on the list.
 	 * @since 1.4.0
+	 * @since 1.6.0 Takes `$expiry_days` and fires `albert/allowed_users/added`.
 	 */
-	public static function add( int $user_id ): bool {
+	public static function add( int $user_id, ?int $expiry_days = null ): bool {
 		$all = self::all();
 
 		if ( isset( $all[ $user_id ] ) ) {
 			return false;
 		}
 
-		$now = time();
+		$now        = time();
+		$expires_at = $expiry_days === null
+			? self::compute_expiry( $now )
+			: ( $expiry_days > 0 ? $now + ( $expiry_days * DAY_IN_SECONDS ) : null );
 
 		$all[ $user_id ] = [
 			'added_at'      => $now,
 			'authorised_at' => null,
-			'expires_at'    => self::compute_expiry( $now ),
+			'expires_at'    => $expires_at,
 		];
 
 		self::save( $all );
+
+		/**
+		 * A person was added to the allowed list.
+		 *
+		 * @param int      $user_id    The user id.
+		 * @param int|null $expires_at When their invitation lapses if unused (Unix timestamp), or null for never.
+		 *
+		 * @since 1.6.0
+		 */
+		do_action( 'albert/allowed_users/added', $user_id, $expires_at );
 
 		return true;
 	}
@@ -328,21 +346,38 @@ class AllowedUsers {
 	/**
 	 * Remove a user from the allowed list.
 	 *
-	 * Does not touch their tokens; callers that mean "and disconnect them"
-	 * (e.g. {@see \Albert\Admin\Connections::handle_remove_allowed_user()})
-	 * revoke separately via {@see \Albert\Admin\Settings::revoke_user_tokens()}.
+	 * Fires `albert/allowed_users/removed` when they were on it, including when
+	 * the expiry sweep removes a lapsed invitation. Does not touch their tokens:
+	 * callers that mean "and disconnect them" (the Connections screen, `wp albert
+	 * allowed-users remove`) revoke separately via
+	 * {@see \Albert\Admin\Settings::revoke_user_tokens()}, after this returns.
 	 *
 	 * @param int $user_id The user id.
 	 *
 	 * @return void
 	 * @since 1.4.0
+	 * @since 1.6.0 Fires `albert/allowed_users/removed`.
 	 */
 	public static function remove( int $user_id ): void {
 		$all = self::all();
 
+		if ( ! isset( $all[ $user_id ] ) ) {
+			return;
+		}
+
 		unset( $all[ $user_id ] );
 
 		self::save( $all );
+
+		/**
+		 * A person was removed from the allowed list. Their tokens may not be
+		 * revoked yet when this fires.
+		 *
+		 * @param int $user_id The user id.
+		 *
+		 * @since 1.6.0
+		 */
+		do_action( 'albert/allowed_users/removed', $user_id );
 	}
 
 	/**
