@@ -171,6 +171,17 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.6.0
+
+**Improvements**
+
+- You can now manage the list of people who may connect an assistant from the command line, as well as on the Connections screen: see who is on it and whether they have connected yet, add people, with their own invitation length if you like, and remove them. Removing someone signs out every assistant they connected, as it does on the screen.
+
+**Developer**
+
+- New WP-CLI command `wp albert allowed-users` with `list`, `add` and `remove`. It takes user IDs, logins or email addresses and changes nothing if any of them is not found. `add --expires=<days>` sets that invitation's length (0 never lapses).
+- New actions `albert/allowed_users/added` `( $user_id, $expires_at )` and `albert/allowed_users/removed` `( $user_id )`. They fire however the list changes: the Connections screen, the command, an add-on or an invitation lapsing.
+
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
