@@ -233,6 +233,38 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.6.0 =
+
+**Improvements**
+
+* The Abilities screen now labels an ability from another plugin that doesn't say whether it only reads or can change something as Not declared, instead of guessing Write, and explains what that means. Albert still treats it as one that can make changes, so safe mode holds it.
+* When your assistant edits a single block and the new text would lose a tag the block had, such as a ThirstyAffiliates link, Albert refuses the edit and tells the assistant to ask you first. Nothing is saved until you agree.
+* Albert is about 2 MB smaller: the Abilities and Skills screens now share one copy of their table instead of each carrying its own.
+* Ordinary page views on your site no longer load Albert's abilities, so the pages your visitors see do a little less work.
+
+**Fixes**
+
+* Switching an ability off on the Abilities screen removed it from your whole site, so other plugins that used it stopped working too. The switch now only decides what assistants connected through Albert can use, and the screen explains this.
+* Text your assistant wrote in paragraphs, headings, lists, buttons and quotes lost tags that other plugins add, such as ThirstyAffiliates links, even for administrators. Text is now saved the way the WordPress editor saves it, with the same rules for who may store what.
+
+**Security**
+
+* Another site can no longer show Albert's approval page inside its own page to trick you into clicking Authorize.
+* Someone could fill the limit on connected apps with sign-ups they never finished, so a real assistant was refused for a day. Albert now makes room by removing the oldest sign-up that never connected. Apps that have connected are never removed.
+* Every app now has to use the sign-in protection that ties an approval to the app that asked for it, as the MCP standard requires. Apps that registered with a secret could skip it before.
+* Changing or resetting a person's password now disconnects every assistant connected as them. An assistant also stops working as soon as its person is no longer on the list of people who may connect one, however they were taken off it.
+
+**Developer**
+
+* Switching an ability off no longer unregisters it. Albert's MCP server leaves it out of discovery and refuses to describe or run it, and safe mode refuses to approve a held call for it. An Albert ability that an add-on refuses, such as one that needs a licence, is still unregistered.
+* `albert/abilities/disabled_list` now also applies to Albert's own abilities.
+* An Abilities screen row's `operation` is now `undeclared` (it was `write`) for an ability whose annotations set neither `readonly` nor `destructive`.
+* Deprecated: `AnnotationPresenter::heuristic_chips()`. An ability's name no longer decides its label.
+* New filter `albert/safe_mode/should_hold` (`$hold`, `$ability`, `$input`, `$user_id`) lets an add-on hold a call for approval based on its input. It can add a hold, never release one, and is not called when safe mode is off or the ability is exempt.
+* New `remove_tags` input on `albert/edit-post-block` and `albert/edit-page-block` confirms that an edit may drop the listed tags.
+* New action `albert/oauth/client_evicted` (`$client_id`, `$client_name`) fires when an unused registration is removed to make room under the client limit.
+* `albert/abilities/register` now fires on `wp_abilities_api_init` instead of `init`, and only on requests that read the abilities registry.
+
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
 
