@@ -171,6 +171,24 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.6.0
+
+**Improvements**
+
+- Your assistant can now see which categories and tags a post or page has, so it can check that a change to them took effect.
+
+**Fixes**
+
+- Asking your assistant to remove all categories or tags from a post did nothing, while it was told the change had worked. They are now removed.
+
+**Developer**
+
+- `albert/view-post` and `albert/view-page` return `categories` and `tags` as `{ id, name }` lists, left out when the post type does not use that taxonomy. `albert/update-post` treats an empty `categories` or `tags` list as removing them all.
+
+**Credits**
+
+- [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting that categories and tags could not be read or cleared.
+
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
