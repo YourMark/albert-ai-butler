@@ -171,6 +171,16 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.6.0
+
+**Features**
+
+- **Know what a role allows before changing it.** Your assistant can now list your site's user roles, each with a one-line summary of what it can do and how many people have it, and show every permission a single role holds. It also knows which roles would wait for your approval in safe mode when given to someone, so it can suggest a role change knowing what it grants. Only people who can see the list of users can ask.
+
+**Developer**
+
+- New ability: `albert/find-roles`.
+
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.

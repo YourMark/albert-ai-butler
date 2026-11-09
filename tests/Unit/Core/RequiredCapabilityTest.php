@@ -85,6 +85,17 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
+	 * Listing roles needs list_users, like listing the users who hold them.
+	 *
+	 * @return void
+	 */
+	public function test_find_roles_requires_list_users(): void {
+		$ability = new WP_Ability( 'albert/find-roles', [ 'annotations' => [ 'readonly' => true ] ] );
+
+		$this->assertSame( 'list_users', AbilitiesRegistry::resolve_required_capability( $ability ) );
+	}
+
+	/**
 	 * Uploading media requires upload_files.
 	 *
 	 * @return void

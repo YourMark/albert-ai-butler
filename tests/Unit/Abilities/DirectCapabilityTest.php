@@ -24,6 +24,7 @@ use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
 use Albert\Abilities\WordPress\Taxonomies\FindTerms;
 use Albert\Abilities\WordPress\Taxonomies\UpdateTerm;
 use Albert\Abilities\WordPress\Taxonomies\ViewTerm;
+use Albert\Abilities\WordPress\Users\FindRoles;
 use Albert\Abilities\WordPress\Users\ViewUser;
 use Albert\Abilities\WooCommerce\FindCustomers;
 use Albert\Abilities\WooCommerce\FindOrders;
@@ -81,6 +82,7 @@ class DirectCapabilityTest extends TestCase {
 
 			// Users.
 			'view-user'          => [ ViewUser::class, 'list_users' ],
+			'find-roles'         => [ FindRoles::class, 'list_users' ],
 
 			// Taxonomies.
 			'find-taxonomies'    => [ FindTaxonomies::class, 'manage_categories' ],
