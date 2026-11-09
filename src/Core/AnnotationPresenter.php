@@ -19,7 +19,7 @@ defined( 'ABSPATH' ) || exit;
  * AnnotationPresenter class
  *
  * Pure helper that converts an ability's WP 6.9 annotations array
- * (read / write / delete) into a list of chip DTOs the
+ * (read / write / destructive / not declared) into a list of chip DTOs the
  * AbilitiesPage renders. Keeping the mapping here makes the view thin
  * and the logic unit-testable without a WordPress bootstrap.
  *
@@ -31,32 +31,66 @@ class AnnotationPresenter {
 	 * Build chip DTOs for an ability.
 	 *
 	 * Each chip is an array with:
-	 *  - 'key'         string — stable identifier ('read', 'write', 'destructive').
+	 *  - 'key'         string — stable identifier ('read', 'write', 'destructive', 'undeclared').
 	 *  - 'label'       string — short translated label shown on the chip.
 	 *  - 'description' string — one-sentence explanation used for tooltips.
 	 *  - 'icon'        string — Dashicon class name.
 	 *  - 'tone'        string — one of: neutral, warning, danger.
 	 *
-	 * If the ability has no annotations the presenter falls back to the
-	 * slug heuristic ({@see self::heuristic_chips()}) so older custom
-	 * abilities still display something sensible.
+	 * An ability that declares neither `readonly` nor `destructive` gets one
+	 * "Not declared" chip: its name says nothing reliable about what it does.
+	 *
+	 * A destructive flag or a name on safe mode's high-risk list wins over
+	 * `readonly`: a contradictory declaration reads the safe way.
 	 *
 	 * @param array<string, mixed> $annotations Raw annotations from get_meta()['annotations'].
-	 * @param string               $ability_id  Ability id, used only for the fallback heuristic.
+	 * @param string               $ability_id  Ability id, for the high-risk name list.
 	 *
 	 * @return array<int, array{key: string, label: string, description: string, icon: string, tone: string}>
 	 * @since 1.1.0
 	 */
 	public static function chips_for( array $annotations, string $ability_id = '' ): array {
-		if ( self::is_destructive( $annotations, $ability_id ) ) {
+		if ( RiskPolicy::is_high_risk_ability( $ability_id ) || ! empty( $annotations['destructive'] ) ) {
 			return [ self::destructive_chip() ];
 		}
 
-		if ( empty( $annotations ) ) {
-			return self::heuristic_chips( $ability_id );
+		if ( ! self::is_declared( $annotations ) ) {
+			return [ self::not_declared_chip() ];
 		}
 
-		return [ empty( $annotations['readonly'] ) ? self::makes_changes_chip() : self::read_only_chip() ];
+		// Strict, as everywhere else (defaults, safe mode): `readonly => 1` is not read-only.
+		return [ ( $annotations['readonly'] ?? null ) === true ? self::read_only_chip() : self::makes_changes_chip() ];
+	}
+
+	/**
+	 * Whether an ability says if it changes anything.
+	 *
+	 * Core fills missing annotations with null, so only a boolean `readonly` or
+	 * `destructive` counts as a declaration.
+	 *
+	 * @param array<string, mixed> $annotations Raw annotations.
+	 *
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	public static function is_declared( array $annotations ): bool {
+		return is_bool( $annotations['readonly'] ?? null ) || is_bool( $annotations['destructive'] ?? null );
+	}
+
+	/**
+	 * "Not declared" chip: the ability does not say what it does.
+	 *
+	 * @return array{key: string, label: string, description: string, icon: string, tone: string}
+	 * @since 1.6.0
+	 */
+	private static function not_declared_chip(): array {
+		return [
+			'key'         => 'undeclared',
+			'label'       => __( 'Not declared', 'albert-ai-butler' ),
+			'description' => __( "This ability doesn't say whether it reads, changes or deletes anything, so Albert treats it as one that can make changes.", 'albert-ai-butler' ),
+			'icon'        => 'dashicons-editor-help',
+			'tone'        => 'neutral',
+		];
 	}
 
 	/**
@@ -92,7 +126,7 @@ class AnnotationPresenter {
 	}
 
 	/**
-	 * "Destructive" chip.
+	 * "Destructive" chip: may remove or overwrite beyond recovery, or reaches far.
 	 *
 	 * @return array{key: string, label: string, description: string, icon: string, tone: string}
 	 * @since 1.1.0
@@ -110,8 +144,8 @@ class AnnotationPresenter {
 	/**
 	 * Derive chips from the ability id when no annotations are declared.
 	 *
-	 * Uses the same write-prefix heuristic as the previous AbstractAbilitiesPage,
-	 * so existing third-party abilities without annotations still look sensible.
+	 * @deprecated 1.6.0 A name is not a declaration; {@see self::chips_for()} labels
+	 *             an unannotated ability "Not declared".
 	 *
 	 * @param string $ability_id Ability id, e.g. 'albert/create-post'.
 	 *
@@ -119,6 +153,8 @@ class AnnotationPresenter {
 	 * @since 1.1.0
 	 */
 	public static function heuristic_chips( string $ability_id ): array {
+		_deprecated_function( __METHOD__, '1.6.0', __CLASS__ . '::chips_for' );
+
 		if ( $ability_id === '' ) {
 			return [];
 		}
@@ -140,13 +176,14 @@ class AnnotationPresenter {
 	}
 
 	/**
-	 * Whether an ability belongs in the Destructive group.
+	 * Whether an ability may be destructive: the one answer for the environment policy.
 	 *
-	 * The one answer for the chips and the environment policy. Safe mode holds
-	 * more than this: it also holds what does not declare itself.
+	 * Fail-safe: a name on safe mode's high-risk list is destructive whatever it
+	 * declares, and without a `destructive` flag only a declared read-only
+	 * ability is safe.
 	 *
 	 * @param array<string, mixed> $annotations Raw annotations.
-	 * @param string               $ability_id  Ability id for the name list and the fallback heuristic.
+	 * @param string               $ability_id  Ability id, for the high-risk name list.
 	 *
 	 * @return bool
 	 * @since 1.1.0
@@ -160,17 +197,14 @@ class AnnotationPresenter {
 			return (bool) $annotations['destructive'];
 		}
 
-		$parts  = explode( '/', $ability_id, 2 );
-		$action = $parts[1] ?? $parts[0];
-
-		return str_starts_with( $action, 'delete-' );
+		return ( $annotations['readonly'] ?? null ) !== true;
 	}
 
 	/**
 	 * Whether an ability declares itself outside the Destructive group.
 	 *
-	 * Strict: an undeclared ability, or a write that leaves `destructive` unset,
-	 * declares nothing.
+	 * Strict: only a boolean `destructive: false`, or a boolean `readonly: true`
+	 * without a `destructive` flag, counts.
 	 *
 	 * @param \WP_Ability $ability The registered ability.
 	 *

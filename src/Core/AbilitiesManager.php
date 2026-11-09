@@ -493,11 +493,8 @@ class AbilitiesManager implements Hookable {
 	/**
 	 * Resolve an ability ID to its human-readable label.
 	 *
-	 * Reads the label from the in-memory ability instances the manager holds,
-	 * which are populated during bootstrap independently of the WordPress
-	 * Abilities API registration timing. This lets callers resolve labels in
-	 * contexts where wp_get_ability() is not yet safe to call (e.g. admin pages
-	 * that render before the abilities registry is populated).
+	 * Reads the ability instances the manager holds, so it also knows the
+	 * abilities enforce_disabled() has unregistered from WordPress.
 	 *
 	 * Returns null for IDs the manager does not hold (e.g. third-party
 	 * abilities registered directly with WordPress), so callers can fall back

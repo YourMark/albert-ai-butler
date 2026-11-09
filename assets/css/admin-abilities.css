@@ -132,7 +132,7 @@
 	line-clamp: 3;
 }
 
-/* Operation badge — read (green) / write (amber) / delete (red). */
+/* Operation badge: read (green), write (amber), destructive (red), not declared (grey). */
 .albert-op-badge {
 	display: inline-flex;
 	align-items: center;
@@ -165,6 +165,11 @@
 .albert-op-badge--destructive {
 	background: var(--albert-color-danger-surface);
 	color: var(--albert-color-danger);
+}
+
+.albert-op-badge--undeclared {
+	background: var(--albert-color-neutral-surface);
+	color: var(--albert-color-neutral);
 }
 
 /* Generic add-on badges — appended to rows via the

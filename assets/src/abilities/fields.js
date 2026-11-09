@@ -1,19 +1,20 @@
 /**
  * DataViews field definitions for the Abilities screen.
  *
- * Operation is the read/write/delete value derived server-side from the
- * ability's annotations. Category, Operation, Source and Status are filterable
+ * Operation is the read/write/destructive/undeclared value derived server-side from
+ * the ability's annotations. Category, Operation, Source and Status are filterable
  * (single-select); Ability/ID/Description feed global search only.
  */
 import { FormToggle } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
-import { OPERATION_LABELS } from './constants';
+import { OPERATION_LABELS, operationTitle } from './constants';
 import { SINGLE_SELECT } from '../shared/ToolbarControls';
 
 const OPERATION_ELEMENTS = [
 	{ value: 'read', label: OPERATION_LABELS.read },
 	{ value: 'write', label: OPERATION_LABELS.write },
 	{ value: 'destructive', label: OPERATION_LABELS.destructive },
+	{ value: 'undeclared', label: OPERATION_LABELS.undeclared },
 ];
 
 const STATUS_ELEMENTS = [
@@ -74,7 +75,7 @@ function AbilityCell( { item } ) {
 }
 
 /**
- * The colored operation badge (read / write / destructive).
+ * The colored operation badge (read / write / destructive / not declared).
  *
  * @param {Object} props      Render props.
  * @param {Object} props.item The ability row.
@@ -84,6 +85,7 @@ function OperationBadge( { item } ) {
 	return (
 		<span
 			className={ `albert-op-badge albert-op-badge--${ item.operation }` }
+			title={ operationTitle( item ) }
 		>
 			<span className="albert-op-badge__dot" aria-hidden="true" />
 			{ OPERATION_LABELS[ item.operation ] || item.operation }
