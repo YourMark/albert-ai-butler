@@ -233,6 +233,20 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.6.0 =
+
+**Fixes**
+
+* When your assistant wrote a post, page or pattern in Markdown (headings marked with `#`, bold text with `**`), it was saved as one paragraph with those marks left in, and the assistant was told it had worked. Albert now refuses it and asks the assistant to send proper blocks, so nothing broken is saved.
+
+**Developer**
+
+* The post, page and pattern create and update abilities now return a `content_is_markdown` error when `content` is Markdown, instead of saving it as one paragraph. Send `blocks` instead.
+
+**Credits**
+
+* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting Markdown saved as one paragraph.
+
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
 
