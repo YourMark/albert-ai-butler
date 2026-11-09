@@ -171,6 +171,16 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.6.0
+
+**Features**
+
+- **Menus.** Your assistant can now tell you which menu visitors actually see in your header, on classic and block themes alike, and show what is in any menu. On classic menus it can create a menu, add, change, move and remove items, put a menu in one of your theme's menu locations, and delete a menu. If a change lands on a menu visitors do not see, it says so instead of reporting plain success. With safe mode on, removing an item or deleting a menu waits for your approval. Menus made in the Site Editor on a block theme can be viewed but not yet edited. The Dashboard suggests asking which menu visitors see in the header.
+
+**Developer**
+
+- New abilities: `albert/find-menus`, `albert/view-menu`, `albert/create-menu`, `albert/add-menu-item`, `albert/update-menu-item`, `albert/move-menu-item`, `albert/remove-menu-item`, `albert/assign-menu-location` and `albert/delete-menu`. Every write except `delete-menu` returns `visible`, plus a `notice` when visitors will not see the change.
+
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.

@@ -14,6 +14,15 @@ namespace Albert\Tests\Unit\Abilities;
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 
 use Albert\Abilities\WordPress\Media\FindMedia;
+use Albert\Abilities\WordPress\Menus\AddMenuItem;
+use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
+use Albert\Abilities\WordPress\Menus\CreateMenu;
+use Albert\Abilities\WordPress\Menus\DeleteMenu;
+use Albert\Abilities\WordPress\Menus\FindMenus;
+use Albert\Abilities\WordPress\Menus\MoveMenuItem;
+use Albert\Abilities\WordPress\Menus\RemoveMenuItem;
+use Albert\Abilities\WordPress\Menus\UpdateMenuItem;
+use Albert\Abilities\WordPress\Menus\ViewMenu;
 use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Pages\ViewPage;
@@ -70,6 +79,17 @@ class DirectCapabilityTest extends TestCase {
 	 */
 	public static function provideAbilitiesWithCaps(): array {
 		return [
+			// Menus.
+			'find-menus'           => [ FindMenus::class, 'edit_theme_options' ],
+			'view-menu'            => [ ViewMenu::class, 'edit_theme_options' ],
+			'create-menu'          => [ CreateMenu::class, 'edit_theme_options' ],
+			'delete-menu'          => [ DeleteMenu::class, 'edit_theme_options' ],
+			'add-menu-item'        => [ AddMenuItem::class, 'edit_theme_options' ],
+			'update-menu-item'     => [ UpdateMenuItem::class, 'edit_theme_options' ],
+			'move-menu-item'       => [ MoveMenuItem::class, 'edit_theme_options' ],
+			'remove-menu-item'     => [ RemoveMenuItem::class, 'edit_theme_options' ],
+			'assign-menu-location' => [ AssignMenuLocation::class, 'edit_theme_options' ],
+
 			// Media.
 			'find-media'         => [ FindMedia::class, 'upload_files' ],
 			'view-media'         => [ ViewMedia::class, 'upload_files' ],

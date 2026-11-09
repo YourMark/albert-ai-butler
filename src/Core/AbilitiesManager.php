@@ -137,6 +137,10 @@ class AbilitiesManager implements Hookable {
 				'label'       => __( 'Comments', 'albert-ai-butler' ),
 				'description' => __( 'Comment management.', 'albert-ai-butler' ),
 			],
+			'menus'       => [
+				'label'       => __( 'Menus', 'albert-ai-butler' ),
+				'description' => __( 'Classic menus and block theme navigation.', 'albert-ai-butler' ),
+			],
 			'commerce'    => [
 				'label'       => __( 'Commerce', 'albert-ai-butler' ),
 				'description' => __( 'Store and order management.', 'albert-ai-butler' ),
