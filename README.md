@@ -185,12 +185,6 @@ Website: https://yourmark.nl
 - Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 - A group block sent with its contents written out was saved empty. It now keeps them.
 
-**Developer**
-
-- Block markup sent in `content` is stored as sent, and is now checked against the allowed blocks, as `blocks` already was.
-- A `blocks` write with an attribute Albert cannot write into the block's HTML now fails with `block_validation_failed` naming the attribute, for example `textAlign` on a heading in WordPress 7.x. Comment-only attributes (`lock`, `metadata`, `layout`, `templateLock`, `allowedBlocks`) are accepted.
-- `html` works on every block as its saved inner markup, and nested block markup in it becomes inner blocks. Sending `html` together with `innerBlocks` is an error.
-
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
