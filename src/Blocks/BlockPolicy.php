@@ -164,10 +164,9 @@ class BlockPolicy {
 	/**
 	 * Collect every distinct block name from a tree of submitted block specs.
 	 *
-	 * Walks innerBlocks, and block markup in `html`, recursively. Block names are
-	 * read from the `name` (or legacy `blockName`) key, so a parse_blocks() tree
-	 * walks too; blank or non-string names are ignored: the
-	 * serializer already reports those as their own errors.
+	 * Walks innerBlocks, and block markup in `html`, recursively. Names come from
+	 * `name` or the legacy `blockName`, so a parse_blocks() tree walks too. Blank
+	 * or non-string names are skipped: the serializer reports those itself.
 	 *
 	 * @param array<int, mixed> $specs Block specs.
 	 *

@@ -87,6 +87,9 @@ class BlockSerializer {
 	/**
 	 * The block delimiter pattern WP_Block_Parser uses.
 	 *
+	 * Matched here because parse_blocks() neither reports unbalanced delimiters
+	 * nor keeps byte offsets, and the markup is stored as sent.
+	 *
 	 * @var string
 	 *
 	 * @since 1.6.0
@@ -152,7 +155,7 @@ class BlockSerializer {
 	/**
 	 * Convert block specs (or a string) into block markup.
 	 *
-	 * @param array<int, array<string, mixed>>|string $input Block specs, or a string: block markup is kept as sent, HTML/Markdown is converted.
+	 * @param array<int, array<string, mixed>>|string $input Block specs, or block markup, HTML or Markdown.
 	 * @return string Comment-delimited block markup.
 	 *
 	 * @since 1.2.0
@@ -168,7 +171,7 @@ class BlockSerializer {
 	 * message is actionable and path-qualified for an LLM to self-correct, e.g.
 	 * "content[0].attributes.level must be between 1 and 6".
 	 *
-	 * @param array<int, array<string, mixed>>|string $input Block specs, or a string: block markup is kept as sent, HTML/Markdown is converted.
+	 * @param array<int, array<string, mixed>>|string $input Block specs, or block markup, HTML or Markdown.
 	 * @return array{markup: string, issues: array<int, Issue>} Markup plus a list of issues.
 	 *
 	 * @since 1.2.0
@@ -299,7 +302,15 @@ class BlockSerializer {
 	 * @since 1.6.0
 	 */
 	private function top_level_spans( string $markup, string $path, array &$issues ): array {
-		preg_match_all( self::DELIMITER, $markup, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
+		// Without this, a regex failure would pass the markup on as stray HTML and wrap it in core/html.
+		if ( preg_match_all( self::DELIMITER, $markup, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE ) === false ) {
+			$issues[] = $this->issue(
+				self::SEVERITY_ERROR,
+				"{$path} could not be read as block markup. Send fewer blocks per write, or send them in `blocks`."
+			);
+
+			return [];
+		}
 
 		$spans      = [];
 		$stack      = [];

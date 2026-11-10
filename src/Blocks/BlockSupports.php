@@ -311,16 +311,16 @@ class BlockSupports {
 		// Core validates these against the REST schema and rejects the 'rich-text' type.
 		$attributes = array_diff_key( $attributes, array_flip( $this->schema->unvalidatable_sourced_attributes( $name ) ) );
 
-		if ( class_exists( WP_Block_Supports::class ) ) {
-			$previous                           = WP_Block_Supports::$block_to_render;
-			WP_Block_Supports::$block_to_render = [
-				'blockName' => $name,
-				'attrs'     => $attributes,
-			];
-			$output                             = WP_Block_Supports::get_instance()->apply_block_supports();
+		$previous                           = WP_Block_Supports::$block_to_render;
+		WP_Block_Supports::$block_to_render = [
+			'blockName' => $name,
+			'attrs'     => $attributes,
+		];
+
+		try {
+			$output = WP_Block_Supports::get_instance()->apply_block_supports();
+		} finally {
 			WP_Block_Supports::$block_to_render = $previous;
-		} else {
-			$output = [];
 		}
 
 		// Anchor and aria-label support landed in PHP after WordPress 6.9.
