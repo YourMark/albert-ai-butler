@@ -75,8 +75,9 @@ class UpdateMedia extends BaseAbility {
 	 */
 	private function get_input_schema(): array {
 		return [
-			'type'       => 'object',
-			'properties' => [
+			'type'          => 'object',
+			'description'   => 'Send the id and at least one of alt_text, title, caption or description.',
+			'properties'    => [
 				'id'          => [
 					'type'        => 'integer',
 					'description' => 'The media ID to update.',
@@ -99,7 +100,9 @@ class UpdateMedia extends BaseAbility {
 					'description' => 'Longer description, shown on the attachment page. Omit to leave unchanged.',
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'      => [ 'id' ],
+			// Only `id` and the four fields are allowed, so this means at least one field.
+			'minProperties' => 2,
 		];
 	}
 
@@ -160,21 +163,11 @@ class UpdateMedia extends BaseAbility {
 
 		$request = new WP_REST_Request( 'POST', '/wp/v2/media/' . $media_id );
 		$request->set_param( 'context', 'edit' );
-		$changed = false;
 
 		foreach ( self::FIELDS as $field ) {
 			if ( array_key_exists( $field, $args ) ) {
 				$request->set_param( $field, $args[ $field ] );
-				$changed = true;
 			}
-		}
-
-		if ( ! $changed ) {
-			return new WP_Error(
-				'media_no_changes',
-				__( 'Nothing to update: send at least one of alt_text, title, caption or description.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
 		}
 
 		$response = rest_do_request( $request );

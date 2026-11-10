@@ -336,6 +336,35 @@ class MediaAbilityTest extends TestCase {
 	}
 
 	/**
+	 * The schema refuses an update that sends only the id, before anything runs.
+	 *
+	 * @return void
+	 */
+	public function test_update_media_needs_a_field_besides_the_id(): void {
+		$ability = wp_get_ability( 'albert/update-media' );
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-media is not registered.' );
+		}
+
+		$attachment_id = $this->create_test_attachment();
+
+		$result = $ability->execute( [ 'id' => $attachment_id ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+
+		$this->assertIsArray(
+			$ability->execute(
+				[
+					'id'      => $attachment_id,
+					'caption' => '',
+				]
+			),
+			'Clearing one field is enough.'
+		);
+	}
+
+	/**
 	 * UpdateMedia refuses an ID that is a post, not an attachment.
 	 *
 	 * @return void

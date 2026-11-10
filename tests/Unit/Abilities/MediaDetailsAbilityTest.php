@@ -178,14 +178,6 @@ class MediaDetailsAbilityTest extends TestCase {
 		$this->assertSame( 404, $result->get_error_data()['status'] );
 	}
 
-	public function test_update_with_no_fields_is_refused_before_any_write(): void {
-		$result = ( new UpdateMedia() )->execute( [ 'id' => 7 ] );
-
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'media_no_changes', $result->get_error_code() );
-		$this->assertSame( [], $GLOBALS['albert_test_rest_calls'] );
-	}
-
 	public function test_update_refuses_an_id_that_is_not_an_attachment(): void {
 		$result = ( new UpdateMedia() )->execute(
 			[
