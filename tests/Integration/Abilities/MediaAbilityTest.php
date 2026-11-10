@@ -198,6 +198,33 @@ class MediaAbilityTest extends TestCase {
 		$this->assertNotContains( $document, $ids, 'Only images need alt text.' );
 	}
 
+	/**
+	 * An explicit mime_type replaces the images-only default of missing_alt_text.
+	 *
+	 * @return void
+	 */
+	public function test_find_media_missing_alt_text_with_mime_type(): void {
+		$image    = $this->create_test_attachment();
+		$document = self::factory()->attachment->create(
+			[
+				'post_mime_type' => 'application/pdf',
+				'post_title'     => 'A PDF',
+			]
+		);
+
+		$result = ( new FindMedia() )->execute(
+			[
+				'missing_alt_text' => true,
+				'mime_type'        => 'application/pdf',
+				'per_page'         => 100,
+			]
+		);
+		$ids    = array_column( $result['media'], 'id' );
+
+		$this->assertContains( $document, $ids );
+		$this->assertNotContains( $image, $ids );
+	}
+
 	// UpdateMedia.
 
 	/**
@@ -256,6 +283,38 @@ class MediaAbilityTest extends TestCase {
 		$this->assertSame( 'Old alt', get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) );
 		$this->assertSame( 'Keep me', get_post_field( 'post_title', $attachment_id ) );
 		$this->assertSame( '', get_post_field( 'post_excerpt', $attachment_id ) );
+	}
+
+	/**
+	 * Core sanitises what an author sends: alt text becomes plain text, and the caption loses disallowed HTML.
+	 *
+	 * @return void
+	 */
+	public function test_update_media_values_are_sanitised_by_core(): void {
+		$author = self::factory()->user->create( [ 'role' => 'author' ] );
+		wp_set_current_user( $author );
+		$attachment_id = $this->create_test_attachment();
+		wp_update_post(
+			[
+				'ID'          => $attachment_id,
+				'post_author' => $author,
+			]
+		);
+
+		$result = ( new UpdateMedia() )->execute(
+			[
+				'id'       => $attachment_id,
+				'alt_text' => '<b>A canola field</b>',
+				'caption'  => 'Spring<script>alert(1)</script> in <a href="https://example.com">the north</a>',
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 'A canola field', get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) );
+
+		$caption = get_post_field( 'post_excerpt', $attachment_id );
+		$this->assertStringNotContainsString( '<script', $caption );
+		$this->assertStringContainsString( '<a href="https://example.com">the north</a>', $caption );
 	}
 
 	/**

@@ -105,6 +105,17 @@ class FindMedia extends BaseAbility {
 				'media'       => [
 					'type'        => 'array',
 					'description' => 'Array of media items.',
+					'items'       => [
+						'type'       => 'object',
+						'properties' => [
+							'id'        => [ 'type' => 'integer' ],
+							'title'     => [ 'type' => 'string' ],
+							'mime_type' => [ 'type' => 'string' ],
+							'alt_text'  => [ 'type' => 'string' ],
+							'url'       => [ 'type' => [ 'string', 'boolean' ] ],
+							'date'      => [ 'type' => 'string' ],
+						],
+					],
 				],
 				'total'       => [
 					'type'        => 'integer',

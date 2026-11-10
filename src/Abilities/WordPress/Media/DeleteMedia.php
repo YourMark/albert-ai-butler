@@ -133,12 +133,8 @@ class DeleteMedia extends BaseAbility {
 		$response = rest_do_request( $request );
 		$data     = rest_get_server()->response_to_data( $response, false );
 
-		if ( is_wp_error( $data ) ) {
-			return $data;
-		}
-
 		if ( $response->is_error() ) {
-			return UpdateMedia::rest_failure( $data, $response->get_status(), __( 'The media file could not be deleted.', 'albert-ai-butler' ) );
+			return self::rest_failure( $data, $response->get_status(), __( 'The media file could not be deleted.', 'albert-ai-butler' ), 'media_permission_denied' );
 		}
 
 		return [

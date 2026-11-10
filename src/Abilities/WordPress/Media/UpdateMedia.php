@@ -20,7 +20,7 @@ defined( 'ABSPATH' ) || exit;
  * Sets a media file's alt text, title, caption and description.
  *
  * Writes through core's media endpoint, so the per-attachment edit check and
- * core's own sanitising (KSES on caption and description) apply as in wp-admin.
+ * core's own sanitising apply as in wp-admin.
  *
  * @since 1.6.0
  */
@@ -113,7 +113,16 @@ class UpdateMedia extends BaseAbility {
 			'properties' => [
 				'media'   => [
 					'type'        => 'object',
-					'description' => 'The media file as saved: id, alt_text, title, caption, description, mime_type, url.',
+					'description' => 'The media file as saved.',
+					'properties'  => [
+						'id'          => [ 'type' => 'integer' ],
+						'alt_text'    => [ 'type' => 'string' ],
+						'title'       => [ 'type' => 'string' ],
+						'caption'     => [ 'type' => 'string' ],
+						'description' => [ 'type' => 'string' ],
+						'mime_type'   => [ 'type' => 'string' ],
+						'url'         => [ 'type' => 'string' ],
+					],
 				],
 				'updated' => [ 'type' => 'boolean' ],
 			],
@@ -161,18 +170,10 @@ class UpdateMedia extends BaseAbility {
 		$changed = false;
 
 		foreach ( self::FIELDS as $field ) {
-			if ( ! array_key_exists( $field, $args ) || ! is_string( $args[ $field ] ) ) {
-				continue;
+			if ( array_key_exists( $field, $args ) ) {
+				$request->set_param( $field, $args[ $field ] );
+				$changed = true;
 			}
-
-			// Title and alt text are plain text. Caption and description may hold
-			// links, so core's save filters decide what HTML survives.
-			$value = in_array( $field, [ 'title', 'alt_text' ], true )
-				? sanitize_text_field( $args[ $field ] )
-				: $args[ $field ];
-
-			$request->set_param( $field, $value );
-			$changed = true;
 		}
 
 		if ( ! $changed ) {
@@ -186,12 +187,8 @@ class UpdateMedia extends BaseAbility {
 		$response = rest_do_request( $request );
 		$data     = rest_get_server()->response_to_data( $response, false );
 
-		if ( is_wp_error( $data ) ) {
-			return $data;
-		}
-
 		if ( $response->is_error() ) {
-			return self::rest_failure( $data, $response->get_status(), __( 'The media file could not be updated.', 'albert-ai-butler' ) );
+			return self::rest_failure( $data, $response->get_status(), __( 'The media file could not be updated.', 'albert-ai-butler' ), 'media_permission_denied' );
 		}
 
 		return [
@@ -206,29 +203,5 @@ class UpdateMedia extends BaseAbility {
 			],
 			'updated' => true,
 		];
-	}
-
-	/**
-	 * Turn a failed media REST response into an error the log classifies.
-	 *
-	 * Core refuses with `rest_cannot_edit` or `rest_cannot_delete`, which would
-	 * log as a failure; a refusal is a `*_permission_denied` warning.
-	 *
-	 * @param mixed  $data     Response data.
-	 * @param int    $status   HTTP status.
-	 * @param string $fallback Message when core gave none.
-	 * @return WP_Error
-	 * @since 1.6.0
-	 */
-	public static function rest_failure( $data, int $status, string $fallback ): WP_Error {
-		$data    = is_array( $data ) ? $data : [];
-		$code    = (string) ( $data['code'] ?? 'rest_error' );
-		$message = (string) ( $data['message'] ?? $fallback );
-
-		if ( $status === 401 || $status === 403 ) {
-			$code = 'media_permission_denied';
-		}
-
-		return new WP_Error( $code, $message, [ 'status' => $status ] );
 	}
 }

@@ -143,17 +143,39 @@ class MediaDetailsAbilityTest extends TestCase {
 		$this->assertSame( '', $GLOBALS['albert_test_rest_calls'][0]['params']['caption'] );
 	}
 
-	public function test_alt_text_is_plain_text(): void {
+	public function test_values_reach_core_unchanged(): void {
 		$this->queue_saved_media();
 
 		( new UpdateMedia() )->execute(
 			[
-				'id'       => 7,
-				'alt_text' => '<b>A cat</b>',
+				'id'    => 7,
+				'title' => 'The <em>best</em> cat',
 			]
 		);
 
-		$this->assertSame( 'A cat', $GLOBALS['albert_test_rest_calls'][0]['params']['alt_text'] );
+		$this->assertSame( 'The <em>best</em> cat', $GLOBALS['albert_test_rest_calls'][0]['params']['title'], 'Core sanitises, as in wp-admin.' );
+	}
+
+	public function test_other_core_errors_keep_their_code(): void {
+		$GLOBALS['albert_test_rest_responses']['write'] = [
+			'is_error' => true,
+			'data'     => [
+				'code'    => 'rest_post_invalid_id',
+				'message' => 'Invalid post ID.',
+			],
+			'status'   => 404,
+		];
+
+		$result = ( new UpdateMedia() )->execute(
+			[
+				'id'       => 7,
+				'alt_text' => 'x',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rest_post_invalid_id', $result->get_error_code() );
+		$this->assertSame( 404, $result->get_error_data()['status'] );
 	}
 
 	public function test_update_with_no_fields_is_refused_before_any_write(): void {
