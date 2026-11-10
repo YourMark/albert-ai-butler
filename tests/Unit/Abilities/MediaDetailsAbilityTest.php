@@ -221,10 +221,51 @@ class MediaDetailsAbilityTest extends TestCase {
 		$this->assertSame( 403, $result->get_error_data()['status'] );
 	}
 
+	public function test_a_401_also_becomes_a_permission_denied_code(): void {
+		$GLOBALS['albert_test_rest_responses']['write'] = [
+			'is_error' => true,
+			'data'     => [
+				'code'    => 'rest_forbidden',
+				'message' => 'Sorry, you are not allowed to do that.',
+			],
+			'status'   => 401,
+		];
+
+		$result = ( new UpdateMedia() )->execute(
+			[
+				'id'       => 7,
+				'alt_text' => 'x',
+			]
+		);
+
+		$this->assertSame( 'media_permission_denied', $result->get_error_code() );
+	}
+
+	public function test_a_failure_without_a_code_or_message_falls_back(): void {
+		$GLOBALS['albert_test_rest_responses']['write'] = [
+			'is_error' => true,
+			'data'     => [],
+			'status'   => 500,
+		];
+
+		$result = ( new UpdateMedia() )->execute(
+			[
+				'id'       => 7,
+				'alt_text' => 'x',
+			]
+		);
+
+		$this->assertSame( 'rest_error', $result->get_error_code() );
+		$this->assertSame( 'The media file could not be updated.', $result->get_error_message() );
+	}
+
 	public function test_delete_is_permanent(): void {
 		$GLOBALS['albert_test_rest_responses']['get'] = [
 			'is_error' => false,
-			'data'     => [ 'deleted' => true ],
+			'data'     => [
+				'deleted'  => true,
+				'previous' => [ 'title' => [ 'raw' => 'Cat' ] ],
+			],
 		];
 
 		$result = ( new DeleteMedia() )->execute( [ 'id' => 7 ] );

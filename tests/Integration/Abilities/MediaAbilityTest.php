@@ -199,6 +199,24 @@ class MediaAbilityTest extends TestCase {
 	}
 
 	/**
+	 * Without missing_alt_text, every media file is listed, with or without alt text.
+	 *
+	 * @return void
+	 */
+	public function test_find_media_lists_all_media_by_default(): void {
+		$with_alt = $this->create_test_attachment();
+		$no_alt   = $this->create_test_attachment();
+		update_post_meta( $with_alt, '_wp_attachment_image_alt', 'A canola field' );
+		$document = self::factory()->attachment->create( [ 'post_mime_type' => 'application/pdf' ] );
+
+		$ids = array_column( ( new FindMedia() )->execute( [ 'per_page' => 100 ] )['media'], 'id' );
+
+		$this->assertContains( $with_alt, $ids );
+		$this->assertContains( $no_alt, $ids );
+		$this->assertContains( $document, $ids );
+	}
+
+	/**
 	 * An explicit mime_type replaces the images-only default of missing_alt_text.
 	 *
 	 * @return void
@@ -392,6 +410,10 @@ class MediaAbilityTest extends TestCase {
 			$refused = $ability->check_permissions( [ 'id' => $others ] );
 			$this->assertInstanceOf( WP_Error::class, $refused, "{$name}: another user's file." );
 			$this->assertSame( 'media_permission_denied', $refused->get_error_code() );
+
+			// Core rewrites a permission error to "no permission", so these pass on to media_not_found.
+			$this->assertTrue( $ability->check_permissions( [ 'id' => PHP_INT_MAX ] ), "{$name}: missing ID." );
+			$this->assertTrue( $ability->check_permissions( [ 'id' => self::factory()->post->create() ] ), "{$name}: post ID." );
 		}
 	}
 
@@ -417,10 +439,18 @@ class MediaAbilityTest extends TestCase {
 	public function test_delete_media_removes_it_permanently(): void {
 		$attachment_id = $this->create_test_attachment();
 
+		wp_update_post(
+			[
+				'ID'         => $attachment_id,
+				'post_title' => 'Canola field',
+			]
+		);
+
 		$result = ( new DeleteMedia() )->execute( [ 'id' => $attachment_id ] );
 
 		$this->assertIsArray( $result );
 		$this->assertTrue( $result['deleted'] );
+		$this->assertSame( 'Canola field', $result['title'] );
 		$this->assertNull( get_post( $attachment_id ) );
 	}
 

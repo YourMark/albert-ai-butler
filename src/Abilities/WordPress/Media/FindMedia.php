@@ -68,7 +68,7 @@ class FindMedia extends BaseAbility {
 				],
 				'mime_type'        => [
 					'type'        => 'string',
-					'description' => 'Filter by MIME type (e.g., image/jpeg).',
+					'description' => 'Filter by MIME type (e.g., image/jpeg). With missing_alt_text, replaces its images-only default.',
 				],
 				'missing_alt_text' => [
 					'type'        => 'boolean',
