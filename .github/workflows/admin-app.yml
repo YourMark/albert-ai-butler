@@ -18,6 +18,8 @@ on:
       - 'assets/src/**'
       - 'package.json'
       - 'package-lock.json'
+      - 'webpack.config.js'
+      - '.github/workflows/admin-app.yml'
   push:
     branches:
       - main
@@ -26,6 +28,8 @@ on:
       - 'assets/src/**'
       - 'package.json'
       - 'package-lock.json'
+      - 'webpack.config.js'
+      - '.github/workflows/admin-app.yml'
 
 jobs:
   build:
@@ -56,10 +60,21 @@ jobs:
 
       - name: Confirm the bundles were produced
         run: |
-          for entry in abilities skills context; do
+          for entry in abilities skills context runtime dataviews; do
             test -f "assets/build/js/${entry}.js" \
               || { echo "::error::assets/build/js/${entry}.js was not produced"; exit 1; }
             test -f "assets/build/js/${entry}.asset.php" \
               || { echo "::error::assets/build/js/${entry}.asset.php was not produced"; exit 1; }
           done
           echo "All admin bundles present."
+
+      # DataViews ships once, in the shared chunk. A screen bundle that carries
+      # its own copy means its entry is missing from dataviewsEntries.
+      - name: Confirm DataViews is not duplicated
+        run: |
+          for entry in abilities skills context; do
+            if grep -q 'dataviews-view-table' "assets/build/js/${entry}.js"; then
+              echo "::error::assets/build/js/${entry}.js bundles its own DataViews; add it to dataviewsEntries in webpack.config.js"
+              exit 1
+            fi
+          done

@@ -15,6 +15,7 @@
 namespace Albert\Abstracts;
 
 use Albert\Blocks\BlockTreeEditor;
+use Albert\Blocks\MarkupTags;
 use WP_Error;
 
 defined( 'ABSPATH' ) || exit;
@@ -45,12 +46,35 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 		$properties['block'] = $this->block_property();
 
 		$properties['block']['description'] = trim( ( $properties['block']['description'] ?? '' ) . ' ' . self::KEEP_CHILDREN_NOTE );
+		$properties[ MarkupTags::INPUT ]    = MarkupTags::input_schema();
 
 		return [
 			'type'       => 'object',
 			'properties' => $properties,
 			'required'   => [ 'id', 'path', 'block' ],
 		];
+	}
+
+	/**
+	 * The target block's markup before the edit and its replacement's after.
+	 *
+	 * @param array<int, mixed>    $tree        Parsed tree before the edit.
+	 * @param array<int, mixed>    $result_tree Tree after the edit.
+	 * @param array<string, mixed> $args        Ability input.
+	 * @return array{0: string, 1: string}|null [ before, after ] markup, or null.
+	 * @since 1.6.0
+	 */
+	protected function changed_markup( array $tree, array $result_tree, array $args ): ?array {
+		$editor = new BlockTreeEditor();
+		$path   = $this->read_path( $args );
+		$before = $editor->find( $tree, $path );
+		$after  = $editor->find( $result_tree, $path );
+
+		if ( $before === null || $after === null ) {
+			return null;
+		}
+
+		return [ serialize_block( $before ), serialize_block( $after ) ];
 	}
 
 	/**

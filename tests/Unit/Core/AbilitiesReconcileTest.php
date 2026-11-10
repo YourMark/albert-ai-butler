@@ -310,7 +310,7 @@ class AbilitiesReconcileTest extends TestCase {
 		$html = ob_get_clean();
 
 		$this->assertStringContainsString( 'notice notice-info', $html );
-		$this->assertStringContainsString( 'disabled', $html );
+		$this->assertStringContainsString( 'switched it off for assistants', $html );
 		// Shown only once: the transient is consumed.
 		$this->assertArrayNotHasKey( 'albert_new_abilities_disabled', $GLOBALS['albert_test_transients'] );
 	}

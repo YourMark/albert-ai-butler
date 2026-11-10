@@ -24,7 +24,7 @@ import { __, _n, sprintf } from '@wordpress/i18n';
 import { chevronRight } from '@wordpress/icons';
 import FlyInShell, { Section } from '../shared/FlyInShell';
 import InfoPopover from '../shared/InfoPopover';
-import { OPERATION_LABELS } from './constants';
+import { OPERATION_LABELS, operationTitle } from './constants';
 import { Badges } from './fields';
 import AdvancedPermissionsUpsell from './AdvancedPermissionsUpsell';
 
@@ -321,6 +321,14 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 				<span className="albert-op-badge__dot" aria-hidden="true" />
 				{ OPERATION_LABELS[ ability.operation ] || ability.operation }
 			</span>
+			{ operationTitle( ability ) && (
+				<InfoPopover
+					inline
+					label={ __( 'About "Not declared"', 'albert-ai-butler' ) }
+				>
+					<p>{ operationTitle( ability ) }</p>
+				</InfoPopover>
+			) }
 			<Badges badges={ ability.badges } />
 			<h2 id="albert-flyin-title" className="albert-flyin__title">
 				{ ability.label }
@@ -367,10 +375,17 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 					<ToggleControl
 						__nextHasNoMarginBottom
 						label={ __( 'Enabled', 'albert-ai-butler' ) }
-						help={ __(
-							'Allow apps and agents to invoke this ability.',
-							'albert-ai-butler'
-						) }
+						help={
+							ability.enabled
+								? __(
+										'Available through Albert’s MCP endpoint.',
+										'albert-ai-butler'
+								  )
+								: __(
+										'Not available through Albert’s MCP endpoint.',
+										'albert-ai-butler'
+								  )
+						}
 						checked={ ability.enabled }
 						onChange={ ( value ) => onToggle( ability, value ) }
 					/>

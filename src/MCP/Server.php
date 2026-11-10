@@ -102,6 +102,9 @@ class Server implements Hookable {
 		// (WordPress 7.1+); a no-op on older versions.
 		( new SchemaPreparer() )->register_hooks();
 
+		// Switched-off abilities: hidden from discovery, refused on call.
+		( new DisabledAbilities() )->register_hooks();
+
 		// Add `site` and `skills` to the discovery response, so an assistant
 		// knows what this site is before it starts guessing.
 		( new DiscoveryContext() )->register_hooks();

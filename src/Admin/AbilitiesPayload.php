@@ -14,6 +14,7 @@ namespace Albert\Admin;
 use Albert\Core\AbilitiesRegistry;
 use Albert\Core\AbilitiesState;
 use Albert\Core\AnnotationPresenter;
+use Albert\Core\EnvironmentPolicy;
 use Albert\Logging\Repository as LoggingRepository;
 
 defined( 'ABSPATH' ) || exit;
@@ -37,7 +38,8 @@ class AbilitiesPayload {
 	 *     abilities: array<int, array<string, mixed>>,
 	 *     categories: array<int, array{value: string, label: string}>,
 	 *     sources: array<int, array{value: string, label: string}>,
-	 *     counts: array{total: int, enabled: int}
+	 *     counts: array{total: int, enabled: int},
+	 *     policy: array{environment: string, policy: string, source: string}|null
 	 * }
 	 * @since 1.3.0
 	 */
@@ -53,7 +55,7 @@ class AbilitiesPayload {
 		// The MCP adapter's own tools (discover / get-info / execute) are protocol
 		// infrastructure, not user-manageable abilities — never surface them on the
 		// screen. They can't be disabled regardless (see
-		// AbilitiesManager::get_effective_disabled_list()).
+		// AbilitiesState::effective()).
 		$protected = AbilitiesRegistry::get_protected_abilities();
 		$all       = array_filter(
 			$all,
@@ -105,6 +107,7 @@ class AbilitiesPayload {
 				'total'   => count( $abilities ),
 				'enabled' => $enabled_count,
 			],
+			'policy'     => EnvironmentPolicy::is_active() ? EnvironmentPolicy::current() : null,
 		];
 	}
 
@@ -172,7 +175,7 @@ class AbilitiesPayload {
 			// an add-on already reading them must keep working.
 			'supplier'        => $source['slug'],
 			'supplierLabel'   => $source['label'],
-			'operation'       => $chips[0]['key'] ?? 'read',
+			'operation'       => $chips[0]['key'] ?? 'undeclared',
 			'enabled'         => ! in_array( $id, $disabled, true ),
 			'capability'      => $capability,
 			'capabilityRoles' => self::roles_with_capability( $capability, $roles ),

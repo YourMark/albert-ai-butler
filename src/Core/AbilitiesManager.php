@@ -69,18 +69,14 @@ class AbilitiesManager implements Hookable {
 		add_action( 'abilities_api_init', [ $this, 'heal_transport_tools' ], 1 );
 		add_action( 'wp_abilities_api_init', [ $this, 'heal_transport_tools' ], 1 );
 
-		// Reconcile abilities added by an upgrade against the persisted baseline
-		// so newly-seen write/destructive abilities inherit the fresh-install
-		// default (off) instead of silently turning on. Runs after every
-		// registration (default priority) but before enforce_disabled
-		// (PHP_INT_MAX) so any newly-disabled ability is pruned this same
-		// request — including the MCP REST request.
+		// Switch off abilities first seen after the toggles were saved, so an
+		// upgrade never widens what an assistant can reach. After every
+		// registration, so the set is complete.
 		add_action( 'abilities_api_init', [ $this, 'reconcile_new_abilities' ], PHP_INT_MAX - 1 );
 		add_action( 'wp_abilities_api_init', [ $this, 'reconcile_new_abilities' ], PHP_INT_MAX - 1 );
 
-		// Remove disabled abilities from the registry after every plugin has
-		// registered. PHP_INT_MAX guarantees we run last so we can also strip
-		// abilities registered directly by third-party plugins.
+		// Unregister Albert abilities an add-on refuses (a lapsed licence). Last,
+		// so every ability is in the registry when it is counted.
 		add_action( 'wp_abilities_api_init', [ $this, 'enforce_disabled' ], PHP_INT_MAX );
 
 		// Tell the admin when an upgrade disabled newly-added abilities by default.
@@ -220,30 +216,19 @@ class AbilitiesManager implements Hookable {
 	}
 
 	/**
-	 * Remove disabled abilities from the global registry.
+	 * Unregister the Albert abilities an add-on refuses for this site.
 	 *
-	 * Runs at PHP_INT_MAX on wp_abilities_api_init so every ability — Albert's
-	 * built-ins, abilities contributed by add-ons via `albert/abilities/register`,
-	 * and abilities registered directly by third-party plugins — is already
-	 * registered. We then walk the registry and strip out anything that should
-	 * not be executable in this request, so MCP, REST, the WP Abilities client,
-	 * and any other consumer all see only enabled abilities.
+	 * Only the `albert/abilities/is_executable` filter decides (a lapsed licence,
+	 * a plan tier). Switching an ability off never unregisters it: that answers
+	 * whether an assistant connected through Albert may use it, and other
+	 * plugins relying on the ability keep working. See {@see \Albert\MCP\DisabledAbilities}.
 	 *
-	 * The Albert → Abilities admin page intentionally keeps the full registry
-	 * (so the user can re-enable disabled abilities). is_abilities_management_context()
-	 * detects that page and short-circuits this method.
-	 *
-	 * Per ability we apply two checks in order:
-	 *  1. Effective disabled list (option + `albert/abilities/disabled_list`
-	 *     filter). Applies to every ability regardless of who registered it,
-	 *     so toggling a third-party ability off in Albert's UI removes it
-	 *     globally and add-ons can extend the list at runtime.
-	 *  2. is_executable() pipeline, only for Albert-managed abilities. Lets
-	 *     the `albert/abilities/is_executable` filter return a reasoned
-	 *     WP_Error (e.g. licence-blocked) and unregister on that.
+	 * Skipped on the Abilities screen (and add-on screens opting in through
+	 * `albert/abilities/is_management_context`), which list every ability.
 	 *
 	 * @return void
 	 * @since 1.2.0
+	 * @since 1.6.0 Switched-off abilities stay registered.
 	 */
 	public function enforce_disabled(): void {
 		if ( ! function_exists( 'wp_unregister_ability' ) ) {
@@ -254,42 +239,17 @@ class AbilitiesManager implements Hookable {
 			return;
 		}
 
-		$disabled_list = $this->get_effective_disabled_list();
+		// Counted before unregistering, while the registry is still whole.
+		$this->ability_counts = $this->count_registry( AbilitiesState::effective() );
 
-		// Count before unregistering anything. This is the only moment in a
-		// normal request when the registry still holds every ability, and it is
-		// what makes an honest "57 of 103" possible on screens that render
-		// later. Counting afterwards gave "57 of 57" on the Dashboard: the
-		// disabled ones were already gone, so the total and the enabled figure
-		// were the same number counted twice.
-		$this->ability_counts = $this->count_registry( $disabled_list );
-
-		// Raw registry, not wp_get_abilities(): an ability hidden from the filtered
-		// view is still registered and still executable, so it must still be
-		// unregistered here. See AbilitiesRegistry::get_all_raw().
-		foreach ( AbilitiesRegistry::get_all_raw() as $ability ) {
-			$id = $ability->get_name();
-
-			// The MCP transport meta-tools must always stay registered — protocol
-			// discovery and execution depend on them. Never unregister them, whatever
-			// the disabled list, the fresh-install default, or the is_executable()
-			// pipeline says. This is belt-and-braces on top of get_effective_disabled_list()
-			// already stripping them from the blocklist.
+		foreach ( $this->abilities as $id => $ability ) {
+			// The transport meta-tools are never unregistered: MCP depends on them.
 			if ( AbilitiesRegistry::is_transport_ability( $id ) ) {
 				continue;
 			}
 
-			if ( in_array( $id, $disabled_list, true ) ) {
+			if ( is_wp_error( $ability->is_available() ) && wp_has_ability( $id ) ) {
 				wp_unregister_ability( $id );
-				continue;
-			}
-
-			$albert_instance = $this->abilities[ $id ] ?? null;
-			if ( $albert_instance instanceof BaseAbility ) {
-				$check = $albert_instance->is_executable();
-				if ( is_wp_error( $check ) ) {
-					wp_unregister_ability( $id );
-				}
 			}
 		}
 	}
@@ -346,9 +306,9 @@ class AbilitiesManager implements Hookable {
 	 * later is absent from the persisted disabled list and would fall through to
 	 * enabled. Expanding the agent's reach — even a new read, which can expose a
 	 * new category of data — should be the admin's explicit choice. So on an
-	 * already-configured site this method disables EVERY newly-seen ability by
-	 * default (the admin opts in), without ever retroactively changing toggles
-	 * the admin already set.
+	 * already-configured site this method switches EVERY newly-seen ability off
+	 * for assistants (the admin opts in), without ever retroactively changing
+	 * toggles the admin already set. Other plugins can still use it.
 	 *
 	 * Keyed off the `albert_known_abilities` option (the set of ability IDs the
 	 * site has already accounted for):
@@ -356,7 +316,7 @@ class AbilitiesManager implements Hookable {
 	 *  1. Fresh install (`albert_abilities_saved` unset) → return; the existing
 	 *     default fallback already covers it.
 	 *  2. Capture every currently registered ability ID. Runs before
-	 *     enforce_disabled() prunes the registry, so the set is complete.
+	 *     enforce_disabled(), so the set is complete.
 	 *  3. Baseline (`albert_known_abilities` unset) → record the current set as
 	 *     known and return WITHOUT touching the disabled list. The current state
 	 *     is the baseline; we never retroactively re-disable. Also covers the
@@ -471,8 +431,8 @@ class AbilitiesManager implements Hookable {
 		$message = sprintf(
 			/* translators: %s: number of new abilities. */
 			_n(
-				'Albert added %s new ability and disabled it by default for safety.',
-				'Albert added %s new abilities and disabled them by default for safety.',
+				'Albert found %s new ability and switched it off for assistants until you review it.',
+				'Albert found %s new abilities and switched them off for assistants until you review them.',
 				$count,
 				'albert-ai-butler'
 			),
@@ -489,48 +449,6 @@ class AbilitiesManager implements Hookable {
 			</p>
 		</div>
 		<?php
-	}
-
-	/**
-	 * Compute the effective disabled-ability list for this request.
-	 *
-	 * Reads the persisted blocklist option, falls back to the registry's
-	 * default-disabled list on a fresh install, and then runs the result
-	 * through the `albert/abilities/disabled_list` filter so add-ons can
-	 * contribute additional IDs at runtime without writing to the option.
-	 *
-	 * @return array<int, string> Ability IDs that should not be executable.
-	 * @since 1.2.0
-	 */
-	private function get_effective_disabled_list(): array {
-		$disabled = get_option( AbilitiesPage::DISABLED_ABILITIES_OPTION, [] );
-
-		if ( empty( $disabled ) && ! get_option( 'albert_abilities_saved' ) ) {
-			$disabled = AbilitiesRegistry::get_default_disabled_abilities();
-		}
-
-		$disabled = array_values( array_unique( array_map( 'strval', (array) $disabled ) ) );
-
-		/**
-		 * Filters the effective list of disabled ability IDs.
-		 *
-		 * Lets add-ons contribute extra IDs to be unregistered for the current
-		 * request without writing to the persisted option. Useful for state
-		 * that changes per-request (e.g. licence/plan checks computed by an
-		 * add-on, time-of-day windows, kill switches).
-		 *
-		 * @since 1.2.0
-		 *
-		 * @param array<int, string> $disabled Ability IDs that should not be executable.
-		 */
-		$filtered = apply_filters( 'albert/abilities/disabled_list', $disabled );
-
-		$filtered = array_values( array_unique( array_map( 'strval', (array) $filtered ) ) );
-
-		// The MCP adapter's own tools must never be unregistered — doing so breaks
-		// protocol discovery/execution. Strip them whatever the option, the
-		// fresh-install default, or add-on filters say.
-		return array_values( array_diff( $filtered, AbilitiesRegistry::get_protected_abilities() ) );
 	}
 
 	/**
@@ -575,11 +493,8 @@ class AbilitiesManager implements Hookable {
 	/**
 	 * Resolve an ability ID to its human-readable label.
 	 *
-	 * Reads the label from the in-memory ability instances the manager holds,
-	 * which are populated during bootstrap independently of the WordPress
-	 * Abilities API registration timing. This lets callers resolve labels in
-	 * contexts where wp_get_ability() is not yet safe to call (e.g. admin pages
-	 * that render before the abilities registry is populated).
+	 * Reads the ability instances the manager holds, so it also knows the
+	 * abilities enforce_disabled() has unregistered from WordPress.
 	 *
 	 * Returns null for IDs the manager does not hold (e.g. third-party
 	 * abilities registered directly with WordPress), so callers can fall back
@@ -718,9 +633,8 @@ class AbilitiesManager implements Hookable {
 	 * How many abilities this site has, and how many are switched on.
 	 *
 	 * Prefer this over counting {@see AbilitiesRegistry::get_all_raw()} on an
-	 * admin screen. That registry is pruned by {@see self::enforce_disabled()}
-	 * on every request except the Abilities page, so a screen counting it
-	 * later sees only the enabled ones and reports every ability as enabled.
+	 * admin screen: {@see self::enforce_disabled()} may have unregistered
+	 * abilities an add-on refused, which still count towards the total.
 	 *
 	 * The MCP transport meta-tools are excluded, matching
 	 * {@see \Albert\Admin\AbilitiesPayload::build()}. They cannot be switched
@@ -742,10 +656,10 @@ class AbilitiesManager implements Hookable {
 			return $this->ability_counts;
 		}
 
-		// Still nothing means enforcement did not prune (the Abilities page, or
+		// Still nothing means enforcement did not run (the Abilities page, or
 		// a WordPress without wp_unregister_ability), so the registry is whole
 		// and safe to count directly.
-		return $this->count_registry( $this->get_effective_disabled_list() );
+		return $this->count_registry( AbilitiesState::effective() );
 	}
 
 	/**
@@ -754,10 +668,8 @@ class AbilitiesManager implements Hookable {
 	 * Reading the registry is what fires `wp_abilities_api_init`, and
 	 * {@see self::enforce_disabled()} rides that action, so this call is also
 	 * what causes the count snapshot to be taken. Without it, the fallback in
-	 * {@see self::get_ability_counts()} triggers the pruning itself and then
-	 * counts what is left: every ability looks enabled, because the disabled
-	 * ones were unregistered a moment earlier by the very call meant to count
-	 * them.
+	 * {@see self::get_ability_counts()} triggers enforcement itself and then
+	 * counts what is left, missing the abilities it just unregistered.
 	 *
 	 * A method on `$this` rather than the static call it wraps, so the side
 	 * effect on `$this->ability_counts` is visible where it happens.
@@ -796,15 +708,11 @@ class AbilitiesManager implements Hookable {
 				continue;
 			}
 
-			// enforce_disabled() unregisters on two grounds, not one: the
-			// disabled list, and an is_executable() refusal — the hook add-ons
-			// use for licence validity, plan tier and kill switches. Counting
-			// only the first over-reported "enabled" on any site whose Premium
-			// licence had lapsed: the ability was gone from the registry a few
-			// lines later, and the tile still claimed it was on.
+			// An add-on's refusal (a lapsed licence) also means off, or the tile
+			// claims an ability is on that enforce_disabled() is about to remove.
 			$instance = $this->abilities[ $id ] ?? null;
 
-			if ( $instance instanceof BaseAbility && is_wp_error( $instance->is_executable() ) ) {
+			if ( $instance instanceof BaseAbility && is_wp_error( $instance->is_available() ) ) {
 				continue;
 			}
 
