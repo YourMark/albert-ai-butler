@@ -428,6 +428,27 @@ abstract class BaseAbility implements Ability {
 	}
 
 	/**
+	 * The message of a failed REST response, with the reason for each refused parameter.
+	 *
+	 * Core's `rest_invalid_param` message only names the parameter; the reason, such as
+	 * the allowed values, sits in its data.
+	 *
+	 * @param array<string, mixed> $data Response data from `rest_get_server()->response_to_data()`.
+	 * @return string|null Null when the response carries no message.
+	 * @since 1.6.0
+	 */
+	protected static function rest_error_message( array $data ): ?string {
+		$message = isset( $data['message'] ) ? (string) $data['message'] : null;
+		$reasons = $data['data']['params'] ?? [];
+
+		if ( $message === null || ! is_array( $reasons ) || $reasons === [] ) {
+			return $message;
+		}
+
+		return $message . ' ' . implode( ' ', array_map( 'strval', $reasons ) );
+	}
+
+	/**
 	 * Require that the current user has a specific capability.
 	 *
 	 * Returns true on success or a descriptive WP_Error on failure,
