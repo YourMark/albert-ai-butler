@@ -209,4 +209,34 @@ class EnvironmentPolicyTest extends TestCase {
 
 		$this->assertSame( [ 'albert-test/env-write', 'albert-test/env-delete' ], get_option( AbilitiesState::OPTION ) );
 	}
+
+	/**
+	 * Albert's destructive writes declare it, so every reader of the flag agrees.
+	 *
+	 * @dataProvider destructive_writes
+	 *
+	 * @param string $class_name The ability class.
+	 *
+	 * @return void
+	 */
+	public function test_destructive_writes_declare_it( string $class_name ): void {
+		$meta = new \ReflectionProperty( $class_name, 'meta' );
+		$meta->setAccessible( true );
+
+		$this->assertTrue( $meta->getValue( new $class_name() )['annotations']['destructive'] );
+	}
+
+	/**
+	 * Writes that remove content or manage accounts.
+	 *
+	 * @return array<string, array{0: string}>
+	 */
+	public function destructive_writes(): array {
+		return [
+			'remove post block' => [ \Albert\Abilities\WordPress\Posts\RemoveBlock::class ],
+			'remove page block' => [ \Albert\Abilities\WordPress\Pages\RemoveBlock::class ],
+			'update user'       => [ \Albert\Abilities\WordPress\Users\Update::class ],
+			'create user'       => [ \Albert\Abilities\WordPress\Users\Create::class ],
+		];
+	}
 }
