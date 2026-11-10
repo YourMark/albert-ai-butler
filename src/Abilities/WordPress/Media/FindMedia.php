@@ -45,7 +45,7 @@ class FindMedia extends BaseAbility {
 				'Search by title, filename, caption or description. A `core/image` block is a reference '
 				. 'to the media library, not a URL, so take both the `id` and the `url` from the result '
 				. 'here and put both in the block, an image with a `url` and no `id` is not linked to the '
-				. 'library.'
+				. 'library. For alt text work, set `missing_alt_text` to list only the images without it.'
 			),
 		];
 
@@ -62,22 +62,27 @@ class FindMedia extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'search'    => [
+				'search'           => [
 					'type'        => 'string',
 					'description' => 'Search query for media titles.',
 				],
-				'mime_type' => [
+				'mime_type'        => [
 					'type'        => 'string',
-					'description' => 'Filter by MIME type (e.g., image/jpeg).',
+					'description' => 'Filter by MIME type (e.g., image/jpeg). With missing_alt_text, replaces its images-only default.',
 				],
-				'per_page'  => [
+				'missing_alt_text' => [
+					'type'        => 'boolean',
+					'description' => 'Only images with no alt text. Limits results to images unless mime_type is set.',
+					'default'     => false,
+				],
+				'per_page'         => [
 					'type'        => 'integer',
 					'description' => 'Number of media items per page.',
 					'default'     => 10,
 					'minimum'     => 1,
 					'maximum'     => 100,
 				],
-				'page'      => [
+				'page'             => [
 					'type'        => 'integer',
 					'description' => 'Page number for pagination.',
 					'default'     => 1,
@@ -100,6 +105,17 @@ class FindMedia extends BaseAbility {
 				'media'       => [
 					'type'        => 'array',
 					'description' => 'Array of media items.',
+					'items'       => [
+						'type'       => 'object',
+						'properties' => [
+							'id'        => [ 'type' => 'integer' ],
+							'title'     => [ 'type' => 'string' ],
+							'mime_type' => [ 'type' => 'string' ],
+							'alt_text'  => [ 'type' => 'string' ],
+							'url'       => [ 'type' => [ 'string', 'boolean' ] ],
+							'date'      => [ 'type' => 'string' ],
+						],
+					],
 				],
 				'total'       => [
 					'type'        => 'integer',
@@ -155,6 +171,24 @@ class FindMedia extends BaseAbility {
 			$query_args['post_mime_type'] = $mime_type;
 		}
 
+		if ( ! empty( $args['missing_alt_text'] ) ) {
+			$query_args['post_mime_type'] = $query_args['post_mime_type'] ?? 'image';
+
+			// The editor saves an empty string when alt text is cleared, so a
+			// missing row and an empty one both count.
+			$query_args['meta_query'] = [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				'relation' => 'OR',
+				[
+					'key'     => '_wp_attachment_image_alt',
+					'compare' => 'NOT EXISTS',
+				],
+				[
+					'key'   => '_wp_attachment_image_alt',
+					'value' => '',
+				],
+			];
+		}
+
 		$query = new WP_Query( $query_args );
 
 		$media = [];
@@ -167,6 +201,7 @@ class FindMedia extends BaseAbility {
 				'id'        => $attachment->ID,
 				'title'     => $attachment->post_title,
 				'mime_type' => $attachment->post_mime_type,
+				'alt_text'  => (string) get_post_meta( $attachment->ID, '_wp_attachment_image_alt', true ),
 				'url'       => wp_get_attachment_url( $attachment->ID ),
 				'date'      => $attachment->post_date,
 			];
