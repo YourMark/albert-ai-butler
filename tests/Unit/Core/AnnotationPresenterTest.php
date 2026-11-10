@@ -294,23 +294,24 @@ class AnnotationPresenterTest extends TestCase {
 	}
 
 	/**
-	 * Only a boolean declaration puts an ability outside the Destructive group.
+	 * Only a boolean declaration puts an ability outside the Destructive group,
+	 * and the chip says the same.
 	 *
 	 * @return void
 	 */
-	public function test_declares_not_destructive_needs_a_boolean_declaration(): void {
-		$this->assertTrue( AnnotationPresenter::declares_not_destructive( Annotations::update() ) );
-		$this->assertTrue( AnnotationPresenter::declares_not_destructive( [ 'readonly' => true ] ) );
-		$this->assertFalse( AnnotationPresenter::declares_not_destructive( [ 'destructive' => 0 ] ) );
-		$this->assertFalse( AnnotationPresenter::declares_not_destructive( [ 'readonly' => false ] ) );
-		$this->assertFalse( AnnotationPresenter::declares_not_destructive( [] ) );
-		$this->assertFalse(
-			AnnotationPresenter::declares_not_destructive(
-				[
-					'readonly'    => true,
-					'destructive' => true,
-				]
-			)
-		);
+	public function test_only_a_boolean_declaration_is_not_destructive(): void {
+		$this->assertFalse( AnnotationPresenter::is_destructive( Annotations::update() ) );
+		$this->assertFalse( AnnotationPresenter::is_destructive( [ 'readonly' => true ] ) );
+		$this->assertTrue( AnnotationPresenter::is_destructive( [ 'destructive' => 0 ] ) );
+		$this->assertTrue( AnnotationPresenter::is_destructive( [ 'readonly' => false ] ) );
+		$this->assertTrue( AnnotationPresenter::is_destructive( [] ) );
+
+		$annotations = [
+			'readonly'    => true,
+			'destructive' => 0,
+		];
+
+		$this->assertTrue( AnnotationPresenter::is_destructive( $annotations ) );
+		$this->assertSame( [ 'destructive' ], array_column( AnnotationPresenter::chips_for( $annotations ), 'key' ) );
 	}
 }

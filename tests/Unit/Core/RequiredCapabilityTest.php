@@ -186,6 +186,21 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
+	 * "delete" only counts as a whole word of the name.
+	 *
+	 * @return void
+	 */
+	public function test_delete_inside_a_word_is_not_a_delete(): void {
+		$annotations = [ 'destructive' => true ];
+
+		$undelete = new WP_Ability( 'foo/undelete-post', [ 'annotations' => $annotations ] );
+		$deleted  = new WP_Ability( 'foo/restore-deleted-posts', [ 'annotations' => $annotations ] );
+
+		$this->assertSame( 'edit_posts', AbilitiesRegistry::resolve_required_capability( $undelete ) );
+		$this->assertSame( 'edit_posts', AbilitiesRegistry::resolve_required_capability( $deleted ) );
+	}
+
+	/**
 	 * The resolved value passes through the required_capability filter, so an
 	 * add-on can correct the best-effort guess.
 	 *

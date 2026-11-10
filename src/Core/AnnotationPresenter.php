@@ -180,9 +180,9 @@ class AnnotationPresenter {
 	/**
 	 * Whether an ability may be destructive: the one answer for the chips and the environment policy.
 	 *
-	 * Fail-safe: a name on safe mode's high-risk list is destructive whatever it
-	 * declares, and without a `destructive` flag only a declared read-only
-	 * ability is safe.
+	 * Fail-safe: a high-risk name is destructive whatever it declares; otherwise
+	 * only a boolean `destructive: false`, or a boolean `readonly: true` without
+	 * a `destructive` flag, is not. Safe mode is wider: it also holds the latter.
 	 *
 	 * @param array<string, mixed> $annotations Raw annotations.
 	 * @param string               $ability_id  Ability id, for the high-risk name list.
@@ -196,31 +196,9 @@ class AnnotationPresenter {
 		}
 
 		if ( isset( $annotations['destructive'] ) ) {
-			return (bool) $annotations['destructive'];
+			return $annotations['destructive'] !== false;
 		}
 
 		return ( $annotations['readonly'] ?? null ) !== true;
-	}
-
-	/**
-	 * Whether an ability declares itself outside the Destructive group.
-	 *
-	 * Stricter than {@see self::is_destructive()}: only a boolean `destructive: false`,
-	 * or a boolean `readonly: true` without a `destructive` flag, counts.
-	 *
-	 * @param array<string, mixed> $annotations Raw annotations.
-	 * @param string               $ability_id  Ability id, for the high-risk name list.
-	 *
-	 * @return bool
-	 * @since 1.6.0
-	 */
-	public static function declares_not_destructive( array $annotations, string $ability_id = '' ): bool {
-		if ( self::is_destructive( $annotations, $ability_id ) ) {
-			return false;
-		}
-
-		$destructive = $annotations['destructive'] ?? null;
-
-		return $destructive === false || ( $destructive === null && ( $annotations['readonly'] ?? null ) === true );
 	}
 }

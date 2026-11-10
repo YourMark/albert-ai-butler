@@ -173,7 +173,7 @@ class EnvironmentPolicy {
 
 					$annotations = $ability->get_meta_item( 'annotations', [] );
 
-					return ! AnnotationPresenter::declares_not_destructive( is_array( $annotations ) ? $annotations : [], $id );
+					return AnnotationPresenter::is_destructive( is_array( $annotations ) ? $annotations : [], $id );
 				}
 			)
 		);
