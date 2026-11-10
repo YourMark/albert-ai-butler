@@ -426,7 +426,7 @@ class AbilitiesRegistry {
 		$action  = strtolower( strstr( $id, '/' ) ? substr( $id, (int) strpos( $id, '/' ) + 1 ) : $id );
 		$is_read = $operation === 'read';
 		// The name, not the group: update-user is destructive but needs edit_users.
-		$is_delete = str_starts_with( $action, 'delete-' );
+		$is_delete = (bool) preg_match( '/(^|-)(delete|trash)(-|$)/', $action );
 
 		if ( str_contains( $action, 'user' ) ) {
 			return $is_read ? 'list_users' : ( $is_delete ? 'delete_users' : 'edit_users' );

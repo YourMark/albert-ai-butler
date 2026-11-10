@@ -40,8 +40,8 @@ class AnnotationPresenter {
 	 * An ability that declares neither `readonly` nor `destructive` gets one
 	 * "Not declared" chip: its name says nothing reliable about what it does.
 	 *
-	 * A destructive flag or a name on safe mode's high-risk list wins over
-	 * `readonly`: a contradictory declaration reads the safe way.
+	 * Read, Write or Destructive follows {@see self::is_destructive()}, so the
+	 * chip always matches what the environment policy does with the ability.
 	 *
 	 * @param array<string, mixed> $annotations Raw annotations from get_meta()['annotations'].
 	 * @param string               $ability_id  Ability id, for the high-risk name list.
@@ -50,12 +50,14 @@ class AnnotationPresenter {
 	 * @since 1.1.0
 	 */
 	public static function chips_for( array $annotations, string $ability_id = '' ): array {
-		if ( RiskPolicy::is_high_risk_ability( $ability_id ) || ! empty( $annotations['destructive'] ) ) {
-			return [ self::destructive_chip() ];
+		$high_risk = RiskPolicy::is_high_risk_ability( $ability_id );
+
+		if ( ! $high_risk && empty( $annotations['destructive'] ) && ! self::is_declared( $annotations ) ) {
+			return [ self::not_declared_chip() ];
 		}
 
-		if ( ! self::is_declared( $annotations ) ) {
-			return [ self::not_declared_chip() ];
+		if ( $high_risk || self::is_destructive( $annotations ) ) {
+			return [ self::destructive_chip() ];
 		}
 
 		// Strict, as everywhere else (defaults, safe mode): `readonly => 1` is not read-only.
@@ -176,7 +178,7 @@ class AnnotationPresenter {
 	}
 
 	/**
-	 * Whether an ability may be destructive: the one answer for the environment policy.
+	 * Whether an ability may be destructive: the one answer for the chips and the environment policy.
 	 *
 	 * Fail-safe: a name on safe mode's high-risk list is destructive whatever it
 	 * declares, and without a `destructive` flag only a declared read-only
@@ -203,19 +205,17 @@ class AnnotationPresenter {
 	/**
 	 * Whether an ability declares itself outside the Destructive group.
 	 *
-	 * Strict: only a boolean `destructive: false`, or a boolean `readonly: true`
-	 * without a `destructive` flag, counts.
+	 * Stricter than {@see self::is_destructive()}: only a boolean `destructive: false`,
+	 * or a boolean `readonly: true` without a `destructive` flag, counts.
 	 *
-	 * @param \WP_Ability $ability The registered ability.
+	 * @param array<string, mixed> $annotations Raw annotations.
+	 * @param string               $ability_id  Ability id, for the high-risk name list.
 	 *
 	 * @return bool
 	 * @since 1.6.0
 	 */
-	public static function declares_not_destructive( \WP_Ability $ability ): bool {
-		$meta        = (array) $ability->get_meta();
-		$annotations = isset( $meta['annotations'] ) && is_array( $meta['annotations'] ) ? $meta['annotations'] : [];
-
-		if ( self::is_destructive( $annotations, $ability->get_name() ) ) {
+	public static function declares_not_destructive( array $annotations, string $ability_id = '' ): bool {
+		if ( self::is_destructive( $annotations, $ability_id ) ) {
 			return false;
 		}
 

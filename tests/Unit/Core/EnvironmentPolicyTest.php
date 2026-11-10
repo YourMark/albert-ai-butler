@@ -163,6 +163,30 @@ class EnvironmentPolicyTest extends TestCase {
 	}
 
 	/**
+	 * An add-on's own high-risk ability keeps its toggle, whatever it annotates.
+	 *
+	 * @return void
+	 */
+	public function test_read_write_keeps_an_add_on_high_risk_ability_off(): void {
+		$GLOBALS['albert_test_options'][ AbilitiesState::OPTION ]                      = [ 'other/grant-access' ];
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/high_risk_abilities'] = [ 'other/grant-access' ];
+		$GLOBALS['albert_test_abilities'] = [
+			new WP_Ability(
+				'other/grant-access',
+				[
+					'annotations' => [
+						'readonly'    => true,
+						'destructive' => false,
+					],
+				]
+			),
+		];
+		$this->filter_policy( EnvironmentPolicy::READ_WRITE );
+
+		$this->assertSame( [ 'other/grant-access' ], AbilitiesState::effective() );
+	}
+
+	/**
 	 * A write that leaves `destructive` unset may delete, so `read-write` leaves its toggle.
 	 *
 	 * @return void

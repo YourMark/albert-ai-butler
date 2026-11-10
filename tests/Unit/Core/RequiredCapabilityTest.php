@@ -171,6 +171,21 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
+	 * A delete or trash anywhere in an add-on's name still infers a delete capability.
+	 *
+	 * @return void
+	 */
+	public function test_delete_or_trash_in_the_name_requires_delete_posts(): void {
+		$annotations = [ 'destructive' => true ];
+
+		$bulk  = new WP_Ability( 'foo/bulk-delete-posts', [ 'annotations' => $annotations ] );
+		$trash = new WP_Ability( 'foo/trash-post', [ 'annotations' => $annotations ] );
+
+		$this->assertSame( 'delete_posts', AbilitiesRegistry::resolve_required_capability( $bulk ) );
+		$this->assertSame( 'delete_posts', AbilitiesRegistry::resolve_required_capability( $trash ) );
+	}
+
+	/**
 	 * The resolved value passes through the required_capability filter, so an
 	 * add-on can correct the best-effort guess.
 	 *

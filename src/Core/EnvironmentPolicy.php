@@ -165,7 +165,16 @@ class EnvironmentPolicy {
 		return array_values(
 			array_filter(
 				$disabled,
-				static fn( string $id ): bool => ! ( ( $registered[ $id ] ?? null ) instanceof \WP_Ability && AnnotationPresenter::declares_not_destructive( $registered[ $id ] ) )
+				static function ( string $id ) use ( $registered ): bool {
+					$ability = $registered[ $id ] ?? null;
+					if ( ! $ability instanceof \WP_Ability ) {
+						return true;
+					}
+
+					$annotations = $ability->get_meta_item( 'annotations', [] );
+
+					return ! AnnotationPresenter::declares_not_destructive( is_array( $annotations ) ? $annotations : [], $id );
+				}
 			)
 		);
 	}

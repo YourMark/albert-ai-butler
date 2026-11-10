@@ -98,7 +98,7 @@ class Annotations {
 	}
 
 	/**
-	 * Delete ability (e.g. Delete Post, Delete Term).
+	 * Delete ability (e.g. Delete Post, Delete Term). The same preset as {@see self::destructive()}.
 	 *
 	 * @since 1.0.0
 	 *

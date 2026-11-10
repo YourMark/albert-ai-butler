@@ -279,4 +279,38 @@ class AnnotationPresenterTest extends TestCase {
 
 		$this->assertSame( [ 'destructive' ], array_column( AnnotationPresenter::chips_for( $annotations ), 'key' ) );
 	}
+
+	/**
+	 * A write that leaves `destructive` unset may delete, so its chip says Destructive,
+	 * as the environment policy and safe mode treat it.
+	 *
+	 * @return void
+	 */
+	public function test_write_without_destructive_flag_is_destructive(): void {
+		$annotations = [ 'readonly' => false ];
+
+		$this->assertSame( [ 'destructive' ], array_column( AnnotationPresenter::chips_for( $annotations ), 'key' ) );
+		$this->assertTrue( AnnotationPresenter::is_destructive( $annotations ) );
+	}
+
+	/**
+	 * Only a boolean declaration puts an ability outside the Destructive group.
+	 *
+	 * @return void
+	 */
+	public function test_declares_not_destructive_needs_a_boolean_declaration(): void {
+		$this->assertTrue( AnnotationPresenter::declares_not_destructive( Annotations::update() ) );
+		$this->assertTrue( AnnotationPresenter::declares_not_destructive( [ 'readonly' => true ] ) );
+		$this->assertFalse( AnnotationPresenter::declares_not_destructive( [ 'destructive' => 0 ] ) );
+		$this->assertFalse( AnnotationPresenter::declares_not_destructive( [ 'readonly' => false ] ) );
+		$this->assertFalse( AnnotationPresenter::declares_not_destructive( [] ) );
+		$this->assertFalse(
+			AnnotationPresenter::declares_not_destructive(
+				[
+					'readonly'    => true,
+					'destructive' => true,
+				]
+			)
+		);
+	}
 }

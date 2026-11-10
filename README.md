@@ -185,7 +185,7 @@ Website: https://yourmark.nl
 **Developer**
 
 - New constant `ALBERT_ENVIRONMENT_ABILITIES` (environment type => `toggles`, `read-write` or `all`) and filter `albert/abilities/environment_policy`. The environment comes from `wp_get_environment_type()`, so Bedrock's `WP_ENV` works. An unknown policy is ignored with a `_doing_it_wrong()` notice.
-- New `Annotations::destructive()` preset. `albert/remove-post-block`, `albert/remove-page-block`, `albert/create-user` and `albert/update-user` are annotated `destructive: true`, and abilities on `albert/safe_mode/high_risk_abilities` show as Destructive. The ability row's `operation` value `delete` is now `destructive`.
+- New `Annotations::destructive()` preset. `albert/remove-post-block`, `albert/remove-page-block`, `albert/create-user` and `albert/update-user` are annotated `destructive: true`, and abilities on `albert/safe_mode/high_risk_abilities` show as Destructive. The ability row's `operation` value `delete` is now `destructive`, and the badge class `albert-op-badge--delete` is now `albert-op-badge--destructive`.
 
 ### 1.5.0
 
