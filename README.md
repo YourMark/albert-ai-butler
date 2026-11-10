@@ -171,6 +171,16 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.6.0
+
+**Improvements**
+
+- An ability's details on the Abilities screen now show the permission it really checks, and which roles have it, instead of a guess based on its name. Albert's own abilities state theirs. An ability from another plugin that does not say which permission it needs shows Not declared.
+
+**Developer**
+
+- Abilities extending `BaseAbility` declare `$capability`: the base `check_permission()` requires it and it is registered as `meta['capability']`. The `albert/abilities/required_capability` filter now receives `''` when an ability declares nothing, where it used to receive a guess.
+
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.

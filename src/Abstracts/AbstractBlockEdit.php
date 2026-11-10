@@ -60,14 +60,6 @@ abstract class AbstractBlockEdit extends BaseAbility {
 	abstract protected function rest_base(): string;
 
 	/**
-	 * The capability gate used by the REST permission check.
-	 *
-	 * @return string Capability ('edit_posts' or 'edit_pages').
-	 * @since 1.2.0
-	 */
-	abstract protected function edit_capability(): string;
-
-	/**
 	 * Apply this ability's operation to the parsed block tree.
 	 *
 	 * Reads the op-specific args (path/expect/block/position/to_index), builds a
@@ -134,7 +126,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 		return $this->check_rest_permission(
 			'/wp/v2/' . $this->rest_base() . '/(?P<id>[\\d]+)',
 			'POST',
-			$this->edit_capability()
+			$this->capability
 		);
 	}
 

@@ -55,6 +55,8 @@ class Create extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'create_users';
+
 		parent::__construct();
 	}
 
@@ -156,7 +158,7 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->check_rest_permission( '/wp/v2/users', 'POST', 'create_users' );
+		return $this->check_rest_permission( '/wp/v2/users', 'POST', $this->capability );
 	}
 
 	/**

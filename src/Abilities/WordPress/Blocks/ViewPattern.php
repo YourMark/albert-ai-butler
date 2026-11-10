@@ -63,6 +63,8 @@ class ViewPattern extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'edit_posts';
+
 		parent::__construct();
 	}
 
@@ -114,16 +116,6 @@ class ViewPattern extends BaseAbility {
 			],
 			'required'   => [ 'name', 'content', 'source' ],
 		];
-	}
-
-	/**
-	 * Anyone who may compose content may read a pattern.
-	 *
-	 * @return bool|WP_Error
-	 * @since 1.5.0
-	 */
-	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'edit_posts' );
 	}
 
 	/**

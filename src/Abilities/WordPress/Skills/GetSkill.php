@@ -66,6 +66,8 @@ class GetSkill extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'edit_posts';
+
 		parent::__construct();
 	}
 
@@ -110,16 +112,6 @@ class GetSkill extends BaseAbility {
 			],
 			'required'   => [ 'slug', 'body' ],
 		];
-	}
-
-	/**
-	 * Check if the current user may read this site's task guides.
-	 *
-	 * @return bool|WP_Error True if permitted, WP_Error otherwise.
-	 * @since 1.4.0
-	 */
-	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'edit_posts' );
 	}
 
 	/**

@@ -47,6 +47,8 @@ class FindProducts extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'edit_products';
+
 		parent::__construct();
 	}
 
@@ -142,16 +144,6 @@ class FindProducts extends BaseAbility {
 			],
 			'required'   => [ 'products', 'total' ],
 		];
-	}
-
-	/**
-	 * Check permission.
-	 *
-	 * @return bool|WP_Error
-	 * @since 1.0.0
-	 */
-	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'edit_products' );
 	}
 
 	/**

@@ -367,90 +367,30 @@ class AbilitiesRegistry {
 	}
 
 	/**
-	 * Resolve the WordPress capability an ability is likely to require.
+	 * The WordPress capability an ability declares it requires, or '' when it declares none.
 	 *
-	 * Abilities expose only a `permission_callback` (often delegating to a core
-	 * REST route), not a declared capability string, so this is a best-effort
-	 * value for display. An ability can declare an exact capability in its
-	 * `meta['capability']`; otherwise we infer one from its source and
-	 * operation. Either way the `albert/abilities/required_capability` filter
-	 * gets the final say, so abilities or add-ons can correct it precisely.
+	 * A permission callback is code, so nothing can be read from it reliably.
+	 * Only a declared `meta['capability']` counts; Albert's own abilities declare
+	 * theirs, and the same value drives their permission check.
 	 *
 	 * @param \WP_Ability $ability The ability to resolve.
 	 *
-	 * @return string A capability slug (best-effort).
+	 * @return string A capability slug, or '' when not declared.
 	 * @since 1.3.0
 	 */
 	public static function resolve_required_capability( \WP_Ability $ability ): string {
-		$id   = $ability->get_name();
 		$meta = (array) $ability->get_meta();
-
-		if ( ! empty( $meta['capability'] ) && is_string( $meta['capability'] ) ) {
-			$cap = $meta['capability'];
-		} else {
-			$cap = self::guess_capability( $id, $meta );
-		}
+		$cap  = isset( $meta['capability'] ) && is_string( $meta['capability'] ) ? $meta['capability'] : '';
 
 		/**
-		 * Filters the required capability surfaced for an ability.
+		 * Filters the required capability shown for an ability.
 		 *
 		 * @since 1.3.0
 		 *
-		 * @param string      $cap     The resolved capability slug (best-effort).
+		 * @param string      $cap     The declared capability slug, or '' when none is declared.
 		 * @param string      $id      The ability ID.
 		 * @param \WP_Ability $ability The ability instance.
 		 */
-		return (string) apply_filters( 'albert/abilities/required_capability', $cap, $id, $ability );
-	}
-
-	/**
-	 * Infer a likely capability from an ability's id, source and operation.
-	 *
-	 * Heuristic only — see {@see self::resolve_required_capability()}.
-	 *
-	 * @param string               $id   Ability ID.
-	 * @param array<string, mixed> $meta Ability meta (for annotations).
-	 *
-	 * @return string
-	 * @since 1.3.0
-	 */
-	private static function guess_capability( string $id, array $meta ): string {
-		$annotations = isset( $meta['annotations'] ) && is_array( $meta['annotations'] ) ? $meta['annotations'] : [];
-		$chips       = AnnotationPresenter::chips_for( $annotations, $id );
-		$operation   = $chips[0]['key'] ?? 'undeclared';
-
-		if ( self::get_ability_source( $id )['slug'] === 'woo' ) {
-			return 'manage_woocommerce';
-		}
-
-		$action    = strtolower( strstr( $id, '/' ) ? substr( $id, (int) strpos( $id, '/' ) + 1 ) : $id );
-		$is_read   = $operation === 'read';
-		$is_delete = $operation === 'delete';
-
-		if ( str_contains( $action, 'user' ) ) {
-			return $is_read ? 'list_users' : ( $is_delete ? 'delete_users' : 'edit_users' );
-		}
-		// Setting a featured image edits the target post, not the media library.
-		if ( str_contains( $action, 'featured-image' ) ) {
-			return $is_read ? 'read' : 'edit_posts';
-		}
-		if ( str_contains( $action, 'media' ) || str_contains( $action, 'upload' ) ) {
-			return $is_read ? 'read' : 'upload_files';
-		}
-		if ( str_contains( $action, 'term' ) || str_contains( $action, 'taxonom' ) ) {
-			return $is_read ? 'read' : 'manage_categories';
-		}
-		if ( str_contains( $action, 'page' ) ) {
-			return $is_read ? 'read' : ( $is_delete ? 'delete_pages' : 'edit_pages' );
-		}
-		if ( str_contains( $action, 'setting' ) || str_contains( $action, 'option' ) ) {
-			return 'manage_options';
-		}
-
-		// Posts and general content.
-		if ( $is_read ) {
-			return 'read';
-		}
-		return $is_delete ? 'delete_posts' : 'edit_posts';
+		return (string) apply_filters( 'albert/abilities/required_capability', $cap, $ability->get_name(), $ability );
 	}
 }

@@ -51,6 +51,8 @@ class Create extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'edit_pages';
+
 		parent::__construct();
 	}
 
@@ -137,7 +139,7 @@ class Create extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->check_rest_permission( '/wp/v2/pages', 'POST', 'edit_pages' );
+		return $this->check_rest_permission( '/wp/v2/pages', 'POST', $this->capability );
 	}
 
 	/**

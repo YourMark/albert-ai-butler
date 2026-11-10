@@ -42,7 +42,7 @@ class MyComponent implements Hookable {
 **BaseAbility**: all abilities extend `Albert\Abstracts\BaseAbility`:
 - Set `$id`, `$label`, `$description`, `$category`, `$input_schema`, `$meta` in constructor
 - Implement `execute(array $args): array|WP_Error`
-- Implement `check_permission(): bool|WP_Error`
+- Set `$capability`; the base `check_permission()` requires it (see the abilities rule)
 - Call `parent::__construct()` last
 
 ## Namespace Examples

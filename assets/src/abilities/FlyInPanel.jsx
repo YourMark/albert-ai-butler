@@ -219,11 +219,19 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 				>
 					<p>
 						{ __(
-							'A WordPress capability that gates this ability: it can run only for users whose role grants this capability. This value is best-effort; an ability or add-on can override it.',
+							'The WordPress capability this ability checks before it runs. For a single post, page or user, WordPress also checks that item, for example whether you may edit someone else\'s post.',
 							'albert-ai-butler'
 						) }
 					</p>
-					{ ability.capabilityRoles?.length > 0 ? (
+					{ ! ability.capability && (
+						<p>
+							{ __(
+								'This ability decides who may use it in its own code and does not say which capability it needs.',
+								'albert-ai-butler'
+							) }
+						</p>
+					) }
+					{ ! ability.capability ? null : ability.capabilityRoles?.length > 0 ? (
 						<p>
 							<strong>
 								{ __(
@@ -243,9 +251,15 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 					) }
 				</InfoPopover>
 			</div>
-			<code className="albert-flyin__card-value">
-				{ ability.capability }
-			</code>
+			{ ability.capability ? (
+				<code className="albert-flyin__card-value">
+					{ ability.capability }
+				</code>
+			) : (
+				<span className="albert-flyin__card-value">
+					{ __( 'Not declared', 'albert-ai-butler' ) }
+				</span>
+			) }
 		</div>
 	);
 
