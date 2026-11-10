@@ -12,11 +12,8 @@ namespace Albert\Abilities\WordPress;
 use WP_Error;
 
 /**
- * The slug, date, author, parent, order, template, comment, sticky and format
- * fields shared by the post and page write abilities.
- *
- * The REST endpoint validates and saves them. Only what it accepts silently
- * and gets wrong is checked here.
+ * The post and page fields beyond title and content. REST validates and saves
+ * them; only what it gets wrong silently is checked here.
  *
  * @since 1.6.0
  */
@@ -35,11 +32,6 @@ class PostFields {
 	 * @since 1.6.0
 	 */
 	public const PAGE = [ 'slug', 'date', 'author', 'parent', 'menu_order', 'template', 'comment_status' ];
-
-	/**
-	 * The shapes `rest_parse_date()` accepts.
-	 */
-	private const DATE_PATTERN = '/^(\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}(?::\d{2})?)?$/';
 
 	/**
 	 * Input schema properties for the given fields.
@@ -112,37 +104,51 @@ class PostFields {
 		);
 
 		if ( isset( $params['date'] ) && ! self::is_real_date( $params['date'] ) ) {
-			return self::refuse(
+			return new WP_Error(
 				'invalid_date',
-				__( 'The date is not a valid date and time. Send "YYYY-MM-DDTHH:MM:SS", e.g. "2026-12-01T09:00:00", optionally ending in an offset such as "+02:00".', 'albert-ai-butler' )
+				__( 'That date or time does not exist, such as 30 February or 24:00. Send a real one, e.g. "2026-12-01T09:00:00".', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
 			);
 		}
 
-		$refusal = isset( $params['author'] ) ? self::author_refusal( (int) $params['author'], $post_type ) : null;
-		$refusal = $refusal ?? ( isset( $params['parent'] ) ? self::parent_refusal( (int) $params['parent'], $post_type, $post_id ) : null );
+		if ( isset( $params['author'] ) ) {
+			$refusal = self::author_refusal( (int) $params['author'], $post_type );
+			if ( $refusal ) {
+				return $refusal;
+			}
+		}
 
-		return $refusal ?? $params;
+		if ( isset( $params['parent'] ) ) {
+			$refusal = self::parent_refusal( (int) $params['parent'], $post_type, $post_id );
+			if ( $refusal ) {
+				return $refusal;
+			}
+		}
+
+		return $params;
 	}
 
 	/**
-	 * Whether a date has the REST shape and exists on the calendar.
-	 *
-	 * `strtotime()` rolls 2026-02-30 over to March instead of failing.
+	 * Whether a date exists. REST checks the shape, but `strtotime()` rolls 2026-02-30 into March.
 	 *
 	 * @param mixed $value Supplied date.
 	 * @return bool
 	 */
 	private static function is_real_date( mixed $value ): bool {
-		return is_string( $value ) && preg_match( self::DATE_PATTERN, $value, $m ) === 1
-			&& checkdate( (int) $m[2], (int) $m[3], (int) $m[1] )
-			&& (int) $m[4] < 24 && (int) $m[5] < 60 && (int) $m[6] < 60;
+		if ( ! is_string( $value ) ) {
+			return false;
+		}
+
+		$parsed = date_parse( $value );
+
+		return $parsed['error_count'] === 0 && $parsed['warning_count'] === 0;
 	}
 
 	/**
-	 * Refuse an author who cannot edit this type: REST accepts any existing user, even a subscriber.
+	 * Refuse an author who cannot edit this type; REST accepts even a subscriber.
 	 *
-	 * An unknown user, or someone else without `edit_others_posts`, is left for REST to
-	 * refuse, so a caller who may not assign others cannot probe user IDs here.
+	 * What REST refuses itself is left to it, so a caller who may not assign
+	 * others cannot probe user IDs here.
 	 *
 	 * @param int    $user_id   Supplied user ID.
 	 * @param string $post_type Post type being written.
@@ -160,18 +166,16 @@ class PostFields {
 			return null;
 		}
 
-		return self::refuse(
+		return new WP_Error(
 			'author_cannot_edit',
 			/* translators: %s: user display name. */
-			sprintf( __( '%s cannot edit this kind of content, so they cannot be its author. Pick a user with an author, editor or administrator role.', 'albert-ai-butler' ), $user->display_name )
+			sprintf( __( '%s cannot edit this kind of content, so they cannot be its author. Pick a user with an author, editor or administrator role.', 'albert-ai-butler' ), $user->display_name ),
+			[ 'status' => 400 ]
 		);
 	}
 
 	/**
-	 * Refuse a parent of another type, or one that makes a loop.
-	 *
-	 * REST accepts any existing post as parent, and `wp_insert_post()` silently
-	 * resets a loop to 0. A parent that does not exist is left for REST to refuse.
+	 * Refuse a parent of another type, or a loop: REST accepts both and silently resets a loop to 0.
 	 *
 	 * @param int    $parent_id Supplied parent ID.
 	 * @param string $post_type Post type being written.
@@ -185,28 +189,22 @@ class PostFields {
 		}
 
 		if ( $parent->post_type !== $post_type ) {
-			return self::refuse(
+			return new WP_Error(
 				'invalid_parent',
 				/* translators: 1: post ID, 2: post type. */
-				sprintf( __( 'ID %1$d is not a %2$s. The parent must be the same kind of content; send 0 for top level.', 'albert-ai-butler' ), $parent_id, $post_type )
+				sprintf( __( 'ID %1$d is not a %2$s. The parent must be the same kind of content; send 0 for top level.', 'albert-ai-butler' ), $parent_id, $post_type ),
+				[ 'status' => 400 ]
 			);
 		}
 
 		if ( $post_id > 0 && ( $parent_id === $post_id || in_array( $post_id, array_map( 'intval', get_post_ancestors( $parent ) ), true ) ) ) {
-			return self::refuse( 'parent_loop', __( 'That parent is this item itself or one of its children, which would make a loop. Pick another parent.', 'albert-ai-butler' ) );
+			return new WP_Error(
+				'parent_loop',
+				__( 'That parent is this item itself or one of its children, which would make a loop. Pick another parent.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
 		}
 
 		return null;
-	}
-
-	/**
-	 * Build a refusal.
-	 *
-	 * @param string $code    Error code.
-	 * @param string $message Message telling the assistant what to send instead.
-	 * @return WP_Error
-	 */
-	private static function refuse( string $code, string $message ): WP_Error {
-		return new WP_Error( $code, $message, [ 'status' => 400 ] );
 	}
 }

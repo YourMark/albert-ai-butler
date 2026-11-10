@@ -216,7 +216,8 @@ class ViewPost extends BaseAbility {
 		if ( isset( $args['limit'] ) ) {
 			$options['limit'] = max( 0, (int) $args['limit'] );
 		}
-		$content = ContentFormatter::build( $post->post_content, $format, $options );
+		$content     = ContentFormatter::build( $post->post_content, $format, $options );
+		$post_format = get_post_format( $post );
 
 		return [
 			'post' => array_merge(
@@ -237,7 +238,7 @@ class ViewPost extends BaseAbility {
 					'template'       => get_page_template_slug( $post ),
 					'comment_status' => $post->comment_status,
 					'sticky'         => is_sticky( $post->ID ),
-					'format'         => get_post_format( $post ) ? get_post_format( $post ) : 'standard',
+					'format'         => $post_format ? $post_format : 'standard',
 					'featured_image' => get_post_thumbnail_id( $post ) ? get_post_thumbnail_id( $post ) : null,
 				]
 			),
