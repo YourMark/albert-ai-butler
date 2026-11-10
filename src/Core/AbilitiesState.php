@@ -69,9 +69,10 @@ class AbilitiesState {
 	/**
 	 * The abilities switched off for assistants in this request.
 	 *
-	 * The saved toggles through `albert/abilities/disabled_list`, minus the MCP
-	 * transport tools. Kept apart from {@see self::disabled()} so a filter never
-	 * reaches the screen's toggles or gets saved into them.
+	 * The saved toggles, narrowed by the {@see EnvironmentPolicy}, then through
+	 * `albert/abilities/disabled_list`, minus the MCP transport tools. Kept apart
+	 * from {@see self::disabled()} so neither reaches the screen's toggles or
+	 * gets saved into them.
 	 *
 	 * @return array<int, string>
 	 * @since 1.6.0
@@ -86,12 +87,13 @@ class AbilitiesState {
 		 * writing the saved toggles.
 		 *
 		 * @since 1.2.0
-		 * @since 1.6.0 Applies to Albert's own abilities too, and no longer
-		 *              unregisters anything.
+		 * @since 1.6.0 Applies to Albert's own abilities too, no longer
+		 *              unregisters anything, and receives the list after the
+		 *              environment policy.
 		 *
 		 * @param array<int, string> $disabled Ability IDs switched off for assistants.
 		 */
-		$filtered = apply_filters( 'albert/abilities/disabled_list', self::disabled() );
+		$filtered = apply_filters( 'albert/abilities/disabled_list', EnvironmentPolicy::apply( self::disabled() ) );
 
 		$filtered = array_values( array_unique( array_map( 'strval', (array) $filtered ) ) );
 

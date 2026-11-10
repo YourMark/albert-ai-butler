@@ -11,13 +11,15 @@
 
 namespace Albert\Core;
 
+use Albert\SafeMode\RiskPolicy;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
  * AnnotationPresenter class
  *
  * Pure helper that converts an ability's WP 6.9 annotations array
- * (read / write / delete) into a list of chip DTOs the
+ * (read / write / destructive / not declared) into a list of chip DTOs the
  * AbilitiesPage renders. Keeping the mapping here makes the view thin
  * and the logic unit-testable without a WordPress bootstrap.
  *
@@ -29,7 +31,7 @@ class AnnotationPresenter {
 	 * Build chip DTOs for an ability.
 	 *
 	 * Each chip is an array with:
-	 *  - 'key'         string — stable identifier ('read', 'write', 'delete', 'undeclared').
+	 *  - 'key'         string — stable identifier ('read', 'write', 'destructive', 'undeclared').
 	 *  - 'label'       string — short translated label shown on the chip.
 	 *  - 'description' string — one-sentence explanation used for tooltips.
 	 *  - 'icon'        string — Dashicon class name.
@@ -38,33 +40,28 @@ class AnnotationPresenter {
 	 * An ability that declares neither `readonly` nor `destructive` gets one
 	 * "Not declared" chip: its name says nothing reliable about what it does.
 	 *
+	 * Read, Write or Destructive follows {@see self::is_destructive()}, so the
+	 * chip always matches what the environment policy does with the ability.
+	 *
 	 * @param array<string, mixed> $annotations Raw annotations from get_meta()['annotations'].
-	 * @param string               $ability_id  Unused since 1.6.0, kept for callers that pass it.
+	 * @param string               $ability_id  Ability id, for the high-risk name list.
 	 *
 	 * @return array<int, array{key: string, label: string, description: string, icon: string, tone: string}>
 	 * @since 1.1.0
 	 */
-	public static function chips_for( array $annotations, string $ability_id = '' ): array { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Kept for callers that pass it.
-		if ( ! self::is_declared( $annotations ) ) {
+	public static function chips_for( array $annotations, string $ability_id = '' ): array {
+		$high_risk = RiskPolicy::is_high_risk_ability( $ability_id );
+
+		if ( ! $high_risk && empty( $annotations['destructive'] ) && ! self::is_declared( $annotations ) ) {
 			return [ self::not_declared_chip() ];
 		}
 
+		if ( $high_risk || self::is_destructive( $annotations ) ) {
+			return [ self::destructive_chip() ];
+		}
+
 		// Strict, as everywhere else (defaults, safe mode): `readonly => 1` is not read-only.
-		$readonly = ( $annotations['readonly'] ?? null ) === true;
-		$chips    = [];
-
-		if ( $readonly ) {
-			$chips[] = self::read_only_chip();
-		} elseif ( empty( $annotations['destructive'] ) ) {
-			// Non-readonly and non-destructive: ability creates or updates data.
-			$chips[] = self::makes_changes_chip();
-		}
-
-		if ( ! empty( $annotations['destructive'] ) ) {
-			$chips[] = self::deletes_data_chip();
-		}
-
-		return $chips;
+		return [ ( $annotations['readonly'] ?? null ) === true ? self::read_only_chip() : self::makes_changes_chip() ];
 	}
 
 	/**
@@ -131,16 +128,16 @@ class AnnotationPresenter {
 	}
 
 	/**
-	 * "Delete" chip — ability permanently destroys data.
+	 * "Destructive" chip: may remove or overwrite beyond recovery, or reaches far.
 	 *
 	 * @return array{key: string, label: string, description: string, icon: string, tone: string}
 	 * @since 1.1.0
 	 */
-	private static function deletes_data_chip(): array {
+	private static function destructive_chip(): array {
 		return [
-			'key'         => 'delete',
-			'label'       => __( 'Delete', 'albert-ai-butler' ),
-			'description' => __( 'Permanently removes content. Deleted items may not be recoverable.', 'albert-ai-butler' ),
+			'key'         => 'destructive',
+			'label'       => __( 'Destructive', 'albert-ai-butler' ),
+			'description' => __( 'Can remove or overwrite data in a way that may not be recoverable, or has a wide impact on your site.', 'albert-ai-butler' ),
 			'icon'        => 'dashicons-trash',
 			'tone'        => 'danger',
 		];
@@ -168,7 +165,7 @@ class AnnotationPresenter {
 		$action = $parts[1] ?? $parts[0];
 
 		if ( str_starts_with( $action, 'delete-' ) ) {
-			return [ self::deletes_data_chip() ];
+			return [ self::destructive_chip() ];
 		}
 
 		foreach ( [ 'create-', 'update-', 'upload-', 'set-' ] as $prefix ) {
@@ -181,20 +178,25 @@ class AnnotationPresenter {
 	}
 
 	/**
-	 * Whether the ability should trigger a confirmation prompt when enabled.
+	 * Whether an ability may be destructive: the one answer for the chips and the environment policy.
 	 *
-	 * Without a `destructive` flag, only a declared read-only ability is safe;
-	 * an undeclared one is treated as destructive.
+	 * Fail-safe: a high-risk name is destructive whatever it declares; otherwise
+	 * only a boolean `destructive: false`, or a boolean `readonly: true` without
+	 * a `destructive` flag, is not. Safe mode is wider: it also holds the latter.
 	 *
 	 * @param array<string, mixed> $annotations Raw annotations.
-	 * @param string               $ability_id  Unused since 1.6.0, kept for callers that pass it.
+	 * @param string               $ability_id  Ability id, for the high-risk name list.
 	 *
 	 * @return bool
 	 * @since 1.1.0
 	 */
-	public static function is_destructive( array $annotations, string $ability_id = '' ): bool { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Kept for callers that pass it.
+	public static function is_destructive( array $annotations, string $ability_id = '' ): bool {
+		if ( RiskPolicy::is_high_risk_ability( $ability_id ) ) {
+			return true;
+		}
+
 		if ( isset( $annotations['destructive'] ) ) {
-			return (bool) $annotations['destructive'];
+			return $annotations['destructive'] !== false;
 		}
 
 		return ( $annotations['readonly'] ?? null ) !== true;
