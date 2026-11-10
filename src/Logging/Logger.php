@@ -65,9 +65,10 @@ class Logger implements Hookable {
 	/**
 	 * Log an ability execution (success or failure).
 	 *
-	 * Called after every ability execution via Albert's own hook — covers
-	 * both WP_Error results and successful ones.  Wrapped in try/catch to
-	 * ensure logging never breaks ability execution.
+	 * Called on `albert/abilities/after_execute`, for both WP_Error results and
+	 * successful ones. Other plugins' abilities reach it through
+	 * {@see OtherPluginCallObserver}. Wrapped in try/catch so logging never
+	 * breaks ability execution.
 	 *
 	 * Must be public so WordPress can invoke it via call_user_func_array
 	 * from the albert/abilities/after_execute action — a protected method

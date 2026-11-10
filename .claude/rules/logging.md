@@ -11,7 +11,7 @@ paths:
 Free writes a short log to `{prefix}albert_ability_log` (schema in `Logging\Installer`). Premium takes over the same table with more columns and time-based retention.
 
 ## Who writes
-- `Logger` listens on `albert/abilities/after_execute`. `ObservabilityHandler` records MCP-level failures that never reach an ability. `ToolCallObserver` (on `mcp_adapter_tool_call_result`) catches input the Abilities API rejected before the callback, rewrites the error into one the model can act on, and fires `after_execute` so it logs normally.
+- `Logger` listens on `albert/abilities/after_execute`. `ObservabilityHandler` records MCP-level failures that never reach an ability. `ToolCallObserver` (on `mcp_adapter_tool_call_result`) catches input the Abilities API rejected before the callback, rewrites the error into one the model can act on, and fires `after_execute` so it logs normally. `OtherPluginCallObserver` wraps other plugins' execute callbacks and fires `after_execute` for calls over an Albert connection; without it they never reach the log.
 - `ExecutionLogMarker` stops one call logging twice. Any new observer must check it.
 - `albert/logging/enabled` false means "Free does not write"; Premium sets it to write itself. It does not turn logging off.
 - `albert/logging/ability_failed` fires whatever that filter says, and only for an `error`.
