@@ -175,8 +175,16 @@ Website: https://yourmark.nl
 
 ### 1.6.0
 
+**Features**
+
+- **Abilities that stay on for your staging site.** A setting in your site's code can switch abilities on for assistants on a staging, development or local copy of your site, without changing the switches on the Abilities screen. Copying your live site over a staging copy no longer turns everything back off. You choose to switch on every ability, or every ability that is not marked Destructive; your live site keeps using its own switches. Safe mode still holds what it would hold, and the Abilities screen says when such a setting is in use.
+- **Schedule posts and set their details.** Your assistant can now schedule a post or page to publish later, and set its address (slug), author, parent page, page order, template, whether comments are open, whether a post stays at the top of the blog, and its post format. If a request would not work, such as an author who cannot edit that content or a template your theme does not offer, Albert refuses it and says what to send instead.
+- **Fill in missing alt text.** Your assistant can now find the images in your media library that have no alt text, and write the alt text, title, caption and description of any media file. It can also delete a media file; deleting is permanent, so safe mode holds it for your approval. Both new tools are off until you switch them on, and the Dashboard then suggests asking which images are missing alt text.
+
 **Improvements**
 
+- The Abilities screen now sorts abilities into Read, Write and Destructive. Destructive means an ability can remove or overwrite something in a way that may not be recoverable, or has a wide reach, not only that it deletes. Removing a block from a post or page, and creating or changing users, are now marked Destructive.
+- Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 - When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
 
 **Fixes**
@@ -184,6 +192,14 @@ Website: https://yourmark.nl
 - Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
 - Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 - A group block sent with its contents written out was saved empty. It now keeps them.
+
+**Developer**
+
+- New constant `ALBERT_ENVIRONMENT_ABILITIES` (environment type => `toggles`, `read-write` or `all`) and filter `albert/abilities/environment_policy`. The environment comes from `wp_get_environment_type()`, so Bedrock's `WP_ENV` works. An unknown policy is ignored with a `_doing_it_wrong()` notice.
+- New `Annotations::destructive()` preset. `albert/remove-post-block`, `albert/remove-page-block`, `albert/create-user` and `albert/update-user` are annotated `destructive: true`, and abilities on `albert/safe_mode/high_risk_abilities` show as Destructive. The ability row's `operation` value `delete` is now `destructive`, and the badge class `albert-op-badge--delete` is now `albert-op-badge--destructive`.
+- `albert/create-post` and `albert/update-post` accept `slug`, `date`, `author`, `template`, `comment_status`, `sticky` and `format`. `albert/create-page` and `albert/update-page` accept `slug`, `date`, `author`, `parent`, `menu_order`, `template` and `comment_status`. A future `date` with status `publish` schedules the post. All four return the saved `slug` and `date`.
+- `albert/view-post` now returns `template`, `comment_status`, `sticky` and `format`; `albert/view-page` returns `template` and `comment_status`.
+- New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 
 ### 1.5.0
 

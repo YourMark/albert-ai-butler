@@ -391,6 +391,35 @@ if ( ! function_exists( 'wp_parse_url' ) ) {
 	}
 }
 
+if ( ! function_exists( '_doing_it_wrong' ) ) {
+	/**
+	 * Record the call for assertions.
+	 *
+	 * @param string $function_name Function that was misused.
+	 * @param string $message       What went wrong.
+	 * @param string $version       Version the message was added in.
+	 *
+	 * @return void
+	 */
+	function _doing_it_wrong( string $function_name, string $message, string $version ): void {
+		$GLOBALS['albert_test_doing_it_wrong'][] = $message;
+	}
+}
+
+if ( ! function_exists( 'esc_html__' ) ) {
+	/**
+	 * Return the text unchanged.
+	 *
+	 * @param string $text   Text.
+	 * @param string $domain Text domain.
+	 *
+	 * @return string
+	 */
+	function esc_html__( string $text, string $domain = 'default' ): string {
+		return $text;
+	}
+}
+
 if ( ! function_exists( '__' ) ) {
 	/**
 	 * Stub translation function that returns the input string.

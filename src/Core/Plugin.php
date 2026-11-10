@@ -39,6 +39,8 @@ use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
 use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
+use Albert\Abilities\WordPress\Media\UpdateMedia;
+use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Blocks\GetBlockType;
 use Albert\Abilities\WordPress\Blocks\ListBlockTypes;
 use Albert\Abilities\WordPress\Blocks\FindPatterns;
@@ -359,15 +361,39 @@ class Plugin {
 	}
 
 	/**
-	 * Register built-in abilities.
+	 * Set up the abilities manager; the abilities themselves wait for the Abilities API.
+	 *
+	 * Autoloading some 50 ability classes is the cost, so they are built on
+	 * `wp_abilities_api_init`, which WordPress fires once, on the first read of
+	 * the registry. A plain frontend request never reads it.
 	 *
 	 * @return void
 	 * @since 1.0.0
+	 * @since 1.6.0 Builds no abilities; see {@see self::build_abilities()}.
 	 */
 	public function register_abilities(): void {
-		// Initialize abilities manager.
 		$this->abilities_manager = new AbilitiesManager();
+		$this->abilities_manager->register_hooks();
 
+		// Something read the registry earlier in `init`. WordPress no longer
+		// accepts registrations, but the manager still needs its instances
+		// for labels and counts.
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$this->build_abilities();
+			return;
+		}
+
+		// Before the manager hands them to WordPress at 10.
+		add_action( 'wp_abilities_api_init', [ $this, 'build_abilities' ], 5 );
+	}
+
+	/**
+	 * Build the built-in abilities and let add-ons add theirs.
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	public function build_abilities(): void {
 		// Posts abilities.
 		$this->abilities_manager->add_ability( new FindPosts() );
 		$this->abilities_manager->add_ability( new ViewPost() );
@@ -405,6 +431,8 @@ class Plugin {
 		$this->abilities_manager->add_ability( new FindMedia() );
 		$this->abilities_manager->add_ability( new ViewMedia() );
 		$this->abilities_manager->add_ability( new UploadMedia() );
+		$this->abilities_manager->add_ability( new UpdateMedia() );
+		$this->abilities_manager->add_ability( new DeleteMedia() );
 		$this->abilities_manager->add_ability( new CreateUploadLink() );
 		$this->abilities_manager->add_ability( new SetFeaturedImage() );
 
@@ -441,34 +469,38 @@ class Plugin {
 		}
 
 		/**
-		 * Fires after built-in abilities are registered.
+		 * Fires after built-in abilities are added to the manager.
 		 *
 		 * Addon plugins hook here to register their own abilities by calling
-		 * $manager->add_ability() with a BaseAbility subclass.
+		 * $manager->add_ability() with a BaseAbility subclass. Fires on
+		 * `wp_abilities_api_init`, so not on a request that never reads the
+		 * abilities registry.
 		 *
 		 * @since 1.1.0
+		 * @since 1.6.0 Fires on `wp_abilities_api_init` instead of `init`.
 		 *
 		 * @param AbilitiesManager $manager The abilities manager instance.
 		 */
 		do_action( 'albert/abilities/register', $this->abilities_manager );
-
-		// Register abilities manager hooks.
-		$this->abilities_manager->register_hooks();
 	}
 
 	/**
-	 * Get the abilities manager instance.
+	 * Get the abilities manager, populated with every ability.
 	 *
-	 * Returns null until built-in abilities have been registered on the `init`
-	 * hook (see {@see self::register_abilities()}). Callers that run during
-	 * admin page render — well after `init` — can rely on the manager being
-	 * populated, and use it to resolve ability labels without touching the
-	 * WordPress Abilities API.
+	 * Starts the abilities registry first, which fires `wp_abilities_api_init`
+	 * if it has not fired yet and so builds the abilities.
 	 *
-	 * @return AbilitiesManager|null The abilities manager, or null if not yet built.
+	 * @return AbilitiesManager|null The abilities manager, or null before `init`.
 	 * @since 1.2.0
+	 * @since 1.6.0 Initialises the Abilities API if it has not run yet.
 	 */
 	public function get_abilities_manager(): ?AbilitiesManager {
+		// get_instance(), not wp_get_abilities(): this runs once per log row,
+		// and only the init side effect is wanted.
+		if ( $this->abilities_manager !== null ) {
+			\WP_Abilities_Registry::get_instance();
+		}
+
 		return $this->abilities_manager;
 	}
 

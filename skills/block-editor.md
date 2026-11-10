@@ -148,6 +148,9 @@ block needs both the attachment `id` and its `url` (plus `alt`):
   user explicitly asks for a different image.
 - A bare external `url` with no `id` works but is discouraged: it is not linked to the
   media library.
+- An image block keeps its own copy of `alt`. `albert/update-media` sets the library's
+  alt text, which new blocks start from; to fix an image already in a post, also edit
+  that block's `alt`.
 
 ## Links and buttons
 

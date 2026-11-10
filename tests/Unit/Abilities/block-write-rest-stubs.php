@@ -31,6 +31,21 @@ if ( ! function_exists( 'get_post_statuses' ) ) {
 	}
 }
 
+if ( ! function_exists( 'get_post_format_slugs' ) ) {
+	/**
+	 * Stub get_post_format_slugs().
+	 *
+	 * @return array<string, string>
+	 */
+	function get_post_format_slugs() {
+		return [
+			'standard' => 'standard',
+			'aside'    => 'aside',
+			'gallery'  => 'gallery',
+		];
+	}
+}
+
 if ( ! function_exists( 'sanitize_textarea_field' ) ) {
 	/**
 	 * Stub sanitize_textarea_field().
@@ -168,6 +183,15 @@ if ( ! class_exists( 'Albert_Test_REST_Server' ) ) {
 		 */
 		public function response_to_data( $response, $embed = false ) {
 			return $response->data;
+		}
+
+		/**
+		 * No routes, so a REST permission check falls back to its capability.
+		 *
+		 * @return array<string, mixed>
+		 */
+		public function get_routes() {
+			return [];
 		}
 	}
 }
