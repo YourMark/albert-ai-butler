@@ -37,6 +37,7 @@ Product-specific:
 - [Abilities](.claude/rules/abilities.md) - creating an ability
 - [Abilities screen](.claude/rules/abilities-screen.md) - the DataViews screen, row augmentation, source labels
 - [Agent context](.claude/rules/agent-context.md) - what `discover-abilities` tells an assistant, the skills registry
+- [Blocks](.claude/rules/blocks.md) - why block templates are hand-written, the editor validity check
 - [Safe mode](.claude/rules/safe-mode.md) - what is held for approval, and why
 - [Connections](.claude/rules/connections.md) - the Connections screen, connect dialog, allowed users
 - [OAuth](.claude/rules/oauth.md) - how the OAuth endpoints are served, token validation
