@@ -364,6 +364,38 @@ class MediaAbilityTest extends TestCase {
 	}
 
 	/**
+	 * Given an ID, the permission check asks core about that file: what safe mode
+	 * calls before holding a request, so a refused call is never queued.
+	 *
+	 * @return void
+	 */
+	public function test_permission_check_with_input_is_per_file(): void {
+		$others = $this->create_test_attachment();
+		$author = self::factory()->user->create( [ 'role' => 'author' ] );
+		wp_set_current_user( $author );
+		$own = $this->create_test_attachment();
+		wp_update_post(
+			[
+				'ID'          => $own,
+				'post_author' => $author,
+			]
+		);
+
+		foreach ( [ 'albert/update-media', 'albert/delete-media' ] as $name ) {
+			$ability = wp_get_ability( $name );
+			if ( ! $ability ) {
+				$this->markTestSkipped( "{$name} is not registered." );
+			}
+
+			$this->assertTrue( $ability->check_permissions( [ 'id' => $own ] ), "{$name}: own file." );
+
+			$refused = $ability->check_permissions( [ 'id' => $others ] );
+			$this->assertInstanceOf( WP_Error::class, $refused, "{$name}: another user's file." );
+			$this->assertSame( 'media_permission_denied', $refused->get_error_code() );
+		}
+	}
+
+	/**
 	 * A user without upload_files cannot use the ability at all.
 	 *
 	 * @return void

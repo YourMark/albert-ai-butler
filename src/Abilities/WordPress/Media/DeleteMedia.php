@@ -95,13 +95,27 @@ class DeleteMedia extends BaseAbility {
 	/**
 	 * Check if the current user has permission to execute this ability.
 	 *
-	 * The per-attachment delete check runs in core's endpoint at execute time.
+	 * Given the input, also asks core's `delete_post` for that file, so safe mode refuses
+	 * another user's file at once instead of holding a call core would refuse after
+	 * approval. A non-attachment ID passes here and is refused as not found.
 	 *
+	 * @param mixed $input Ability input; absent when listing abilities.
 	 * @return bool|WP_Error True if permitted, WP_Error with details otherwise.
 	 * @since 1.6.0
 	 */
-	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'upload_files' );
+	public function check_permission( mixed $input = null ): bool|WP_Error {
+		$allowed  = $this->require_capability( 'upload_files' );
+		$media_id = is_array( $input ) ? absint( $input['id'] ?? 0 ) : 0;
+
+		if ( $allowed !== true || $media_id === 0 || get_post_type( $media_id ) !== 'attachment' || current_user_can( 'delete_post', $media_id ) ) {
+			return $allowed;
+		}
+
+		return new WP_Error(
+			'media_permission_denied',
+			__( 'You are not allowed to delete this media file.', 'albert-ai-butler' ),
+			[ 'status' => 403 ]
+		);
 	}
 
 	/**
