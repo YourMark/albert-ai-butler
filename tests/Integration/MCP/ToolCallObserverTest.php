@@ -152,8 +152,8 @@ class ToolCallObserverTest extends TestCase {
 	 * @return void
 	 */
 	public function test_a_non_validation_meta_tool_failure_is_untouched(): void {
-		$schema = wp_get_ability( $this->ability() )->get_input_schema();
-		$valid  = [
+		$schema   = wp_get_ability( $this->ability() )->get_input_schema();
+		$valid    = [
 			'id'       => 1,
 			'taxonomy' => 'category',
 		];

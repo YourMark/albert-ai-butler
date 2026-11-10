@@ -112,7 +112,7 @@ class FrameHeadersTest extends TestCase {
 
 		foreach ( token_get_all( $open_first ? "<?php\n" . $code : $code ) as $token ) {
 			// A leading backslash names the same global function.
-			$token    = is_array( $token ) ? [ $token[0], ltrim( $token[1], '\\' ) ] : [ 0, $token ];
+			$token = is_array( $token ) ? [ $token[0], ltrim( $token[1], '\\' ) ] : [ 0, $token ];
 			$token[0] = T_NAME_FULLY_QUALIFIED === $token[0] ? T_STRING : $token[0];
 
 			if ( ! in_array( $token[0], [ T_OPEN_TAG, T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ], true ) ) {

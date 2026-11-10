@@ -166,4 +166,5 @@ class ConnectGuidesTest extends TestCase {
 		$this->assertStringEndsWith( " 'https://example.com/?rest_route=/albert/v1/mcp'", $plain['steps'][0]['action']['value'] );
 		$this->assertStringEndsWith( ' ' . self::HTTPS, $pretty['steps'][0]['action']['value'] );
 	}
+
 }

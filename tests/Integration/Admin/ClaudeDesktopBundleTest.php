@@ -98,4 +98,5 @@ class ClaudeDesktopBundleTest extends TestCase {
 		$this->assertSame( '', $plain );
 		$this->assertStringEndsWith( '/connect/done', ClaudeDesktopBundle::done_url() );
 	}
+
 }
