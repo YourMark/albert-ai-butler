@@ -21,7 +21,8 @@
     "@wordpress/icons": "^15.0.0",
     "@wordpress/prettier-config": "^4.53.0",
     "@wordpress/scripts": "^32.4.1",
-    "copy-webpack-plugin": "^10.2.4"
+    "copy-webpack-plugin": "^10.2.4",
+    "playwright": "^1.62.1"
   },
   "dependencies": {
     "@wordpress/dataviews": "^16.0.1"

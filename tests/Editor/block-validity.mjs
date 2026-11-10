@@ -99,7 +99,13 @@ try {
 	}
 } finally {
 	await browser?.close();
-	wp( `user delete ${ session.user } --yes --url=${ siteUrl }` );
+
+	// A failed cleanup must not hide the check's own error.
+	try {
+		wp( `user delete ${ session.user } --yes --url=${ siteUrl }` );
+	} catch {
+		console.error( `Could not delete the session user ${ session.user }; remove it by hand.` );
+	}
 }
 
 console.log( failures ? `\n${ failures } invalid block(s).` : `\nAll ${ cases.length } cases valid.` );
