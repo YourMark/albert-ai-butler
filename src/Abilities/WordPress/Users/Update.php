@@ -41,7 +41,7 @@ class Update extends BaseAbility {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::update(
+			'annotations' => Annotations::destructive(
 				'This ability cannot change a password and will refuse the request if you supply one. '
 				. 'Changing an existing account\'s password is account takeover, and the account holder can '
 				. 'reset their own from the login screen. Tell the user to do that instead.'

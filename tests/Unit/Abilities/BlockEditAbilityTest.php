@@ -358,6 +358,94 @@ class BlockEditAbilityTest extends TestCase {
 		$this->assertSame( [], $this->write_calls() );
 	}
 
+	/**
+	 * A post whose second paragraph holds a ThirstyAffiliates link.
+	 *
+	 * @return string
+	 */
+	private function paragraph_with_ta(): string {
+		return "<!-- wp:paragraph --><p>One</p><!-- /wp:paragraph -->\n\n"
+			. '<!-- wp:paragraph --><p>Buy <ta href="https://example.com" linkid="1">here</ta>.</p><!-- /wp:paragraph -->';
+	}
+
+	public function test_edit_that_drops_a_tag_is_refused_without_writing(): void {
+		$this->set_post( 7, $this->paragraph_with_ta() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'path'  => [ 1 ],
+				'block' => [
+					'name'       => 'core/paragraph',
+					'attributes' => [ 'content' => 'Buy <a href="https://example.com">here</a>.' ],
+				],
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'tags_removed', $result->get_error_code() );
+		$this->assertSame( [], $this->write_calls() );
+	}
+
+	public function test_edit_that_drops_a_tag_saves_when_remove_tags_confirms_it(): void {
+		$this->set_post( 7, $this->paragraph_with_ta() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'          => 7,
+				'path'        => [ 1 ],
+				'remove_tags' => [ 'ta' ],
+				'block'       => [
+					'name'       => 'core/paragraph',
+					'attributes' => [ 'content' => 'Buy here.' ],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $this->write_calls() );
+	}
+
+	public function test_edit_that_keeps_a_plugin_tag_writes_it_as_sent(): void {
+		$this->set_post( 7, $this->paragraph_with_ta() );
+		$this->queue_write_success();
+
+		$content = 'Buy <ta href="https://example.com/new" linkid="2">now</ta>.';
+		$result  = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'path'  => [ 1 ],
+				'block' => [
+					'name'       => 'core/heading',
+					'attributes' => [
+						'level'   => 2,
+						'content' => $content,
+					],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertStringContainsString( $content, $this->write_calls()[0]['content'] );
+	}
+
+	public function test_removing_a_block_with_a_tag_needs_no_confirmation(): void {
+		$this->set_post( 7, $this->paragraph_with_ta() );
+		$this->queue_write_success();
+
+		$result = ( new RemovePostBlock() )->execute(
+			[
+				'id'   => 7,
+				'path' => [ 1 ],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $this->write_calls() );
+	}
+
 	// =====================================================================
 	// add / remove / move
 	// =====================================================================

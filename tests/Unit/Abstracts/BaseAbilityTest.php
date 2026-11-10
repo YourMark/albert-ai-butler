@@ -14,6 +14,7 @@ namespace Albert\Tests\Unit\Abstracts;
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 require_once dirname( __DIR__ ) . '/stubs/StubAbility.php';
 
+use Albert\Core\AbilitiesRegistry;
 use Albert\Tests\Unit\StubAbility;
 use PHPUnit\Framework\TestCase;
 use WP_Error;
@@ -87,8 +88,8 @@ class BaseAbilityTest extends TestCase {
 	}
 
 	/**
-	 * A fresh install where the registry heuristic flags this id as
-	 * default-disabled (write prefix) returns false.
+	 * A fresh install where the registry default switches this ability off
+	 * (no annotations) returns false.
 	 *
 	 * @return void
 	 */
@@ -101,6 +102,42 @@ class BaseAbilityTest extends TestCase {
 		$ability = new StubAbility( 'albert/delete-post' );
 
 		$this->assertFalse( $ability->is_enabled() );
+	}
+
+	/**
+	 * On a fresh install an undeclared ability starts off, even with a read-like name.
+	 *
+	 * @return void
+	 */
+	public function test_fresh_install_switches_off_an_undeclared_ability(): void {
+		$GLOBALS['albert_test_options']   = [];
+		$GLOBALS['albert_test_abilities'] = [
+			new AbilityDouble(
+				'vendor/find-things',
+				[
+					'annotations' => [
+						'readonly'    => null,
+						'destructive' => null,
+					],
+				]
+			),
+		];
+
+		$this->assertContains( 'vendor/find-things', AbilitiesRegistry::get_default_disabled_abilities() );
+	}
+
+	/**
+	 * On a fresh install a declared read-only ability starts on.
+	 *
+	 * @return void
+	 */
+	public function test_fresh_install_keeps_a_declared_read_on(): void {
+		$GLOBALS['albert_test_options']   = [];
+		$GLOBALS['albert_test_abilities'] = [
+			new AbilityDouble( 'vendor/delete-things', [ 'annotations' => [ 'readonly' => true ] ] ),
+		];
+
+		$this->assertNotContains( 'vendor/delete-things', AbilitiesRegistry::get_default_disabled_abilities() );
 	}
 
 	// ─── enabled() (deprecated) ──────────────────────────────────────
