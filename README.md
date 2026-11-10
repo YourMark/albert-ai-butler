@@ -148,6 +148,8 @@ composer phpcbf
 composer test
 ```
 
+Block markup is checked in the real editor with `WP_CLI="herd php ~/bin/wp-cli.phar" npm run test:editor` (`WP_CLI` defaults to `wp`): it serializes `tests/Editor/cases.php` on the local site and requires `wp.blocks.parse()` to find every block valid.
+
 ## Architecture
 
 The plugin uses a modern, modular architecture:
@@ -183,6 +185,13 @@ Website: https://yourmark.nl
 
 - The Abilities screen now sorts abilities into Read, Write and Destructive. Destructive means an ability can remove or overwrite something in a way that may not be recoverable, or has a wide reach, not only that it deletes. Removing a block from a post or page, and creating or changing users, are now marked Destructive.
 - Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
+- When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
+
+**Fixes**
+
+- Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
+- Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
+- A group block sent with its contents written out was saved empty. It now keeps them.
 
 **Developer**
 
