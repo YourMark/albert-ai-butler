@@ -2,11 +2,10 @@
 /**
  * Unit tests for SchemaPreparer — client-facing JSON Schema preparation.
  *
- * SchemaPreparer runs outgoing schemas through wp_prepare_json_schema_for_client()
- * on WordPress 7.1+. That function does not exist on the test runner, so it is
- * shadowed here inside the Albert\MCP namespace (a faithful stand-in that strips
- * the same server-only keys), while WpCompat's 7.1 detection is toggled through
- * the shared function_exists shadow.
+ * SchemaPreparer runs outgoing schemas through wp_prepare_json_schema_for_client().
+ * That function does not exist on the test runner, so it is shadowed here inside
+ * the Albert\MCP namespace (a faithful stand-in that strips the same server-only
+ * keys).
  *
  * @package Albert\Tests\Unit\MCP
  */
@@ -14,7 +13,7 @@
 namespace Albert\MCP;
 
 /**
- * Namespaced shadow of the 7.1-only wp_prepare_json_schema_for_client().
+ * Namespaced shadow of wp_prepare_json_schema_for_client().
  *
  * Mirrors the real behaviour the live 7.1 check confirmed: recursively remove
  * the server-only keys, leaving client-relevant ones in place.
@@ -94,22 +93,10 @@ class SchemaPreparerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_another_plugins_server_is_untouched(): void {
-		$this->set_71( true );
-
 		$result   = [ 'input_schema' => $this->schema_with_server_keys() ];
 		$prepared = ( new SchemaPreparer() )->prepare_ability_info_result( $result, [], 'mcp-adapter-get-ability-info', null, $this->server( 'woo' ) );
 
 		$this->assertSame( $result, $prepared );
-	}
-
-	/**
-	 * Make WpCompat report the 7.1 schema-prep capability as present/absent.
-	 *
-	 * @param bool $available Whether the 7.1 function should be seen.
-	 * @return void
-	 */
-	private function set_71( bool $available ): void {
-		$GLOBALS['albert_test_fn_exists']['wp_prepare_json_schema_for_client'] = $available;
 	}
 
 	/**
@@ -125,26 +112,6 @@ class SchemaPreparerTest extends TestCase {
 		return $server;
 	}
 
-	/**
-	 * Reset capability overrides before each test.
-	 *
-	 * @return void
-	 */
-	protected function setUp(): void {
-		parent::setUp();
-		$GLOBALS['albert_test_fn_exists'] = [];
-	}
-
-	/**
-	 * Clear overrides after each test.
-	 *
-	 * @return void
-	 */
-	protected function tearDown(): void {
-		unset( $GLOBALS['albert_test_fn_exists'] );
-		parent::tearDown();
-	}
-
 
 
 
@@ -153,9 +120,7 @@ class SchemaPreparerTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_ability_info_strips_both_schemas_on_71(): void {
-		$this->set_71( true );
-
+	public function test_ability_info_strips_both_schemas(): void {
 		$result = [
 			'name'          => 'albert/demo',
 			'input_schema'  => $this->schema_with_server_keys(),
@@ -174,8 +139,6 @@ class SchemaPreparerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_ability_info_ignores_other_tools(): void {
-		$this->set_71( true );
-
 		$result   = [ 'input_schema' => $this->schema_with_server_keys() ];
 		$prepared = ( new SchemaPreparer() )->prepare_ability_info_result( $result, [], 'albert/find-posts', null, $this->server() );
 
@@ -188,26 +151,10 @@ class SchemaPreparerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_ability_info_passes_through_wp_error(): void {
-		$this->set_71( true );
-
 		$error    = new WP_Error( 'nope', 'No.' );
 		$prepared = ( new SchemaPreparer() )->prepare_ability_info_result( $error, [], 'mcp-adapter/get-ability-info', null, $this->server() );
 
 		$this->assertSame( $error, $prepared );
-	}
-
-	/**
-	 * Below 7.1 the get-ability-info schemas keep their server-only keys.
-	 *
-	 * @return void
-	 */
-	public function test_ability_info_keeps_server_keys_below_71(): void {
-		$this->set_71( false );
-
-		$result   = [ 'input_schema' => $this->schema_with_server_keys() ];
-		$prepared = ( new SchemaPreparer() )->prepare_ability_info_result( $result, [], 'mcp-adapter-get-ability-info', null, $this->server() );
-
-		$this->assertArrayHasKey( 'sanitize_callback', $prepared['input_schema']['properties']['title'] );
 	}
 
 	/**
@@ -220,8 +167,6 @@ class SchemaPreparerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_ability_info_matches_the_sanitised_tool_name(): void {
-		$this->set_71( true );
-
 		$result   = [ 'input_schema' => $this->schema_with_server_keys() ];
 		$prepared = ( new SchemaPreparer() )->prepare_ability_info_result( $result, [], 'mcp-adapter-get-ability-info', null, $this->server() );
 
@@ -239,8 +184,6 @@ class SchemaPreparerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_object_default_is_emitted_as_an_object(): void {
-		$this->set_71( false );
-
 		$schema              = $this->schema_with_server_keys();
 		$schema['default']   = [];
 		$result              = [ 'input_schema' => $schema ];
@@ -258,8 +201,6 @@ class SchemaPreparerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_array_default_stays_an_array(): void {
-		$this->set_71( false );
-
 		$result = [
 			'input_schema' => [
 				'type'       => 'object',
@@ -284,8 +225,6 @@ class SchemaPreparerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_non_empty_object_default_is_untouched(): void {
-		$this->set_71( false );
-
 		$result = [
 			'input_schema' => [
 				'type'    => 'object',
@@ -304,8 +243,6 @@ class SchemaPreparerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_ignores_foreign_or_missing_server(): void {
-		$this->set_71( true );
-
 		$result = [ 'input_schema' => $this->schema_with_server_keys() ];
 
 		$this->assertSame( $result, ( new SchemaPreparer() )->prepare_ability_info_result( $result, [], 'mcp-adapter/get-ability-info', null, new \stdClass() ) );
@@ -319,8 +256,6 @@ class SchemaPreparerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_does_not_fail_open_on_unencodable_value(): void {
-		$this->set_71( true );
-
 		$schema = [
 			'type'       => 'object',
 			'properties' => [
@@ -350,8 +285,6 @@ class SchemaPreparerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_empty_nested_object_map_stays_object(): void {
-		$this->set_71( true );
-
 		$schema = [
 			'type'       => 'object',
 			'properties' => [

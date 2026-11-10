@@ -1,7 +1,7 @@
 === Albert - Connect AI Assistants to WordPress ===
 Contributors: albertai, mark-jansen
 Tags: ai assistant, chatgpt, claude, ai, mcp
-Requires at least: 6.9
+Requires at least: 7.1
 Tested up to: 7.1
 Requires PHP: 8.1
 Stable tag: 1.5.0
@@ -20,7 +20,7 @@ Albert removes that step. Connect your AI assistant to your site once, and it wr
 
 **The easiest and safest way to use the WordPress MCP Adapter.** The MCP Adapter is WordPress's own way for AI assistants to reach a site, and on its own it leaves setup, sign-in and permissions to you. Albert adds them: a guided setup, a proper sign-in, a list of who may connect, and nothing destructive without your approval.
 
-* **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request. Needs WordPress 7.1.
+* **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request.
 * **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 * **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 * **No tracking.** Albert sends nothing about your site or your usage anywhere.
@@ -80,8 +80,6 @@ Switched on by default. When your assistant asks to delete a post, change someon
 * **Approve what you could do yourself.** Editors approve their own requests; administrators approve anyone's. Nobody gains reach they did not already have.
 * **The assistant cannot approve its own work**, cannot switch safe mode off, and cannot touch the settings that control it.
 * **Requests expire** if nobody decides, so an old intent cannot be approved against today's site.
-
-Needs WordPress 7.1. On older versions Albert tells you plainly that it cannot hold anything, rather than letting the switch imply otherwise.
 
 ---
 
@@ -217,7 +215,7 @@ Albert is built for single-site installations. Multisite support is on the roadm
 
 = What are the requirements? =
 
-WordPress 6.9 or higher, PHP 8.1 or higher (8.3+ recommended), MySQL 8.0+ or MariaDB 10.5+, HTTPS (OAuth 2.0 requires it), and any permalink setting other than Plain.
+WordPress 7.1 or higher, PHP 8.1 or higher (8.3+ recommended), MySQL 8.0+ or MariaDB 10.5+, HTTPS (OAuth 2.0 requires it), and any permalink setting other than Plain.
 
 = Where do I get support? =
 
@@ -243,6 +241,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 **Improvements**
 
+* Albert now requires WordPress 7.1. Safe mode depends on it, so it now works on every site Albert runs on, and the notices saying safe mode could not hold anything are gone. Update WordPress before you update Albert.
 * The Abilities screen now sorts abilities into Read, Write and Destructive. Destructive means an ability can remove or overwrite something in a way that may not be recoverable, or has a wide reach, not only that it deletes. Removing a block from a post or page, and creating or changing users, are now marked Destructive.
 * Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 * When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
@@ -260,6 +259,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * `albert/create-post` and `albert/update-post` accept `slug`, `date`, `author`, `template`, `comment_status`, `sticky` and `format`. `albert/create-page` and `albert/update-page` accept `slug`, `date`, `author`, `parent`, `menu_order`, `template` and `comment_status`. A future `date` with status `publish` schedules the post. All four return the saved `slug` and `date`.
 * `albert/view-post` now returns `template`, `comment_status`, `sticky` and `format`; `albert/view-page` returns `template` and `comment_status`.
 * New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
+* Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.

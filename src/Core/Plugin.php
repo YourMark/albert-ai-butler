@@ -208,9 +208,8 @@ class Plugin {
 		( new InvocationRelay() )->register_hooks();
 
 		// Safe mode: hold assistant-initiated destructive (or unannotated) ability
-		// calls for a person to approve. Bound to WP 7.1's wp_pre_execute_ability;
-		// inert below 7.1, where that filter never fires. Not admin-only — the
-		// gate runs on MCP requests.
+		// calls for a person to approve. Bound to wp_pre_execute_ability. Not
+		// admin-only: the gate runs on MCP requests.
 		$safe_mode_repository = new SafeModeRepository();
 		( new SafeModeInterceptor(
 			new InterceptorDecision(),

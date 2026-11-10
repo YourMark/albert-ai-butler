@@ -1,7 +1,7 @@
 # Albert
 
 ![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.1+-blue)
-![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-6.9+-blue)
+![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-7.1+-blue)
 ![Tested up to](https://img.shields.io/badge/Tested%20up%20to-7.1-blue)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
 
@@ -9,7 +9,7 @@
 
 ## Safe by default
 
-- **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request. Needs WordPress 7.1.
+- **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request.
 - **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 - **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 - **No tracking.** Albert sends nothing about your site or your usage anywhere.
@@ -94,7 +94,7 @@ What an assistant can do with each plugin is decided by that plugin. Albert adds
 
 ## Requirements
 
-- **WordPress**: 6.9 or higher
+- **WordPress**: 7.1 or higher
 - **PHP**: 8.1 or higher (8.3+ recommended)
 - **WooCommerce**: 11.0 or higher (if WooCommerce integration is used)
 - **MySQL**: 8.0+ or MariaDB 10.5+
@@ -183,6 +183,7 @@ Website: https://yourmark.nl
 
 **Improvements**
 
+- Albert now requires WordPress 7.1. Safe mode depends on it, so it now works on every site Albert runs on, and the notices saying safe mode could not hold anything are gone. Update WordPress before you update Albert.
 - The Abilities screen now sorts abilities into Read, Write and Destructive. Destructive means an ability can remove or overwrite something in a way that may not be recoverable, or has a wide reach, not only that it deletes. Removing a block from a post or page, and creating or changing users, are now marked Destructive.
 - Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 - When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
@@ -200,6 +201,7 @@ Website: https://yourmark.nl
 - `albert/create-post` and `albert/update-post` accept `slug`, `date`, `author`, `template`, `comment_status`, `sticky` and `format`. `albert/create-page` and `albert/update-page` accept `slug`, `date`, `author`, `parent`, `menu_order`, `template` and `comment_status`. A future `date` with status `publish` schedules the post. All four return the saved `slug` and `date`.
 - `albert/view-post` now returns `template`, `comment_status`, `sticky` and `format`; `albert/view-page` returns `template` and `comment_status`.
 - New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
+- Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 
 ### 1.5.0
 

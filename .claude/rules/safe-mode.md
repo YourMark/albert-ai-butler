@@ -14,7 +14,7 @@ paths:
 Holds destructive assistant calls until a person approves them in Albert > Approvals. On by default: a safety default that ships off protects nobody.
 
 ## The gate
-- `Interceptor` binds WordPress 7.1's `wp_pre_execute_ability`, which fires before validation, the permission check and the callback. Below 7.1 the feature is inert, and the Settings field, the Approvals screen and the Dashboard each say so. Never let an unprotected site show an empty queue as if it were protected.
+- `Interceptor` binds WordPress 7.1's `wp_pre_execute_ability`, which fires before validation, the permission check and the callback.
 - Only calls with an Albert connection (`ConnectionContext`) are held. WP-CLI, direct PHP and other plugins pass. Never describe safe mode as general write protection.
 - One MCP `tools/call` fires `wp_pre_execute_ability` twice (the adapter's `execute-ability` wrapper, then the real ability). `Execution\InterceptorDecision` says which firing is real; anything else on that hook must use it too.
 - The queue holds the input as captured, before core normalises it. Docblocks say "captured", not "resolved".
