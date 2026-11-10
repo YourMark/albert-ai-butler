@@ -9,7 +9,7 @@ requires: block_editor
 Albert lets you edit WordPress posts and pages as **structured blocks** instead of
 raw HTML. WordPress content is made of blocks (paragraphs, headings, images, columns,
 and so on). When you send Albert a list of block specs, Albert serializes them into
-correct block-editor markup for you, so you never hand-write block comments or inner HTML.
+correct block-editor markup for you, so you do not have to write block comments or inner HTML.
 
 Always prefer the structured `blocks` field over a raw `content` string. The exception
 is the classic editor (see "Classic-editor sites" at the end).
@@ -27,9 +27,8 @@ you are allowed to save. Use `albert/get-block-type` to inspect a single block's
 attributes. Composing a block that is not in your allowed set returns a
 `block_validation_failed` error naming it, and nothing is saved.
 
-Allowed-block enforcement applies only to the structured `blocks` field. The raw
-`content` string path is not allow-list-enforced, so prefer `blocks` whenever you want
-the allowed set honoured.
+Allowed-block enforcement applies to the structured `blocks` field and to block markup
+(`<!-- wp:... -->`) in `content`. Plain HTML in `content` is not checked.
 
 The `albert://blocks/types` resource returns the site-wide (post-less) allowed list. For
 a specific target, the `list-block-types` tool with a `post_type` is authoritative, since
@@ -58,9 +57,17 @@ not use a block missing from that list: either case comes back as a
 arbitrary HTML that has no matching block, use `core/html` and put the markup in its
 `html` attribute.
 
+Every attribute you send must be one Albert writes into the block's HTML: the block's
+own (see `albert/get-block-type`), its supports (colour, typography, spacing, border,
+align, `anchor`, `className`), or one kept in the block comment only (`lock`, `metadata`,
+`layout`). Anything else returns `block_validation_failed` naming the attribute, because
+the editor would flag the block as invalid. To keep a block's markup exactly, send it in
+`html`: the markup inside the block's delimiters, as the editor stores it. Block markup
+nested in it becomes the block's inner blocks, so do not also send `innerBlocks`.
+
 Text attributes (`content`, a button's `text`, a quote's `citation`) accept inline HTML
-(`<strong>`, `<em>`, `<a href="…">`, `<code>`), which Albert sanitizes. Use them for inline
-emphasis and for links inside text.
+(`<strong>`, `<em>`, `<a href="…">`, `<code>`). Use it for emphasis and for links inside
+text. WordPress removes any HTML the connected user may not post.
 
 ## Examples
 
@@ -141,6 +148,9 @@ block needs both the attachment `id` and its `url` (plus `alt`):
   user explicitly asks for a different image.
 - A bare external `url` with no `id` works but is discouraged: it is not linked to the
   media library.
+- An image block keeps its own copy of `alt`. `albert/update-media` sets the library's
+  alt text, which new blocks start from; to fix an image already in a post, also edit
+  that block's `alt`.
 
 ## Links and buttons
 
@@ -226,8 +236,11 @@ edits apply to block-editor targets only. On a classic post they return
 - Prefer `blocks` over a raw `content` string.
 - Use only block names from `albert/list-block-types`; a block you are not allowed to use
   returns a `block_validation_failed` error. Use `core/html` for raw HTML; never invent names.
-- Do not hand-write block comments (`<!-- wp:... -->`) or inner HTML. Send attributes
-  and `innerBlocks` and let Albert serialize the markup.
+- Prefer attributes and `innerBlocks`, and let Albert serialize the markup. Write block
+  comments (`<!-- wp:... -->`) or inner HTML yourself only to keep markup exactly, in
+  `html` or `content`.
+- Block markup you read from a site (a pattern, a post's `content`) can be written back in
+  `content` unchanged: Albert stores it exactly as sent.
 - Put child blocks in `innerBlocks`, not in attributes.
 
 ## Self-correction

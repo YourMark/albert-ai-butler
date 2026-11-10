@@ -11,7 +11,7 @@ Albert provides hooks for addon plugins or themes to register custom abilities, 
 
 ### Registering Custom Abilities (`albert/abilities/register`)
 
-**Action**: Fires after built-in abilities are registered on the `init` hook. Addons (or themes via `functions.php`) hook here to register their own abilities by extending `BaseAbility` directly, the same pattern built-in abilities use.
+**Action**: Fires after built-in abilities are added to the manager, on `wp_abilities_api_init` (since 1.6.0; `init` before). A request that never reads the abilities registry, such as a plain frontend view, never fires it. Addons (or themes via `functions.php`) hook here to register their own abilities by extending `BaseAbility` directly, the same pattern built-in abilities use.
 
 ```php
 // In an addon plugin or theme functions.php:
@@ -22,9 +22,9 @@ add_action( 'albert/abilities/register', function ( $manager ) {
 
 The `$manager` parameter is the `AbilitiesManager` instance. Custom abilities extend `Albert\Abstracts\BaseAbility` and implement `execute()` and `check_permission()`. They flow through the same admin UI, enabled/disabled toggle, and `guarded_execute()` pipeline as built-in abilities.
 
-This works from any context that loads before `init`:
+This works from any context that adds the callback before the Abilities API initialises (at the earliest, during `init`):
 - **Addon plugins**: The recommended approach for distributing abilities.
-- **Theme `functions.php`**: Works because themes load before the `init` hook fires.
+- **Theme `functions.php`**: Works because themes load before `init`.
 - **Must-use plugins**: Also supported.
 
 ### Execution Hooks
@@ -95,6 +95,7 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/context/skills` | filter | The skills index entries, after preconditions have been applied |
 | `albert/skills/registry` | filter | Register a skill: `slug`, `summary`, and either `file` or `body`, plus optional `requires` / `when` preconditions |
 | `albert/abilities/payload_row` | filter | Augment a normalized ability row before it reaches the Abilities screen (e.g. append `badges`). Fires on both the bulk build and single-row paths. See `docs/extending-the-abilities-screen.md` |
+| `albert/abilities/environment_policy` | filter | `( string $policy, string $environment )`, @since 1.6.0. The ability policy for this site's `WP_ENVIRONMENT_TYPE`: `toggles` (default), `read-write` (switch on every ability that declares itself read or write, not destructive) or `all`. Widens `AbilitiesState::effective()` without writing the toggles; safe mode still holds. Not called when the `ALBERT_ENVIRONMENT_ABILITIES` constant (environment type => policy) names this environment. The environment comes from `wp_get_environment_type()`, so Bedrock's `WP_ENV` works, and a value outside core's four types reads as `production`. An unknown policy from either source is ignored with a `_doing_it_wrong()` |
 | `albert/abilities/required_capability` | filter | Override the best-effort capability shown on the Abilities screen |
 | `albert/abilities/before_execute` | action | Before any ability runs |
 | `BaseAbility::$sensitive_output_keys` | property | Not a hook, but part of the ability contract (1.4.0). Top-level result keys holding a credential. The caller receives them intact; every `after_execute` observer is handed a copy with them replaced by `[redacted]`. Observers are loggers (Albert's own writes a DB row, Premium captures the whole success payload), so a short-lived secret would otherwise outlive its own expiry in plaintext. Masks rather than drops, so a log still records the field was returned. Top-level keys only |

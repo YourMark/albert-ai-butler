@@ -98,6 +98,8 @@ if ( ! function_exists( 'serialize_blocks' ) ) {
 	}
 }
 
+require_once __DIR__ . '/Unit/stubs/WP_Block_Supports.php';
+
 if ( ! function_exists( 'parse_blocks' ) ) {
 	// Load the real WP block parser classes (pure PHP, no WP deps).
 	require_once __DIR__ . '/Unit/stubs/class-wp-block-parser.php';
@@ -432,8 +434,11 @@ if ( ! function_exists( 'albert_test_register_default_block_types' ) ) {
 			'core/pullquote',
 		];
 
+		// Paragraphs and list items carry no generated wp-block-* class.
+		$no_generated_class = [ 'core/paragraph', 'core/list-item' ];
+
 		foreach ( $static_blocks as $block_name ) {
-			albert_test_register_block_type( $block_name, false );
+			albert_test_register_block_type( $block_name, false, [], in_array( $block_name, $no_generated_class, true ) ? [ 'className' => false ] : [] );
 		}
 
 		// A registered dynamic block (renders via a render_callback).

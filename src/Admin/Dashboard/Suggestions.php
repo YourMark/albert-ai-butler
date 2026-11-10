@@ -134,12 +134,6 @@ class Suggestions {
 	 * that has a real answer on any site with the abilities it names, whether
 	 * that answer is a list or "none".
 	 *
-	 * The same rule ruled out the other tempting ones. "Which images are
-	 * missing alt text?" would be the most useful prompt on this list, but
-	 * `albert/find-media` does not return alt text; answering it means a
-	 * `view-media` call per attachment, which is not a thing to put in front of
-	 * somebody as an example.
-	 *
 	 * Ordered so the first one that survives filtering is the most
 	 * characteristic thing this site can do: commerce on a shop, content
 	 * everywhere else.
@@ -186,6 +180,10 @@ class Suggestions {
 			[
 				'text'     => __( 'Turn my three most recent posts into a round-up, and leave it as a draft.', 'albert-ai-butler' ),
 				'requires' => [ 'albert/find-posts', 'albert/create-post' ],
+			],
+			[
+				'text'     => __( 'Which images are missing alt text? Suggest alt text for each, and add it once I agree.', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-media', 'albert/update-media' ],
 			],
 			[
 				'text'     => __( 'Who has administrator access to this site?', 'albert-ai-butler' ),

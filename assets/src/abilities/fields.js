@@ -1,7 +1,7 @@
 /**
  * DataViews field definitions for the Abilities screen.
  *
- * Operation is the read/write/delete/undeclared value derived server-side from
+ * Operation is the read/write/destructive/undeclared value derived server-side from
  * the ability's annotations. Category, Operation, Source and Status are filterable
  * (single-select); Ability/ID/Description feed global search only.
  */
@@ -13,7 +13,7 @@ import { SINGLE_SELECT } from '../shared/ToolbarControls';
 const OPERATION_ELEMENTS = [
 	{ value: 'read', label: OPERATION_LABELS.read },
 	{ value: 'write', label: OPERATION_LABELS.write },
-	{ value: 'delete', label: OPERATION_LABELS.delete },
+	{ value: 'destructive', label: OPERATION_LABELS.destructive },
 	{ value: 'undeclared', label: OPERATION_LABELS.undeclared },
 ];
 
@@ -75,7 +75,7 @@ function AbilityCell( { item } ) {
 }
 
 /**
- * The colored operation badge (read / write / delete / not declared).
+ * The colored operation badge (read / write / destructive / not declared).
  *
  * @param {Object} props      Render props.
  * @param {Object} props.item The ability row.
