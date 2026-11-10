@@ -51,7 +51,6 @@ class PostFieldsAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function tear_down(): void {
-		remove_theme_support( 'post-formats' );
 		remove_all_filters( 'theme_page_templates' );
 		update_option( 'timezone_string', '' );
 		parent::tear_down();
@@ -225,7 +224,7 @@ class PostFieldsAbilityTest extends TestCase {
 		$post_id = self::factory()->post->create();
 
 		$this->assertRefused(
-			'invalid_author',
+			'rest_invalid_author',
 			( new UpdatePost() )->execute(
 				[
 					'id'     => $post_id,
@@ -242,7 +241,7 @@ class PostFieldsAbilityTest extends TestCase {
 		wp_set_current_user( $author );
 
 		$this->assertRefused(
-			'author_permission_denied',
+			'rest_cannot_edit_others',
 			( new UpdatePost() )->execute(
 				[
 					'id'     => $post_id,
@@ -350,7 +349,7 @@ class PostFieldsAbilityTest extends TestCase {
 			]
 		);
 
-		$this->assertRefused( 'invalid_template', $result );
+		$this->assertRefused( 'rest_invalid_param', $result );
 		$this->assertStringContainsString( 'templates/wide.php', $result->get_error_message() );
 		$this->assertSame( '', get_page_template_slug( $page_id ) );
 	}
@@ -389,8 +388,7 @@ class PostFieldsAbilityTest extends TestCase {
 		$this->assertFalse( is_sticky( $post_id ) );
 	}
 
-	public function test_a_supported_format_is_saved(): void {
-		add_theme_support( 'post-formats', [ 'aside' ] );
+	public function test_a_format_is_saved(): void {
 		$post_id = self::factory()->post->create();
 
 		( new UpdatePost() )->execute(
@@ -402,21 +400,6 @@ class PostFieldsAbilityTest extends TestCase {
 
 		$this->assertSame( 'aside', get_post_format( $post_id ) );
 		$this->assertSame( 'aside', ( new ViewPost() )->execute( [ 'id' => $post_id ] )['post']['format'] );
-	}
-
-	public function test_an_unsupported_format_is_refused(): void {
-		$post_id = self::factory()->post->create();
-
-		$this->assertRefused(
-			'invalid_format',
-			( new UpdatePost() )->execute(
-				[
-					'id'     => $post_id,
-					'format' => 'gallery',
-				]
-			)
-		);
-		$this->assertFalse( get_post_format( $post_id ) );
 	}
 
 	public function test_view_post_returns_the_fields_before_a_write(): void {

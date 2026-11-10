@@ -65,48 +65,50 @@ class Create extends BaseAbility {
 		// Get all available post statuses dynamically.
 		$post_statuses = array_keys( get_post_statuses() );
 
+		$properties = [
+			'title'      => [
+				'type'        => 'string',
+				'description' => 'The post title',
+			],
+			'content'    => [
+				'type'        => 'string',
+				'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
+				'default'     => '',
+			],
+			'blocks'     => [
+				'type'        => 'array',
+				'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'items'       => BlockSpecSchema::spec(),
+				'default'     => [],
+			],
+			'status'     => [
+				'type'        => 'string',
+				'enum'        => $post_statuses,
+				'description' => 'Post status',
+				'default'     => 'draft',
+			],
+			'excerpt'    => [
+				'type'        => 'string',
+				'description' => 'Optional post excerpt',
+				'default'     => '',
+			],
+			'categories' => [
+				'type'        => 'array',
+				'items'       => [ 'type' => 'integer' ],
+				'description' => 'Array of category IDs',
+				'default'     => [],
+			],
+			'tags'       => [
+				'type'        => 'array',
+				'items'       => [ 'type' => 'string' ],
+				'description' => 'Array of tag names',
+				'default'     => [],
+			],
+		];
+
 		return [
 			'type'       => 'object',
-			'properties' => [
-				'title'      => [
-					'type'        => 'string',
-					'description' => 'The post title',
-				],
-				'content'    => [
-					'type'        => 'string',
-					'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
-					'default'     => '',
-				],
-				'blocks'     => [
-					'type'        => 'array',
-					'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
-					'items'       => BlockSpecSchema::spec(),
-					'default'     => [],
-				],
-				'status'     => [
-					'type'        => 'string',
-					'enum'        => $post_statuses,
-					'description' => 'Post status',
-					'default'     => 'draft',
-				],
-				'excerpt'    => [
-					'type'        => 'string',
-					'description' => 'Optional post excerpt',
-					'default'     => '',
-				],
-				'categories' => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'integer' ],
-					'description' => 'Array of category IDs',
-					'default'     => [],
-				],
-				'tags'       => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'string' ],
-					'description' => 'Array of tag names',
-					'default'     => [],
-				],
-			] + PostFields::input_schema( PostFields::POST ),
+			'properties' => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ),
 			'required'   => [ 'title' ],
 		];
 	}
@@ -240,7 +242,7 @@ class Create extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while creating the post.', 'albert-ai-butler' ),
+				self::rest_error_message( $data ) ?? __( 'An error occurred while creating the post.', 'albert-ai-butler' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

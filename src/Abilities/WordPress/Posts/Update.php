@@ -67,46 +67,48 @@ class Update extends BaseAbility {
 		// Get all available post statuses dynamically.
 		$post_statuses = array_keys( get_post_statuses() );
 
+		$properties = [
+			'id'         => [
+				'type'        => 'integer',
+				'description' => 'The post ID to update',
+			],
+			'title'      => [
+				'type'        => 'string',
+				'description' => 'The post title',
+			],
+			'content'    => [
+				'type'        => 'string',
+				'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire post body when set.',
+			],
+			'blocks'     => [
+				'type'        => 'array',
+				'description' => 'Structured block specs (preferred over "content"). Replaces the entire post body. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'items'       => BlockSpecSchema::spec(),
+			],
+			'status'     => [
+				'type'        => 'string',
+				'enum'        => $post_statuses,
+				'description' => 'Post status',
+			],
+			'excerpt'    => [
+				'type'        => 'string',
+				'description' => 'Optional post excerpt',
+			],
+			'categories' => [
+				'type'        => 'array',
+				'items'       => [ 'type' => 'integer' ],
+				'description' => 'Array of category IDs',
+			],
+			'tags'       => [
+				'type'        => 'array',
+				'items'       => [ 'type' => 'string' ],
+				'description' => 'Array of tag names',
+			],
+		];
+
 		return [
 			'type'       => 'object',
-			'properties' => [
-				'id'         => [
-					'type'        => 'integer',
-					'description' => 'The post ID to update',
-				],
-				'title'      => [
-					'type'        => 'string',
-					'description' => 'The post title',
-				],
-				'content'    => [
-					'type'        => 'string',
-					'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire post body when set.',
-				],
-				'blocks'     => [
-					'type'        => 'array',
-					'description' => 'Structured block specs (preferred over "content"). Replaces the entire post body. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
-					'items'       => BlockSpecSchema::spec(),
-				],
-				'status'     => [
-					'type'        => 'string',
-					'enum'        => $post_statuses,
-					'description' => 'Post status',
-				],
-				'excerpt'    => [
-					'type'        => 'string',
-					'description' => 'Optional post excerpt',
-				],
-				'categories' => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'integer' ],
-					'description' => 'Array of category IDs',
-				],
-				'tags'       => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'string' ],
-					'description' => 'Array of tag names',
-				],
-			] + PostFields::input_schema( PostFields::POST ),
+			'properties' => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ),
 			'required'   => [ 'id' ],
 		];
 	}
@@ -259,7 +261,7 @@ class Update extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while updating the post.', 'albert-ai-butler' ),
+				self::rest_error_message( $data ) ?? __( 'An error occurred while updating the post.', 'albert-ai-butler' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}

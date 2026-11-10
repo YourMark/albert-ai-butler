@@ -94,7 +94,6 @@ class PostFieldsTest extends TestCase {
 			$GLOBALS['albert_test_posts'],
 			$GLOBALS['albert_test_ancestors'],
 			$GLOBALS['albert_test_site'],
-			$GLOBALS['albert_test_post_formats'],
 			$GLOBALS['albert_test_sticky'],
 			$GLOBALS['albert_test_rest_calls'],
 			$GLOBALS['albert_test_rest_responses'],
@@ -163,13 +162,17 @@ class PostFieldsTest extends TestCase {
 		);
 	}
 
-	public function test_slug_is_cleaned(): void {
-		$this->assertSame( [ 'slug' => 'summer-sale' ], $this->post( [ 'slug' => 'Summer Sale' ] ) );
-	}
+	public function test_fields_core_validates_pass_through_unchanged(): void {
+		$fields = [
+			'slug'           => 'Summer Sale',
+			'comment_status' => 'closed',
+			'sticky'         => true,
+			'format'         => 'aside',
+			'template'       => 'templates/missing.php',
+		];
 
-	public function test_slug_that_cleans_to_nothing_is_refused(): void {
-		$this->assertRefused( 'invalid_slug', $this->post( [ 'slug' => '!!!' ] ) );
-		$this->assertRefused( 'invalid_slug', $this->post( [ 'slug' => 42 ] ) );
+		$this->assertSame( $fields, $this->post( $fields ) );
+		$this->assertSame( [ 'menu_order' => '3' ], $this->page( [ 'menu_order' => '3' ] ) );
 	}
 
 	public function test_dates_in_local_time_and_with_an_offset_are_accepted(): void {
@@ -214,8 +217,8 @@ class PostFieldsTest extends TestCase {
 		$this->assertSame( [ 'author' => 2 ], $this->post( [ 'author' => 2 ] ) );
 	}
 
-	public function test_unknown_author_is_refused(): void {
-		$this->assertRefused( 'invalid_author', $this->post( [ 'author' => 99 ] ) );
+	public function test_unknown_author_is_left_for_rest(): void {
+		$this->assertSame( [ 'author' => 99 ], $this->post( [ 'author' => 99 ] ) );
 	}
 
 	public function test_author_who_cannot_edit_the_type_is_refused(): void {
@@ -225,12 +228,10 @@ class PostFieldsTest extends TestCase {
 		$this->assertStringContainsString( 'Subscriber', $result->get_error_message() );
 	}
 
-	public function test_assigning_someone_else_needs_edit_others(): void {
+	public function test_someone_else_is_left_for_rest_without_edit_others(): void {
 		$GLOBALS['albert_test_caps'] = [ 'edit_posts' ];
 
-		$this->assertRefused( 'author_permission_denied', $this->post( [ 'author' => 2 ] ) );
-		$this->assertRefused( 'author_permission_denied', $this->post( [ 'author' => 3 ] ) );
-		$this->assertSame( [ 'author' => 1 ], $this->post( [ 'author' => 1 ] ) );
+		$this->assertSame( [ 'author' => 3 ], $this->post( [ 'author' => 3 ] ) );
 	}
 
 	public function test_page_author_is_checked_against_page_capabilities(): void {
@@ -241,77 +242,21 @@ class PostFieldsTest extends TestCase {
 
 	public function test_parent_page_is_accepted_and_zero_means_top_level(): void {
 		$this->assertSame( [ 'parent' => 10 ], $this->page( [ 'parent' => 10 ] ) );
+		$this->assertSame( [ 'parent' => '10' ], $this->page( [ 'parent' => '10' ] ) );
 		$this->assertSame( [ 'parent' => 0 ], $this->page( [ 'parent' => 0 ] ) );
-		$this->assertSame( [ 'parent' => 10 ], $this->page( [ 'parent' => '10' ] ) );
 	}
 
-	public function test_missing_or_wrong_type_parent_is_refused(): void {
-		$this->assertRefused( 'invalid_parent', $this->page( [ 'parent' => 999 ] ) );
+	public function test_missing_parent_is_left_for_rest(): void {
+		$this->assertSame( [ 'parent' => 999 ], $this->page( [ 'parent' => 999 ] ) );
+	}
+
+	public function test_parent_of_another_type_is_refused(): void {
 		$this->assertRefused( 'invalid_parent', $this->page( [ 'parent' => 20 ] ) );
-		$this->assertRefused( 'invalid_parent', $this->page( [ 'parent' => -1 ] ) );
 	}
 
 	public function test_parent_that_makes_a_loop_is_refused(): void {
 		$this->assertRefused( 'parent_loop', $this->page( [ 'parent' => 10 ], 10 ) );
 		$this->assertRefused( 'parent_loop', $this->page( [ 'parent' => 11 ], 10 ) );
-	}
-
-	public function test_menu_order_must_be_a_whole_number(): void {
-		$this->assertSame( [ 'menu_order' => 3 ], $this->page( [ 'menu_order' => 3 ] ) );
-		$this->assertSame( [ 'menu_order' => 3 ], $this->page( [ 'menu_order' => '3' ] ) );
-		$this->assertRefused( 'invalid_menu_order', $this->page( [ 'menu_order' => 'third' ] ) );
-	}
-
-	public function test_template_the_theme_offers_is_accepted(): void {
-		$this->assertSame( [ 'template' => 'templates/wide.php' ], $this->page( [ 'template' => 'templates/wide.php' ] ) );
-		$this->assertSame( [ 'template' => '' ], $this->page( [ 'template' => '' ] ) );
-	}
-
-	public function test_unknown_template_is_refused_with_the_choices(): void {
-		$result = $this->page( [ 'template' => 'templates/missing.php' ] );
-
-		$this->assertRefused( 'invalid_template', $result );
-		$this->assertStringContainsString( 'templates/wide.php', $result->get_error_message() );
-	}
-
-	public function test_a_template_that_is_not_a_string_is_refused(): void {
-		$result = $this->page( [ 'template' => 5 ] );
-
-		$this->assertRefused( 'invalid_template', $result );
-		$this->assertStringContainsString( 'template name', $result->get_error_message() );
-	}
-
-	public function test_template_is_refused_when_the_theme_offers_none(): void {
-		$result = $this->post( [ 'template' => 'templates/wide.php' ] );
-
-		$this->assertRefused( 'invalid_template', $result );
-		$this->assertStringContainsString( 'offers no templates', $result->get_error_message() );
-	}
-
-	public function test_the_current_template_is_accepted_after_the_theme_drops_it(): void {
-		$GLOBALS['albert_test_posts'][20]->page_template = 'templates/old.php';
-
-		$this->assertSame( [ 'template' => 'templates/old.php' ], $this->post( [ 'template' => 'templates/old.php' ], 20 ) );
-		$this->assertRefused( 'invalid_template', $this->post( [ 'template' => 'templates/old.php' ] ) );
-	}
-
-	public function test_comment_status_is_open_or_closed(): void {
-		$this->assertSame( [ 'comment_status' => 'open' ], $this->page( [ 'comment_status' => 'open' ] ) );
-		$this->assertRefused( 'invalid_comment_status', $this->page( [ 'comment_status' => 'registered_only' ] ) );
-	}
-
-	public function test_sticky_must_be_a_boolean(): void {
-		$this->assertSame( [ 'sticky' => false ], $this->post( [ 'sticky' => false ] ) );
-		$this->assertRefused( 'invalid_sticky', $this->post( [ 'sticky' => 'yes' ] ) );
-	}
-
-	public function test_format_must_be_standard_or_supported_by_the_theme(): void {
-		$this->assertSame( [ 'format' => 'standard' ], $this->post( [ 'format' => 'standard' ] ) );
-		$this->assertRefused( 'invalid_format', $this->post( [ 'format' => 'aside' ] ) );
-
-		$GLOBALS['albert_test_post_formats'] = [ 'aside', 'gallery' ];
-
-		$this->assertSame( [ 'format' => 'aside' ], $this->post( [ 'format' => 'aside' ] ) );
 	}
 
 	public function test_update_post_sends_the_fields_to_rest(): void {

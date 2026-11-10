@@ -4,7 +4,6 @@
  *
  * Users: $GLOBALS['albert_test_users'][ $id ] = [ 'display_name' => '...', 'caps' => [ ... ] ].
  * Ancestors: $GLOBALS['albert_test_ancestors'][ $id ] = [ parent ids ].
- * Post formats the theme supports: $GLOBALS['albert_test_post_formats'].
  * Sticky posts: $GLOBALS['albert_test_sticky'].
  *
  * @package Albert\Tests
@@ -71,22 +70,6 @@ if ( ! function_exists( 'get_post_ancestors' ) ) {
 		$id = is_object( $post ) ? (int) $post->ID : (int) $post;
 
 		return (array) ( $GLOBALS['albert_test_ancestors'][ $id ] ?? [] );
-	}
-}
-
-if ( ! function_exists( 'get_theme_support' ) ) {
-	/**
-	 * Stub get_theme_support() for post formats.
-	 *
-	 * @param string $feature Feature.
-	 * @return mixed
-	 */
-	function get_theme_support( $feature ) {
-		if ( $feature !== 'post-formats' || empty( $GLOBALS['albert_test_post_formats'] ) ) {
-			return false;
-		}
-
-		return [ (array) $GLOBALS['albert_test_post_formats'] ];
 	}
 }
 
