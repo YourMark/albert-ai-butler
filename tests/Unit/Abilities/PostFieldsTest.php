@@ -242,6 +242,7 @@ class PostFieldsTest extends TestCase {
 	public function test_parent_page_is_accepted_and_zero_means_top_level(): void {
 		$this->assertSame( [ 'parent' => 10 ], $this->page( [ 'parent' => 10 ] ) );
 		$this->assertSame( [ 'parent' => 0 ], $this->page( [ 'parent' => 0 ] ) );
+		$this->assertSame( [ 'parent' => 10 ], $this->page( [ 'parent' => '10' ] ) );
 	}
 
 	public function test_missing_or_wrong_type_parent_is_refused(): void {
@@ -257,7 +258,8 @@ class PostFieldsTest extends TestCase {
 
 	public function test_menu_order_must_be_a_whole_number(): void {
 		$this->assertSame( [ 'menu_order' => 3 ], $this->page( [ 'menu_order' => 3 ] ) );
-		$this->assertRefused( 'invalid_menu_order', $this->page( [ 'menu_order' => '3' ] ) );
+		$this->assertSame( [ 'menu_order' => 3 ], $this->page( [ 'menu_order' => '3' ] ) );
+		$this->assertRefused( 'invalid_menu_order', $this->page( [ 'menu_order' => 'third' ] ) );
 	}
 
 	public function test_template_the_theme_offers_is_accepted(): void {
@@ -270,6 +272,13 @@ class PostFieldsTest extends TestCase {
 
 		$this->assertRefused( 'invalid_template', $result );
 		$this->assertStringContainsString( 'templates/wide.php', $result->get_error_message() );
+	}
+
+	public function test_a_template_that_is_not_a_string_is_refused(): void {
+		$result = $this->page( [ 'template' => 5 ] );
+
+		$this->assertRefused( 'invalid_template', $result );
+		$this->assertStringContainsString( 'template name', $result->get_error_message() );
 	}
 
 	public function test_template_is_refused_when_the_theme_offers_none(): void {

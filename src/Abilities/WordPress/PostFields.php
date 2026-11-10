@@ -37,7 +37,7 @@ class PostFields {
 	public const PAGE = [ 'slug', 'date', 'author', 'parent', 'menu_order', 'template', 'comment_status' ];
 
 	/**
-	 * The shapes `rest_parse_date()` accepts, so nothing passes here that the endpoint refuses.
+	 * The shapes `rest_parse_date()` accepts; the offset's range is left to the endpoint.
 	 */
 	private const DATE_PATTERN = '/^(\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}(?::\d{2})?)?$/';
 
@@ -52,7 +52,7 @@ class PostFields {
 		$all = [
 			'slug'           => [
 				'type'        => 'string',
-				'description' => 'URL slug, e.g. "summer-sale". WordPress adds a number when another item already uses it; the result returns the slug that was saved.',
+				'description' => 'URL slug, e.g. "summer-sale". On a published item this changes its address, so links to the old one may stop working. WordPress adds a number when another item already uses it; the result returns the slug that was saved.',
 			],
 			'date'           => [
 				'type'        => 'string',
@@ -188,7 +188,7 @@ class PostFields {
 	 * @return int|WP_Error
 	 */
 	private static function author( mixed $value, string $post_type ): int|WP_Error {
-		$user_id = is_int( $value ) || ( is_string( $value ) && ctype_digit( $value ) ) ? (int) $value : 0;
+		$user_id = self::whole_number( $value ) ?? 0;
 		$caps    = self::caps( $post_type );
 
 		if ( $user_id !== get_current_user_id() && ! current_user_can( $caps['edit_others_posts'] ) ) {
@@ -231,11 +231,10 @@ class PostFields {
 	 * @return int|WP_Error
 	 */
 	private static function parent( mixed $value, string $post_type, int $post_id ): int|WP_Error {
-		if ( ! is_int( $value ) || $value < 0 ) {
+		$parent_id = self::whole_number( $value );
+		if ( $parent_id === null || $parent_id < 0 ) {
 			return self::refuse( 'invalid_parent', __( 'parent must be a page ID, or 0 for a top-level page.', 'albert-ai-butler' ) );
 		}
-
-		$parent_id = $value;
 		if ( $parent_id === 0 ) {
 			return 0;
 		}
@@ -269,7 +268,11 @@ class PostFields {
 	 * @return string|WP_Error
 	 */
 	private static function template( mixed $value, string $post_type, int $post_id ): string|WP_Error {
-		$template = is_string( $value ) ? trim( $value ) : null;
+		if ( ! is_string( $value ) ) {
+			return self::refuse( 'invalid_template', __( 'template must be a template name, or "" for the default.', 'albert-ai-butler' ) );
+		}
+
+		$template = trim( $value );
 		if ( $template === '' ) {
 			return '';
 		}
@@ -281,7 +284,7 @@ class PostFields {
 
 		$available = array_map( 'strval', array_keys( wp_get_theme()->get_page_templates( $post, $post_type ) ) );
 
-		if ( $template !== null && in_array( $template, $available, true ) ) {
+		if ( in_array( $template, $available, true ) ) {
 			return $template;
 		}
 
@@ -351,12 +354,29 @@ class PostFields {
 	 * @return int|WP_Error
 	 */
 	private static function integer( string $field, mixed $value ): int|WP_Error {
-		if ( is_int( $value ) ) {
-			return $value;
+		$number = self::whole_number( $value );
+		if ( $number !== null ) {
+			return $number;
 		}
 
 		/* translators: %s: field name. */
 		return self::refuse( 'invalid_' . $field, sprintf( __( '%s must be a whole number.', 'albert-ai-butler' ), $field ) );
+	}
+
+	/**
+	 * An integer, or a string of digits from a client that ignores the schema's type.
+	 *
+	 * The fields this replaced went through absint(), so "12" has always worked.
+	 *
+	 * @param mixed $value Supplied value.
+	 * @return int|null Null when it is not a whole number.
+	 */
+	private static function whole_number( mixed $value ): ?int {
+		if ( is_int( $value ) ) {
+			return $value;
+		}
+
+		return is_string( $value ) && ctype_digit( $value ) ? (int) $value : null;
 	}
 
 	/**

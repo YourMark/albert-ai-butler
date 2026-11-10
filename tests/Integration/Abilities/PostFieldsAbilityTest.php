@@ -53,6 +53,7 @@ class PostFieldsAbilityTest extends TestCase {
 	public function tear_down(): void {
 		remove_theme_support( 'post-formats' );
 		remove_all_filters( 'theme_page_templates' );
+		update_option( 'timezone_string', '' );
 		parent::tear_down();
 	}
 
@@ -123,6 +124,22 @@ class PostFieldsAbilityTest extends TestCase {
 
 		$this->assertSame( '2020-01-01 10:00:00', get_post( $post_id )->post_date_gmt );
 		$this->assertSame( 'publish', get_post_status( $post_id ) );
+	}
+
+	public function test_a_date_without_an_offset_is_in_the_site_timezone(): void {
+		update_option( 'timezone_string', 'Europe/Amsterdam' );
+		$post_id = self::factory()->post->create( [ 'post_status' => 'publish' ] );
+
+		( new UpdatePost() )->execute(
+			[
+				'id'   => $post_id,
+				'date' => '2020-07-01T12:00:00',
+			]
+		);
+
+		$post = get_post( $post_id );
+		$this->assertSame( '2020-07-01 12:00:00', $post->post_date );
+		$this->assertSame( '2020-07-01 10:00:00', $post->post_date_gmt );
 	}
 
 	public function test_an_impossible_date_is_refused_and_nothing_changes(): void {
