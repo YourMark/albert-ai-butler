@@ -44,6 +44,14 @@ use Albert\Blocks\BlockSpecSchema;
 abstract class AbstractBlockEdit extends BaseAbility {
 
 	/**
+	 * Input key for several operations saved as one change.
+	 *
+	 * @var string
+	 * @since 1.6.0
+	 */
+	protected const EDITS = 'edits';
+
+	/**
 	 * The post type this ability targets.
 	 *
 	 * @return string Post type slug ('post' or 'page').
@@ -181,12 +189,13 @@ abstract class AbstractBlockEdit extends BaseAbility {
 			return $operations;
 		}
 
-		$batched      = array_key_exists( 'edits', $args );
-		$tree         = array_values( parse_blocks( (string) $post->post_content ) );
+		$batched      = array_key_exists( self::EDITS, $args );
+		$stored       = (string) $post->post_content;
+		$tree         = array_values( parse_blocks( $stored ) );
 		$block_issues = [];
 
 		foreach ( $operations as $index => $op_args ) {
-			$applied = $this->apply_operation( $tree, $op_args, $post_id );
+			$applied = $this->apply_operation( $tree, $op_args, $post_id, $stored );
 
 			if ( $applied instanceof WP_Error ) {
 				return $batched ? $this->edit_failed( $index, $applied ) : $applied;
@@ -194,7 +203,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 
 			$tree = $applied['tree'];
 			foreach ( $applied['warnings'] as $warning ) {
-				$block_issues[] = $batched ? sprintf( 'edits[%1$d]: %2$s', $index, $warning ) : $warning;
+				$block_issues[] = $batched ? $this->name_edit( $index, $warning ) : $warning;
 			}
 		}
 
@@ -229,10 +238,11 @@ abstract class AbstractBlockEdit extends BaseAbility {
 	 * @param array<int, mixed>    $tree    Tree as the earlier operations left it.
 	 * @param array<string, mixed> $args    This operation's input.
 	 * @param int                  $post_id Target post ID.
+	 * @param string               $stored  The saved content, so a tag an earlier edit added and a later one drops needs no confirmation.
 	 * @return array{tree: array<int, mixed>, warnings: array<int, string>}|WP_Error New tree and warnings, or an error.
 	 * @since 1.6.0
 	 */
-	private function apply_operation( array $tree, array $args, int $post_id ): array|WP_Error {
+	private function apply_operation( array $tree, array $args, int $post_id, string $stored ): array|WP_Error {
 		$result_tree = $this->apply( new BlockTreeEditor(), $tree, $args );
 		if ( is_wp_error( $result_tree ) ) {
 			return $result_tree;
@@ -251,7 +261,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 
 		$changed = $this->can_edit( $post_id ) ? $this->changed_markup( $tree, $result_tree, $args ) : null;
 		if ( $changed !== null ) {
-			$dropped = MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args );
+			$dropped = MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args, $stored );
 			if ( $dropped instanceof WP_Error ) {
 				return $dropped;
 			}
@@ -300,6 +310,19 @@ abstract class AbstractBlockEdit extends BaseAbility {
 			),
 			$data
 		);
+	}
+
+	/**
+	 * Prefix a message with the item of `edits` it belongs to.
+	 *
+	 * @param int    $index   Zero-based position in `edits`.
+	 * @param string $message The message.
+	 * @return string
+	 * @since 1.6.0
+	 */
+	private function name_edit( int $index, string $message ): string {
+		/* translators: 1: zero-based position in the edits list, 2: a message about that edit. */
+		return sprintf( __( 'edits[%1$d]: %2$s', 'albert-ai-butler' ), $index, $message );
 	}
 
 	/**

@@ -808,20 +808,28 @@ class BlockEditAbilityTest extends TestCase {
 		$this->assertSame( [], $this->write_calls() );
 	}
 
-	public function test_an_edit_without_path_or_edits_is_refused(): void {
+	public function test_a_tag_an_earlier_edit_added_can_be_dropped_without_confirmation(): void {
 		$this->set_post( 7, $this->three_paragraphs() );
 		$this->queue_write_success();
 
 		$result = ( new EditPostBlock() )->execute(
 			[
 				'id'    => 7,
-				'block' => $this->paragraph( 'Where?' ),
+				'edits' => [
+					[
+						'path'  => [ 0 ],
+						'block' => $this->paragraph( 'Buy <ta href="https://example.com">here</ta>.' ),
+					],
+					[
+						'path'  => [ 0 ],
+						'block' => $this->paragraph( 'Plain' ),
+					],
+				],
 			]
 		);
 
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'path_required', $result->get_error_code() );
-		$this->assertSame( [], $this->write_calls() );
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $this->write_calls() );
 	}
 
 	public function test_edit_page_block_takes_edits(): void {

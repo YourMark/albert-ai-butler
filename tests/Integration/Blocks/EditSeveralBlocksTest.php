@@ -232,7 +232,7 @@ class EditSeveralBlocksTest extends TestCase {
 	}
 
 	/**
-	 * The registered schema accepts `edits` and refuses an item without a block.
+	 * The schema takes `path` and `block`, or `edits`, and refuses a call or item without a block.
 	 *
 	 * @return void
 	 */
@@ -255,6 +255,17 @@ class EditSeveralBlocksTest extends TestCase {
 		];
 
 		$this->assertTrue( rest_validate_value_from_schema( $valid, $schema, 'input' ) );
+
+		$single = [
+			'id'    => 1,
+			'path'  => [ 0 ],
+			'block' => $this->paragraph( 'A' ),
+		];
+		$this->assertTrue( rest_validate_value_from_schema( $single, $schema, 'input' ) );
+
+		unset( $single['block'] );
+		$this->assertInstanceOf( WP_Error::class, rest_validate_value_from_schema( $single, $schema, 'input' ) );
+		$this->assertInstanceOf( WP_Error::class, rest_validate_value_from_schema( [ 'id' => 1 ], $schema, 'input' ) );
 
 		unset( $valid['edits'][0]['block'] );
 		$this->assertInstanceOf( WP_Error::class, rest_validate_value_from_schema( $valid, $schema, 'input' ) );

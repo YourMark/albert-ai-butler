@@ -37,14 +37,6 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 	private const KEEP_CHILDREN_NOTE = 'Omit innerBlocks to keep the target block\'s existing inner blocks (e.g. to change only a group\'s attributes); send innerBlocks to replace them, or [] to remove them.';
 
 	/**
-	 * Input key for several edits saved as one change.
-	 *
-	 * @var string
-	 * @since 1.6.0
-	 */
-	private const EDITS = 'edits';
-
-	/**
 	 * Build the input schema for the edit operation.
 	 *
 	 * @return array<string, mixed> Input JSON schema.
@@ -61,11 +53,21 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 		$properties['path']['description']  .= ' Required unless you send `edits`.';
 		$properties['block']['description'] .= ' Required unless you send `edits`.';
 
-		// `path` and `block` are required only without `edits`; operations() enforces it.
 		return [
-			'type'       => 'object',
-			'properties' => $properties,
-			'required'   => [ 'id' ],
+			'type'        => 'object',
+			'description' => 'Send `path` and `block` for one edit, or `edits` for several.',
+			'properties'  => $properties,
+			'required'    => [ 'id' ],
+			'anyOf'       => [
+				[
+					'type'     => 'object',
+					'required' => [ 'path', 'block' ],
+				],
+				[
+					'type'     => 'object',
+					'required' => [ self::EDITS ],
+				],
+			],
 		];
 	}
 
@@ -115,19 +117,11 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 	 */
 	protected function operations( array $args ): array|WP_Error {
 		if ( ! array_key_exists( self::EDITS, $args ) ) {
-			if ( ! array_key_exists( 'path', $args ) ) {
-				return new WP_Error(
-					'path_required',
-					__( 'Send `path` and `block` for one edit, or `edits` for several.', 'albert-ai-butler' ),
-					[ 'status' => 400 ]
-				);
-			}
-
 			return [ $args ];
 		}
 
-		$mixed = array_intersect( [ 'path', 'block', 'expect' ], array_keys( $args ) );
-		if ( $mixed !== [] ) {
+		// The schema can't say "not with": sending both shapes would apply one and ignore the other.
+		if ( array_intersect( [ 'path', 'block', 'expect' ], array_keys( $args ) ) !== [] ) {
 			return new WP_Error(
 				'edits_with_single_edit',
 				__( 'Send either `edits` or `path`, `block` and `expect`, not both. Put every edit in `edits`. Nothing was saved.', 'albert-ai-butler' ),
@@ -135,33 +129,9 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 			);
 		}
 
-		$edits = $args[ self::EDITS ];
-		if ( ! is_array( $edits ) || $edits === [] ) {
-			return new WP_Error(
-				'edits_empty',
-				__( '`edits` must list at least one edit. Nothing was saved.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		$operations = [];
-		foreach ( array_values( $edits ) as $index => $edit ) {
-			if ( ! is_array( $edit ) || ! array_key_exists( 'path', $edit ) ) {
-				return new WP_Error(
-					'path_required',
-					sprintf(
-						/* translators: %d: zero-based position in the edits list. */
-						__( 'edits[%d] needs a `path` and a `block`. Nothing was saved.', 'albert-ai-butler' ),
-						$index
-					),
-					[
-						'status'     => 400,
-						'edit_index' => $index,
-					]
-				);
-			}
-
-			$operation = array_intersect_key( $edit, array_flip( [ 'path', 'block', 'expect' ] ) );
+		foreach ( (array) $args[ self::EDITS ] as $edit ) {
+			$operation = array_intersect_key( (array) $edit, array_flip( [ 'path', 'block', 'expect' ] ) );
 			if ( array_key_exists( MarkupTags::INPUT, $args ) ) {
 				$operation[ MarkupTags::INPUT ] = $args[ MarkupTags::INPUT ];
 			}
