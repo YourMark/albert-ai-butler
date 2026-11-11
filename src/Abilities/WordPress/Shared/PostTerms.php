@@ -3,11 +3,11 @@
  * Categories and tags of a post, for the view abilities.
  *
  * @package Albert
- * @subpackage Abilities\WordPress
+ * @subpackage Abilities\WordPress\Shared
  * @since      1.6.0
  */
 
-namespace Albert\Abilities\WordPress;
+namespace Albert\Abilities\WordPress\Shared;
 
 use WP_Post;
 

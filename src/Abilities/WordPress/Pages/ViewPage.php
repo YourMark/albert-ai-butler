@@ -9,7 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
-use Albert\Abilities\WordPress\PostTerms;
+use Albert\Abilities\WordPress\Shared\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
