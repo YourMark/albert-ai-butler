@@ -19,7 +19,8 @@ namespace Albert\Core;
  *
  * - **Read**: `readonly: true, destructive: false`, only reads data.
  * - **Write**: `readonly: false, destructive: false`, creates or updates data.
- * - **Delete**: `readonly: false, destructive: true`, permanently removes data.
+ * - **Destructive**: `readonly: false, destructive: true`, removes or overwrites
+ *   data beyond recovery, or has a wide impact. Not only deletes.
  *
  * Every factory takes an optional `instructions` string. It is the guidance that
  * only matters once a model is about to call this particular ability: the
@@ -97,7 +98,7 @@ class Annotations {
 	}
 
 	/**
-	 * Delete ability (e.g. Delete Post, Delete Term).
+	 * Delete ability (e.g. Delete Post, Delete Term). The same preset as {@see self::destructive()}.
 	 *
 	 * @since 1.0.0
 	 *
@@ -113,6 +114,19 @@ class Annotations {
 			],
 			$instructions
 		);
+	}
+
+	/**
+	 * A write that may not be recoverable, or reaches far (e.g. Remove Block, Update User).
+	 *
+	 * @since 1.6.0
+	 *
+	 * @param string $instructions Optional guidance, surfaced through `get-ability-info`.
+	 *
+	 * @return array{readonly: bool, destructive: bool, instructions?: string}
+	 */
+	public static function destructive( string $instructions = '' ): array {
+		return self::delete( $instructions );
 	}
 
 	/**

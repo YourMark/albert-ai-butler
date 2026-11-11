@@ -1,7 +1,7 @@
 # Albert
 
 ![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.1+-blue)
-![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-6.9+-blue)
+![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-7.1+-blue)
 ![Tested up to](https://img.shields.io/badge/Tested%20up%20to-7.1-blue)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
 
@@ -9,7 +9,7 @@
 
 ## Safe by default
 
-- **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request. Needs WordPress 7.1.
+- **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request.
 - **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 - **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 - **No tracking.** Albert sends nothing about your site or your usage anywhere.
@@ -94,7 +94,7 @@ What an assistant can do with each plugin is decided by that plugin. Albert adds
 
 ## Requirements
 
-- **WordPress**: 6.9 or higher
+- **WordPress**: 7.1 or higher
 - **PHP**: 8.1 or higher (8.3+ recommended)
 - **WooCommerce**: 11.0 or higher (if WooCommerce integration is used)
 - **MySQL**: 8.0+ or MariaDB 10.5+
@@ -175,8 +175,17 @@ Website: https://yourmark.nl
 
 ### 1.6.0
 
+**Features**
+
+- **Abilities that stay on for your staging site.** A setting in your site's code can switch abilities on for assistants on a staging, development or local copy of your site, without changing the switches on the Abilities screen. Copying your live site over a staging copy no longer turns everything back off. You choose to switch on every ability, or every ability that is not marked Destructive; your live site keeps using its own switches. Safe mode still holds what it would hold, and the Abilities screen says when such a setting is in use.
+- **Schedule posts and set their details.** Your assistant can now schedule a post or page to publish later, and set its address (slug), author, parent page, page order, template, whether comments are open, whether a post stays at the top of the blog, and its post format. If a request would not work, such as an author who cannot edit that content or a template your theme does not offer, Albert refuses it and says what to send instead.
+- **Fill in missing alt text.** Your assistant can now find the images in your media library that have no alt text, and write the alt text, title, caption and description of any media file. It can also delete a media file; deleting is permanent, so safe mode holds it for your approval. Both new tools are off until you switch them on, and the Dashboard then suggests asking which images are missing alt text.
+
 **Improvements**
 
+- Albert now requires WordPress 7.1. Safe mode depends on it, so it now works on every site Albert runs on, and the notices saying safe mode could not hold anything are gone. Update WordPress before you update Albert.
+- The Abilities screen now sorts abilities into Read, Write and Destructive. Destructive means an ability can remove or overwrite something in a way that may not be recoverable, or has a wide reach, not only that it deletes. Removing a block from a post or page, and creating or changing users, are now marked Destructive.
+- Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 - When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
 - When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
 
@@ -188,9 +197,12 @@ Website: https://yourmark.nl
 
 **Developer**
 
-- Block markup sent in `content` is stored as sent, and is now checked against the allowed blocks, as `blocks` already was.
-- A `blocks` write with an attribute Albert cannot write into the block's HTML now fails with `block_validation_failed` naming the attribute, for example `textAlign` on a heading in WordPress 7.x. Comment-only attributes (`lock`, `metadata`, `layout`, `templateLock`, `allowedBlocks`) are accepted.
-- `html` works on every block as its saved inner markup, and nested block markup in it becomes inner blocks. Sending `html` together with `innerBlocks` is an error.
+- New constant `ALBERT_ENVIRONMENT_ABILITIES` (environment type => `toggles`, `read-write` or `all`) and filter `albert/abilities/environment_policy`. The environment comes from `wp_get_environment_type()`, so Bedrock's `WP_ENV` works. An unknown policy is ignored with a `_doing_it_wrong()` notice.
+- New `Annotations::destructive()` preset. `albert/remove-post-block`, `albert/remove-page-block`, `albert/create-user` and `albert/update-user` are annotated `destructive: true`, and abilities on `albert/safe_mode/high_risk_abilities` show as Destructive. The ability row's `operation` value `delete` is now `destructive`, and the badge class `albert-op-badge--delete` is now `albert-op-badge--destructive`.
+- `albert/create-post` and `albert/update-post` accept `slug`, `date`, `author`, `template`, `comment_status`, `sticky` and `format`. `albert/create-page` and `albert/update-page` accept `slug`, `date`, `author`, `parent`, `menu_order`, `template` and `comment_status`. A future `date` with status `publish` schedules the post. All four return the saved `slug` and `date`.
+- `albert/view-post` now returns `template`, `comment_status`, `sticky` and `format`; `albert/view-page` returns `template` and `comment_status`.
+- New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
+- Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 - `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
 
 ### 1.5.0

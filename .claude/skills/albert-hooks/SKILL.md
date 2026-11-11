@@ -11,7 +11,7 @@ Albert provides hooks for addon plugins or themes to register custom abilities, 
 
 ### Registering Custom Abilities (`albert/abilities/register`)
 
-**Action**: Fires after built-in abilities are registered on the `init` hook. Addons (or themes via `functions.php`) hook here to register their own abilities by extending `BaseAbility` directly, the same pattern built-in abilities use.
+**Action**: Fires after built-in abilities are added to the manager, on `wp_abilities_api_init` (since 1.6.0; `init` before). A request that never reads the abilities registry, such as a plain frontend view, never fires it. Addons (or themes via `functions.php`) hook here to register their own abilities by extending `BaseAbility` directly, the same pattern built-in abilities use.
 
 ```php
 // In an addon plugin or theme functions.php:
@@ -22,9 +22,9 @@ add_action( 'albert/abilities/register', function ( $manager ) {
 
 The `$manager` parameter is the `AbilitiesManager` instance. Custom abilities extend `Albert\Abstracts\BaseAbility` and implement `execute()` and `check_permission()`. They flow through the same admin UI, enabled/disabled toggle, and `guarded_execute()` pipeline as built-in abilities.
 
-This works from any context that loads before `init`:
+This works from any context that adds the callback before the Abilities API initialises (at the earliest, during `init`):
 - **Addon plugins**: The recommended approach for distributing abilities.
-- **Theme `functions.php`**: Works because themes load before the `init` hook fires.
+- **Theme `functions.php`**: Works because themes load before `init`.
 - **Must-use plugins**: Also supported.
 
 ### Execution Hooks
@@ -95,6 +95,7 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/context/skills` | filter | The skills index entries, after preconditions have been applied |
 | `albert/skills/registry` | filter | Register a skill: `slug`, `summary`, and either `file` or `body`, plus optional `requires` / `when` preconditions |
 | `albert/abilities/payload_row` | filter | Augment a normalized ability row before it reaches the Abilities screen (e.g. append `badges`). Fires on both the bulk build and single-row paths. See `docs/extending-the-abilities-screen.md` |
+| `albert/abilities/environment_policy` | filter | `( string $policy, string $environment )`, @since 1.6.0. The ability policy for this site's `WP_ENVIRONMENT_TYPE`: `toggles` (default), `read-write` (switch on every ability that declares itself read or write, not destructive) or `all`. Widens `AbilitiesState::effective()` without writing the toggles; safe mode still holds. Not called when the `ALBERT_ENVIRONMENT_ABILITIES` constant (environment type => policy) names this environment. The environment comes from `wp_get_environment_type()`, so Bedrock's `WP_ENV` works, and a value outside core's four types reads as `production`. An unknown policy from either source is ignored with a `_doing_it_wrong()` |
 | `albert/abilities/required_capability` | filter | Override the best-effort capability shown on the Abilities screen |
 | `albert/abilities/before_execute` | action | Before any ability runs |
 | `BaseAbility::$sensitive_output_keys` | property | Not a hook, but part of the ability contract (1.4.0). Top-level result keys holding a credential. The caller receives them intact; every `after_execute` observer is handed a copy with them replaced by `[redacted]`. Observers are loggers (Albert's own writes a DB row, Premium captures the whole success payload), so a short-lived secret would otherwise outlive its own expiry in plaintext. Masks rather than drops, so a log still records the field was returned. Top-level keys only |
@@ -104,6 +105,7 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/abilities/invoked` | action | Relayed from WP 7.1's `wp_ability_invoked`. Fires for EVERY invocation whatever the outcome (denied, invalid, short-circuited) and for abilities Albert does not own, which is wider than `after_execute` can see. Inert below 7.1; ask `WpCompat::supports_execution_lifecycle()`. Observer Throwables are swallowed |
 | `albert/safe_mode/high_risk_abilities` | filter | Ability ids safe mode always holds, whatever their annotation. Add-ons append their own high-risk surface |
 | `albert/safe_mode/exempt_abilities` | filter | Ability ids safe mode never holds. Wins over the high-risk list: naming an ability here is a statement about *this* site, where the risk list is a general default. A filter and not a checkbox on purpose, a deliberate act by somebody who went looking beats a click next to the thing protecting them. Excuses staging only: permissions still run and `ConnectionGuard` still refuses control-option writes |
+| `albert/safe_mode/should_hold` | filter | `( bool $hold, string $ability, array $input, int $user_id )`, since 1.6.0. Hold a call on its input, after Albert's annotation and risk axes have decided. Can add a hold, never release one: the result is OR-ed with Albert's own decision. Not called when safe mode is off or the ability is exempt |
 | `albert/safe_mode/high_risk_options` | filter | Option names treated as high-risk to *write*, so the call is held for approval. Distinct from `protected_options`, which are refused outright |
 | `albert/safe_mode/protected_options` | filter | Albert's own gate-controlling options, refused over a connection rather than held. Approving "turn safe mode off" is self-defeating, so there is no coherent way to consent to it |
 | `albert/safe_mode/retention_days` | filter | How long a decided action is kept before deletion (default 30). These rows hold each call's captured input, so keeping them forever keeps request payloads in every backup |
@@ -143,13 +145,15 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 
 ## Admin asset and menu contracts (1.4.0+)
 
-Add-ons that render a screen under the Albert menu depend on two published
-handles and one set of constants. All three are part of the public contract.
+Add-ons that render a screen under the Albert menu, or extend one, depend on
+these published handles and constants. All are part of the public contract.
 
 | Handle / constant | What it is |
 |---|---|
 | `albert-tokens` (`Admin\Assets::TOKENS_HANDLE`) | The design tokens. Colour, spacing, type, radius, motion. |
 | `albert-primitives` (`Admin\Assets::PRIMITIVES_HANDLE`) | The shared components. Depends on the tokens, so naming this one alone is enough. |
+| `albert-abilities-app`, `albert-skills-app`, `albert-context-app` | Each React screen's script. Depend on `albert-abilities-app` to run before the Abilities screen renders (the JS seams below). |
+| `albert-dataviews` (`Admin\Assets::DATAVIEWS_HANDLE`, 1.6.0+) | Script and stylesheet: the one shared @wordpress/dataviews build, loaded ahead of the Abilities and Skills scripts. The script is a chunk of Albert's webpack build that runs only under the `albert-runtime` script, so an add-on cannot import DataViews from it; depend on the screen script instead. The stylesheet handle predates 1.6.0. |
 | `Admin\Menu::POSITION_*` | `admin_menu` priorities that fix submenu order. Add-ons use `POSITION_ADDONS` or later so a future core screen cannot be pushed below third-party entries. |
 
 ```php

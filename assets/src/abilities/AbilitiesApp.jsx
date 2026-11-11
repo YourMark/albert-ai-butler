@@ -36,6 +36,8 @@ import { viewFromUrl, syncViewToUrl, openIdFromUrl } from './url';
 import Toolbar from './Toolbar';
 import useNarrowLayout from '../shared/useNarrowLayout';
 import FlyInPanel from './FlyInPanel';
+import PolicyNotice from './PolicyNotice';
+import InfoPopover from '../shared/InfoPopover';
 
 const DEFAULT_VIEW = {
 	type: 'table',
@@ -77,6 +79,7 @@ export default function AbilitiesApp() {
 	const [ categories, setCategories ] = useState( [] );
 	const [ sources, setSources ] = useState( [] );
 	const [ roles, setRoles ] = useState( [] );
+	const [ policy, setPolicy ] = useState( null );
 	// Initialise from the URL so a shared/bookmarked link opens pre-filtered.
 	const [ view, setView ] = useState( () => viewFromUrl( DEFAULT_VIEW ) );
 
@@ -117,6 +120,7 @@ export default function AbilitiesApp() {
 				setCategories( payload.categories );
 				setSources( payload.sources );
 				setRoles( payload.roles || [] );
+				setPolicy( payload.policy || null );
 			} )
 			.catch(
 				( err ) => active && setError( err.message || String( err ) )
@@ -289,6 +293,11 @@ export default function AbilitiesApp() {
 
 	const onCloseFlyIn = useCallback( () => setOpenId( null ), [] );
 
+	const hasUndeclared = useMemo(
+		() => items.some( ( item ) => item.operation === 'undeclared' ),
+		[ items ]
+	);
+
 	const enabledCount = useMemo(
 		() => items.filter( ( item ) => item.enabled ).length,
 		[ items ]
@@ -323,9 +332,28 @@ export default function AbilitiesApp() {
 					</h1>
 					<p className="albert-page__description">
 						{ __(
-							'Capabilities exposed to apps and agents through the WordPress Abilities API. Enable an ability to make it callable, or open one to review its schema and permissions.',
+							'Choose which abilities are available through Albert’s MCP endpoint. Open an ability to review its schema and permissions.',
 							'albert-ai-butler'
-						) }
+						) }{ ' ' }
+						<InfoPopover
+							label={ __(
+								'About what these switches change',
+								'albert-ai-butler'
+							) }
+						>
+							<p>
+								{ __(
+									'A switched-off ability is left out of Albert’s MCP endpoint, and refused there if an assistant calls it anyway.',
+									'albert-ai-butler'
+								) }
+							</p>
+							<p>
+								{ __(
+									'The ability stays registered in WordPress. Other plugins, the MCP Adapter default server and other MCP servers on this site can still use it.',
+									'albert-ai-butler'
+								) }
+							</p>
+						</InfoPopover>
 					</p>
 				</div>
 			</header>
@@ -354,6 +382,8 @@ export default function AbilitiesApp() {
 			 * actions that change those counts on the right, sharing the list's
 			 * own measure.
 			 */ }
+			<PolicyNotice policy={ policy } hidden={ !! openItem } />
+
 			{ ! isLoading && (
 				<div
 					className="albert-abilities__summary-row"
@@ -432,6 +462,7 @@ export default function AbilitiesApp() {
 							categories={ categories }
 							sources={ sources }
 							badges={ badges }
+							hasUndeclared={ hasUndeclared }
 						/>
 						{ selection.length > 0 && (
 							<div className="albert-abilities__bulkbar">
@@ -470,7 +501,7 @@ export default function AbilitiesApp() {
 								'albert-ai-butler'
 						  )
 						: __(
-								'Disable every ability? Apps and agents won’t be able to call any ability until you re-enable them.',
+								'Disable every ability? None will be available through Albert’s MCP endpoint until you enable them again.',
 								'albert-ai-butler'
 						  ) }
 				</ConfirmDialog>

@@ -1469,8 +1469,8 @@ class Dashboard implements Hookable {
 		// off" link, which only appears when the two numbers differ.
 		$manager = Plugin::get_instance()->get_abilities_manager();
 
-		// Nullable until abilities are registered on `init`. This screen renders
-		// long after that, so the guard is belt and braces. But a dashboard
+		// Null only before `init`, long before this screen renders, so the
+		// guard is belt and braces. But a dashboard
 		// that fatals rather than showing one fewer figure is the worse trade,
 		// and PHPStan does not report nullable method calls below level 8.
 		if ( $manager === null ) {
@@ -1659,13 +1659,11 @@ class Dashboard implements Hookable {
 	/**
 	 * Resolve a logged ability slug to its human-readable label.
 	 *
-	 * Prefers the in-memory abilities manager, whose label data is populated
-	 * during bootstrap and is therefore available even on this admin page,
-	 * where the WordPress Abilities API registry is not yet populated and
-	 * calling wp_get_ability() would emit PHP notices. Abilities the manager
-	 * does not hold (e.g. third-party abilities registered directly with
-	 * WordPress) fall back to {@see AbilitiesRegistry::label_for()}, which
-	 * itself prettifies the slug when the Abilities API is unavailable.
+	 * Prefers the abilities manager, which also holds abilities unregistered
+	 * from WordPress. Abilities it does not hold (e.g. third-party abilities
+	 * registered directly with WordPress) fall back to
+	 * {@see AbilitiesRegistry::label_for()}, which prettifies the slug when the
+	 * Abilities API is unavailable.
 	 *
 	 * @param string $slug Ability slug, e.g. `albert/find-posts`.
 	 *

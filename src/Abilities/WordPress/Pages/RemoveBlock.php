@@ -40,7 +40,7 @@ class RemoveBlock extends AbstractRemoveBlock {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::update(
+			'annotations' => Annotations::destructive(
 				'Address the block by `path` from a fresh `albert/view-page` read with `"format": '
 				. '["blocks"]`, and pass `expect` set to the block name you read there, without it, a page '
 				. 'that changed since your read means you delete the wrong block. Every op returns the '

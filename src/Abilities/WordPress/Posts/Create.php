@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+use Albert\Abilities\WordPress\PostFields;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
@@ -64,48 +65,50 @@ class Create extends BaseAbility {
 		// Get all available post statuses dynamically.
 		$post_statuses = array_keys( get_post_statuses() );
 
+		$properties = [
+			'title'      => [
+				'type'        => 'string',
+				'description' => 'The post title',
+			],
+			'content'    => [
+				'type'        => 'string',
+				'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
+				'default'     => '',
+			],
+			'blocks'     => [
+				'type'        => 'array',
+				'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'items'       => BlockSpecSchema::spec(),
+				'default'     => [],
+			],
+			'status'     => [
+				'type'        => 'string',
+				'enum'        => $post_statuses,
+				'description' => 'Post status',
+				'default'     => 'draft',
+			],
+			'excerpt'    => [
+				'type'        => 'string',
+				'description' => 'Optional post excerpt',
+				'default'     => '',
+			],
+			'categories' => [
+				'type'        => 'array',
+				'items'       => [ 'type' => 'integer' ],
+				'description' => 'Array of category IDs',
+				'default'     => [],
+			],
+			'tags'       => [
+				'type'        => 'array',
+				'items'       => [ 'type' => 'string' ],
+				'description' => 'Array of tag names',
+				'default'     => [],
+			],
+		];
+
 		return [
 			'type'       => 'object',
-			'properties' => [
-				'title'      => [
-					'type'        => 'string',
-					'description' => 'The post title',
-				],
-				'content'    => [
-					'type'        => 'string',
-					'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
-					'default'     => '',
-				],
-				'blocks'     => [
-					'type'        => 'array',
-					'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
-					'items'       => BlockSpecSchema::spec(),
-					'default'     => [],
-				],
-				'status'     => [
-					'type'        => 'string',
-					'enum'        => $post_statuses,
-					'description' => 'Post status',
-					'default'     => 'draft',
-				],
-				'excerpt'    => [
-					'type'        => 'string',
-					'description' => 'Optional post excerpt',
-					'default'     => '',
-				],
-				'categories' => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'integer' ],
-					'description' => 'Array of category IDs',
-					'default'     => [],
-				],
-				'tags'       => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'string' ],
-					'description' => 'Array of tag names',
-					'default'     => [],
-				],
-			],
+			'properties' => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ),
 			'required'   => [ 'title' ],
 		];
 	}
@@ -125,6 +128,14 @@ class Create extends BaseAbility {
 				'status'       => [ 'type' => 'string' ],
 				'permalink'    => [ 'type' => 'string' ],
 				'edit_url'     => [ 'type' => 'string' ],
+				'slug'         => [
+					'type'        => 'string',
+					'description' => 'The slug that was saved, which may carry a number WordPress added to keep it unique.',
+				],
+				'date'         => [
+					'type'        => 'string',
+					'description' => 'The publish date in the site\'s timezone. With status "future" this is when it will be published.',
+				],
 				'block_issues' => [
 					'type'        => 'array',
 					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the post is not created.',
@@ -159,11 +170,18 @@ class Create extends BaseAbility {
 	 *     @type string $excerpt    Post excerpt.
 	 *     @type array  $categories Category IDs.
 	 *     @type array  $tags       Tag names.
+	 *
+	 *     Plus the fields in PostFields::POST.
 	 * }
 	 * @return array<string, mixed>|WP_Error Post data on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
+		$fields = PostFields::to_rest( $args, PostFields::POST, 'post' );
+		if ( is_wp_error( $fields ) ) {
+			return $fields;
+		}
+
 		// Resolve the content to store from the content/blocks input (classic
 		// rejection, block serialization, allowed-block enforcement, issues).
 		$resolved = ( new WriteContentResolver() )->resolve( $args, 'post' );
@@ -179,7 +197,7 @@ class Create extends BaseAbility {
 			'content' => $resolved['content'],
 			'status'  => sanitize_key( $args['status'] ?? 'draft' ),
 			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
-		];
+		] + $fields;
 
 		// Add categories if provided.
 		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
@@ -224,7 +242,7 @@ class Create extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while creating the post.', 'albert-ai-butler' ),
+				self::rest_error_message( $data ) ?? __( 'An error occurred while creating the post.', 'albert-ai-butler' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
@@ -236,6 +254,8 @@ class Create extends BaseAbility {
 			'status'    => $data['status'],
 			'permalink' => $data['link'] ?? get_permalink( $data['id'] ),
 			'edit_url'  => admin_url( 'post.php?post=' . $data['id'] . '&action=edit' ),
+			'slug'      => $data['slug'] ?? '',
+			'date'      => $data['date'] ?? '',
 		];
 
 		if ( ! empty( $block_issues ) ) {
