@@ -5,7 +5,7 @@
  * Operation base for the "edit one block" ability (posts + pages). Replaces the
  * block at `path` with the submitted block spec, keeping the target's inner
  * blocks when the spec omits `innerBlocks`; all other blocks are preserved
- * byte-for-byte.
+ * byte-for-byte. `edits` applies several such edits in order and saves once.
  *
  * @package    Albert
  * @subpackage Abstracts
@@ -14,6 +14,7 @@
 
 namespace Albert\Abstracts;
 
+use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\BlockTreeEditor;
 use Albert\Blocks\MarkupTags;
 use WP_Error;
@@ -47,12 +48,98 @@ abstract class AbstractEditBlock extends AbstractBlockEdit {
 
 		$properties['block']['description'] = trim( ( $properties['block']['description'] ?? '' ) . ' ' . self::KEEP_CHILDREN_NOTE );
 		$properties[ MarkupTags::INPUT ]    = MarkupTags::input_schema();
+		$properties[ self::EDITS ]          = $this->edits_property( $properties );
+
+		$properties['path']['description']  .= ' Required unless you send `edits`.';
+		$properties['block']['description'] .= ' Required unless you send `edits`.';
 
 		return [
-			'type'       => 'object',
-			'properties' => $properties,
-			'required'   => [ 'id', 'path', 'block' ],
+			'type'        => 'object',
+			'description' => 'Send `path` and `block` for one edit, or `edits` for several.',
+			'properties'  => $properties,
+			'required'    => [ 'id' ],
+			'anyOf'       => [
+				[
+					'type'     => 'object',
+					'required' => [ 'path', 'block' ],
+				],
+				[
+					'type'     => 'object',
+					'required' => [ self::EDITS ],
+				],
+			],
 		];
+	}
+
+	/**
+	 * The `edits` list: several edits of one post, saved as one revision.
+	 *
+	 * Each item's `block` is validated by the same spec but carries no
+	 * descriptions; the top-level `block` already explains it.
+	 *
+	 * @param array<string, array<string, mixed>> $properties The single-edit properties.
+	 * @return array<string, mixed> The `edits` property schema.
+	 * @since 1.6.0
+	 */
+	private function edits_property( array $properties ): array {
+		$block                = BlockSpecSchema::spec( BlockSpecSchema::MAX_DEPTH, false );
+		$block['description'] = 'Same as the top-level `block`.';
+
+		return [
+			'type'        => 'array',
+			'minItems'    => 1,
+			'description' => 'Optional. Several edits to this post, saved once as one revision. Use it instead of `path`, `block` and `expect` when you change more than one block. Each item takes those three, applied in order: each path points into the tree as the earlier edits left it. If one edit fails, nothing is saved and the error names it as edits[index]. `remove_tags` covers every edit.',
+			'items'       => [
+				'type'       => 'object',
+				'properties' => [
+					'path'   => [
+						'type'        => 'array',
+						'items'       => $properties['path']['items'],
+						'description' => 'Same as the top-level `path`, read against the tree after the earlier edits.',
+					],
+					'block'  => $block,
+					'expect' => [
+						'type'        => 'string',
+						'description' => 'Same as the top-level `expect`.',
+					],
+				],
+				'required'   => [ 'path', 'block' ],
+			],
+		];
+	}
+
+	/**
+	 * One operation for `path`/`block`, or one per item of `edits`.
+	 *
+	 * @param array<string, mixed> $args Ability input.
+	 * @return array<int, array<string, mixed>>|WP_Error Operation inputs, or an error.
+	 * @since 1.6.0
+	 */
+	protected function operations( array $args ): array|WP_Error {
+		if ( ! array_key_exists( self::EDITS, $args ) ) {
+			return [ $args ];
+		}
+
+		// The schema can't say "not with": sending both shapes would apply one and ignore the other.
+		if ( array_intersect( [ 'path', 'block', 'expect' ], array_keys( $args ) ) !== [] ) {
+			return new WP_Error(
+				'edits_with_single_edit',
+				__( 'Send either `edits` or `path`, `block` and `expect`, not both. Put every edit in `edits`. Nothing was saved.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		$operations = [];
+		foreach ( (array) $args[ self::EDITS ] as $edit ) {
+			$operation = array_intersect_key( (array) $edit, array_flip( [ 'path', 'block', 'expect' ] ) );
+			if ( array_key_exists( MarkupTags::INPUT, $args ) ) {
+				$operation[ MarkupTags::INPUT ] = $args[ MarkupTags::INPUT ];
+			}
+
+			$operations[] = $operation;
+		}
+
+		return $operations;
 	}
 
 	/**

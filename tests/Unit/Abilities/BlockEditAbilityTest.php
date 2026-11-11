@@ -619,4 +619,243 @@ class BlockEditAbilityTest extends TestCase {
 		$calls = $this->write_calls();
 		$this->assertSame( '/wp/v2/pages/12', $calls[0]['route'] );
 	}
+
+	/**
+	 * A paragraph spec.
+	 *
+	 * @param string $content Paragraph text.
+	 * @return array<string, mixed>
+	 */
+	private function paragraph( string $content ): array {
+		return [
+			'name'       => 'core/paragraph',
+			'attributes' => [ 'content' => $content ],
+		];
+	}
+
+	public function test_edits_apply_in_order_and_save_once(): void {
+		$this->set_post( 7, $this->three_paragraphs() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'edits' => [
+					[
+						'path'   => [ 0 ],
+						'expect' => 'core/paragraph',
+						'block'  => $this->paragraph( 'First' ),
+					],
+					[
+						'path'  => [ 2 ],
+						'block' => $this->paragraph( 'Third' ),
+					],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+
+		$calls = $this->write_calls();
+		$this->assertCount( 1, $calls, 'Several edits save once.' );
+		$this->assertStringContainsString( '<p>First</p>', $calls[0]['content'] );
+		$this->assertStringContainsString( '<p>Two</p>', $calls[0]['content'] );
+		$this->assertStringContainsString( '<p>Third</p>', $calls[0]['content'] );
+		$this->assertStringNotContainsString( '<p>One</p>', $calls[0]['content'] );
+	}
+
+	public function test_edits_paths_resolve_against_the_tree_the_earlier_edits_left(): void {
+		$this->set_post( 7, $this->three_paragraphs() );
+		$this->queue_write_success();
+
+		// [0, 0] exists only once the first edit has turned [0] into a group.
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'edits' => [
+					[
+						'path'  => [ 0 ],
+						'block' => [
+							'name'        => 'core/group',
+							'innerBlocks' => [ $this->paragraph( 'Inside' ) ],
+						],
+					],
+					[
+						'path'   => [ 0, 0 ],
+						'expect' => 'core/paragraph',
+						'block'  => $this->paragraph( 'Changed inside' ),
+					],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+
+		$content = $this->write_calls()[0]['content'];
+		$this->assertStringContainsString( '<p>Changed inside</p>', $content );
+		$this->assertStringNotContainsString( '<p>Inside</p>', $content );
+	}
+
+	public function test_a_failing_edit_saves_nothing_and_names_its_index(): void {
+		$this->set_post( 7, $this->three_paragraphs() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'edits' => [
+					[
+						'path'  => [ 0 ],
+						'block' => $this->paragraph( 'First' ),
+					],
+					[
+						'path'   => [ 1 ],
+						'expect' => 'core/heading',
+						'block'  => $this->paragraph( 'Second' ),
+					],
+					[
+						'path'  => [ 2 ],
+						'block' => $this->paragraph( 'Third' ),
+					],
+				],
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'block_path_mismatch', $result->get_error_code() );
+		$this->assertStringStartsWith( 'edits[1] failed, so nothing was saved:', $result->get_error_message() );
+		$this->assertSame( 1, $result->get_error_data()['edit_index'] );
+		$this->assertSame( [], $this->write_calls() );
+	}
+
+	public function test_an_edit_with_a_disallowed_block_saves_nothing(): void {
+		$this->set_post( 7, $this->three_paragraphs() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'edits' => [
+					[
+						'path'  => [ 0 ],
+						'block' => $this->paragraph( 'First' ),
+					],
+					[
+						'path'  => [ 1 ],
+						'block' => [ 'name' => 'core/hero' ],
+					],
+				],
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'block_validation_failed', $result->get_error_code() );
+		$this->assertSame( 1, $result->get_error_data()['edit_index'] );
+		$this->assertSame( [], $this->write_calls() );
+	}
+
+	public function test_an_edit_that_drops_a_tag_needs_remove_tags(): void {
+		$this->set_post( 7, $this->paragraph_with_ta() );
+		$this->queue_write_success();
+
+		$args = [
+			'id'    => 7,
+			'edits' => [
+				[
+					'path'  => [ 0 ],
+					'block' => $this->paragraph( 'First' ),
+				],
+				[
+					'path'  => [ 1 ],
+					'block' => $this->paragraph( 'Buy here.' ),
+				],
+			],
+		];
+
+		$refused = ( new EditPostBlock() )->execute( $args );
+
+		$this->assertInstanceOf( WP_Error::class, $refused );
+		$this->assertSame( 'tags_removed', $refused->get_error_code() );
+		$this->assertSame( 1, $refused->get_error_data()['edit_index'] );
+		$this->assertSame( [], $this->write_calls() );
+
+		$args['remove_tags'] = [ 'ta' ];
+
+		$this->assertIsArray( ( new EditPostBlock() )->execute( $args ) );
+		$this->assertCount( 1, $this->write_calls() );
+	}
+
+	public function test_edits_and_single_edit_inputs_together_are_refused(): void {
+		$this->set_post( 7, $this->three_paragraphs() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'path'  => [ 0 ],
+				'block' => $this->paragraph( 'Single' ),
+				'edits' => [
+					[
+						'path'  => [ 1 ],
+						'block' => $this->paragraph( 'Batched' ),
+					],
+				],
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'edits_with_single_edit', $result->get_error_code() );
+		$this->assertSame( [], $this->write_calls() );
+	}
+
+	public function test_a_tag_an_earlier_edit_added_can_be_dropped_without_confirmation(): void {
+		$this->set_post( 7, $this->three_paragraphs() );
+		$this->queue_write_success();
+
+		$result = ( new EditPostBlock() )->execute(
+			[
+				'id'    => 7,
+				'edits' => [
+					[
+						'path'  => [ 0 ],
+						'block' => $this->paragraph( 'Buy <ta href="https://example.com">here</ta>.' ),
+					],
+					[
+						'path'  => [ 0 ],
+						'block' => $this->paragraph( 'Plain' ),
+					],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $this->write_calls() );
+	}
+
+	public function test_edit_page_block_takes_edits(): void {
+		$this->set_post( 12, $this->three_paragraphs(), 'page' );
+		$this->queue_write_success( [ 'id' => 12 ] );
+
+		$result = ( new EditPageBlock() )->execute(
+			[
+				'id'    => 12,
+				'edits' => [
+					[
+						'path'  => [ 0 ],
+						'block' => $this->paragraph( 'A' ),
+					],
+					[
+						'path'  => [ 1 ],
+						'block' => $this->paragraph( 'B' ),
+					],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+
+		$calls = $this->write_calls();
+		$this->assertCount( 1, $calls );
+		$this->assertSame( '/wp/v2/pages/12', $calls[0]['route'] );
+	}
 }
