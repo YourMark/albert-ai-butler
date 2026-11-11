@@ -2303,7 +2303,6 @@ class Connections implements Hookable {
 			'albertAdmin',
 			[
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'albert_oauth_nonce' ),
 				'i18n'    => [
 					'copied'          => __( 'Copied!', 'albert-ai-butler' ),
 					'copyFailed'      => __( 'Copy failed', 'albert-ai-butler' ),

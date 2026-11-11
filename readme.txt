@@ -1,10 +1,10 @@
-=== Albert - Connect AI Assistants to WordPress ===
+=== Albert - The AI Butler ===
 Contributors: albertai, mark-jansen
 Tags: ai assistant, chatgpt, claude, ai, mcp
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -233,6 +233,48 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.5.1 =
+Security release. Closes a way someone could get an assistant connection to your site by tricking a person into approving it, and a number of smaller leaks. Update now.
+
+**Security**
+
+* **The approval screen can no longer be fooled about where access goes.** A sign-in address written to look like a trusted assistant could send the approval to someone else. Albert now refuses such addresses, also for apps that registered before this update. The approval screen shows the destination's site name prominently, with the full address underneath, and the approval is tied to that app and address.
+* **Every assistant must prove it is the app that started the sign-in.** This was required for desktop and command-line apps only; it now applies to all of them. Claude, ChatGPT, Cursor and the other common assistants already do this.
+* **Removing someone from the list of who may connect now takes effect at once.** Their assistants stop working straight away, including ones that were still signing in, and their upload links stop working too.
+* **Access is checked against what Albert actually issued.** An access key is only accepted when it matches the person, the app, and a connection that is still live.
+* **Password-protected posts and pages stay protected.** An assistant only sees their content, and only finds them by searching their text, when the person who connected it may edit them, as in WordPress itself. Password-protected block patterns are hidden the same way.
+* **Tools you switch off stay off.** A specially crafted request could still reach tools switched off on the Abilities screen, also through an add-on's screen. Albert now recognises an assistant's request before anything else, and on WordPress 7.1 and later also refuses switched-off tools at the moment they would run.
+* **Unpublished products stay private.** Viewing and finding WooCommerce products shows drafts, pending, private products and disabled variations only to people who may see them in WooCommerce. Viewing orders also needs WooCommerce's right to read private orders.
+* **Media follows the post it belongs to.** Files attached to someone else's private or draft post are no longer shown, and files can only be attached to posts you may edit, both when uploading and through an upload link.
+* **An assistant can no longer change anyone's email address,** including your own, just as it could never change a password. Change it on your profile instead.
+* **Creating a user no longer hands the assistant a password-reset link.** WordPress emails the new person their own link to set a password.
+* **Editing blocks in a post you may not edit now answers "not found"** without revealing anything about that post.
+* **Safe mode holds more risky changes for your approval,** including changes to user roles, scheduled tasks, upload folders, a pending admin email change and the fallback security keys.
+* **More of Albert's own settings are out of an assistant's reach,** including the site description it is given, how long connections and invitations last, the upload size limit and Albert's internal version markers.
+* **Terms and categories follow WordPress's rights.** New tags and pattern categories are only created by people allowed to assign them, a refused save leaves no stray tags, and viewing a term works only for taxonomies WordPress exposes to apps.
+* **On multisite, people from other sites in the network are no longer shown.**
+* **A flood of unfinished sign-ups can no longer lock real assistants out.** Only connected apps count toward the limit; unfinished sign-ups have their own, larger limit and the oldest makes room.
+* **Albert's sign-in pages can no longer be shown inside another website,** and unexpected errors no longer show internal details.
+
+**Improvements**
+
+* The "MCP endpoint is switched off" notice now shows only to people who can manage plugins, and no longer shows a server path. The sign-in warning shows only on Albert's screens and the Plugins screen.
+* Uninstalling also removes the saved site location and Albert's cached data.
+* The bundled MCP Adapter is updated to 0.7.1.
+
+**Fixes**
+
+* Deleting a user who owns content now asks who should take it over, instead of failing. A user without content is deleted straight away.
+* Apps whose sign-in address uses three slashes or an underscore (such as `myapp:///callback`) can register again, and local `http://[::1]` addresses are accepted.
+
+**Developer**
+
+* New `Albert\Core\RestRequest`, so add-ons can recognise the route WordPress dispatches and an assistant's request. `albert/abilities/is_management_context` can no longer make an assistant's request a management context.
+* `albert/create-user` returns `invitation_sent` instead of `password_reset_url`. `albert/delete-user` accepts `reassign`. Read abilities return `protected` for password-protected items.
+* New filter `albert/oauth/max_pending_clients` (default 100). `albert/oauth/max_clients` now counts connected apps only.
+* Removed: `BlockConverter`'s unused image sideloading (`$sideload_images`, `get_created_attachment_ids()`, `assign_parent_to_attachments()`).
+* The translation template is now `languages/albert-ai-butler.pot`.
+
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
 
@@ -313,24 +355,14 @@ Fixes AI assistants that could not connect to some sites.
 * [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting the Claude Code sign-in problem.
 * [Sébastien](https://wordpress.org/support/users/seb94100/) for reporting the /index.php/ connection problem, with the logs that pinpointed it.
 
-= 1.4.1 =
-Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that handle the sign-in discovery address themselves.
-
-**Fixes**
-
-* AI assistants using the newest sign-in method could fail to connect. They connect again now.
-* AI assistants could not sign in on some managed hosts (such as SiteGround and Servebolt) that answer part of the sign-in discovery themselves. Albert now serves it where those hosts pass it through, so sign-in works with no manual setup.
-
-**Developer**
-
-* Discovery is now RFC 9728 / RFC 8414 conformant: `resource_metadata` in `WWW-Authenticate`, one Protected Resource Metadata source listing the issuer, and the issuer served at a mid-path `.well-known` URL that hosts intercepting a root `/.well-known/` leave alone. Adds the `albert_oauth_discovery` Site Health test.
-* The issuer is now a path, so a connected client that re-runs discovery re-authorises once; live connections keep working.
-
 = Earlier versions =
 
-Releases before 1.4.1 are listed in `changelog.txt`, bundled with the plugin.
+Releases before 1.4.2 are listed in `changelog.txt`, bundled with the plugin.
 
 == Upgrade Notice ==
+
+= 1.5.1 =
+Security release: closes a way an approval could be sent to someone else, and stops several leaks to connected assistants. Update now.
 
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an assistant with an application password could reach your site's tools without Albert's sign-in. Recommended for everyone.
@@ -367,7 +399,7 @@ Initial release. Connect Claude Desktop, ChatGPT, and other MCP-compatible AI as
 
 == Privacy Policy ==
 
-Albert runs entirely on your own site. It has no servers of its own and sends no data about your site or your usage anywhere. The only request it makes is Site Health checking your site's own sign-in address.
+Albert runs entirely on your own site. It has no servers of its own and sends no data about your site or your usage to its makers or anyone else. The requests it makes are listed under External services below.
 
 **What reaches your assistant.** Only the site context you choose to send, and the results of the actions you have switched on, for the person who approved the connection, within their WordPress permissions. Before a result leaves your site, Albert masks visitors' and customers' personal details according to your privacy mode: Strict, Balanced or Off. New sites start on Strict. What your assistant's provider then does with that text is covered by their own privacy policy.
 
@@ -380,11 +412,24 @@ Albert runs entirely on your own site. It has no servers of its own and sends no
 
 Uninstalling Albert removes its tables and settings. On a multisite network this currently covers the main site only.
 
+== External services ==
+
+Albert has no service of its own. It makes these requests, and only these:
+
+* **The AI assistant you connect.** Your assistant's app (for example Claude or ChatGPT) signs in to your site and sends requests to it. What Albert returns goes to that assistant's provider, under their own terms and privacy policy. You choose the provider by connecting it; nothing is sent until you approve a connection.
+* **Files your assistant asks to upload from a web address.** When an assistant uploads media by URL, your site downloads that file from the address the assistant gave, through WordPress's own safe download functions.
+* **Embeds.** When an assistant writes a bare link to a video or post into content, WordPress's own oEmbed looks it up at that provider (for example YouTube), exactly as it does when you paste a link in the editor.
+* **Site Health.** Albert checks that your site's own sign-in address can be reached, by requesting it from your own site.
+
+== Source code ==
+
+The admin screens' JavaScript is compiled from `assets/src/` with `npm run build`, and the Claude Desktop bridge from `tools/claude-desktop/`. Both are in [Albert's source](https://github.com/YourMark/albert-ai-butler).
+
 == Credits ==
 
 Developed by Mark Jansen, Your Mark Media
 Website: https://yourmark.nl
-Plugin URL: https://wordpress.org/plugins/albert/
+Plugin URL: https://wordpress.org/plugins/albert-ai-butler/
 
 Built with:
 * league/oauth2-server for OAuth 2.0 implementation

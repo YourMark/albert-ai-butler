@@ -9,9 +9,11 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+defined( 'ABSPATH' ) || exit;
+
+use Albert\Abilities\WordPress\ProtectedContent;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
-use Albert\Blocks\EditorMode;
 use Albert\Core\Annotations;
 use WP_Error;
 
@@ -131,6 +133,7 @@ class ViewPost extends BaseAbility {
 							'type'        => 'boolean',
 							'description' => 'Whether the stored content actually contains block markup. May differ from "editor" (e.g. classic content saved on a block-editor type).',
 						],
+						'protected'  => ProtectedContent::schema(),
 						'_meta'      => [
 							'type'        => 'object',
 							'description' => 'Block-window pagination metadata. The returned content/blocks/plaintext/html/markdown reflect only the requested window of top-level blocks. When "truncated" is true, fetch the rest by re-requesting with the suggested "next_offset".',
@@ -216,7 +219,8 @@ class ViewPost extends BaseAbility {
 		if ( isset( $args['limit'] ) ) {
 			$options['limit'] = max( 0, (int) $args['limit'] );
 		}
-		$content = ContentFormatter::build( $post->post_content, $format, $options );
+		$withheld = ProtectedContent::is_withheld( $post );
+		$content  = ContentFormatter::build( $withheld ? '' : $post->post_content, $format, $options );
 
 		return [
 			'post' => array_merge(
@@ -225,9 +229,10 @@ class ViewPost extends BaseAbility {
 					'title' => $post->post_title,
 				],
 				$content,
-				EditorMode::signal( $post ),
+				ProtectedContent::editor_signal( $post ),
 				[
-					'excerpt'        => $post->post_excerpt,
+					'excerpt'        => $withheld ? '' : $post->post_excerpt,
+					'protected'      => ProtectedContent::is_protected( $post ),
 					'status'         => $post->post_status,
 					'author_id'      => (int) $post->post_author,
 					'date'           => $post->post_date,

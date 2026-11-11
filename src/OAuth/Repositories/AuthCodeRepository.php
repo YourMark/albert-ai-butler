@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Repositories;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Database\Tables;
 use Albert\OAuth\Entities\AuthCodeEntity;
 use League\OAuth2\Server\Entities\AuthCodeEntityInterface;

@@ -11,6 +11,7 @@ namespace Albert\OAuth;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Admin\Menu;
 use Albert\Contracts\Interfaces\Hookable;
 
 /**
@@ -135,6 +136,7 @@ class DiscoveryHealth implements Hookable {
 			$this->discovery_url(),
 			[
 				'timeout'     => 5,
+				// A loopback request to this site; local sites often use a self-signed certificate.
 				'sslverify'   => ! in_array( wp_get_environment_type(), [ 'local', 'development' ], true ),
 				'redirection' => 3,
 				'headers'     => [ 'Accept' => 'application/json' ],
@@ -200,12 +202,14 @@ class DiscoveryHealth implements Hookable {
 	 * Warn, unmissably, when discovery is unreachable.
 	 *
 	 * Only {@see self::UNREACHABLE} warns; the remedy lives in the Site Health test.
+	 * Shown on Albert's screens and the Plugins screen only, not across wp-admin.
 	 *
 	 * @return void
 	 * @since 1.4.1
+	 * @since 1.5.1 Only on Albert's screens and the Plugins screen.
 	 */
 	public function maybe_render_notice(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'manage_options' ) || ! self::is_notice_screen() ) {
 			return;
 		}
 
@@ -218,6 +222,22 @@ class DiscoveryHealth implements Hookable {
 			esc_html__( 'Albert:', 'albert-ai-butler' ),
 			wp_kses_post( $this->explanation() )
 		);
+	}
+
+	/**
+	 * Whether the current admin screen is one the warning belongs on.
+	 *
+	 * @return bool
+	 * @since 1.5.1
+	 */
+	private static function is_notice_screen(): bool {
+		if ( Menu::is_albert_screen() ) {
+			return true;
+		}
+
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+		return $screen !== null && $screen->id === 'plugins';
 	}
 
 	/**

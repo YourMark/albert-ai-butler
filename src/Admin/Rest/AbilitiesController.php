@@ -16,6 +16,8 @@ use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\AbilitiesRegistry;
 use Albert\Core\AbilitiesState;
 use Albert\Core\Plugin;
+use Albert\Core\RestRequest;
+use Albert\OAuth\Server\ConnectionContext;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -204,8 +206,8 @@ class AbilitiesController implements Hookable {
 	 * Opt this controller's requests into the abilities management context.
 	 *
 	 * Keeps disabled abilities in the registry for our endpoint so the screen
-	 * can list and re-enable them. Matches by request URI (available before any
-	 * dispatch), mirroring how the admin page is detected by its `page` query arg.
+	 * can list and re-enable them. Only for a request that WordPress will
+	 * dispatch to our route, by a user who may use it, outside a connection.
 	 *
 	 * @param bool $is_management_context Incoming value.
 	 *
@@ -221,16 +223,13 @@ class AbilitiesController implements Hookable {
 	 *
 	 * @return bool
 	 * @since 1.3.0
+	 * @since 1.5.1 Matches the route WordPress dispatches, not the request path.
 	 */
 	private function is_abilities_request(): bool {
-		// Input sanitizer (not esc_url_raw, which is an output escaper and would
-		// mangle encoded path characters). The value is only substring-matched.
-		$uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		if ( RestRequest::is_assistant_request() || ConnectionContext::client_id() !== null || ! $this->check_permission() ) {
+			return false;
+		}
 
-		// Match the path only — a query string like ?q=albert/v1/abilities on an
-		// unrelated REST request must not count as our endpoint.
-		$path = strtok( $uri, '?' );
-
-		return is_string( $path ) && str_contains( $path, '/' . Plugin::rest_namespace() . '/abilities' );
+		return RestRequest::targets( '/' . Plugin::rest_namespace() . '/abilities' );
 	}
 }

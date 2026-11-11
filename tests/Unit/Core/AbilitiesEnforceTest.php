@@ -15,12 +15,14 @@ require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 
 use Albert\Admin\AbilitiesPage;
 use Albert\Core\AbilitiesManager;
+use Albert\OAuth\Server\ConnectionContext;
 use PHPUnit\Framework\TestCase;
 
 /**
  * AbilitiesManager enforcement tests.
  *
  * @covers \Albert\Core\AbilitiesManager::enforce_disabled
+ * @covers \Albert\Core\AbilitiesManager::refuse_disabled_execution
  */
 class AbilitiesEnforceTest extends TestCase {
 
@@ -39,6 +41,16 @@ class AbilitiesEnforceTest extends TestCase {
 		$GLOBALS['albert_test_unregistered_abilities'] = [];
 		$GLOBALS['albert_test_is_admin']               = false;
 		unset( $_GET['page'] );
+	}
+
+	/**
+	 * Clear the connection a test set.
+	 *
+	 * @return void
+	 */
+	protected function tearDown(): void {
+		ConnectionContext::reset();
+		parent::tearDown();
 	}
 
 	/**
@@ -105,5 +117,73 @@ class AbilitiesEnforceTest extends TestCase {
 		$this->assertNotContains( 'mcp-adapter/execute-ability', $unregistered );
 		// An enabled ability is left alone.
 		$this->assertNotContains( 'albert/find-posts', $unregistered );
+	}
+
+	/**
+	 * A disabled ability is refused at execution; others and the transport proceed.
+	 *
+	 * @return void
+	 */
+	public function test_refuses_executing_a_disabled_ability(): void {
+		$GLOBALS['albert_test_options']['albert_abilities_saved']                   = true;
+		$GLOBALS['albert_test_options'][ AbilitiesPage::DISABLED_ABILITIES_OPTION ] = [ 'albert/create-post', 'mcp-adapter/execute-ability' ];
+
+		$manager  = new AbilitiesManager();
+		$sentinel = new \stdClass();
+
+		$refused = $manager->refuse_disabled_execution( $sentinel, 'albert/create-post' );
+		$this->assertInstanceOf( \WP_Error::class, $refused );
+		$this->assertSame( 'albert_ability_disabled', $refused->get_error_code() );
+
+		$this->assertSame( $sentinel, $manager->refuse_disabled_execution( $sentinel, 'albert/find-posts' ) );
+		$this->assertSame( $sentinel, $manager->refuse_disabled_execution( $sentinel, 'mcp-adapter/execute-ability' ) );
+	}
+
+	/**
+	 * A management context never keeps disabled abilities for a connection.
+	 *
+	 * @return void
+	 */
+	public function test_management_context_does_not_apply_over_a_connection(): void {
+		$GLOBALS['albert_test_options']['albert_abilities_saved']                   = true;
+		$GLOBALS['albert_test_options'][ AbilitiesPage::DISABLED_ABILITIES_OPTION ] = [ 'albert/create-post' ];
+		$GLOBALS['albert_test_abilities'] = [ $this->ability( 'albert/create-post' ) ];
+		$GLOBALS['albert_test_is_admin']  = true;
+		$_GET['page']                     = AbilitiesPage::PAGE_SLUG;
+		ConnectionContext::set( 'client-1' );
+
+		( new AbilitiesManager() )->enforce_disabled();
+
+		$this->assertContains( 'albert/create-post', $GLOBALS['albert_test_unregistered_abilities'] );
+	}
+
+	/**
+	 * A Bearer token or the MCP route overrides any filter, before the token is validated.
+	 *
+	 * The reported bypass: an add-on's path-matching filter says "management"
+	 * for a request whose rest_route is the MCP endpoint.
+	 *
+	 * @return void
+	 */
+	public function test_assistant_request_overrides_a_management_filter(): void {
+		$GLOBALS['albert_test_options']['albert_abilities_saved']                        = true;
+		$GLOBALS['albert_test_options'][ AbilitiesPage::DISABLED_ABILITIES_OPTION ]      = [ 'albert/create-post' ];
+		$GLOBALS['albert_test_filter_returns']['albert/abilities/is_management_context'] = true;
+
+		$_SERVER['REQUEST_URI']        = '/wp-json/albert-premium/v1/abilities/x/y/permissions';
+		$_GET['rest_route']            = '/albert/v1/mcp';
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer token';
+
+		$GLOBALS['albert_test_abilities'] = [ $this->ability( 'albert/create-post' ) ];
+		( new AbilitiesManager() )->enforce_disabled();
+		$this->assertContains( 'albert/create-post', $GLOBALS['albert_test_unregistered_abilities'] );
+
+		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		$GLOBALS['albert_test_unregistered_abilities'] = [];
+		$GLOBALS['albert_test_abilities']              = [ $this->ability( 'albert/create-post' ) ];
+		( new AbilitiesManager() )->enforce_disabled();
+		$this->assertContains( 'albert/create-post', $GLOBALS['albert_test_unregistered_abilities'] );
+
+		unset( $_SERVER['REQUEST_URI'], $_GET['rest_route'], $GLOBALS['albert_test_filter_returns'] );
 	}
 }

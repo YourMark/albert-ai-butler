@@ -14,6 +14,7 @@ namespace Albert\Tests\Integration\Abilities;
 
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
+use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Tests\TestCase;
 use WP_Error;
@@ -192,6 +193,67 @@ class MediaAbilityTest extends TestCase {
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'media_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * A file attached to another author's private post is not theirs to read.
+	 *
+	 * @return void
+	 */
+	public function test_media_on_a_private_post_is_hidden_from_other_authors(): void {
+		$owner         = get_current_user_id();
+		$private       = self::factory()->post->create(
+			[
+				'post_status' => 'private',
+				'post_author' => $owner,
+			]
+		);
+		$attachment_id = $this->create_test_attachment( $private );
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'author' ] ) );
+
+		$view = ( new ViewMedia() )->execute( [ 'id' => $attachment_id ] );
+		$this->assertWPError( $view );
+		$this->assertSame( 'media_not_found', $view->get_error_code() );
+
+		$found = ( new FindMedia() )->execute( [] );
+		$this->assertNotContains( $attachment_id, array_column( $found['media'], 'id' ) );
+
+		wp_set_current_user( $owner );
+		$this->assertIsArray( ( new ViewMedia() )->execute( [ 'id' => $attachment_id ] ) );
+	}
+
+	// ─── UploadMedia ────────────────────────────────────────────────
+
+	/**
+	 * UploadMedia refuses to attach to a post the user cannot edit, before downloading.
+	 *
+	 * @return void
+	 */
+	public function test_upload_media_needs_edit_post_on_the_parent(): void {
+		$foreign = self::factory()->post->create( [ 'post_author' => get_current_user_id() ] );
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'author' ] ) );
+
+		$fetched = false;
+		$watch   = static function ( $pre ) use ( &$fetched ) {
+			$fetched = true;
+			return $pre;
+		};
+		add_filter( 'pre_http_request', $watch );
+
+		$result = ( new UploadMedia() )->execute(
+			[
+				'url'     => 'https://example.com/image.jpg',
+				'post_id' => $foreign,
+			]
+		);
+
+		remove_filter( 'pre_http_request', $watch );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'cannot_attach', $result->get_error_code() );
+		$this->assertFalse( $fetched );
 	}
 
 	// ─── SetFeaturedImage ───────────────────────────────────────────

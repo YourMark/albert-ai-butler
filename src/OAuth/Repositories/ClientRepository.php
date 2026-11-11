@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Repositories;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Database\Tables;
 use Albert\OAuth\Entities\ClientEntity;
 use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
@@ -355,24 +357,18 @@ class ClientRepository implements ClientRepositoryInterface {
 	}
 
 	/**
-	 * Count the clients that hold a place under the registration cap.
+	 * Count the clients that hold a place under the registration cap: those
+	 * with a live access or refresh token, so connected ones.
 	 *
-	 * Live clients, by the same test as {@see self::getLiveConnections()}, plus
-	 * any registered in the last `$grace_hours`. Counting every row let clients
-	 * that never authorised, or were disconnected long ago, fill the cap until
-	 * no new assistant could connect. The grace window keeps a registration
-	 * nobody completes counting for a while, so the cap still bounds abuse: one
-	 * address can fill it within the registration rate limit, but only for a day.
-	 *
-	 * Client `created_at` is stamped in the database's own time zone, so it is
-	 * compared with NOW(); token expiry is written as UTC, so with UTC_TIMESTAMP().
-	 *
-	 * @param int $grace_hours How long a new client counts without a token.
+	 * Registration is anonymous, so a client that never authorised must not
+	 * count, or anybody could fill the cap and lock every assistant out.
+	 * Unfinished registrations are bounded by {@see self::count_pending_clients()}.
 	 *
 	 * @return int
 	 * @since 1.5.0
+	 * @since 1.5.1 Recent clients without a token no longer count.
 	 */
-	public function count_live_clients( int $grace_hours = 24 ): int {
+	public function count_live_clients(): int {
 		global $wpdb;
 
 		$tables = Tables::oauth();
@@ -381,22 +377,73 @@ class ClientRepository implements ClientRepositoryInterface {
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i c
-				WHERE c.created_at >= DATE_SUB( NOW(), INTERVAL %d HOUR )
-					OR EXISTS (
-						SELECT 1 FROM %i t
-						LEFT JOIN %i r
-							ON r.access_token_id = t.token_id
-							AND r.revoked = 0
-							AND r.expires_at > UTC_TIMESTAMP()
-						WHERE t.client_id = c.client_id
-							AND ( ( t.revoked = 0 AND t.expires_at > UTC_TIMESTAMP() ) OR r.id IS NOT NULL )
-					)',
+				WHERE EXISTS (
+					SELECT 1 FROM %i t
+					LEFT JOIN %i r
+						ON r.access_token_id = t.token_id
+						AND r.revoked = 0
+						AND r.expires_at > UTC_TIMESTAMP()
+					WHERE t.client_id = c.client_id
+						AND ( ( t.revoked = 0 AND t.expires_at > UTC_TIMESTAMP() ) OR r.id IS NOT NULL )
+				)',
 				$tables['clients'],
-				$grace_hours,
 				$tables['access_tokens'],
 				$tables['refresh_tokens']
 			)
 		);
+	}
+
+	/**
+	 * Count the clients that never got a token: unfinished registrations.
+	 *
+	 * @return int
+	 * @since 1.5.1
+	 */
+	public function count_pending_clients(): int {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, bound on registrations.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE client_id NOT IN ( SELECT t.client_id FROM %i t )',
+				$tables['clients'],
+				$tables['access_tokens']
+			)
+		);
+	}
+
+	/**
+	 * Delete the oldest client that never got a token, to make room for a new one.
+	 *
+	 * A client holding a live authorization code is mid sign-in and kept.
+	 *
+	 * @return bool Whether a client was deleted.
+	 * @since 1.5.1
+	 */
+	public function evict_oldest_pending_client(): bool {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, bound on registrations.
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i
+				WHERE client_id NOT IN ( SELECT t.client_id FROM %i t )
+					AND client_id NOT IN (
+						SELECT a.client_id FROM %i a WHERE a.revoked = 0 AND a.expires_at > UTC_TIMESTAMP()
+					)
+				ORDER BY created_at ASC, id ASC
+				LIMIT 1',
+				$tables['clients'],
+				$tables['access_tokens'],
+				$tables['auth_codes']
+			)
+		);
+
+		return (int) $result > 0;
 	}
 
 	/**

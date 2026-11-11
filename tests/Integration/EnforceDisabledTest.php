@@ -85,7 +85,7 @@ class EnforceDisabledTest extends TestCase {
 		remove_all_filters( 'albert/abilities/is_management_context' );
 		remove_all_filters( 'albert/abilities/disabled_list' );
 
-		unset( $_GET['page'] );
+		unset( $_GET['page'], $_GET['rest_route'], $_SERVER['HTTP_AUTHORIZATION'] );
 
 		parent::tear_down();
 	}
@@ -349,6 +349,35 @@ class EnforceDisabledTest extends TestCase {
 		$this->manager->enforce_disabled();
 
 		$this->assertTrue( wp_has_ability( 'albert/test-filter-target' ) );
+	}
+
+	/**
+	 * An add-on's path-matching filter cannot keep disabled abilities for an assistant.
+	 *
+	 * The reported bypass: the request path is an add-on's admin route, the
+	 * rest_route is the MCP endpoint, and the token is not validated yet.
+	 *
+	 * @return void
+	 */
+	public function test_management_filter_does_not_apply_to_an_assistant_request(): void {
+		$this->register_albert_ability( 'albert/test-bypass-target' );
+		update_option( AbilitiesPage::DISABLED_ABILITIES_OPTION, [ 'albert/test-bypass-target' ] );
+		add_filter( 'albert/abilities/is_management_context', '__return_true' );
+
+		$request_uri                   = $_SERVER['REQUEST_URI'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Saved to restore it verbatim.
+		$_SERVER['REQUEST_URI']        = '/wp-json/albert-premium/v1/abilities/x/y/permissions';
+		$_GET['rest_route']            = '/albert/v1/mcp';
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer anything';
+
+		$this->manager->enforce_disabled();
+
+		if ( $request_uri === null ) {
+			unset( $_SERVER['REQUEST_URI'] );
+		} else {
+			$_SERVER['REQUEST_URI'] = $request_uri;
+		}
+
+		$this->assertFalse( wp_has_ability( 'albert/test-bypass-target' ) );
 	}
 
 	// ─── disabled_list filter ───────────────────────────────────────

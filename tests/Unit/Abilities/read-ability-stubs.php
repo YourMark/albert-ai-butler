@@ -52,6 +52,19 @@ if ( ! function_exists( '_prime_post_caches' ) ) {
 	}
 }
 
+if ( ! function_exists( 'post_password_required' ) ) {
+	/**
+	 * Stub post_password_required(): no unlock cookie, so any password applies.
+	 *
+	 * @param int|object|null $post Post or ID.
+	 * @return bool
+	 */
+	function post_password_required( $post = null ) {
+		$post = is_object( $post ) ? $post : get_post( (int) $post );
+		return ( $post->post_password ?? '' ) !== '';
+	}
+}
+
 // get_permalink() is provided by block-write-rest-stubs.php (object-aware).
 
 // phpcs:enable

@@ -19,11 +19,29 @@ WP_CORE_DIR=${WP_CORE_DIR-$TMPDIR/wordpress}
 
 download() {
 	if [ $(which curl) ]; then
-		curl -s "$1" > "$2";
+		curl -fsSL --retry 5 --retry-all-errors "$1" -o "$2";
 	elif [ $(which wget) ]; then
-		wget -nv -O "$2" "$1"
+		wget -nv --tries=5 -O "$2" "$1"
 	fi
 }
+
+# The test suite comes from the wordpress-develop mirror on GitHub instead of
+# Subversion, so a CI runner needs neither svn nor the Ubuntu package mirrors.
+develop_archive() {
+	local REF=${WP_TESTS_TAG#branches/}
+	REF=${REF#tags/}
+	local ARCHIVE=$TMPDIR/wordpress-develop-$REF.tar.gz
+	if [ ! -f "$ARCHIVE" ]; then
+		download "https://codeload.github.com/WordPress/wordpress-develop/tar.gz/$REF" "$ARCHIVE"
+	fi
+	echo "$ARCHIVE"
+}
+
+# GNU tar needs --wildcards to match member patterns; bsdtar (macOS) matches them by default.
+TAR_WILDCARDS=''
+if tar --version 2>/dev/null | grep -q GNU; then
+	TAR_WILDCARDS='--wildcards'
+fi
 
 if [[ $WP_VERSION =~ ^[0-9]+\.[0-9]+\-(beta|RC)[0-9]+$ ]]; then
 	WP_BRANCH=${WP_VERSION%\-*}
@@ -63,7 +81,8 @@ install_wp() {
 	if [[ $WP_VERSION == 'nightly' || $WP_VERSION == 'trunk' ]]; then
 		mkdir -p $TMPDIR/wordpress-trunk
 		rm -rf $TMPDIR/wordpress-trunk/*
-		svn export --quiet https://core.svn.wordpress.org/trunk $TMPDIR/wordpress-trunk/wordpress
+		download https://wordpress.org/nightly-builds/wordpress-latest.zip $TMPDIR/wordpress-nightly.zip
+		unzip -q $TMPDIR/wordpress-nightly.zip -d $TMPDIR/wordpress-trunk
 		mv $TMPDIR/wordpress-trunk/wordpress/* $WP_CORE_DIR
 	else
 		if [ $WP_VERSION == 'latest' ]; then
@@ -78,7 +97,6 @@ install_wp() {
 		tar --strip-components=1 -zxmf $TMPDIR/wordpress.tar.gz -C $WP_CORE_DIR
 	fi
 
-	download https://raw.githubusercontent.com/marber/wp-content-config/master/wp-tests-config-sample.php $WP_CORE_DIR/wp-tests-config.php
 }
 
 install_test_suite() {
@@ -93,12 +111,13 @@ install_test_suite() {
 		# set up testing suite
 		mkdir -p $WP_TESTS_DIR
 		rm -rf $WP_TESTS_DIR/{includes,data}
-		svn export --quiet --ignore-externals https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/includes/ $WP_TESTS_DIR/includes
-		svn export --quiet --ignore-externals https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/data/ $WP_TESTS_DIR/data
+		local ARCHIVE
+		ARCHIVE=$(develop_archive)
+		tar -xzf "$ARCHIVE" -C $WP_TESTS_DIR --strip-components=3 $TAR_WILDCARDS '*/tests/phpunit/includes/*' '*/tests/phpunit/data/*'
 	fi
 
 	if [ ! -f wp-tests-config.php ]; then
-		download https://develop.svn.wordpress.org/${WP_TESTS_TAG}/wp-tests-config-sample.php "$WP_TESTS_DIR"/wp-tests-config.php
+		tar -xzf "$(develop_archive)" -O $TAR_WILDCARDS '*/wp-tests-config-sample.php' > "$WP_TESTS_DIR"/wp-tests-config.php
 		# remove all forward slashes in the end
 		WP_CORE_DIR=$(echo $WP_CORE_DIR | sed "s:/\+$::")
 		sed $ioption "s:dirname( __FILE__ ) . '/src/':'$WP_CORE_DIR/':" "$WP_TESTS_DIR"/wp-tests-config.php

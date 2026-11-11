@@ -26,6 +26,8 @@ use WP_REST_Request;
  * @covers \Albert\OAuth\Repositories\ClientRepository::count_live_clients
  * @covers \Albert\OAuth\Repositories\ClientRepository::delete_stale_clients
  * @covers \Albert\OAuth\Endpoints\ClientRegistration::limit_reached
+ * @covers \Albert\OAuth\Repositories\ClientRepository::count_pending_clients
+ * @covers \Albert\OAuth\Repositories\ClientRepository::evict_oldest_pending_client
  */
 class ClientCapTest extends TestCase {
 
@@ -46,7 +48,7 @@ class ClientCapTest extends TestCase {
 
 		global $wpdb;
 
-		foreach ( [ 'clients', 'access_tokens', 'refresh_tokens' ] as $key ) {
+		foreach ( [ 'clients', 'access_tokens', 'refresh_tokens', 'auth_codes' ] as $key ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test reset.
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', Tables::oauth()[ $key ] ) );
 		}
@@ -188,7 +190,7 @@ class ClientCapTest extends TestCase {
 	 *
 	 * @return mixed
 	 */
-	private function register() {
+	private function register( string $redirect_uri = 'http://localhost:5000/callback' ) {
 		delete_transient( 'albert_dcr_' . md5( '127.0.0.1' ) );
 		$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 
@@ -198,7 +200,7 @@ class ClientCapTest extends TestCase {
 			wp_json_encode(
 				[
 					'client_name'   => 'New assistant',
-					'redirect_uris' => [ 'http://localhost:5000/callback' ],
+					'redirect_uris' => [ $redirect_uri ],
 				]
 			)
 		);
@@ -233,19 +235,71 @@ class ClientCapTest extends TestCase {
 	}
 
 	/**
-	 * A fresh registration nobody completed still counts, so the cap bounds abuse.
+	 * Registrations nobody completed never fill the cap, however recent:
+	 * registration is anonymous, so anybody could otherwise lock assistants out.
 	 *
 	 * @return void
 	 */
-	public function test_a_fresh_unauthorised_client_counts_for_a_day(): void {
+	public function test_unfinished_registrations_do_not_fill_the_cap(): void {
 		$this->client( 'fresh-1', 0 );
 		$this->client( 'fresh-2', 0 );
 		$this->client( 'fresh-3', 0 );
+
+		$this->assertSame( 0, ( new ClientRepository() )->count_live_clients() );
+		$this->assertNotInstanceOf( WP_Error::class, $this->register() );
+	}
+
+	/**
+	 * Connected clients fill the cap and a new registration is refused.
+	 *
+	 * @return void
+	 */
+	public function test_connected_clients_fill_the_cap(): void {
+		$this->token( $this->client( 'a', 0 ), 'live' );
+		$this->token( $this->client( 'b', 0 ), 'live' );
+		$this->token( $this->client( 'c', 0 ), 'live' );
 
 		$result = $this->register();
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'client_limit_reached', $result->get_error_code() );
+	}
+
+	/**
+	 * At the bound on unfinished registrations the oldest goes, unless it is
+	 * mid sign-in; connected clients are never touched.
+	 *
+	 * @return void
+	 */
+	public function test_the_oldest_unfinished_registration_makes_room(): void {
+		add_filter( 'albert/oauth/max_pending_clients', fn(): int => 3 );
+
+		$this->auth_code( $this->client( 'signing-in', 10 ) );
+		$this->client( 'oldest', 5 );
+		$this->client( 'middle', 3 );
+		$this->token( $this->client( 'connected', 20 ), 'live' );
+
+		$this->assertSame( 3, ( new ClientRepository() )->count_pending_clients() );
+		$this->assertNotInstanceOf( WP_Error::class, $this->register() );
+
+		$this->assertFalse( $this->exists( 'oldest' ) );
+		$this->assertTrue( $this->exists( 'signing-in' ) );
+		$this->assertTrue( $this->exists( 'middle' ) );
+		$this->assertTrue( $this->exists( 'connected' ) );
+		$this->assertSame( 3, ( new ClientRepository() )->count_pending_clients() );
+	}
+
+	/**
+	 * An invalid registration deletes nothing: room is only made for a valid one.
+	 *
+	 * @return void
+	 */
+	public function test_an_invalid_registration_evicts_nothing(): void {
+		add_filter( 'albert/oauth/max_pending_clients', fn(): int => 1 );
+		$this->client( 'waiting', 5 );
+
+		$this->assertInstanceOf( WP_Error::class, $this->register( 'http://evil.example/cb' ) );
+		$this->assertTrue( $this->exists( 'waiting' ) );
 	}
 
 	/**
@@ -309,18 +363,6 @@ class ClientCapTest extends TestCase {
 	}
 
 	/**
-	 * The grace window is 24 hours.
-	 *
-	 * @return void
-	 */
-	public function test_the_grace_window_ends_after_a_day(): void {
-		$this->client( 'just-inside', 23 );
-		$this->client( 'just-outside', 25 );
-
-		$this->assertSame( 1, ( new ClientRepository() )->count_live_clients() );
-	}
-
-	/**
 	 * A client somebody is signing in with right now is not cleaned up.
 	 *
 	 * @return void
@@ -339,9 +381,9 @@ class ClientCapTest extends TestCase {
 	 * @return void
 	 */
 	public function test_a_refusal_fires_registration_rejected(): void {
-		$this->client( 'fresh-1', 0 );
-		$this->client( 'fresh-2', 0 );
-		$this->client( 'fresh-3', 0 );
+		$this->token( $this->client( 'a', 0 ), 'live' );
+		$this->token( $this->client( 'b', 0 ), 'live' );
+		$this->token( $this->client( 'c', 0 ), 'live' );
 
 		$seen = [];
 		add_action(
@@ -365,9 +407,9 @@ class ClientCapTest extends TestCase {
 	 */
 	public function test_no_cap_means_no_refusal_and_no_item(): void {
 		add_filter( 'albert/oauth/max_clients', '__return_zero', 20 );
-		$this->client( 'fresh-1', 0 );
-		$this->client( 'fresh-2', 0 );
-		$this->client( 'fresh-3', 0 );
+		$this->token( $this->client( 'a', 0 ), 'live' );
+		$this->token( $this->client( 'b', 0 ), 'live' );
+		$this->token( $this->client( 'c', 0 ), 'live' );
 
 		$this->assertNotInstanceOf( WP_Error::class, $this->register() );
 		$this->assertNotContains( 'client-limit-reached', array_column( ( new Attention() )->items( 1 ), 'id' ) );

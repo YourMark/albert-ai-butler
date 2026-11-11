@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Entities;
 
+defined( 'ABSPATH' ) || exit;
+
 use League\OAuth2\Server\Entities\UserEntityInterface;
 
 /**

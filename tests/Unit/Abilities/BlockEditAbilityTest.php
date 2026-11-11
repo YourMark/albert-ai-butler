@@ -500,6 +500,31 @@ class BlockEditAbilityTest extends TestCase {
 		$this->assertSame( 'post_not_found', $result->get_error_code() );
 	}
 
+	public function test_post_the_user_cannot_edit_returns_not_found_without_reading_it(): void {
+		// A classic post would answer classic_editor_no_block_edits if it were
+		// read; not-found proves the edit check came first.
+		$this->set_post( 7, '<p>Classic HTML</p>' );
+		$GLOBALS['albert_test_block_editor_posts'] = [ 7 => false ];
+		$GLOBALS['albert_test_caps']               = [ 'edit_posts' ];
+		EditorMode::reset_cache();
+
+		try {
+			$result = ( new EditPostBlock() )->execute(
+				[
+					'id'    => 7,
+					'path'  => [ 0 ],
+					'block' => [ 'name' => 'core/paragraph' ],
+				]
+			);
+		} finally {
+			unset( $GLOBALS['albert_test_caps'] );
+		}
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
+		$this->assertSame( [], $this->write_calls() );
+	}
+
 	// =====================================================================
 	// page variant smoke test (shared base wires for pages)
 	// =====================================================================

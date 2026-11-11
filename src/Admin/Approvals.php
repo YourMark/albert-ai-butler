@@ -631,7 +631,7 @@ class Approvals implements Hookable {
 			) . ' ';
 		}
 
-		echo $this->time_tag( $action->decided_at ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- time_tag escapes its own output.
+		echo wp_kses( $this->time_tag( $action->decided_at ), [ 'time' => [ 'datetime' => true ] ] );
 		echo '</p>';
 
 		echo '</li>';

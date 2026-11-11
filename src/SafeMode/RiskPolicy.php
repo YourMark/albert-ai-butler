@@ -74,6 +74,24 @@ class RiskPolicy {
 		'blog_public',
 		// Changes every URL on the site at once, breaking inbound links.
 		'permalink_structure',
+		// Schedules any hook to run later, with any arguments.
+		'cron',
+		'active_sitewide_plugins',
+		// Point uploads at another directory or host.
+		'upload_path',
+		'upload_url_path',
+		// A pending change of the admin email, confirmed by mail to the new address.
+		'new_admin_email',
+		// Fallback salts, used when wp-config.php does not define them: whoever
+		// sets them can forge login cookies and nonces.
+		'auth_key',
+		'auth_salt',
+		'secure_auth_key',
+		'secure_auth_salt',
+		'logged_in_key',
+		'logged_in_salt',
+		'nonce_key',
+		'nonce_salt',
 	];
 
 	/**
@@ -228,13 +246,33 @@ class RiskPolicy {
 		 *
 		 * @param list<string> $options Option names.
 		 */
-		$high_risk = apply_filters( 'albert/safe_mode/high_risk_options', self::HIGH_RISK_OPTIONS );
+		$high_risk = apply_filters( 'albert/safe_mode/high_risk_options', self::high_risk_options() );
 
 		if ( ! is_array( $high_risk ) ) {
 			return false;
 		}
 
 		return $this->named_option( $input, $high_risk ) !== null;
+	}
+
+	/**
+	 * The high-risk options, with the prefixed ones resolved for this site.
+	 *
+	 * `{prefix}user_roles` holds every role's capabilities: writing it gives any
+	 * role administrator rights.
+	 *
+	 * @return list<string>
+	 * @since 1.5.1
+	 */
+	private static function high_risk_options(): array {
+		global $wpdb;
+
+		$options = self::HIGH_RISK_OPTIONS;
+		if ( isset( $wpdb ) && is_object( $wpdb ) && isset( $wpdb->prefix ) ) {
+			$options[] = $wpdb->prefix . 'user_roles';
+		}
+
+		return $options;
 	}
 
 	/**

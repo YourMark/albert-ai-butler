@@ -15,6 +15,10 @@ use Albert\Core\Plugin;
 use Albert\Core\Tokens\TokenService;
 use Albert\Media\AttachmentImporter;
 use Albert\Media\MimeAllowlist;
+use Albert\OAuth\AllowedUsers;
+use Albert\OAuth\Repositories\AccessTokenRepository;
+use Albert\OAuth\Repositories\ClientRepository;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Settings\Value;
 use WP_Error;
 
@@ -192,11 +196,14 @@ class UploadLinkService {
 		// (int) cast, not absint(): absint(-12) returns 12, which would
 		// silently parent against a post the caller never asked for.
 		$post_id = max( 0, (int) ( $args['post_id'] ?? 0 ) );
-		if ( $post_id > 0 && ! get_post( $post_id ) ) {
+		// Core's media endpoint asks the same before attaching to a parent. A
+		// missing post fails it too, with the same answer, so the error does not
+		// tell anyone which post IDs exist.
+		if ( $post_id > 0 && ! user_can( $user_id, 'edit_post', $post_id ) ) {
 			return new WP_Error(
-				'invalid_post',
-				__( 'The specified post does not exist.', 'albert-ai-butler' ),
-				[ 'status' => 404 ]
+				'cannot_attach',
+				__( 'That post does not exist, or this user may not attach media to it.', 'albert-ai-butler' ),
+				[ 'status' => 403 ]
 			);
 		}
 
@@ -209,6 +216,8 @@ class UploadLinkService {
 				'mime_allowlist' => $allowlist,
 				'max_bytes'      => $max_bytes,
 				'post_id'        => $post_id,
+				// The connection that asked, so disconnecting it ends the link too.
+				'client_id'      => self::minting_client_id(),
 			],
 			self::TTL_SECONDS
 		);
@@ -254,6 +263,19 @@ class UploadLinkService {
 		$user_id = $redeemed['user_id'];
 		$payload = $redeemed['payload'];
 
+		// Removing a person or disconnecting their assistant takes effect at
+		// once, so a link minted before either stops working with it.
+		if ( ! AllowedUsers::is_allowed( $user_id ) || ! self::connection_is_live( $user_id, (string) ( $payload['client_id'] ?? '' ) ) ) {
+			return new WP_Error(
+				'capability_revoked',
+				__( 'The connection that created this upload link has been removed.', 'albert-ai-butler' ),
+				[
+					'status'  => 403,
+					'user_id' => $user_id,
+				]
+			);
+		}
+
 		if ( ! user_can( $user_id, self::REQUIRED_CAPABILITY ) ) {
 			return new WP_Error(
 				'capability_revoked',
@@ -281,6 +303,19 @@ class UploadLinkService {
 			);
 		}
 
+		// Re-checked: the user may have lost access to the post since minting.
+		$post_id = (int) ( $payload['post_id'] ?? 0 );
+		if ( $post_id > 0 && ! user_can( $user_id, 'edit_post', $post_id ) ) {
+			return new WP_Error(
+				'capability_revoked',
+				__( 'The user who created this upload link can no longer edit the post it attaches to.', 'albert-ai-butler' ),
+				[
+					'status'  => 403,
+					'user_id' => $user_id,
+				]
+			);
+		}
+
 		return [
 			'user_id'        => $user_id,
 			'mime_allowlist' => $effective_allowlist,
@@ -288,8 +323,57 @@ class UploadLinkService {
 			// been lowered since this link was minted, and the stored number
 			// would then promise more than core will accept.
 			'max_bytes'      => $this->apply_server_ceiling( (int) ( $payload['max_bytes'] ?? self::DEFAULT_MAX_BYTES ) ),
-			'post_id'        => (int) ( $payload['post_id'] ?? 0 ),
+			'post_id'        => $post_id,
 		];
+	}
+
+	/**
+	 * The OAuth client behind this request, or '' when there is none.
+	 *
+	 * Only a registered client counts: a Safe Mode approval run sets a
+	 * placeholder that no disconnect could ever revoke.
+	 *
+	 * @return string
+	 * @since 1.5.1
+	 */
+	private static function minting_client_id(): string {
+		$client_id = (string) ConnectionContext::client_id();
+
+		if ( $client_id === '' || ( new ClientRepository() )->getClientEntity( $client_id ) === null ) {
+			return '';
+		}
+
+		return $client_id;
+	}
+
+	/**
+	 * Whether the minting connection is still connected for this user.
+	 *
+	 * Disconnecting revokes the user's tokens for the client, or deletes the
+	 * client. A link minted outside a connection has nothing to check.
+	 *
+	 * @param int    $user_id   The link's user.
+	 * @param string $client_id The connection that minted it, or ''.
+	 *
+	 * @return bool
+	 * @since 1.5.1
+	 */
+	private static function connection_is_live( int $user_id, string $client_id ): bool {
+		if ( $client_id === '' ) {
+			return true;
+		}
+
+		if ( ( new ClientRepository() )->getClientEntity( $client_id ) === null ) {
+			return false;
+		}
+
+		foreach ( ( new AccessTokenRepository() )->getAccessTokensByUser( $user_id ) as $row ) {
+			if ( (string) ( $row['client_id'] ?? '' ) === $client_id && empty( $row['revoked'] ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

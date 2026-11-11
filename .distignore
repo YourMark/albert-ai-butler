@@ -70,6 +70,7 @@ vendor/**/.deepsource.toml
 vendor/**/dist/*.asc
 vendor/**/dist/*.asc.sig
 vendor/**/*.bat
+vendor/**/*.sh
 lib/mcp-adapter/vendor/bin/
 lib/mcp-adapter/vendor/*/bin/
 lib/mcp-adapter/vendor/**/.deployignore
@@ -77,6 +78,26 @@ lib/mcp-adapter/vendor/**/.deepsource.toml
 lib/mcp-adapter/vendor/**/dist/*.asc
 lib/mcp-adapter/vendor/**/dist/*.asc.sig
 lib/mcp-adapter/vendor/**/*.bat
+lib/mcp-adapter/vendor/**/*.sh
+
+# Library build, CI and analysis files: never loaded, and Plugin Check flags
+# hidden and application files anywhere in the zip.
+vendor/**/.*.yml
+vendor/**/.*.yaml
+vendor/**/phpstan*.neon*
+vendor/**/psalm*.xml
+vendor/**/psalm-autoload.php
+vendor/**/renovate.json
+vendor/**/Makefile
+vendor/**/box.json
+vendor/**/*.pubkey
+vendor/defuse/php-encryption/dist/
+vendor/paragonie/random_compat/other/
+lib/mcp-adapter/vendor/**/.*.yml
+lib/mcp-adapter/vendor/**/.*.yaml
+lib/mcp-adapter/vendor/**/phpstan*.neon*
+lib/mcp-adapter/vendor/**/psalm*.xml
+lib/mcp-adapter/vendor/**/renovate.json
 
 # WordPress.org directory assets (screenshots, banners, icons)
 .wordpress-org

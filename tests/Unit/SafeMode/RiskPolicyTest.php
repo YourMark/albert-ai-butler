@@ -131,6 +131,25 @@ class RiskPolicyTest extends TestCase {
 	}
 
 	/**
+	 * Options that hand out privileges or code execution are held too.
+	 *
+	 * @return void
+	 */
+	public function test_holds_privilege_escalating_option_writes(): void {
+		global $wpdb;
+		$saved = $wpdb ?? null;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Only the prefix is read.
+		$wpdb = (object) [ 'prefix' => 'wp_' ];
+
+		foreach ( [ 'wp_user_roles', 'cron', 'active_sitewide_plugins', 'upload_path', 'upload_url_path', 'new_admin_email', 'auth_key', 'nonce_salt' ] as $name ) {
+			$this->assertTrue( $this->risk->must_hold( $this->ability( 'thirdparty/update-option' ), [ 'option' => $name ] ), $name );
+		}
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore.
+		$wpdb = $saved;
+	}
+
+	/**
 	 * The option is compared by the matcher, after the trim WordPress applies,
 	 * so a spelling the database treats as the same row is held.
 	 *

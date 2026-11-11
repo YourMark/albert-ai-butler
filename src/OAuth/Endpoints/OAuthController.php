@@ -146,7 +146,7 @@ class OAuthController implements Hookable {
 			return new WP_REST_Response(
 				[
 					'error'             => 'server_error',
-					'error_description' => $e->getMessage(),
+					'error_description' => 'The token request could not be completed.',
 				],
 				500
 			);

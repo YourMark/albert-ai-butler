@@ -210,7 +210,6 @@ class Dashboard implements Hookable {
 			'albertAdmin',
 			[
 				'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
-				'nonce'        => wp_create_nonce( 'albert_oauth_nonce' ),
 				'dismissNonce' => wp_create_nonce( Attention::DISMISS_ACTION ),
 				'i18n'         => [
 					'copied'     => __( 'Copied!', 'albert-ai-butler' ),

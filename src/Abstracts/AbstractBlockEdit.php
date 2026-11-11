@@ -132,7 +132,10 @@ abstract class AbstractBlockEdit extends BaseAbility {
 		$post_id = absint( $args['id'] ?? 0 );
 		$post    = get_post( $post_id );
 
-		if ( ! $post || $post->post_type !== $this->post_type() ) {
+		// The edit check comes before the post is read: error messages about
+		// block paths would otherwise describe a post the user cannot edit. The
+		// answer matches a missing post, so neither reveals it exists.
+		if ( ! $post || $post->post_type !== $this->post_type() || ! current_user_can( 'edit_post', $post_id ) ) {
 			return new WP_Error(
 				'post_not_found',
 				sprintf(

@@ -459,4 +459,41 @@ class PagesAbilityTest extends TestCase {
 		$this->assertNotNull( get_post( $page_id ), 'The page must survive — no silent permanent delete.' );
 		$this->assertSame( 'publish', get_post_status( $page_id ) );
 	}
+
+	// ─── Password-protected pages ───────────────────────────────────
+
+	/**
+	 * A reader who cannot edit a protected page gets neither its content nor a search hit on it.
+	 *
+	 * @return void
+	 */
+	public function test_protected_page_content_is_withheld_from_readers(): void {
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'     => 'page',
+				'post_title'    => 'Members',
+				'post_content'  => '<!-- wp:paragraph --><p>Secret pineapple code</p><!-- /wp:paragraph -->',
+				'post_password' => 'hunter2',
+				'post_author'   => get_current_user_id(),
+			]
+		);
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'editor' ] ) );
+		$this->assertIsArray( ( new ViewPage() )->execute( [ 'id' => $page_id ] ) );
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
+
+		$view = ( new ViewPage() )->execute( [ 'id' => $page_id ] );
+		$this->assertIsArray( $view );
+		$this->assertTrue( $view['page']['protected'] );
+		$this->assertStringNotContainsString( 'pineapple', (string) wp_json_encode( $view ) );
+		$this->assertFalse( $view['page']['has_blocks'] );
+
+		$found = ( new FindPages() )->execute( [ 'search' => 'pineapple' ] );
+		$this->assertIsArray( $found );
+		$this->assertNotContains( $page_id, array_column( $found['pages'], 'id' ) );
+
+		$listed = ( new FindPages() )->execute( [] );
+		$this->assertStringNotContainsString( 'pineapple', (string) wp_json_encode( $listed ) );
+	}
 }

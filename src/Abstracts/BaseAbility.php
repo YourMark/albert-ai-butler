@@ -9,6 +9,8 @@
 
 namespace Albert\Abstracts;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Contracts\Interfaces\Ability;
 use Albert\Core\AbilitiesState;
 use WP_Error;

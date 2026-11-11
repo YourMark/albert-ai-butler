@@ -27,6 +27,20 @@ use Albert\MCP\AdapterSource;
 class AdapterNudge implements Hookable {
 
 	/**
+	 * Markup allowed in the fix link, for wp_kses() at output.
+	 *
+	 * @since 1.5.1
+	 * @var array<string, array<string, bool>>
+	 */
+	private const LINK_HTML = [
+		'a' => [
+			'class'                       => true,
+			'href'                        => true,
+			'data-albert-adapter-install' => true,
+		],
+	];
+
+	/**
 	 * Script handle for the one-click install.
 	 *
 	 * @since 1.5.0
@@ -200,7 +214,7 @@ class AdapterNudge implements Hookable {
 			'<tr class="plugin-update-tr active albert-adapter-row"><td colspan="%1$d" class="plugin-update colspanchange"><div class="update-message notice inline notice-warning notice-alt"><p>%2$s%3$s</p></div></td></tr>',
 			(int) $columns,
 			esc_html( AdapterPlugin::explanation() ),
-			$link // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
+			wp_kses( $link, self::LINK_HTML )
 		);
 	}
 
@@ -348,11 +362,14 @@ class AdapterNudge implements Hookable {
 			return;
 		}
 
-		printf(
-			'<a class="button button-primary" href="%1$s"%2$s>%3$s</a>',
-			esc_url( AdapterPlugin::fix_url() ),
-			self::attribute_string(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in attribute_string().
-			esc_html( AdapterPlugin::action_label() )
+		echo wp_kses(
+			sprintf(
+				'<a class="button button-primary" href="%1$s"%2$s>%3$s</a>',
+				esc_url( AdapterPlugin::fix_url() ),
+				self::attribute_string(),
+				esc_html( AdapterPlugin::action_label() )
+			),
+			self::LINK_HTML
 		);
 	}
 

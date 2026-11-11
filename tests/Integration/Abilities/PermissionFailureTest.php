@@ -126,7 +126,7 @@ class PermissionFailureTest extends TestCase {
 		// on the role system's state.
 		if ( self::is_woocommerce_ability( $ability_class ) ) {
 			$user = get_userdata( $admin_id );
-			foreach ( [ 'edit_products', 'edit_shop_orders', 'manage_woocommerce' ] as $cap ) {
+			foreach ( [ 'edit_products', 'edit_shop_orders', 'read_private_shop_orders', 'manage_woocommerce' ] as $cap ) {
 				$user->add_cap( $cap );
 			}
 		}

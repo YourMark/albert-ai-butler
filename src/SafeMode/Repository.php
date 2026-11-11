@@ -735,7 +735,7 @@ class Repository {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $where is a literal fragment from this class; every value is bound.
 		$sql = 'SELECT * FROM %i WHERE ' . $where . ' ORDER BY id DESC LIMIT %d';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Direct read on a custom table; bound below.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Direct read on a custom table; bound below.
 		$rows = $wpdb->get_results(
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholders are bound here.
 			$wpdb->prepare( $sql, array_merge( [ Tables::pending_actions() ], $bindings, [ max( 1, $limit ) ] ) ),

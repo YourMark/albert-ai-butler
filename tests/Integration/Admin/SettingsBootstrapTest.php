@@ -91,7 +91,8 @@ class SettingsBootstrapTest extends TestCase {
 	 *
 	 * The popover is a `<span>`, not a `<div>`: the whole control is phrasing
 	 * content so it stays legal inside a `<legend>`, a `<p>` or a `<label>`,
-	 * which is where a tip beside a field's name has to sit.
+	 * which is where a tip beside a field's name has to sit. Attribute order
+	 * is not asserted: WordPress trunk's kses writes attributes alphabetically.
 	 *
 	 * @return void
 	 */
@@ -101,7 +102,7 @@ class SettingsBootstrapTest extends TestCase {
 		$this->assertStringContainsString( 'albert-tip__trigger', $html );
 		$this->assertStringContainsString( 'aria-expanded="false"', $html );
 		$this->assertMatchesRegularExpression(
-			'/<button[^>]*aria-controls="([^"]+)"[^>]*>.*?<\/button><span class="albert-tip__popover" id="\1"/s',
+			'/<button[^>]*aria-controls="([^"]+)"[^>]*>.*?<\/button><span(?=[^>]*class="albert-tip__popover")(?=[^>]*id="\1")[^>]*>/s',
 			$html
 		);
 	}

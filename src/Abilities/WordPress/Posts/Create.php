@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
@@ -186,20 +188,17 @@ class Create extends BaseAbility {
 			$request_data['categories'] = array_map( 'absint', $args['categories'] );
 		}
 
-		// Add tags if provided (REST API expects tag IDs, so convert tag names to IDs).
+		// REST takes tag IDs. Existing names go in with the post; new ones are
+		// created only once the post exists, so a refused save leaves no tags.
+		$new_tags = [];
 		if ( ! empty( $args['tags'] ) && is_array( $args['tags'] ) ) {
 			$tag_ids = [];
 			foreach ( $args['tags'] as $tag_name ) {
-				$tag = get_term_by( 'name', $tag_name, 'post_tag' );
-				if ( ! $tag ) {
-					// Create tag if it doesn't exist.
-					$tag = wp_insert_term( $tag_name, 'post_tag' );
-					if ( is_wp_error( $tag ) ) {
-						continue;
-					}
-					$tag_ids[] = $tag['term_id'];
-				} else {
+				$tag = get_term_by( 'name', (string) $tag_name, 'post_tag' );
+				if ( $tag ) {
 					$tag_ids[] = $tag->term_id;
+				} else {
+					$new_tags[] = sanitize_text_field( (string) $tag_name );
 				}
 			}
 			$request_data['tags'] = $tag_ids;
@@ -227,6 +226,15 @@ class Create extends BaseAbility {
 				$data['message'] ?? __( 'An error occurred while creating the post.', 'albert-ai-butler' ),
 				[ 'status' => $response->get_status() ]
 			);
+		}
+
+		// What the post editor allows: anyone who may assign tags may add new
+		// ones by name.
+		if ( $new_tags !== [] ) {
+			$tag_taxonomy = get_taxonomy( 'post_tag' );
+			if ( $tag_taxonomy && current_user_can( $tag_taxonomy->cap->assign_terms ) ) {
+				wp_set_post_tags( (int) $data['id'], $new_tags, true );
+			}
 		}
 
 		// Return formatted post data.

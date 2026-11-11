@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WooCommerce;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use Albert\Privacy\PiiPolicy;
@@ -125,7 +127,8 @@ class ViewCustomer extends BaseAbility {
 			);
 		}
 
-		if ( ! $customer->get_id() ) {
+		// On multisite, users of other sites in the network are not this site's to show.
+		if ( ! $customer->get_id() || ( is_multisite() && ! is_user_member_of_blog( $customer->get_id() ) ) ) {
 			return new WP_Error(
 				'customer_not_found',
 				sprintf(

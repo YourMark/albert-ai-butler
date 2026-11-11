@@ -135,15 +135,6 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
 
-      - name: Install Subversion
-        run: |
-          # Third-party repos pre-installed on the runner (e.g. packages.microsoft.com)
-          # intermittently serve a broken signature and fail `apt-get update`.
-          # Subversion comes from the Ubuntu repos, so drop those sources first.
-          sudo rm -f /etc/apt/sources.list.d/*microsoft* /etc/apt/sources.list.d/*azure* 2>/dev/null || true
-          sudo apt-get update
-          sudo apt-get install -y subversion
-
       - name: Install WordPress test suite
         run: |
           chmod +x bin/install-wp-tests.sh
@@ -204,15 +195,6 @@ jobs:
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
-
-      - name: Install Subversion
-        run: |
-          # Third-party repos pre-installed on the runner (e.g. packages.microsoft.com)
-          # intermittently serve a broken signature and fail `apt-get update`.
-          # Subversion comes from the Ubuntu repos, so drop those sources first.
-          sudo rm -f /etc/apt/sources.list.d/*microsoft* /etc/apt/sources.list.d/*azure* 2>/dev/null || true
-          sudo apt-get update
-          sudo apt-get install -y subversion
 
       - name: Install WordPress test suite + WooCommerce
         env:

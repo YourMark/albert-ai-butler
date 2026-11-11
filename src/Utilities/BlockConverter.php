@@ -12,6 +12,8 @@
 
 namespace Albert\Utilities;
 
+defined( 'ABSPATH' ) || exit;
+
 use DOMDocument;
 use DOMElement;
 use DOMNode;
@@ -31,32 +33,16 @@ use DOMNodeList;
 class BlockConverter {
 
 	/**
-	 * IDs of attachments created during image sideloading.
-	 *
-	 * @var int[]
-	 */
-	protected array $created_attachment_ids = [];
-
-	/**
-	 * Whether to sideload remote images into the media library.
-	 *
-	 * @var bool
-	 */
-	protected bool $sideload_images;
-
-	/**
 	 * Constructor.
 	 *
-	 * @param string $html            The HTML to convert.
-	 * @param bool   $sideload_images Whether to sideload remote images. Default false.
+	 * @param string $html The HTML to convert.
 	 *
 	 * @since 1.1.0
+	 * @since 1.5.1 The unused `$sideload_images` parameter is gone; images keep their src.
 	 */
 	public function __construct(
-		protected string $html,
-		bool $sideload_images = false
+		protected string $html
 	) {
-		$this->sideload_images = $sideload_images;
 	}
 
 	/**
@@ -70,8 +56,6 @@ class BlockConverter {
 		if ( empty( trim( $this->html ) ) ) {
 			return '';
 		}
-
-		$this->created_attachment_ids = [];
 
 		$nodes  = $this->parse_html( $this->html );
 		$blocks = [];
@@ -113,35 +97,6 @@ class BlockConverter {
 		$output = $this->remove_empty_blocks( $output );
 
 		return $output;
-	}
-
-	/**
-	 * Get IDs of attachments created during image sideloading.
-	 *
-	 * @return int[] Attachment IDs.
-	 *
-	 * @since 1.1.0
-	 */
-	public function get_created_attachment_ids(): array {
-		return $this->created_attachment_ids;
-	}
-
-	/**
-	 * Assign a parent post to all attachments created during conversion.
-	 *
-	 * @param int $post_id The parent post ID.
-	 *
-	 * @since 1.1.0
-	 */
-	public function assign_parent_to_attachments( int $post_id ): void {
-		foreach ( $this->created_attachment_ids as $attachment_id ) {
-			wp_update_post(
-				[
-					'ID'          => $attachment_id,
-					'post_parent' => $post_id,
-				]
-			);
-		}
 	}
 
 	/**
@@ -253,8 +208,6 @@ class BlockConverter {
 			return null;
 		}
 
-		$this->maybe_sideload_image( $node );
-
 		$img_html = $this->get_node_html( $node );
 		$content  = '<figure class="wp-block-image">' . $img_html . '</figure>';
 
@@ -275,10 +228,6 @@ class BlockConverter {
 	protected function figure( DOMNode $node ): ?string {
 		if ( ! $this->is_supported_figure( $node ) ) {
 			return $this->html_block( $node );
-		}
-
-		if ( $this->sideload_images ) {
-			$this->sideload_child_images( $node );
 		}
 
 		if ( $node instanceof DOMElement ) {
@@ -624,148 +573,5 @@ class BlockConverter {
 		);
 
 		return trim( $html );
-	}
-
-	/**
-	 * Sideload a single image element if sideloading is enabled.
-	 *
-	 * @param DOMElement $img_node The <img> element.
-	 *
-	 * @since 1.1.0
-	 */
-	protected function maybe_sideload_image( DOMElement $img_node ): void {
-		if ( ! $this->sideload_images ) {
-			return;
-		}
-
-		$data_srcset = $img_node->getAttribute( 'data-srcset' );
-		$src         = ! empty( $data_srcset ) ? $data_srcset : $img_node->getAttribute( 'src' );
-		if ( empty( $src ) ) {
-			return;
-		}
-
-		$alt = $img_node->getAttribute( 'alt' );
-
-		try {
-			$local_url = $this->upload_image( $src, $alt );
-
-			if ( $local_url ) {
-				$img_node->setAttribute( 'src', $local_url );
-
-				if ( $img_node->hasAttribute( 'srcset' ) ) {
-					$img_node->removeAttribute( 'srcset' );
-				}
-			}
-		} catch ( \Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
-			// Silently fail — the original src remains.
-		}
-	}
-
-	/**
-	 * Recursively sideload images within a parent node.
-	 *
-	 * @param DOMNode $node The parent node to scan for images.
-	 *
-	 * @since 1.1.0
-	 */
-	protected function sideload_child_images( DOMNode $node ): void {
-		if ( ! $node->hasChildNodes() ) {
-			return;
-		}
-
-		foreach ( $node->childNodes as $child ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-			if ( $child->nodeName === 'img' && $child instanceof DOMElement ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-				$this->maybe_sideload_image( $child );
-			} elseif ( $child->hasChildNodes() ) {
-				$this->sideload_child_images( $child );
-			}
-		}
-	}
-
-	/**
-	 * Upload (sideload) a remote image into the WordPress media library.
-	 *
-	 * Checks for an existing attachment by original URL before uploading.
-	 *
-	 * @param string $src The image URL.
-	 * @param string $alt The image alt text.
-	 * @return string The local attachment URL, or empty string on failure.
-	 *
-	 * @since 1.1.0
-	 */
-	protected function upload_image( string $src, string $alt ): string {
-		// Strip query string from image URL.
-		$src = $this->sanitize_image_url( $src );
-
-		if ( empty( $src ) ) {
-			return '';
-		}
-
-		// Check if this image was already sideloaded.
-		$existing = get_posts(
-			[
-				'fields'         => 'ids',
-				'meta_key'       => '_albert_original_url', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value'     => $src, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-				'post_status'    => 'any',
-				'post_type'      => 'attachment',
-				'posts_per_page' => 1,
-			]
-		);
-
-		if ( ! empty( $existing ) ) {
-			$attachment_id = (int) $existing[0];
-			if ( ! in_array( $attachment_id, $this->created_attachment_ids, true ) ) {
-				$this->created_attachment_ids[] = $attachment_id;
-			}
-			return (string) wp_get_attachment_url( $attachment_id );
-		}
-
-		// Require media handling functions.
-		if ( ! function_exists( 'media_sideload_image' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/media.php';
-			require_once ABSPATH . 'wp-admin/includes/file.php';
-			require_once ABSPATH . 'wp-admin/includes/image.php';
-		}
-
-		$attachment_id = media_sideload_image( $src, 0, '', 'id' );
-
-		if ( is_wp_error( $attachment_id ) ) {
-			return '';
-		}
-
-		$this->created_attachment_ids[] = (int) $attachment_id;
-
-		// Store original URL for deduplication.
-		update_post_meta( (int) $attachment_id, '_albert_original_url', $src );
-
-		// Set alt text.
-		if ( ! empty( $alt ) ) {
-			update_post_meta( (int) $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $alt ) );
-		}
-
-		return (string) wp_get_attachment_url( (int) $attachment_id );
-	}
-
-	/**
-	 * Sanitize an image URL by stripping query string and fragment.
-	 *
-	 * @param string $url The image URL.
-	 * @return string Sanitized URL (scheme://host:port/path).
-	 *
-	 * @since 1.1.0
-	 */
-	protected function sanitize_image_url( string $url ): string {
-		$parts  = wp_parse_url( $url );
-		$scheme = $parts['scheme'] ?? 'https';
-		$host   = $parts['host'] ?? '';
-		$port   = ! empty( $parts['port'] ) ? ':' . $parts['port'] : '';
-		$path   = $parts['path'] ?? '';
-
-		if ( empty( $scheme ) || empty( $host ) || empty( $path ) ) {
-			return '';
-		}
-
-		return sprintf( '%s://%s%s%s', $scheme, $host, $port, $path );
 	}
 }

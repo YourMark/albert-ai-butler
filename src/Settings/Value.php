@@ -154,7 +154,7 @@ class Value {
 		 *
 		 * @param mixed $value The overriding value, or null to defer.
 		 */
-		$filtered = apply_filters( $hook, null );
+		$filtered = apply_filters( $hook, null ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- albert/settings/{option}.
 
 		if ( $filtered !== null && ( $validator === null || (bool) $validator( $filtered ) ) ) {
 			/**
@@ -239,7 +239,7 @@ class Value {
 		 *
 		 * @param callable|null $validator The validator, or null to accept anything.
 		 */
-		$validator = apply_filters( self::validator_name( $option_name ), null );
+		$validator = apply_filters( self::validator_name( $option_name ), null ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- albert/settings/validator/{option}.
 
 		if ( is_callable( $validator ) ) {
 			return $validator;

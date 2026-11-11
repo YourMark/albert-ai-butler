@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Media;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -159,7 +161,9 @@ class FindMedia extends BaseAbility {
 
 		$media = [];
 		foreach ( $query->posts as $attachment ) {
-			if ( ! $attachment instanceof \WP_Post ) {
+			// An attachment inherits its parent's status, so one on another
+			// author's private or draft post is not the user's to read.
+			if ( ! $attachment instanceof \WP_Post || ! current_user_can( 'read_post', $attachment->ID ) ) {
 				continue;
 			}
 
