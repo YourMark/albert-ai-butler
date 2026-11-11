@@ -271,6 +271,11 @@ jobs:
           test -f lib/mcp-adapter/vendor/composer/jetpack_autoload_classmap.php \
             || { echo "::error::lib/mcp-adapter/vendor is missing; the bundled MCP adapter was not installed"; exit 1; }
 
+      - name: Strip non-permitted vendor files
+        # .distignore already excludes them; this keeps the SVN tree identical
+        # to the zip even if a library adds a script .distignore misses.
+        run: find vendor lib -name "*.sh" -type f -delete
+
       - name: Deploy to WordPress.org
         uses: 10up/action-wordpress-plugin-deploy@stable
         with:

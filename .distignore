@@ -70,6 +70,7 @@ vendor/**/.deepsource.toml
 vendor/**/dist/*.asc
 vendor/**/dist/*.asc.sig
 vendor/**/*.bat
+vendor/**/*.sh
 lib/mcp-adapter/vendor/bin/
 lib/mcp-adapter/vendor/*/bin/
 lib/mcp-adapter/vendor/**/.deployignore
@@ -77,6 +78,7 @@ lib/mcp-adapter/vendor/**/.deepsource.toml
 lib/mcp-adapter/vendor/**/dist/*.asc
 lib/mcp-adapter/vendor/**/dist/*.asc.sig
 lib/mcp-adapter/vendor/**/*.bat
+lib/mcp-adapter/vendor/**/*.sh
 
 # Library build, CI and analysis files: never loaded, and Plugin Check flags
 # hidden and application files anywhere in the zip.
