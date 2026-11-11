@@ -1,4 +1,4 @@
-=== Albert - Connect AI Assistants to WordPress ===
+=== Albert - The AI Butler ===
 Contributors: albertai, mark-jansen
 Tags: ai assistant, chatgpt, claude, ai, mcp
 Requires at least: 6.9
