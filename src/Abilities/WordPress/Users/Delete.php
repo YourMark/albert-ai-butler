@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Users;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -67,8 +69,7 @@ class Delete extends BaseAbility {
 				],
 				'reassign' => [
 					'type'        => 'integer',
-					'description' => 'Reassign posts and links to this user ID',
-					'default'     => 0,
+					'description' => 'User ID to give the deleted user\'s content to. Required when the user owns any content; nothing is deleted with them.',
 				],
 			],
 			'required'   => [ 'id' ],
@@ -133,10 +134,19 @@ class Delete extends BaseAbility {
 		$request = new WP_REST_Request( 'DELETE', '/wp/v2/users/' . $user_id );
 		$request->set_param( 'force', true );
 
-		// Set reassign parameter if provided.
-		if ( ! empty( $args['reassign'] ) ) {
-			$request->set_param( 'reassign', absint( $args['reassign'] ) );
+		// Core requires `reassign` and deletes the user's content when it is
+		// empty. That is never done silently: content needs a new owner, and
+		// only a user who owns nothing is deleted without one.
+		$reassign = absint( $args['reassign'] ?? 0 );
+		if ( $reassign === 0 && count_user_posts( $user_id, get_post_types( [], 'names' ) ) > 0 ) {
+			return new WP_Error(
+				'reassign_required',
+				__( 'This user owns content. Pass "reassign" with the ID of the user who should take it over.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
 		}
+
+		$request->set_param( 'reassign', $reassign === 0 ? false : $reassign );
 
 		// Execute the request.
 		$response = rest_do_request( $request );

@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Users;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use Albert\Privacy\PiiPolicy;
@@ -160,12 +162,11 @@ class FindUsers extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		// Create REST request.
-
 		$route = '/wp/v2/users';
 
-		if ( isset( $args['id'] ) && ! empty( $args['id'] ) ) {
-			$route .= '/' . $args['id'];
+		// absint() so the id can never add a path segment of its own.
+		if ( ! empty( $args['id'] ) ) {
+			$route .= '/' . absint( $args['id'] );
 		}
 
 		$request = new WP_REST_Request( 'GET', $route );

@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Taxonomies;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -21,6 +23,8 @@ use WP_Error;
  * @since 1.0.0
  */
 class ViewTerm extends BaseAbility {
+	use ResolvesTaxonomyRoute;
+
 	/**
 	 * Constructor.
 	 *
@@ -109,8 +113,17 @@ class ViewTerm extends BaseAbility {
 		$term_id  = absint( $args['id'] );
 		$taxonomy = sanitize_key( $args['taxonomy'] );
 
-		if ( ! taxonomy_exists( $taxonomy ) ) {
-			return new WP_Error( 'invalid_taxonomy', __( 'Invalid taxonomy.', 'albert-ai-butler' ) );
+		// Same reach as the other term abilities: only taxonomies core exposes
+		// over REST, and a non-public one (nav menus, product visibility) only
+		// to somebody who may assign its terms.
+		$route = $this->get_taxonomy_route( $taxonomy );
+		if ( is_wp_error( $route ) ) {
+			return $route;
+		}
+
+		$taxonomy_object = get_taxonomy( $taxonomy );
+		if ( ! $taxonomy_object || ( ! is_taxonomy_viewable( $taxonomy ) && ! current_user_can( $taxonomy_object->cap->assign_terms ) ) ) {
+			return new WP_Error( 'invalid_taxonomy', __( 'Invalid taxonomy.', 'albert-ai-butler' ), [ 'status' => 404 ] );
 		}
 
 		$term = get_term( $term_id, $taxonomy );

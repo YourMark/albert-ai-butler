@@ -122,10 +122,15 @@ class AdapterHealth implements Hookable {
 	 * @since 1.4.0
 	 */
 	public function render_notice(): void {
+		// Only people who can act on it; the server path stays in Site Health.
+		if ( ! current_user_can( 'activate_plugins' ) ) {
+			return;
+		}
+
 		printf(
 			'<div class="notice notice-error"><p><strong>%s</strong> %s</p></div>',
 			esc_html__( 'Albert:', 'albert-ai-butler' ),
-			wp_kses_post( $this->explanation() )
+			wp_kses_post( $this->explanation( false ) )
 		);
 	}
 
@@ -135,10 +140,13 @@ class AdapterHealth implements Hookable {
 	 * Two different faults share one symptom, and they have opposite remedies,
 	 * so they are told apart here rather than left to the reader.
 	 *
+	 * @param bool $with_path Whether to name the loaded library's server path.
+	 *
 	 * @return string Escaped HTML.
 	 * @since 1.4.0
+	 * @since 1.5.1 The `$with_path` parameter.
 	 */
-	private function explanation(): string {
+	private function explanation( bool $with_path = true ): string {
 		$preamble = esc_html__( 'The MCP endpoint is switched off, so every request to it fails with an authentication error even though no token would work — there is nothing registered to authenticate against.', 'albert-ai-butler' );
 
 		if ( ! $this->present() ) {
@@ -146,6 +154,14 @@ class AdapterHealth implements Hookable {
 				/* translators: %s: the composer command that rebuilds dependencies */
 				esc_html__( 'The MCP library is not installed. Reinstall Albert from an official release, or if you are running it from source, install its dependencies with %s.', 'albert-ai-butler' ),
 				'<code>composer install</code>'
+			);
+		}
+
+		if ( ! $with_path ) {
+			return $preamble . ' ' . sprintf(
+				/* translators: %s: list of missing class names */
+				esc_html__( 'A copy of the MCP library loaded by another plugin is older than Albert needs and does not provide: %s. Update the plugin that supplies it, or deactivate it so Albert&#8217;s own copy is used. Site Health shows where it is loaded from.', 'albert-ai-butler' ),
+				'<code>' . implode( '</code>, <code>', array_map( 'esc_html', $this->missing() ) ) . '</code>'
 			);
 		}
 

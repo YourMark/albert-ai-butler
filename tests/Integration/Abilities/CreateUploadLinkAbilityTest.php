@@ -17,6 +17,7 @@ use Albert\Abilities\WordPress\Media\CreateUploadLink;
 use Albert\Database\Installer;
 use Albert\Database\Tables;
 use Albert\Media\UploadLinks\UploadLinkService;
+use Albert\OAuth\AllowedUsers;
 use Albert\Tests\TestCase;
 use WP_Error;
 
@@ -34,6 +35,9 @@ class CreateUploadLinkAbilityTest extends TestCase {
 	 */
 	public function set_up(): void {
 		parent::set_up();
+
+		// A link only redeems for somebody still allowed to connect.
+		add_action( 'user_register', [ AllowedUsers::class, 'add' ] );
 
 		Installer::install();
 

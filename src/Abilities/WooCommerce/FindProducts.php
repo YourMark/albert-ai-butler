@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WooCommerce;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -155,6 +157,30 @@ class FindProducts extends BaseAbility {
 	}
 
 	/**
+	 * The product statuses the current user may list.
+	 *
+	 * Mirrors the capabilities WooCommerce's own product REST checks: others'
+	 * unpublished products need `edit_others_products`, private ones
+	 * `read_private_products`.
+	 *
+	 * @return list<string>
+	 * @since 1.5.1
+	 */
+	private static function readable_statuses(): array {
+		$statuses = [ 'publish' ];
+
+		if ( current_user_can( 'edit_others_products' ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- WooCommerce capability.
+			array_push( $statuses, 'draft', 'pending', 'future' );
+		}
+
+		if ( current_user_can( 'read_private_products' ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown -- WooCommerce capability.
+			$statuses[] = 'private';
+		}
+
+		return $statuses;
+	}
+
+	/**
 	 * Execute the ability.
 	 *
 	 * @param array<string, mixed> $args Input parameters.
@@ -183,9 +209,19 @@ class FindProducts extends BaseAbility {
 			$query_args['sku'] = sanitize_text_field( $args['sku'] );
 		}
 
-		if ( ! empty( $args['status'] ) && $args['status'] !== 'any' ) {
-			$query_args['status'] = sanitize_key( $args['status'] );
+		// wc_get_products() returns every status by default, so the statuses are
+		// narrowed to what the user may read, before paging so totals stay true.
+		$readable  = self::readable_statuses();
+		$requested = ! empty( $args['status'] ) && $args['status'] !== 'any' ? [ sanitize_key( $args['status'] ) ] : $readable;
+		$statuses  = array_values( array_intersect( $requested, $readable ) );
+		if ( $statuses === [] ) {
+			return [
+				'products'    => [],
+				'total'       => 0,
+				'total_pages' => 0,
+			];
 		}
+		$query_args['status'] = $statuses;
 
 		if ( ! empty( $args['type'] ) ) {
 			$query_args['type'] = sanitize_key( $args['type'] );
@@ -196,6 +232,12 @@ class FindProducts extends BaseAbility {
 		$products = [];
 
 		foreach ( $results->products as $product ) {
+			// Status alone does not cover another author's draft for a user who
+			// may edit only their own products.
+			if ( ! current_user_can( 'read_post', $product->get_id() ) ) {
+				continue;
+			}
+
 			$products[] = [
 				'id'            => $product->get_id(),
 				'name'          => $product->get_name(),

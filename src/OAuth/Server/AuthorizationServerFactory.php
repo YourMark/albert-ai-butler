@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Server;
 
+defined( 'ABSPATH' ) || exit;
+
 use DateInterval;
 use Exception;
 use Albert\OAuth\Repositories\AccessTokenRepository;
@@ -151,5 +153,16 @@ class AuthorizationServerFactory {
 		} catch ( Exception $e ) {
 			return new DateInterval( $default_value );
 		}
+	}
+
+	/**
+	 * Reset the singleton instance, as {@see ResourceServerFactory::reset()}
+	 * does, so it is rebuilt with the current keys.
+	 *
+	 * @return void
+	 * @since 1.5.1
+	 */
+	public static function reset(): void {
+		self::$instance = null;
 	}
 }

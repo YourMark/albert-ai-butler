@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WooCommerce;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use Albert\Privacy\PiiPolicy;

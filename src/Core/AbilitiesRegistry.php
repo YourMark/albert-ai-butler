@@ -12,6 +12,8 @@
 
 namespace Albert\Core;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\MCP\Server;
 use WP\MCP\Abilities\McpAbilityExposure;
 

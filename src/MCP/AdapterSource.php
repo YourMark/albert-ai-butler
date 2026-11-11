@@ -116,13 +116,14 @@ final class AdapterSource {
 			return;
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Jetpack Autoloader's own global.
+		// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Jetpack Autoloader's own global.
 		global $jetpack_autoloader_activating_plugins_paths;
 
 		if ( ! is_array( $jetpack_autoloader_activating_plugins_paths ) ) {
-			$jetpack_autoloader_activating_plugins_paths = []; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Jetpack Autoloader's own global.
+			$jetpack_autoloader_activating_plugins_paths = [];
 		}
 
-		$jetpack_autoloader_activating_plugins_paths[] = rtrim( $plugin_dir, '/\\' ) . '/' . self::FALLBACK_DIR; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Jetpack Autoloader's own global.
+		$jetpack_autoloader_activating_plugins_paths[] = rtrim( $plugin_dir, '/\\' ) . '/' . self::FALLBACK_DIR;
+		// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
 	}
 }

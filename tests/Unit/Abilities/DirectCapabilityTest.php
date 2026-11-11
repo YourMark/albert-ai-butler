@@ -66,7 +66,7 @@ class DirectCapabilityTest extends TestCase {
 	/**
 	 * Abilities and the capability they require.
 	 *
-	 * @return array<string, array{0: class-string<BaseAbility>, 1: string}>
+	 * @return array<string, array{0: class-string<BaseAbility>, 1: string|list<string>}>
 	 */
 	public static function provideAbilitiesWithCaps(): array {
 		return [
@@ -93,8 +93,8 @@ class DirectCapabilityTest extends TestCase {
 			// WooCommerce.
 			'woo-find-products'  => [ FindProducts::class, 'edit_products' ],
 			'woo-view-product'   => [ ViewProduct::class, 'read' ],
-			'woo-find-orders'    => [ FindOrders::class, 'edit_shop_orders' ],
-			'woo-view-order'     => [ ViewOrder::class, 'edit_shop_orders' ],
+			'woo-find-orders'    => [ FindOrders::class, [ 'edit_shop_orders', 'read_private_shop_orders' ] ],
+			'woo-view-order'     => [ ViewOrder::class, [ 'edit_shop_orders', 'read_private_shop_orders' ] ],
 			'woo-find-customers' => [ FindCustomers::class, 'list_users' ],
 			'woo-view-customer'  => [ ViewCustomer::class, 'list_users' ],
 		];
@@ -106,18 +106,18 @@ class DirectCapabilityTest extends TestCase {
 	 * @dataProvider provideAbilitiesWithCaps
 	 *
 	 * @param class-string<BaseAbility> $ability_class Ability class.
-	 * @param string                    $cap   Required capability.
+	 * @param string|list<string>       $cap   Required capability, or every one required.
 	 *
 	 * @return void
 	 */
-	public function test_permission_granted_with_required_cap( string $ability_class, string $cap ): void {
-		$GLOBALS['albert_test_caps'] = [ $cap ];
+	public function test_permission_granted_with_required_cap( string $ability_class, string|array $cap ): void {
+		$GLOBALS['albert_test_caps'] = (array) $cap;
 
 		$ability = new $ability_class();
 
 		$this->assertTrue(
 			$ability->check_permission(),
-			sprintf( '%s should return true when user has "%s".', $ability_class, $cap )
+			sprintf( '%s should return true when user has "%s".', $ability_class, implode( '", "', (array) $cap ) )
 		);
 	}
 
@@ -127,11 +127,11 @@ class DirectCapabilityTest extends TestCase {
 	 * @dataProvider provideAbilitiesWithCaps
 	 *
 	 * @param class-string<BaseAbility> $ability_class Ability class.
-	 * @param string                    $cap   Required capability.
+	 * @param string|list<string>       $cap   Required capability, or every one required.
 	 *
 	 * @return void
 	 */
-	public function test_permission_denied_without_required_cap( string $ability_class, string $cap ): void {
+	public function test_permission_denied_without_required_cap( string $ability_class, string|array $cap ): void {
 		// Grant a harmless cap that is NOT the required one.
 		$GLOBALS['albert_test_caps'] = [ 'some_unrelated_cap' ];
 
@@ -141,7 +141,7 @@ class DirectCapabilityTest extends TestCase {
 		$this->assertInstanceOf(
 			WP_Error::class,
 			$result,
-			sprintf( '%s should return WP_Error when user lacks "%s".', $ability_class, $cap )
+			sprintf( '%s should return WP_Error when user lacks "%s".', $ability_class, implode( '", "', (array) $cap ) )
 		);
 		$this->assertSame( 'ability_permission_denied', $result->get_error_code() );
 	}
@@ -152,11 +152,11 @@ class DirectCapabilityTest extends TestCase {
 	 * @dataProvider provideAbilitiesWithCaps
 	 *
 	 * @param class-string<BaseAbility> $ability_class Ability class.
-	 * @param string                    $cap   Required capability.
+	 * @param string|list<string>       $cap   Required capability, or every one required.
 	 *
 	 * @return void
 	 */
-	public function test_permission_denied_error_has_403_status( string $ability_class, string $cap ): void {
+	public function test_permission_denied_error_has_403_status( string $ability_class, string|array $cap ): void {
 		$GLOBALS['albert_test_caps'] = [];
 
 		$ability = new $ability_class();
@@ -174,21 +174,23 @@ class DirectCapabilityTest extends TestCase {
 	 * @dataProvider provideAbilitiesWithCaps
 	 *
 	 * @param class-string<BaseAbility> $ability_class Ability class.
-	 * @param string                    $cap   Required capability.
+	 * @param string|list<string>       $cap   Required capability, or every one required.
 	 *
 	 * @return void
 	 */
-	public function test_permission_denied_message_mentions_capability( string $ability_class, string $cap ): void {
+	public function test_permission_denied_message_mentions_capability( string $ability_class, string|array $cap ): void {
 		$GLOBALS['albert_test_caps'] = [];
 
 		$ability = new $ability_class();
 		$result  = $ability->check_permission();
 
 		$this->assertInstanceOf( WP_Error::class, $result );
+		// With none held, the first missing capability is the one named.
+		$first = ( (array) $cap )[0];
 		$this->assertStringContainsString(
-			$cap,
+			$first,
 			$result->get_error_message(),
-			sprintf( 'Error message should mention the required capability "%s".', $cap )
+			sprintf( 'Error message should mention the required capability "%s".', $first )
 		);
 	}
 }

@@ -286,34 +286,39 @@ class UsersAbilityTest extends TestCase {
 	}
 
 	/**
-	 * CreateUser returns a reset link that actually validates for the new user.
+	 * CreateUser emails WordPress's own set-password link and never returns it.
 	 *
-	 * Asserting the key round-trips through core is the point: a link that only
-	 * looks right is the failure worth catching, because it is how an account
-	 * gets created that nobody can ever sign in to.
+	 * The link is a credential; returned, it would sit in the AI provider's
+	 * transcript.
 	 *
 	 * @return void
 	 */
-	public function test_create_user_returns_a_usable_password_reset_link(): void {
-		$result = ( new CreateUser() )->execute(
-			[
-				'username' => 'resetlink_user',
-				'email'    => 'resetlink@albert.test',
-			]
-		);
+	public function test_create_user_emails_the_set_password_link(): void {
+		$mails = [];
+		$catch = static function ( $args ) use ( &$mails ) {
+			$mails[] = $args;
+			return $args;
+		};
+		add_filter( 'wp_mail', $catch );
+
+		try {
+			$result = ( new CreateUser() )->execute(
+				[
+					'username' => 'invite_user',
+					'email'    => 'invite@albert.test',
+				]
+			);
+		} finally {
+			remove_filter( 'wp_mail', $catch );
+		}
 
 		$this->assertIsArray( $result );
-		$this->assertArrayHasKey( 'password_reset_url', $result );
+		$this->assertTrue( $result['invitation_sent'] );
+		$this->assertStringNotContainsString( 'action=rp', (string) wp_json_encode( $result ) );
 
-		$query = [];
-		parse_str( (string) wp_parse_url( $result['password_reset_url'], PHP_URL_QUERY ), $query );
-
-		$this->assertSame( 'rp', $query['action'] ?? '' );
-		$this->assertSame( 'resetlink_user', $query['login'] ?? '' );
-		$this->assertInstanceOf(
-			\WP_User::class,
-			check_password_reset_key( $query['key'] ?? '', 'resetlink_user' )
-		);
+		$to_user = array_filter( $mails, static fn( $mail ) => $mail['to'] === 'invite@albert.test' );
+		$this->assertCount( 1, $to_user );
+		$this->assertStringContainsString( 'action=rp', (string) reset( $to_user )['message'] );
 	}
 
 	/**
@@ -325,7 +330,7 @@ class UsersAbilityTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_create_user_explains_itself_when_no_reset_link_can_be_issued(): void {
+	public function test_create_user_explains_itself_when_no_invitation_can_be_sent(): void {
 		add_filter( 'allow_password_reset', '__return_false' );
 
 		try {
@@ -341,8 +346,8 @@ class UsersAbilityTest extends TestCase {
 
 		$this->assertIsArray( $result );
 		$this->assertArrayHasKey( 'id', $result );
-		$this->assertArrayNotHasKey( 'password_reset_url', $result );
-		$this->assertNotEmpty( $result['password_reset_note'] ?? '' );
+		$this->assertFalse( $result['invitation_sent'] );
+		$this->assertNotEmpty( $result['invitation_note'] ?? '' );
 	}
 
 	/**
@@ -363,45 +368,14 @@ class UsersAbilityTest extends TestCase {
 		$this->assertArrayNotHasKey( 'user_pass', $result );
 	}
 
-	/**
-	 * The reset link is masked for observers but intact for the caller.
-	 *
-	 * @return void
-	 */
-	public function test_create_user_masks_the_reset_link_for_observers(): void {
-		$captured = null;
-
-		add_action(
-			'albert/abilities/after_execute',
-			static function ( $ability_name, $args, $result ) use ( &$captured ) {
-				if ( $ability_name === 'albert/create-user' ) {
-					$captured = $result;
-				}
-			},
-			10,
-			4
-		);
-
-		$result = ( new CreateUser() )->guarded_execute(
-			[
-				'username' => 'masked_user',
-				'email'    => 'masked@albert.test',
-			]
-		);
-
-		$this->assertIsArray( $result );
-		$this->assertStringContainsString( 'action=rp', $result['password_reset_url'] );
-		$this->assertSame( '[redacted]', $captured['password_reset_url'] ?? null );
-	}
-
 	// ─── UpdateUser ─────────────────────────────────────────────────
 
 	/**
-	 * UpdateUser changes only the email of the user making the call.
+	 * UpdateUser refuses every email change, the caller's own included.
 	 *
 	 * @return void
 	 */
-	public function test_update_user_email(): void {
+	public function test_update_user_refuses_email_changes(): void {
 		$user_id = self::factory()->user->create( [ 'user_email' => 'old@albert.test' ] );
 
 		$refused = ( new UpdateUser() )->execute(
@@ -412,19 +386,19 @@ class UsersAbilityTest extends TestCase {
 		);
 
 		$this->assertWPError( $refused );
-		$this->assertSame( 'old@albert.test', get_userdata( $user_id )->user_email );
+		$this->assertSame( 'email_change_refused', $refused->get_error_code() );
 
 		wp_set_current_user( $user_id );
 
-		$result = ( new UpdateUser() )->execute(
+		$own = ( new UpdateUser() )->execute(
 			[
 				'id'    => $user_id,
 				'email' => 'new@albert.test',
 			]
 		);
 
-		$this->assertIsArray( $result );
-		$this->assertSame( 'new@albert.test', get_userdata( $user_id )->user_email );
+		$this->assertWPError( $own );
+		$this->assertSame( 'old@albert.test', get_userdata( $user_id )->user_email );
 	}
 
 	/**
@@ -584,6 +558,37 @@ class UsersAbilityTest extends TestCase {
 
 		// Post should now belong to the inheritor.
 		$this->assertEquals( $inheritor, get_post( $post_id )->post_author );
+	}
+
+	/**
+	 * DeleteUser removes a user without content when no reassign is given.
+	 *
+	 * @return void
+	 */
+	public function test_delete_user_without_content_needs_no_reassign(): void {
+		$victim = self::factory()->user->create( [ 'role' => 'subscriber' ] );
+
+		$result = ( new DeleteUser() )->execute( [ 'id' => $victim ] );
+
+		$this->assertIsArray( $result );
+		$this->assertFalse( get_userdata( $victim ) );
+	}
+
+	/**
+	 * DeleteUser never deletes a user's content by leaving reassign out.
+	 *
+	 * @return void
+	 */
+	public function test_delete_user_with_content_requires_reassign(): void {
+		$victim  = self::factory()->user->create( [ 'role' => 'author' ] );
+		$post_id = self::factory()->post->create( [ 'post_author' => $victim ] );
+
+		$result = ( new DeleteUser() )->execute( [ 'id' => $victim ] );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'reassign_required', $result->get_error_code() );
+		$this->assertInstanceOf( \WP_User::class, get_userdata( $victim ) );
+		$this->assertInstanceOf( \WP_Post::class, get_post( $post_id ) );
 	}
 
 	/**

@@ -50,7 +50,7 @@ class AbilitiesControllerTest extends TestCase {
 	 * @return void
 	 */
 	protected function tearDown(): void {
-		unset( $_SERVER['REQUEST_URI'], $_GET['rest_route'], $_POST['rest_route'], $GLOBALS['wp'], $GLOBALS['albert_test_caps'] );
+		unset( $_SERVER['REQUEST_URI'], $_SERVER['HTTP_AUTHORIZATION'], $_SERVER['REDIRECT_HTTP_AUTHORIZATION'], $_GET['rest_route'], $_POST['rest_route'], $GLOBALS['wp'], $GLOBALS['albert_test_caps'] );
 		ConnectionContext::reset();
 		parent::tearDown();
 	}
@@ -122,6 +122,21 @@ class AbilitiesControllerTest extends TestCase {
 
 		$GLOBALS['albert_test_caps'] = [ 'manage_options' ];
 		ConnectionContext::set( 'client-1' );
+		$this->assertFalse( $this->is_management_context( '/wp-json/albert/v1/abilities' ) );
+	}
+
+	/**
+	 * A Bearer token makes it an assistant's request before the token is validated.
+	 *
+	 * @return void
+	 */
+	public function test_bearer_token_is_never_a_management_context(): void {
+		$GLOBALS['albert_test_caps']   = [ 'manage_options' ];
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer abc';
+		$this->assertFalse( $this->is_management_context( '/wp-json/albert/v1/abilities' ) );
+
+		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		$_SERVER['REDIRECT_HTTP_AUTHORIZATION'] = 'bearer abc';
 		$this->assertFalse( $this->is_management_context( '/wp-json/albert/v1/abilities' ) );
 	}
 

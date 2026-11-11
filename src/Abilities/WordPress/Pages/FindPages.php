@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abilities\WordPress\ProtectedContent;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
@@ -238,10 +240,20 @@ class FindPages extends BaseAbility {
 			$request->set_param( 'orderby', sanitize_key( $args['orderby'] ) );
 		}
 
-		// Execute the request.
-		$response = rest_do_request( $request );
-		$server   = rest_get_server();
-		$data     = $server->response_to_data( $response, false );
+		$search_guard = ! empty( $args['search'] ) ? ProtectedContent::search_guard( 'page' ) : null;
+		if ( $search_guard !== null ) {
+			add_filter( 'posts_search', $search_guard );
+		}
+
+		try {
+			$response = rest_do_request( $request );
+		} finally {
+			if ( $search_guard !== null ) {
+				remove_filter( 'posts_search', $search_guard );
+			}
+		}
+		$server = rest_get_server();
+		$data   = $server->response_to_data( $response, false );
 
 		// Check for errors.
 		if ( is_wp_error( $data ) ) {
@@ -287,7 +299,7 @@ class FindPages extends BaseAbility {
 					'title' => $page_data['title']['rendered'] ?? '',
 				],
 				ContentFormatter::build( $raw_content, $format, [ 'paginate' => false ] ),
-				$page ? EditorMode::signal( $page ) : EditorMode::signal_for_content( $raw_content ),
+				$page ? ProtectedContent::editor_signal( $page ) : EditorMode::signal_for_content( $raw_content ),
 				[
 					'excerpt'    => $page_data['excerpt']['rendered'] ?? '',
 					'status'     => $page_data['status'] ?? '',

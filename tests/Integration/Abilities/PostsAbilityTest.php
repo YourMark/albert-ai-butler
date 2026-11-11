@@ -454,4 +454,58 @@ class PostsAbilityTest extends TestCase {
 		$this->assertNotNull( get_post( $post_id ), 'The post must survive — no silent permanent delete.' );
 		$this->assertSame( 'publish', get_post_status( $post_id ) );
 	}
+
+	// ─── 1.5.1 hardening ────────────────────────────────────────────
+
+	/**
+	 * Searching does not reveal what another author's protected post contains.
+	 *
+	 * @return void
+	 */
+	public function test_search_skips_protected_posts_the_user_cannot_edit(): void {
+		$protected = self::factory()->post->create(
+			[
+				'post_content'  => 'The launch date is in marmalade.',
+				'post_password' => 'hunter2',
+				'post_author'   => get_current_user_id(),
+			]
+		);
+
+		$author = self::factory()->user->create( [ 'role' => 'author' ] );
+		$own    = self::factory()->post->create(
+			[
+				'post_content'  => 'My own marmalade notes.',
+				'post_password' => 'mine',
+				'post_author'   => $author,
+			]
+		);
+
+		wp_set_current_user( $author );
+
+		$found = ( new FindPosts() )->execute( [ 'search' => 'marmalade' ] );
+		$ids   = array_column( $found['posts'], 'id' );
+
+		$this->assertNotContains( $protected, $ids );
+		$this->assertContains( $own, $ids );
+	}
+
+	/**
+	 * A refused post save leaves no new tags behind.
+	 *
+	 * @return void
+	 */
+	public function test_create_post_makes_no_tags_when_the_save_is_refused(): void {
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
+
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'  => 'Refused',
+				'status' => 'publish',
+				'tags'   => [ 'orphan-tag-151' ],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertFalse( get_term_by( 'name', 'orphan-tag-151', 'post_tag' ) );
+	}
 }

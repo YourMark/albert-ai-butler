@@ -563,4 +563,21 @@ class InstallerTest extends TestCase {
 
 		$this->assertSame( (string) ALBERT_VERSION, get_option( Installer::VERSION_OPTION ) );
 	}
+
+	/**
+	 * Uninstall removes the site location and Albert's transients.
+	 *
+	 * @return void
+	 */
+	public function test_uninstall_removes_site_location_and_transients(): void {
+		update_option( 'albert_site_location', 'local' );
+		set_transient( 'albert_discovery_reachable', 'ok', HOUR_IN_SECONDS );
+
+		Installer::uninstall();
+
+		$this->assertFalse( get_option( 'albert_site_location' ) );
+		$this->assertFalse( get_transient( 'albert_discovery_reachable' ) );
+
+		Installer::install();
+	}
 }

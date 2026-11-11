@@ -377,6 +377,4 @@ class SchemaPreparerTest extends TestCase {
 			(string) wp_json_encode( $prepared['input_schema']['properties']['meta'] )
 		);
 	}
-
-
 }

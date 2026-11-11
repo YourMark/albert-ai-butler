@@ -176,7 +176,7 @@ class ConnectionGuardTest extends TestCase {
 	public function test_protects_settings_that_widen_access(): void {
 		$protected = ConnectionGuard::protected_names();
 
-		foreach ( [ 'albert_abilities_saved', 'albert_known_abilities', 'albert_context', 'albert_allowed_user_expiry_days', 'albert_connection_never_used_days', 'albert_connection_idle_days' ] as $option ) {
+		foreach ( [ 'albert_abilities_saved', 'albert_known_abilities', 'albert_context', 'albert_allowed_user_expiry_days', 'albert_connection_never_used_days', 'albert_connection_idle_days', 'albert_upload_link_max_mb', 'albert_site_location', 'albert_installed_version', 'albert_db_version', 'albert_rewrite_version' ] as $option ) {
 			$this->assertContains( $option, $protected );
 		}
 	}

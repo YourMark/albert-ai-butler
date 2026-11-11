@@ -201,4 +201,28 @@ class AuthorizationPageTest extends TestCase {
 		$this->assertContains( 'X-Frame-Options: DENY', $headers );
 		$this->assertContains( "Content-Security-Policy: frame-ancestors 'none'", $headers );
 	}
+
+	/**
+	 * The destination shown is the web host, or the whole private-use URI.
+	 *
+	 * @return void
+	 */
+	public function test_destination_host(): void {
+		$this->assertSame( 'claude.ai', AuthorizationPage::destination_host( 'https://claude.ai/api/mcp/auth_callback' ) );
+		$this->assertSame( '127.0.0.1', AuthorizationPage::destination_host( 'http://127.0.0.1:5000/cb' ) );
+		$this->assertSame( 'cursor://anysphere.cursor-mcp/oauth/callback', AuthorizationPage::destination_host( 'cursor://anysphere.cursor-mcp/oauth/callback' ) );
+	}
+
+	/**
+	 * The consent nonce is bound to the client and the redirect URI.
+	 *
+	 * @return void
+	 */
+	public function test_nonce_action_is_bound_to_client_and_redirect(): void {
+		$action = AuthorizationPage::nonce_action( 'client-a', 'https://claude.ai/cb' );
+
+		$this->assertSame( $action, AuthorizationPage::nonce_action( 'client-a', 'https://claude.ai/cb' ) );
+		$this->assertNotSame( $action, AuthorizationPage::nonce_action( 'client-b', 'https://claude.ai/cb' ) );
+		$this->assertNotSame( $action, AuthorizationPage::nonce_action( 'client-a', 'https://claude.ai/other' ) );
+	}
 }

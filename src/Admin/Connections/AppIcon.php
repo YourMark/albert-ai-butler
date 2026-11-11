@@ -34,6 +34,32 @@ class AppIcon {
 	private const ICONS = [ 'claude', 'claude-code', 'chatgpt', 'codex', 'cursor', 'vscode', 'other' ];
 
 	/**
+	 * The SVG markup the logos use, for wp_kses() at output.
+	 *
+	 * @since 1.5.1
+	 * @var array<string, array<string, bool>>
+	 */
+	private const SVG_HTML = [
+		'svg'  => [
+			'class'       => true,
+			'aria-hidden' => true,
+			'focusable'   => true,
+			'xmlns'       => true,
+			'viewbox'     => true,
+			'fill'        => true,
+			'fill-rule'   => true,
+			'width'       => true,
+			'height'      => true,
+		],
+		'path' => [
+			'd'         => true,
+			'fill'      => true,
+			'fill-rule' => true,
+			'clip-rule' => true,
+		],
+	];
+
+	/**
 	 * Print a logo, or nothing for an unknown key.
 	 *
 	 * @param string $icon The guide's `icon` key.
@@ -54,6 +80,6 @@ class AppIcon {
 			$cache[ $icon ] = str_replace( '<svg ', '<svg class="albert-app-icon" aria-hidden="true" focusable="false" ', trim( $svg ) );
 		}
 
-		echo $cache[ $icon ]; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Albert's own SVG, paths only.
+		echo wp_kses( $cache[ $icon ], self::SVG_HTML );
 	}
 }

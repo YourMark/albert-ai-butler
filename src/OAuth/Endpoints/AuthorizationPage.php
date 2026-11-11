@@ -181,10 +181,10 @@ class AuthorizationPage implements Hookable {
 
 		// Validate redirect URI: must exactly match a registered URI. There is no
 		// wildcard: a client that did not register this exact URI is rejected.
-		// Re-checked here so a client registered before 1.5.1 with an ambiguous
-		// URI cannot be used.
+		// The registration rules are re-checked too, without DNS, so a client
+		// stored under older, looser rules cannot be used.
 		if ( ! self::is_registered_redirect_uri( $client->getRedirectUri(), $redirect_uri )
-			|| ClientRegistration::has_ambiguous_authority( $redirect_uri )
+			|| ClientRegistration::redirect_uri_problem( $redirect_uri, false ) !== ''
 		) {
 			$this->render_error_page(
 				__( 'Invalid Redirect', 'albert-ai-butler' ),
@@ -217,7 +217,7 @@ class AuthorizationPage implements Hookable {
 		// Handle form submission (user approved or denied).
 		if ( isset( $_SERVER['REQUEST_METHOD'] ) && $_SERVER['REQUEST_METHOD'] === 'POST' ) {
 			if ( ! isset( $_POST['_albert_nonce'] )
-				|| ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_albert_nonce'] ) ), 'albert_oauth_authorize' )
+				|| ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_albert_nonce'] ) ), self::nonce_action( (string) $client->getIdentifier(), $redirect_uri ) )
 			) {
 				$this->render_error_page(
 					__( 'Invalid Request', 'albert-ai-butler' ),
@@ -483,7 +483,7 @@ class AuthorizationPage implements Hookable {
 		$client_name  = $client->getName();
 		$user_name    = $current_user->display_name;
 		$site_name    = get_bloginfo( 'name' );
-		$destination  = $this->format_redirect_destination( $redirect_uri );
+		$destination  = self::destination_host( $redirect_uri );
 		$age_notice   = $this->format_client_age_notice( $client );
 
 		// Start output.
@@ -520,6 +520,9 @@ class AuthorizationPage implements Hookable {
 					<?php esc_html_e( 'After you authorize, the access code is sent to:', 'albert-ai-butler' ); ?>
 				</span>
 				<span class="redirect-destination__value"><?php echo esc_html( $destination ); ?></span>
+				<?php if ( $destination !== $redirect_uri ) { ?>
+				<span class="redirect-destination__uri"><?php echo esc_html( $redirect_uri ); ?></span>
+				<?php } ?>
 			</div>
 			<?php if ( $age_notice !== '' ) { ?>
 			<div class="client-age-notice">
@@ -547,7 +550,7 @@ class AuthorizationPage implements Hookable {
 			<input type="hidden" name="scope" value="<?php echo esc_attr( $scope ); ?>">
 			<input type="hidden" name="code_challenge" value="<?php echo esc_attr( $code_challenge ); ?>">
 			<input type="hidden" name="code_challenge_method" value="<?php echo esc_attr( $code_challenge_method ); ?>">
-			<?php wp_nonce_field( 'albert_oauth_authorize', '_albert_nonce' ); ?>
+			<?php wp_nonce_field( self::nonce_action( (string) $client->getIdentifier(), $redirect_uri ), '_albert_nonce' ); ?>
 
 			<div class="connection-label">
 				<label for="albert-connection-label"><?php esc_html_e( 'Name this connection (optional)', 'albert-ai-butler' ); ?></label>
@@ -642,12 +645,12 @@ class AuthorizationPage implements Hookable {
 
 		$this->enqueue_oauth_styles();
 
-		echo $this->access_denied_html( $user, $client, $redirect_uri, $state ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped as it is built.
+		$this->print_access_denied( $user, $client, $redirect_uri, $state );
 		exit;
 	}
 
 	/**
-	 * The refusal page's markup, separate from sending it so it can be tested.
+	 * Print the refusal page. Values are escaped as they are printed.
 	 *
 	 * The way back to the app is a link to an address the app registered for
 	 * itself, so the page shows where it goes and how new the app is, the
@@ -659,10 +662,10 @@ class AuthorizationPage implements Hookable {
 	 * @param string                              $redirect_uri The validated redirect URI.
 	 * @param string                              $state        The OAuth state, returned with the refusal.
 	 *
-	 * @return string
+	 * @return void
 	 * @since 1.5.0
 	 */
-	public function access_denied_html( \WP_User $user, $client, string $redirect_uri, string $state ): string {
+	public function print_access_denied( \WP_User $user, $client, string $redirect_uri, string $state ): void {
 		$site_name   = get_bloginfo( 'name' );
 		$client_name = (string) $client->getName();
 		$expired     = AllowedUsers::has_expired_invitation( $user->ID );
@@ -671,7 +674,6 @@ class AuthorizationPage implements Hookable {
 		$leave_url   = self::error_redirect_url( $redirect_uri, 'access_denied', 'The user is not allowed to connect an assistant to this site.', $state );
 		$age_notice  = $this->format_client_age_notice( $client );
 
-		ob_start();
 		?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -752,7 +754,7 @@ class AuthorizationPage implements Hookable {
 				<p class="albert-oauth__destination">
 					<?php
 					/* translators: %s: the host the link goes to, e.g. "claude.ai". */
-					echo esc_html( sprintf( __( 'This link goes to %s.', 'albert-ai-butler' ), $this->format_redirect_destination( $redirect_uri ) ) );
+					echo esc_html( sprintf( __( 'This link goes to %s.', 'albert-ai-butler' ), self::destination_host( $redirect_uri ) ) );
 					if ( $age_notice !== '' ) {
 						echo ' ' . esc_html( $age_notice );
 					}
@@ -764,6 +766,23 @@ class AuthorizationPage implements Hookable {
 </body>
 </html>
 		<?php
+	}
+
+	/**
+	 * The same page as a string, for tests.
+	 *
+	 * @param \WP_User                            $user         The signed-in user.
+	 * @param \Albert\OAuth\Entities\ClientEntity $client       The client entity.
+	 * @param string                              $redirect_uri The validated redirect URI.
+	 * @param string                              $state        The state parameter.
+	 *
+	 * @return string
+	 * @since 1.5.1
+	 */
+	public function access_denied_html( \WP_User $user, $client, string $redirect_uri, string $state ): string {
+		ob_start();
+		$this->print_access_denied( $user, $client, $redirect_uri, $state );
+
 		return (string) ob_get_clean();
 	}
 
@@ -832,7 +851,7 @@ class AuthorizationPage implements Hookable {
 		wp_enqueue_script( 'albert-oauth-redirect' );
 		wp_add_inline_script( 'albert-oauth-redirect', self::redirect_script( $redirect_url ) );
 
-		echo $this->success_html( $redirect_url, $client_name ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped as it is built.
+		$this->print_success( $redirect_url, $client_name );
 		exit;
 	}
 
@@ -864,7 +883,7 @@ class AuthorizationPage implements Hookable {
 	}
 
 	/**
-	 * The approval page's markup, separate from sending it so it can be tested.
+	 * Print the approval page. Values are escaped as they are printed.
 	 *
 	 * Says "Approved" rather than "Connected": the app still has to exchange
 	 * the code it is about to receive, and the connect dialog only says
@@ -873,17 +892,16 @@ class AuthorizationPage implements Hookable {
 	 * @param string $redirect_url The OAuth callback URL with authorization code.
 	 * @param string $client_name  The name of the authorized client.
 	 *
-	 * @return string
+	 * @return void
 	 * @since 1.5.0
 	 */
-	public function success_html( string $redirect_url, string $client_name ): string {
+	public function print_success( string $redirect_url, string $client_name ): void {
 		$site_name = get_bloginfo( 'name' );
 		$user      = wp_get_current_user();
 		// No link or redirect to a script scheme; registration refuses those,
 		// so this only shows for a client stored some other way.
 		$can_return = ! self::is_dangerous_scheme( $redirect_url );
 
-		ob_start();
 		?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -948,22 +966,59 @@ class AuthorizationPage implements Hookable {
 </body>
 </html>
 		<?php
+	}
+
+	/**
+	 * The same page as a string, for tests.
+	 *
+	 * @param string $redirect_url The OAuth callback URL with authorization code.
+	 * @param string $client_name  The name of the authorized client.
+	 *
+	 * @return string
+	 * @since 1.5.1
+	 */
+	public function success_html( string $redirect_url, string $client_name ): string {
+		ob_start();
+		$this->print_success( $redirect_url, $client_name );
+
 		return (string) ob_get_clean();
 	}
 
 	/**
-	 * Format the redirect destination shown on the consent screen.
+	 * The host a redirect URI sends the browser to, shown as the destination.
 	 *
-	 * The whole URI, not just its host: the destination is the primary trust
-	 * signal, and a host read by PHP is not always the host a browser visits.
+	 * Trustworthy because an authority PHP and browsers could read differently
+	 * is refused ({@see ClientRegistration::has_ambiguous_authority()}). A
+	 * private-use URI has no web host, so it is shown whole.
 	 *
 	 * @param string $redirect_uri The validated redirect URI.
 	 *
-	 * @return string The destination to display.
-	 * @since 1.3.1
+	 * @return string
+	 * @since 1.5.1
 	 */
-	private function format_redirect_destination( string $redirect_uri ): string {
+	public static function destination_host( string $redirect_uri ): string {
+		$scheme = strtolower( (string) wp_parse_url( $redirect_uri, PHP_URL_SCHEME ) );
+		$host   = wp_parse_url( $redirect_uri, PHP_URL_HOST );
+
+		if ( in_array( $scheme, [ 'http', 'https' ], true ) && is_string( $host ) && $host !== '' ) {
+			return $host;
+		}
+
 		return $redirect_uri;
+	}
+
+	/**
+	 * The consent form's nonce action, bound to the client and redirect URI so
+	 * a nonce from one request cannot approve another client.
+	 *
+	 * @param string $client_id    The client.
+	 * @param string $redirect_uri The redirect URI.
+	 *
+	 * @return string
+	 * @since 1.5.1
+	 */
+	public static function nonce_action( string $client_id, string $redirect_uri ): string {
+		return 'albert_oauth_authorize_' . md5( $client_id . "\n" . $redirect_uri );
 	}
 
 	/**

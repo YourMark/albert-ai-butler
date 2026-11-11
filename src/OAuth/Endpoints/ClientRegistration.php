@@ -68,12 +68,23 @@ class ClientRegistration implements Hookable {
 	const MAX_REDIRECT_URI_LENGTH = 2048;
 
 	/**
-	 * Default per-site cap on the number of registered clients.
+	 * Default per-site cap on the number of connected clients.
 	 *
 	 * @since 1.3.1
 	 * @var int
 	 */
 	const DEFAULT_MAX_CLIENTS = 20;
+
+	/**
+	 * Most registrations kept that never got a token, before the oldest goes.
+	 *
+	 * Registration is anonymous, so these bound storage rather than refuse
+	 * anyone: a flood only pushes out other unfinished registrations.
+	 *
+	 * @since 1.5.1
+	 * @var int
+	 */
+	const MAX_PENDING_CLIENTS = 100;
 
 	/**
 	 * Register WordPress hooks.
@@ -115,7 +126,7 @@ class ClientRegistration implements Hookable {
 	public function handle_registration( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		// Rate limiting: 10 registrations per client IP per hour.
 		$ip            = $this->client_ip( $request );
-		$transient_key = 'albert_dcr_' . md5( $ip );
+		$transient_key = 'albert_dcr_' . md5( self::rate_limit_key( $ip ) );
 		$attempts      = (int) get_transient( $transient_key );
 
 		if ( $attempts >= 10 ) {
@@ -134,11 +145,7 @@ class ClientRegistration implements Hookable {
 
 		$client_name = isset( $body['client_name'] ) ? sanitize_text_field( $body['client_name'] ) : 'MCP Client';
 
-		// Per-site client cap, against live clients only (see count_live_clients()).
-		if ( self::limit_reached( $client_repo ) ) {
-			$client_repo->evict_oldest_unused_client();
-		}
-
+		// Per-site cap on connected clients (see count_live_clients()).
 		if ( self::limit_reached( $client_repo ) ) {
 			$this->log_rejected_registration( 'client_limit_reached', '', $client_name );
 
@@ -189,6 +196,13 @@ class ClientRegistration implements Hookable {
 		// A native (private-use scheme) or loopback client is a public client per
 		// RFC 8252: it cannot protect a secret, so PKCE — not a secret — guards it.
 		$is_confidential = ! $this->requires_public_client( $redirect_uris );
+
+		// Only now, with the request valid: make room among unfinished registrations.
+		while ( $client_repo->count_pending_clients() >= self::max_pending_clients() ) {
+			if ( ! $client_repo->evict_oldest_pending_client() ) {
+				break;
+			}
+		}
 
 		// Create the client.
 		$result = $client_repo->createClient(
@@ -269,6 +283,25 @@ class ClientRegistration implements Hookable {
 	}
 
 	/**
+	 * The rate-limit bucket for an address: IPv6 by its /64, since one host
+	 * commonly holds the whole /64 and could otherwise rotate through it.
+	 *
+	 * @param string $ip The client IP.
+	 *
+	 * @return string
+	 * @since 1.5.1
+	 */
+	public static function rate_limit_key( string $ip ): string {
+		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) === false ) {
+			return $ip;
+		}
+
+		$packed = inet_pton( $ip );
+
+		return $packed === false ? $ip : bin2hex( substr( $packed, 0, 8 ) ) . '::/64';
+	}
+
+	/**
 	 * Sanitize redirect URIs array.
 	 *
 	 * @param mixed $uris Array of redirect URIs (or arbitrary input).
@@ -308,6 +341,21 @@ class ClientRegistration implements Hookable {
 	 * @since 1.3.1
 	 */
 	private function validate_redirect_uri( string $uri ): string {
+		return self::redirect_uri_problem( $uri );
+	}
+
+	/**
+	 * Why a redirect URI is refused, as a reason code, or '' when it is fine.
+	 *
+	 * @param string $uri         The redirect URI.
+	 * @param bool   $resolve_dns Whether to resolve a host name to check its
+	 *                            address. Off at authorization: DNS may have
+	 *                            changed, and it would slow every sign-in.
+	 *
+	 * @return string
+	 * @since 1.5.1
+	 */
+	public static function redirect_uri_problem( string $uri, bool $resolve_dns = true ): string {
 		if ( $uri === '' ) {
 			return 'redirect_uri_empty';
 		}
@@ -327,7 +375,7 @@ class ClientRegistration implements Hookable {
 			return 'redirect_uri_malformed';
 		}
 
-		$scheme = $this->extract_scheme( $uri );
+		$scheme = self::extract_scheme( $uri );
 		if ( $scheme === '' ) {
 			return 'redirect_uri_malformed';
 		}
@@ -362,7 +410,7 @@ class ClientRegistration implements Hookable {
 			if ( $host === '' ) {
 				return 'redirect_uri_malformed';
 			}
-			if ( ! $this->is_safe_https_host( $host ) ) {
+			if ( ! self::is_safe_https_host( $host, $resolve_dns ) ) {
 				return 'redirect_host_not_allowed';
 			}
 
@@ -371,7 +419,7 @@ class ClientRegistration implements Hookable {
 
 		if ( $scheme === 'http' ) {
 			// http is only acceptable for loopback (RFC 8252, native apps).
-			$host = strtolower( (string) wp_parse_url( $uri, PHP_URL_HOST ) );
+			$host = self::bare_host( (string) wp_parse_url( $uri, PHP_URL_HOST ) );
 			if ( ! in_array( $host, [ 'localhost', '127.0.0.1', '::1' ], true ) ) {
 				return 'redirect_scheme_not_permitted';
 			}
@@ -402,13 +450,19 @@ class ClientRegistration implements Hookable {
 			return true;
 		}
 
-		if ( preg_match( '#^[A-Za-z][A-Za-z0-9+.-]*://#', $uri, $prefix ) !== 1 ) {
+		if ( preg_match( '#^([A-Za-z][A-Za-z0-9+.-]*)://#', $uri, $prefix ) !== 1 ) {
 			// No authority, as in a private-use `com.example.app:/cb`.
 			return false;
 		}
 
 		$rest      = substr( $uri, strlen( $prefix[0] ) );
 		$authority = substr( $rest, 0, strcspn( $rest, '/?#' ) );
+
+		// A private-use scheme is opened by the operating system, not a browser
+		// URL parser; only userinfo could pass for a different destination.
+		if ( ! in_array( strtolower( $prefix[1] ), [ 'http', 'https' ], true ) ) {
+			return str_contains( $authority, '@' );
+		}
 
 		// A host name, or a bracketed IPv6 literal, with an optional port. No
 		// userinfo, no percent-encoding.
@@ -436,7 +490,7 @@ class ClientRegistration implements Hookable {
 		foreach ( $uris as $uri ) {
 			// Every validated non-https redirect is either http-loopback or a
 			// private-use scheme — both public client types per RFC 8252.
-			if ( $this->extract_scheme( $uri ) !== 'https' ) {
+			if ( self::extract_scheme( $uri ) !== 'https' ) {
 				return true;
 			}
 		}
@@ -455,7 +509,7 @@ class ClientRegistration implements Hookable {
 	 * @return string The lowercased scheme, or '' when malformed.
 	 * @since 1.3.1
 	 */
-	private function extract_scheme( string $uri ): string {
+	private static function extract_scheme( string $uri ): string {
 		if ( preg_match( '#^([a-zA-Z][a-zA-Z0-9+\-.]*):#', $uri, $matches ) ) {
 			return strtolower( $matches[1] );
 		}
@@ -466,24 +520,32 @@ class ClientRegistration implements Hookable {
 	/**
 	 * Whether an https redirect host is safe (not an internal/reserved target).
 	 *
-	 * @param string $host The host component.
+	 * @param string $host        The host component.
+	 * @param bool   $resolve_dns Whether to resolve a host name to its address.
 	 *
 	 * @return bool Whether the host is acceptable.
 	 * @since 1.3.1
+	 * @since 1.5.1 Checks bracketed IPv6 literals; DNS lookup optional.
 	 */
-	private function is_safe_https_host( string $host ): bool {
+	private static function is_safe_https_host( string $host, bool $resolve_dns = true ): bool {
 		// Development convenience: allow loopback/internal https in local/dev.
 		if ( in_array( wp_get_environment_type(), [ 'local', 'development' ], true ) ) {
 			return true;
 		}
 
-		$lower = strtolower( $host );
-		if ( in_array( $lower, [ 'localhost', '127.0.0.1', '::1' ], true ) ) {
+		$host = self::bare_host( $host );
+		if ( in_array( $host, [ 'localhost', '127.0.0.1', '::1' ], true ) ) {
 			return false;
 		}
 
 		// Resolve a hostname to an IPv4 address (best-effort); literal IPs pass through.
-		$ip = filter_var( $host, FILTER_VALIDATE_IP ) ? $host : gethostbyname( $host );
+		if ( filter_var( $host, FILTER_VALIDATE_IP ) ) {
+			$ip = $host;
+		} elseif ( $resolve_dns ) {
+			$ip = gethostbyname( $host );
+		} else {
+			return true;
+		}
 
 		if ( ! filter_var( $ip, FILTER_VALIDATE_IP ) ) {
 			// Not an IP and DNS did not resolve — allow (the browser, not the
@@ -498,11 +560,23 @@ class ClientRegistration implements Hookable {
 		}
 
 		// CGNAT 100.64.0.0/10 is not covered by the reserved-range filter.
-		if ( $this->ip_in_cidr( $ip, '100.64.0.0', 10 ) ) {
+		if ( self::ip_in_cidr( $ip, '100.64.0.0', 10 ) ) {
 			return false;
 		}
 
 		return true;
+	}
+
+	/**
+	 * A host lowercased, without the brackets PHP keeps around an IPv6 literal.
+	 *
+	 * @param string $host The host from wp_parse_url().
+	 *
+	 * @return string
+	 * @since 1.5.1
+	 */
+	private static function bare_host( string $host ): string {
+		return strtolower( trim( $host, '[]' ) );
 	}
 
 	/**
@@ -515,7 +589,7 @@ class ClientRegistration implements Hookable {
 	 * @return bool Whether the IP is within the range.
 	 * @since 1.3.1
 	 */
-	private function ip_in_cidr( string $ip, string $subnet, int $bits ): bool {
+	private static function ip_in_cidr( string $ip, string $subnet, int $bits ): bool {
 		$ip_long     = ip2long( $ip );
 		$subnet_long = ip2long( $subnet );
 
@@ -538,7 +612,7 @@ class ClientRegistration implements Hookable {
 	 * @since 1.3.1
 	 */
 	private function rejection_message( string $reason, string $uri ): string {
-		$scheme = $this->extract_scheme( $uri );
+		$scheme = self::extract_scheme( $uri );
 
 		switch ( $reason ) {
 			case 'redirect_uri_has_fragment':
@@ -575,7 +649,7 @@ class ClientRegistration implements Hookable {
 	 * @since 1.3.1
 	 */
 	private function log_rejected_registration( string $reason, string $uri, string $client_name ): void {
-		$scheme = $this->extract_scheme( $uri );
+		$scheme = self::extract_scheme( $uri );
 
 		/**
 		 * Fires when a client registration is rejected.
@@ -614,7 +688,29 @@ class ClientRegistration implements Hookable {
 	}
 
 	/**
+	 * How many unfinished registrations are kept, after the
+	 * `albert/oauth/max_pending_clients` filter. At least 1.
+	 *
+	 * @return int
+	 * @since 1.5.1
+	 */
+	public static function max_pending_clients(): int {
+		/**
+		 * Filters how many registrations that never got a token are kept.
+		 *
+		 * When reached, the oldest one not mid sign-in is deleted to make room.
+		 *
+		 * @since 1.5.1
+		 *
+		 * @param int $max Default 100.
+		 */
+		return max( 1, (int) apply_filters( 'albert/oauth/max_pending_clients', self::MAX_PENDING_CLIENTS ) );
+	}
+
+	/**
 	 * Whether the registration cap is reached, so a new client would be refused.
+	 *
+	 * Counts connected clients only, so anonymous registrations cannot fill it.
 	 *
 	 * @param ClientRepository|null $repository Repository to count with.
 	 *

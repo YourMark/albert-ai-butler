@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Server;
 
+defined( 'ABSPATH' ) || exit;
+
 use Exception;
 use Albert\OAuth\Endpoints\Psr7Bridge;
 use Albert\OAuth\AllowedUsers;
@@ -37,6 +39,22 @@ class TokenValidator {
 	 * @since 1.0.0
 	 */
 	public static function validate_request( WP_REST_Request $request ): WP_User|WP_Error {
+		$result = self::authenticate( $request );
+
+		return is_wp_error( $result ) ? $result : $result['user'];
+	}
+
+	/**
+	 * Validate the Bearer token and every check on its user and stored row.
+	 *
+	 * The one path every token check takes, so no caller can skip one.
+	 *
+	 * @param WP_REST_Request<array<string, mixed>> $request The REST request to validate.
+	 *
+	 * @return array{user: WP_User, metadata: array<string, mixed>}|WP_Error
+	 * @since 1.5.1
+	 */
+	private static function authenticate( WP_REST_Request $request ): array|WP_Error {
 		try {
 			$server      = ResourceServerFactory::create();
 			$psr_request = Psr7Bridge::to_psr7_request( $request );
@@ -66,11 +84,9 @@ class TokenValidator {
 				);
 			}
 
-			// The signature proves the key signed it; the row proves this server
-			// issued it to this user. A token forged with a leaked key and a
-			// real token ID still names the wrong user.
-			$token_id = (string) $validated_request->getAttribute( 'oauth_access_token_id' );
-			if ( ( new AccessTokenRepository() )->getUserIdForToken( $token_id ) !== (int) $user->ID ) {
+			$token_id  = (string) $validated_request->getAttribute( 'oauth_access_token_id' );
+			$client_id = (string) $validated_request->getAttribute( 'oauth_client_id' );
+			if ( ! ( new AccessTokenRepository() )->ownsToken( $token_id, (int) $user->ID, $client_id ) ) {
 				return new WP_Error(
 					'oauth_invalid_token',
 					__( 'The access token is not valid.', 'albert-ai-butler' ),
@@ -87,8 +103,6 @@ class TokenValidator {
 					[ 'status' => 401 ]
 				);
 			}
-
-			$client_id = (string) $validated_request->getAttribute( 'oauth_client_id' );
 
 			// Suspending a connection when the site's address changes is
 			// designed (docs/features/31-connections.md §6) and deliberately
@@ -107,7 +121,15 @@ class TokenValidator {
 				( new ClientRepository() )->touchLastUsed( $client_id );
 			}
 
-			return $user;
+			return [
+				'user'     => $user,
+				'metadata' => [
+					'user_id'         => $user->ID,
+					'client_id'       => $client_id,
+					'access_token_id' => $token_id,
+					'scopes'          => (array) $validated_request->getAttribute( 'oauth_scopes' ),
+				],
+			];
 		} catch ( OAuthServerException $e ) {
 			return new WP_Error(
 				'oauth_' . $e->getErrorType(),
@@ -127,6 +149,7 @@ class TokenValidator {
 	 * Get token metadata from a REST request.
 	 *
 	 * Returns an array with token details if valid, or WP_Error if invalid.
+	 * Runs every check {@see self::validate_request()} runs.
 	 *
 	 * @param WP_REST_Request<array<string, mixed>> $request The REST request to validate.
 	 *
@@ -134,32 +157,9 @@ class TokenValidator {
 	 * @since 1.0.0
 	 */
 	public static function get_token_metadata( WP_REST_Request $request ): array|WP_Error {
-		try {
-			$server      = ResourceServerFactory::create();
-			$psr_request = Psr7Bridge::to_psr7_request( $request );
+		$result = self::authenticate( $request );
 
-			// Validate the request.
-			$validated_request = $server->validateAuthenticatedRequest( $psr_request );
-
-			return [
-				'user_id'         => $validated_request->getAttribute( 'oauth_user_id' ),
-				'client_id'       => $validated_request->getAttribute( 'oauth_client_id' ),
-				'access_token_id' => $validated_request->getAttribute( 'oauth_access_token_id' ),
-				'scopes'          => $validated_request->getAttribute( 'oauth_scopes' ),
-			];
-		} catch ( OAuthServerException $e ) {
-			return new WP_Error(
-				'oauth_' . $e->getErrorType(),
-				$e->getMessage(),
-				[ 'status' => 401 ]
-			);
-		} catch ( Exception $e ) {
-			return new WP_Error(
-				'oauth_error',
-				__( 'The access token could not be validated.', 'albert-ai-butler' ),
-				[ 'status' => 500 ]
-			);
-		}
+		return is_wp_error( $result ) ? $result : $result['metadata'];
 	}
 
 	/**
@@ -258,11 +258,7 @@ class TokenValidator {
 				}
 			}
 
-			// Set the current user.
-			$user = get_user_by( 'id', $metadata['user_id'] );
-			if ( $user ) {
-				wp_set_current_user( $user->ID );
-			}
+			wp_set_current_user( (int) $metadata['user_id'] );
 
 			return true;
 		};

@@ -882,4 +882,24 @@ class TaxonomiesAbilityTest extends TestCase {
 		$this->assertArrayHasKey( 'terms', $result );
 		$this->assertContains( 'Shoes', array_column( $result['terms'], 'name' ) );
 	}
+
+	/**
+	 * ViewTerm reaches only taxonomies core exposes over REST.
+	 *
+	 * @return void
+	 */
+	public function test_view_term_refuses_a_taxonomy_hidden_from_rest(): void {
+		$term = wp_insert_term( 'albert-hidden-term', 'wp_theme' );
+		$this->assertIsArray( $term );
+
+		$result = ( new ViewTerm() )->execute(
+			[
+				'id'       => $term['term_id'],
+				'taxonomy' => 'wp_theme',
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'taxonomy_not_rest_enabled', $result->get_error_code() );
+	}
 }

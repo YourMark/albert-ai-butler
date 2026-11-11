@@ -66,6 +66,13 @@ class ConnectionGuard implements Hookable {
 		'albert_connection_never_used_days',
 		'albert_connection_idle_days',
 		'albert_upload_link_max_mb',
+		'albert_site_location',
+		// Deleting or rewinding these re-runs migrations and rewrite flushes.
+		'albert_installed_version',
+		'albert_db_version',
+		'albert_logging_db_version',
+		'albert_oauth_db_version',
+		'albert_rewrite_version',
 		'albert_oauth_encryption_key',
 		'albert_oauth_private_key',
 		'albert_oauth_public_key',

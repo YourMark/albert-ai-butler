@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Repositories;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Database\Tables;
 use Albert\OAuth\AllowedUsers;
 use Albert\OAuth\Entities\AccessTokenEntity;
@@ -27,15 +29,15 @@ use League\OAuth2\Server\Repositories\AccessTokenRepositoryInterface;
 class AccessTokenRepository implements AccessTokenRepositoryInterface {
 
 	/**
-	 * Create a new access token.
+	 * Create a new access token, refusing a user no longer on the allowed list.
+	 *
+	 * Every grant that mints a token for a person (code exchange, refresh)
+	 * passes through here, so removing somebody also stops their outstanding
+	 * codes and refresh tokens.
 	 *
 	 * @param ClientEntityInterface                                           $client_entity   The client entity.
 	 * @param array<int, \League\OAuth2\Server\Entities\ScopeEntityInterface> $scopes          The scopes.
 	 * @param string|int|null                                                 $user_identifier The user identifier.
-	 *
-	 * Refuses a user who is no longer on the allowed list. Every grant that
-	 * mints a token for a person (code exchange, refresh) passes through here,
-	 * so removing somebody also stops their outstanding codes and refresh tokens.
 	 *
 	 * @return AccessTokenEntityInterface The new access token entity.
 	 * @throws OAuthServerException When the user is no longer allowed.
@@ -55,7 +57,8 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 
 		if ( $user_identifier !== null && (string) $user_identifier !== '' ) {
 			if ( ! AllowedUsers::is_allowed( (int) $user_identifier ) ) {
-				throw OAuthServerException::accessDenied( 'The user is no longer allowed to connect.' );
+				// invalid_grant (RFC 6749 §5.2): the grant is dead, so the client signs in again.
+				throw OAuthServerException::invalidGrant( 'The user is no longer allowed to connect.' );
 			}
 
 			$access_token->setUserIdentifier( (string) $user_identifier );
@@ -157,28 +160,39 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	}
 
 	/**
-	 * The user a stored access token was issued to.
+	 * Whether a stored, live access token was issued to this user and client.
 	 *
-	 * @param string $token_id The token identifier.
+	 * The signature proves a key signed the token; this proves the server
+	 * issued it, so a token forged with a leaked key and a real token ID
+	 * still fails unless every claim matches the row.
 	 *
-	 * @return int|null The user ID, or null when the token is unknown.
+	 * @param string $token_id  The token identifier (JWT `jti`).
+	 * @param int    $user_id   The user the token names.
+	 * @param string $client_id The client the token names.
+	 *
+	 * @return bool
 	 * @since 1.5.1
 	 */
-	public function getUserIdForToken( string $token_id ): ?int {
+	public function ownsToken( string $token_id, int $user_id, string $client_id ): bool {
 		global $wpdb;
 
 		$tables = Tables::oauth();
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$user_id = $wpdb->get_var(
+		$found = $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT user_id FROM %i WHERE token_id = %s',
+				'SELECT 1 FROM %i
+				WHERE token_id = %s AND user_id = %d AND client_id = %s
+					AND revoked = 0 AND expires_at > UTC_TIMESTAMP()
+				LIMIT 1',
 				$tables['access_tokens'],
-				$token_id
+				$token_id,
+				$user_id,
+				$client_id
 			)
 		);
 
-		return $user_id === null ? null : (int) $user_id;
+		return $found !== null;
 	}
 
 	/**

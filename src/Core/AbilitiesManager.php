@@ -664,8 +664,12 @@ class AbilitiesManager implements Hookable {
 		 */
 		$is_management_context = (bool) apply_filters( 'albert/abilities/is_management_context', $is_page );
 
-		// An assistant's request never keeps disabled abilities, whatever a filter says.
-		return $is_management_context && ConnectionContext::client_id() === null;
+		// An assistant's request never keeps disabled abilities, whatever a filter
+		// says. Read from the raw request: the registry is built before the
+		// token is validated, so ConnectionContext is usually still empty here.
+		return $is_management_context
+			&& ConnectionContext::client_id() === null
+			&& ! RestRequest::is_assistant_request();
 	}
 
 	/**

@@ -122,6 +122,9 @@ class ClientRegistrationValidationTest extends TestCase {
 			'https hostname (dev)'       => [ 'https://app.example/cb', 'development' ],
 			'https with port and query'  => [ 'https://app.example:8443/cb?x=https://y', 'development' ],
 			'custom, url in query'       => [ 'com.example.app:/cb?u=a@b' ],
+			'custom, empty authority'    => [ 'myapp:///callback' ],
+			'custom, underscore host'    => [ 'myapp://oauth_callback/cb' ],
+			'http ipv6 loopback'         => [ 'http://[::1]:8080/cb' ],
 		];
 	}
 
@@ -148,29 +151,32 @@ class ClientRegistrationValidationTest extends TestCase {
 	 */
 	public static function rejected_uris(): array {
 		return [
-			'empty'                => [ '', 'redirect_uri_empty' ],
-			'fragment'             => [ 'https://app.example/cb#x', 'redirect_uri_has_fragment' ],
-			'no scheme'            => [ 'not-a-uri', 'redirect_uri_malformed' ],
-			'javascript'           => [ 'javascript://alert(1)', 'redirect_scheme_not_permitted' ],
-			'javascript any case'  => [ 'JaVaScRiPt://alert(1)', 'redirect_scheme_not_permitted' ],
-			'control character'    => [ "\x01javascript://alert(1)", 'redirect_uri_malformed' ],
-			'line break inside'    => [ "cursor://a\r\nb/cb", 'redirect_uri_malformed' ],
-			'space inside'         => [ 'https://app.example/c b', 'redirect_uri_malformed' ],
-			'data'                 => [ 'data:text/html,x', 'redirect_scheme_not_permitted' ],
-			'vbscript'             => [ 'vbscript:msgbox', 'redirect_scheme_not_permitted' ],
-			'file'                 => [ 'file:///etc/passwd', 'redirect_scheme_not_permitted' ],
-			'blob'                 => [ 'blob:https://x/y', 'redirect_scheme_not_permitted' ],
-			'about'                => [ 'about:blank', 'redirect_scheme_not_permitted' ],
-			'http non-loopback'    => [ 'http://evil.example/cb', 'redirect_scheme_not_permitted' ],
-			'https private range'  => [ 'https://10.0.0.5/cb', 'redirect_host_not_allowed' ],
-			'https loopback host'  => [ 'https://localhost/cb', 'redirect_host_not_allowed' ],
-			'backslash userinfo'   => [ 'https://evil.example\\@claude.ai/cb', 'redirect_uri_malformed' ],
-			'backslash loopback'   => [ 'http://evil.example\\@localhost/cb', 'redirect_uri_malformed' ],
-			'userinfo'             => [ 'https://user@claude.ai/cb', 'redirect_uri_malformed' ],
-			'encoded host'         => [ 'https://claude.ai%2eevil.example/cb', 'redirect_uri_malformed' ],
-			'non-ascii host'       => [ "https://cl\u{0430}ude.ai/cb", 'redirect_uri_malformed' ],
-			'empty authority'      => [ 'https:///cb', 'redirect_uri_malformed' ],
-			'custom with userinfo' => [ 'cursor://evil@cb/x', 'redirect_uri_malformed' ],
+			'empty'                      => [ '', 'redirect_uri_empty' ],
+			'fragment'                   => [ 'https://app.example/cb#x', 'redirect_uri_has_fragment' ],
+			'no scheme'                  => [ 'not-a-uri', 'redirect_uri_malformed' ],
+			'javascript'                 => [ 'javascript://alert(1)', 'redirect_scheme_not_permitted' ],
+			'javascript any case'        => [ 'JaVaScRiPt://alert(1)', 'redirect_scheme_not_permitted' ],
+			'control character'          => [ "\x01javascript://alert(1)", 'redirect_uri_malformed' ],
+			'line break inside'          => [ "cursor://a\r\nb/cb", 'redirect_uri_malformed' ],
+			'space inside'               => [ 'https://app.example/c b', 'redirect_uri_malformed' ],
+			'data'                       => [ 'data:text/html,x', 'redirect_scheme_not_permitted' ],
+			'vbscript'                   => [ 'vbscript:msgbox', 'redirect_scheme_not_permitted' ],
+			'file'                       => [ 'file:///etc/passwd', 'redirect_scheme_not_permitted' ],
+			'blob'                       => [ 'blob:https://x/y', 'redirect_scheme_not_permitted' ],
+			'about'                      => [ 'about:blank', 'redirect_scheme_not_permitted' ],
+			'http non-loopback'          => [ 'http://evil.example/cb', 'redirect_scheme_not_permitted' ],
+			'https private range'        => [ 'https://10.0.0.5/cb', 'redirect_host_not_allowed' ],
+			'https loopback host'        => [ 'https://localhost/cb', 'redirect_host_not_allowed' ],
+			'backslash userinfo'         => [ 'https://evil.example\\@claude.ai/cb', 'redirect_uri_malformed' ],
+			'backslash loopback'         => [ 'http://evil.example\\@localhost/cb', 'redirect_uri_malformed' ],
+			'userinfo'                   => [ 'https://user@claude.ai/cb', 'redirect_uri_malformed' ],
+			'encoded host'               => [ 'https://claude.ai%2eevil.example/cb', 'redirect_uri_malformed' ],
+			'non-ascii host'             => [ "https://cl\u{0430}ude.ai/cb", 'redirect_uri_malformed' ],
+			'empty authority'            => [ 'https:///cb', 'redirect_uri_malformed' ],
+			'custom with userinfo'       => [ 'cursor://evil@cb/x', 'redirect_uri_malformed' ],
+			'custom userinfo, 3 slashes' => [ 'myapp://evil@x/cb', 'redirect_uri_malformed' ],
+			'https ipv6 loopback'        => [ 'https://[::1]/cb', 'redirect_host_not_allowed' ],
+			'https ipv4-mapped loopback' => [ 'https://[::ffff:127.0.0.1]/cb', 'redirect_host_not_allowed' ],
 		];
 	}
 
@@ -231,5 +237,34 @@ class ClientRegistrationValidationTest extends TestCase {
 		$this->assertTrue( $this->requires_public( [ 'http://127.0.0.1/cb' ] ) );
 		// Mixed: any non-https redirect makes the whole client public.
 		$this->assertTrue( $this->requires_public( [ 'https://app.example/cb', 'claude://cb' ] ) );
+	}
+
+	/**
+	 * At authorization the rules run without DNS, and still refuse a bad URI.
+	 *
+	 * @return void
+	 */
+	public function test_redirect_uri_problem_without_dns(): void {
+		$this->assertSame( '', ClientRegistration::redirect_uri_problem( 'https://claude.ai/api/mcp/auth_callback', false ) );
+		$this->assertSame( 'redirect_scheme_not_permitted', ClientRegistration::redirect_uri_problem( 'http://evil.example/cb', false ) );
+		$this->assertSame( 'redirect_host_not_allowed', ClientRegistration::redirect_uri_problem( 'https://10.0.0.5/cb', false ) );
+		$this->assertSame( 'redirect_uri_malformed', ClientRegistration::redirect_uri_problem( 'https://evil.example\\@claude.ai/cb', false ) );
+	}
+
+	/**
+	 * IPv6 addresses share one rate-limit bucket per /64; IPv4 keeps its own.
+	 *
+	 * @return void
+	 */
+	public function test_rate_limit_key_groups_ipv6_by_64(): void {
+		$this->assertSame( '203.0.113.7', ClientRegistration::rate_limit_key( '203.0.113.7' ) );
+		$this->assertSame(
+			ClientRegistration::rate_limit_key( '2001:db8:1:2::1' ),
+			ClientRegistration::rate_limit_key( '2001:db8:1:2:ffff:ffff:ffff:ffff' )
+		);
+		$this->assertNotSame(
+			ClientRegistration::rate_limit_key( '2001:db8:1:2::1' ),
+			ClientRegistration::rate_limit_key( '2001:db8:1:3::1' )
+		);
 	}
 }

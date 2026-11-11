@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WooCommerce;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -97,7 +99,8 @@ class ViewProduct extends BaseAbility {
 	/**
 	 * Whether the current user may see this product.
 	 *
-	 * A variation is judged by its parent product.
+	 * A variation needs both its own status (a disabled variation is private)
+	 * and its parent product's to allow it.
 	 *
 	 * @param \WC_Product $product The product.
 	 *
@@ -105,7 +108,13 @@ class ViewProduct extends BaseAbility {
 	 * @since 1.5.1
 	 */
 	private function can_view( $product ): bool {
-		$post_id = $product->get_parent_id() ? $product->get_parent_id() : $product->get_id();
+		$parent_id = $product->get_parent_id();
+
+		if ( $parent_id && ! current_user_can( 'read_post', $product->get_id() ) ) {
+			return false;
+		}
+
+		$post_id = $parent_id ? $parent_id : $product->get_id();
 
 		// read_post covers status (draft, pending, private) but ignores the password.
 		if ( ! current_user_can( 'read_post', $post_id ) ) {

@@ -9,10 +9,11 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abilities\WordPress\ProtectedContent;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
-use Albert\Blocks\EditorMode;
 use Albert\Core\Annotations;
 use WP_Error;
 
@@ -228,7 +229,7 @@ class ViewPage extends BaseAbility {
 					'title' => $page->post_title,
 				],
 				$content,
-				EditorMode::signal( $page ),
+				ProtectedContent::editor_signal( $page ),
 				[
 					'excerpt'        => $withheld ? '' : $page->post_excerpt,
 					'protected'      => ProtectedContent::is_protected( $page ),

@@ -156,4 +156,34 @@ class AbilitiesEnforceTest extends TestCase {
 
 		$this->assertContains( 'albert/create-post', $GLOBALS['albert_test_unregistered_abilities'] );
 	}
+
+	/**
+	 * A Bearer token or the MCP route overrides any filter, before the token is validated.
+	 *
+	 * The reported bypass: an add-on's path-matching filter says "management"
+	 * for a request whose rest_route is the MCP endpoint.
+	 *
+	 * @return void
+	 */
+	public function test_assistant_request_overrides_a_management_filter(): void {
+		$GLOBALS['albert_test_options']['albert_abilities_saved']                        = true;
+		$GLOBALS['albert_test_options'][ AbilitiesPage::DISABLED_ABILITIES_OPTION ]      = [ 'albert/create-post' ];
+		$GLOBALS['albert_test_filter_returns']['albert/abilities/is_management_context'] = true;
+
+		$_SERVER['REQUEST_URI']        = '/wp-json/albert-premium/v1/abilities/x/y/permissions';
+		$_GET['rest_route']            = '/albert/v1/mcp';
+		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer token';
+
+		$GLOBALS['albert_test_abilities'] = [ $this->ability( 'albert/create-post' ) ];
+		( new AbilitiesManager() )->enforce_disabled();
+		$this->assertContains( 'albert/create-post', $GLOBALS['albert_test_unregistered_abilities'] );
+
+		unset( $_SERVER['HTTP_AUTHORIZATION'] );
+		$GLOBALS['albert_test_unregistered_abilities'] = [];
+		$GLOBALS['albert_test_abilities']              = [ $this->ability( 'albert/create-post' ) ];
+		( new AbilitiesManager() )->enforce_disabled();
+		$this->assertContains( 'albert/create-post', $GLOBALS['albert_test_unregistered_abilities'] );
+
+		unset( $_SERVER['REQUEST_URI'], $_GET['rest_route'], $GLOBALS['albert_test_filter_returns'] );
+	}
 }

@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Users;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -45,7 +47,8 @@ class Update extends BaseAbility {
 				'This ability cannot change a password and will refuse the request if you supply one. '
 				. 'Changing an existing account\'s password is account takeover, and the account holder can '
 				. 'reset their own from the login screen. Tell the user to do that instead. '
-				. 'It also refuses to change another user\'s email address, for the same reason.'
+				. 'It also refuses to change any email address, the user\'s own included, for the same reason: '
+				. 'a new email plus "Lost password" takes the account over.'
 			),
 		];
 
@@ -73,7 +76,7 @@ class Update extends BaseAbility {
 				'email'       => [
 					'type'        => 'string',
 					'format'      => 'email',
-					'description' => 'The email address for the user. Only your own can be changed; a new email for another user is refused.',
+					'description' => 'The current email address. A different address is refused: email changes are made on the user\'s own profile.',
 				],
 				'first_name'  => [
 					'type'        => 'string',
@@ -184,14 +187,16 @@ class Update extends BaseAbility {
 			);
 		}
 
-		// A new email on someone else's account plus "Lost password" is the
-		// same takeover as setting their password, so it is refused too.
-		if ( isset( $args['email'] ) && $user_id !== get_current_user_id()
+		// A new email plus "Lost password" is the same takeover as setting the
+		// password, so it is refused too. That holds for the caller's own
+		// account: a leaked token must not become a permanent takeover, and
+		// core confirms an own-email change by mail on the profile screen.
+		if ( isset( $args['email'] )
 			&& strtolower( sanitize_email( $args['email'] ) ) !== strtolower( $user->user_email )
 		) {
 			return new WP_Error(
 				'email_change_refused',
-				__( 'This ability cannot change another user\'s email address. The account holder can change it on their own profile.', 'albert-ai-butler' ),
+				__( 'This ability cannot change an email address. The account holder can change it on their own profile, where WordPress confirms it by email.', 'albert-ai-butler' ),
 				[ 'status' => 403 ]
 			);
 		}

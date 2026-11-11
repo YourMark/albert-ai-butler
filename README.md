@@ -173,21 +173,46 @@ Website: https://yourmark.nl
 
 ### 1.5.1
 
-Security release. Closes a way someone could get an assistant connection to your site by tricking a person into approving it, and several smaller leaks. Update now.
+Security release. Closes a way someone could get an assistant connection to your site by tricking a person into approving it, and a number of smaller leaks. Update now.
 
 **Security**
 
-- **The approval screen can no longer be fooled about where access goes.** A sign-in address written to look like a trusted assistant could send the approval to someone else. Albert now refuses such addresses, also for apps that registered before this update, and the approval screen shows the full address the approval goes to.
+- **The approval screen can no longer be fooled about where access goes.** A sign-in address written to look like a trusted assistant could send the approval to someone else. Albert now refuses such addresses, also for apps that registered before this update. The approval screen shows the destination's site name prominently, with the full address underneath, and the approval is tied to that app and address.
 - **Every assistant must prove it is the app that started the sign-in.** This was required for desktop and command-line apps only; it now applies to all of them. Claude, ChatGPT, Cursor and the other common assistants already do this.
-- **Removing someone from the list of who may connect now takes effect at once.** Their assistants stop working straight away, including ones that were still signing in, instead of when their access ran out.
-- **Password-protected posts and pages stay protected.** An assistant only sees their content when the person who connected it may edit them, as in WordPress itself.
-- **Tools you switch off stay off.** A specially crafted request could still reach tools switched off on the Abilities screen. Switched-off tools are now also refused at the moment they would run, on WordPress 7.1 and later.
-- **Unpublished products stay private.** Viewing a WooCommerce product that is a draft, pending or private now needs the same rights as in WooCommerce itself.
-- **Files can only be attached to posts you may edit,** both when uploading and through an upload link.
-- **An assistant can no longer change another person's email address,** just as it could never change their password. Changing your own still works.
-- **More of Albert's own settings are out of an assistant's reach,** including the site description it is given, how long connections and invitations last, and the upload size limit.
-- **A flood of unfinished sign-ups can no longer lock real assistants out.** When the limit on connected apps is reached, Albert makes room by removing the oldest app that never finished connecting.
+- **Removing someone from the list of who may connect now takes effect at once.** Their assistants stop working straight away, including ones that were still signing in, and their upload links stop working too.
+- **Access is checked against what Albert actually issued.** An access key is only accepted when it matches the person, the app, and a connection that is still live.
+- **Password-protected posts and pages stay protected.** An assistant only sees their content, and only finds them by searching their text, when the person who connected it may edit them, as in WordPress itself. Password-protected block patterns are hidden the same way.
+- **Tools you switch off stay off.** A specially crafted request could still reach tools switched off on the Abilities screen, also through an add-on's screen. Albert now recognises an assistant's request before anything else, and on WordPress 7.1 and later also refuses switched-off tools at the moment they would run.
+- **Unpublished products stay private.** Viewing and finding WooCommerce products shows drafts, pending, private products and disabled variations only to people who may see them in WooCommerce. Viewing orders also needs WooCommerce's right to read private orders.
+- **Media follows the post it belongs to.** Files attached to someone else's private or draft post are no longer shown, and files can only be attached to posts you may edit, both when uploading and through an upload link.
+- **An assistant can no longer change anyone's email address,** including your own, just as it could never change a password. Change it on your profile instead.
+- **Creating a user no longer hands the assistant a password-reset link.** WordPress emails the new person their own link to set a password.
+- **Editing blocks in a post you may not edit now answers "not found"** without revealing anything about that post.
+- **Safe mode holds more risky changes for your approval,** including changes to user roles, scheduled tasks, upload folders, a pending admin email change and the fallback security keys.
+- **More of Albert's own settings are out of an assistant's reach,** including the site description it is given, how long connections and invitations last, the upload size limit and Albert's internal version markers.
+- **Terms and categories follow WordPress's rights.** New tags and pattern categories are only created by people allowed to assign them, a refused save leaves no stray tags, and viewing a term works only for taxonomies WordPress exposes to apps.
+- **On multisite, people from other sites in the network are no longer shown.**
+- **A flood of unfinished sign-ups can no longer lock real assistants out.** Only connected apps count toward the limit; unfinished sign-ups have their own, larger limit and the oldest makes room.
 - **Albert's sign-in pages can no longer be shown inside another website,** and unexpected errors no longer show internal details.
+
+**Improvements**
+
+- The "MCP endpoint is switched off" notice now shows only to people who can manage plugins, and no longer shows a server path. The sign-in warning shows only on Albert's screens and the Plugins screen.
+- Uninstalling also removes the saved site location and Albert's cached data.
+- The bundled MCP Adapter is updated to 0.7.1.
+
+**Fixes**
+
+- Deleting a user who owns content now asks who should take it over, instead of failing. A user without content is deleted straight away.
+- Apps whose sign-in address uses three slashes or an underscore (such as `myapp:///callback`) can register again, and local `http://[::1]` addresses are accepted.
+
+**Developer**
+
+- New `Albert\Core\RestRequest`, so add-ons can recognise the route WordPress dispatches and an assistant's request. `albert/abilities/is_management_context` can no longer make an assistant's request a management context.
+- `albert/create-user` returns `invitation_sent` instead of `password_reset_url`. `albert/delete-user` accepts `reassign`. Read abilities return `protected` for password-protected items.
+- New filter `albert/oauth/max_pending_clients` (default 100). `albert/oauth/max_clients` now counts connected apps only.
+- Removed: `BlockConverter`'s unused image sideloading (`$sideload_images`, `get_created_attachment_ids()`, `assign_parent_to_attachments()`).
+- The translation template is now `languages/albert-ai-butler.pot`.
 
 ### 1.5.0
 

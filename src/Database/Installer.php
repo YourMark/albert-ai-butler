@@ -74,6 +74,8 @@ class Installer {
 		'albert_safe_mode_ttl_minutes',
 		// The Context screen's instructions and section toggles.
 		'albert_context',
+		// Where the site runs, chosen in the connect guide.
+		'albert_site_location',
 		// Legacy options retired in earlier releases, cleared here for completeness.
 		'albert_logging_db_version',
 		'albert_oauth_db_version',
@@ -387,6 +389,21 @@ class Installer {
 
 		foreach ( self::USER_META as $meta_key ) {
 			delete_metadata( 'user', 0, $meta_key, '', true );
+		}
+
+		// Caches and rate-limit counters. They expire anyway, but uninstall leaves nothing.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall sweep.
+		$transients = $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT option_name FROM %i WHERE option_name LIKE %s OR option_name LIKE %s',
+				$wpdb->options,
+				$wpdb->esc_like( '_transient_albert_' ) . '%',
+				$wpdb->esc_like( '_transient_timeout_albert_' ) . '%'
+			)
+		);
+
+		foreach ( $transients as $option ) {
+			delete_option( $option );
 		}
 	}
 

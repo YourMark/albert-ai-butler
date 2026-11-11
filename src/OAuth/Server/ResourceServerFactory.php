@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Server;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\OAuth\Repositories\AccessTokenRepository;
 use League\OAuth2\Server\CryptKey;
 use League\OAuth2\Server\ResourceServer;
