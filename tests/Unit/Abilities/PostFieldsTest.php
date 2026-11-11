@@ -16,7 +16,7 @@ require_once __DIR__ . '/read-ability-stubs.php';
 
 use Albert\Abilities\WordPress\Pages\Create as CreatePage;
 use Albert\Abilities\WordPress\Pages\ViewPage;
-use Albert\Abilities\WordPress\PostFields;
+use Albert\Abilities\WordPress\Shared\PostFields;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Blocks\EditorMode;
@@ -26,7 +26,7 @@ use WP_Error;
 /**
  * Post fields tests.
  *
- * @covers \Albert\Abilities\WordPress\PostFields
+ * @covers \Albert\Abilities\WordPress\Shared\PostFields
  */
 class PostFieldsTest extends TestCase {
 

@@ -9,7 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
-use Albert\Abilities\WordPress\PostFields;
+use Albert\Abilities\WordPress\Shared\PostFields;
+use Albert\Abilities\WordPress\Shared\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
@@ -97,12 +98,12 @@ class Update extends BaseAbility {
 			'categories' => [
 				'type'        => 'array',
 				'items'       => [ 'type' => 'integer' ],
-				'description' => 'Array of category IDs',
+				'description' => 'Category IDs. Replaces the post\'s categories; [] removes them all, though WordPress puts the default category back the next time the post is saved elsewhere. Omit to leave them unchanged.',
 			],
 			'tags'       => [
 				'type'        => 'array',
 				'items'       => [ 'type' => 'string' ],
-				'description' => 'Array of tag names',
+				'description' => 'Tag names, created when missing. Replaces the post\'s tags; [] removes them all. Omit to leave them unchanged.',
 			],
 		];
 
@@ -229,17 +230,21 @@ class Update extends BaseAbility {
 			$request_data['excerpt'] = sanitize_textarea_field( $args['excerpt'] );
 		}
 
-		// Add categories if provided.
-		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
+		// An absent field leaves the terms alone; a supplied [] clears them.
+		if ( isset( $args['categories'] ) && is_array( $args['categories'] ) ) {
 			$request_data['categories'] = array_map( 'absint', $args['categories'] );
+			$unknown                    = PostTerms::check_category_ids( $request_data['categories'] );
+			if ( $unknown ) {
+				return $unknown;
+			}
 		}
 
-		// Add tags if provided (convert tag names to IDs using REST API).
-		if ( ! empty( $args['tags'] ) && is_array( $args['tags'] ) ) {
-			$tag_ids = $this->get_or_create_tag_ids( $args['tags'] );
-			if ( ! empty( $tag_ids ) ) {
-				$request_data['tags'] = $tag_ids;
+		if ( isset( $args['tags'] ) && is_array( $args['tags'] ) ) {
+			$tag_ids = PostTerms::tag_ids( $args['tags'] );
+			if ( is_wp_error( $tag_ids ) ) {
+				return $tag_ids;
 			}
+			$request_data['tags'] = $tag_ids;
 		}
 
 		// Create REST request.
@@ -284,52 +289,5 @@ class Update extends BaseAbility {
 		}
 
 		return $result;
-	}
-
-	/**
-	 * Get or create tag IDs from tag names using REST API.
-	 *
-	 * @param array<int, string> $tag_names Array of tag names.
-	 * @return array<int, int> Array of tag IDs.
-	 * @since 1.0.0
-	 */
-	private function get_or_create_tag_ids( array $tag_names ): array {
-		$tag_ids = [];
-
-		foreach ( $tag_names as $tag_name ) {
-			$tag_name = sanitize_text_field( $tag_name );
-
-			// Search for existing tag using REST API.
-			$search_request = new WP_REST_Request( 'GET', '/wp/v2/tags' );
-			$search_request->set_param( 'search', $tag_name );
-			$search_request->set_param( 'per_page', 1 );
-
-			$search_response = rest_do_request( $search_request );
-			$server          = rest_get_server();
-			$search_data     = $server->response_to_data( $search_response, false );
-
-			// Check if exact match exists.
-			if ( ! is_wp_error( $search_data ) && ! empty( $search_data ) ) {
-				foreach ( $search_data as $tag ) {
-					if ( strtolower( $tag['name'] ) === strtolower( $tag_name ) ) {
-						$tag_ids[] = $tag['id'];
-						continue 2;
-					}
-				}
-			}
-
-			// Create new tag using REST API if not found.
-			$create_request = new WP_REST_Request( 'POST', '/wp/v2/tags' );
-			$create_request->set_param( 'name', $tag_name );
-
-			$create_response = rest_do_request( $create_request );
-			$create_data     = $server->response_to_data( $create_response, false );
-
-			if ( ! is_wp_error( $create_data ) && ! empty( $create_data['id'] ) ) {
-				$tag_ids[] = $create_data['id'];
-			}
-		}
-
-		return $tag_ids;
 	}
 }

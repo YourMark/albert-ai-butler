@@ -9,7 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
-use Albert\Abilities\WordPress\PostFields;
+use Albert\Abilities\WordPress\Shared\PostFields;
+use Albert\Abilities\WordPress\Shared\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
@@ -199,26 +200,18 @@ class Create extends BaseAbility {
 			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
 		] + $fields;
 
-		// Add categories if provided.
 		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
 			$request_data['categories'] = array_map( 'absint', $args['categories'] );
+			$unknown                    = PostTerms::check_category_ids( $request_data['categories'] );
+			if ( $unknown ) {
+				return $unknown;
+			}
 		}
 
-		// Add tags if provided (REST API expects tag IDs, so convert tag names to IDs).
 		if ( ! empty( $args['tags'] ) && is_array( $args['tags'] ) ) {
-			$tag_ids = [];
-			foreach ( $args['tags'] as $tag_name ) {
-				$tag = get_term_by( 'name', $tag_name, 'post_tag' );
-				if ( ! $tag ) {
-					// Create tag if it doesn't exist.
-					$tag = wp_insert_term( $tag_name, 'post_tag' );
-					if ( is_wp_error( $tag ) ) {
-						continue;
-					}
-					$tag_ids[] = $tag['term_id'];
-				} else {
-					$tag_ids[] = $tag->term_id;
-				}
+			$tag_ids = PostTerms::tag_ids( $args['tags'] );
+			if ( is_wp_error( $tag_ids ) ) {
+				return $tag_ids;
 			}
 			$request_data['tags'] = $tag_ids;
 		}

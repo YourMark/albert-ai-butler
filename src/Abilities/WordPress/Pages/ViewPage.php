@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+use Albert\Abilities\WordPress\Shared\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
@@ -165,6 +166,7 @@ class ViewPage extends BaseAbility {
 								],
 							],
 						],
+						...PostTerms::schema(),
 					],
 				],
 			],
@@ -239,7 +241,8 @@ class ViewPage extends BaseAbility {
 					'template'       => get_page_template_slug( $page ),
 					'comment_status' => $page->comment_status,
 					'featured_image' => get_post_thumbnail_id( $page ) ? get_post_thumbnail_id( $page ) : null,
-				]
+				],
+				PostTerms::for_post( $page )
 			),
 		];
 	}

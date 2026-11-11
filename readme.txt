@@ -246,12 +246,15 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 * When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
 * When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
+* Your assistant can now see which categories and tags a post or page has, so it can check that a change to a post's categories or tags took effect.
 
 **Fixes**
 
 * Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
 * Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 * A group block sent with its contents written out was saved empty. It now keeps them.
+* Asking your assistant to remove all categories or tags from a post did nothing, while it was told the change had worked. They are now removed.
+* A category or tag your assistant put on a post could be left off without a word, for example a category that no longer exists or a tag whose name is part of another tag's name. Albert now picks the right tag, and refuses the change with the reason when a category or tag cannot be used.
 
 **Developer**
 
@@ -262,6 +265,12 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 * Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 * `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
+* `albert/view-post` and `albert/view-page` return `categories` and `tags` as `{ id, name }` lists, left out when the post type does not use that taxonomy. `albert/update-post` treats an empty `categories` or `tags` list as removing them all.
+* `albert/create-post` and `albert/update-post` return an error for a category ID that does not exist (`albert_unknown_category`) or a tag WordPress refuses to create, and save nothing, instead of leaving it off.
+
+**Credits**
+
+* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting that categories and tags could not be read or cleared.
 
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
