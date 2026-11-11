@@ -120,7 +120,15 @@ class WooCommerceProductVisibilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_find_products_shows_a_shop_manager_every_status(): void {
-		wp_set_current_user( self::factory()->user->create( [ 'role' => 'shop_manager' ] ) );
+		// A shop manager's product rights, granted directly: WC's role caps do
+		// not reliably survive the test framework's transactions (see
+		// PermissionFailureTest).
+		$manager = self::factory()->user->create( [ 'role' => 'shop_manager' ] );
+		$user    = get_userdata( $manager );
+		foreach ( [ 'read_product', 'edit_products', 'edit_others_products', 'edit_published_products', 'edit_private_products', 'read_private_products' ] as $cap ) {
+			$user->add_cap( $cap );
+		}
+		wp_set_current_user( $manager );
 
 		$ids = array_column( ( new FindProducts() )->execute( [ 'per_page' => 50 ] )['products'], 'id' );
 

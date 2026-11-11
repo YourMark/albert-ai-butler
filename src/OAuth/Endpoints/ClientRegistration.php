@@ -553,6 +553,11 @@ class ClientRegistration implements Hookable {
 			return true;
 		}
 
+		// An IPv4-mapped IPv6 address (::ffff:127.0.0.1) is judged as the IPv4
+		// address it carries: PHP before 8.2 does not count the mapped range as
+		// reserved, so the range filter below would let it through.
+		$ip = self::unmap_ipv4( $ip );
+
 		// Reject RFC 1918 private and IANA reserved ranges (covers loopback,
 		// link-local, and other reserved space).
 		if ( ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
@@ -577,6 +582,24 @@ class ClientRegistration implements Hookable {
 	 */
 	private static function bare_host( string $host ): string {
 		return strtolower( trim( $host, '[]' ) );
+	}
+
+	/**
+	 * The IPv4 address inside an IPv4-mapped IPv6 address, or the address unchanged.
+	 *
+	 * @param string $ip A valid IP address.
+	 *
+	 * @return string
+	 * @since 1.5.1
+	 */
+	private static function unmap_ipv4( string $ip ): string {
+		$packed = @inet_pton( $ip ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A malformed address returns false; that is the answer.
+
+		if ( is_string( $packed ) && strlen( $packed ) === 16 && substr( $packed, 0, 12 ) === str_repeat( "\0", 10 ) . "\xff\xff" ) {
+			return (string) inet_ntop( substr( $packed, 12 ) );
+		}
+
+		return $ip;
 	}
 
 	/**
