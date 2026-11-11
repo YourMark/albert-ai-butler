@@ -14,14 +14,15 @@ paths:
 Holds destructive assistant calls until a person approves them in Albert > Approvals. On by default: a safety default that ships off protects nobody.
 
 ## The gate
-- `Interceptor` binds WordPress 7.1's `wp_pre_execute_ability`, which fires before validation, the permission check and the callback. Below 7.1 the feature is inert, and the Settings field, the Approvals screen and the Dashboard each say so. Never let an unprotected site show an empty queue as if it were protected.
+- `Interceptor` binds WordPress 7.1's `wp_pre_execute_ability`, which fires before validation, the permission check and the callback.
 - Only calls with an Albert connection (`ConnectionContext`) are held. WP-CLI, direct PHP and other plugins pass. Never describe safe mode as general write protection.
 - One MCP `tools/call` fires `wp_pre_execute_ability` twice (the adapter's `execute-ability` wrapper, then the real ability). `Execution\InterceptorDecision` says which firing is real; anything else on that hook must use it too.
 - The queue holds the input as captured, before core normalises it. Docblocks say "captured", not "resolved".
 
-## What is held (either axis is enough)
-1. The annotation: `destructive !== false`. Never `=== true`: an undeclared ability must be held, or the gate becomes fail-open.
+## What is held (any one is enough)
+1. The annotation: `destructive !== false`. Never `=== true`: an undeclared ability must be held, or the gate becomes fail-open. This is wider than the Destructive chip, which only shows what an ability declares.
 2. `RiskPolicy`: Albert's high-risk abilities by name, and any call (third-party too) that grants an administrator-capability role or writes a high-risk option. The option lookup ignores bare `name` and `key`; they are ordinary words.
+3. An add-on, through `albert/safe_mode/should_hold`. It runs after both axes and is OR-ed with them, so it can add a hold but never release one, and it is not asked when safe mode is off or the ability is exempt.
 
 ## Option tiers
 | Tier | Options | Behaviour |

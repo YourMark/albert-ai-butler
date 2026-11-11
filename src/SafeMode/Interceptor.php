@@ -33,7 +33,7 @@ use WP_Error;
  * run directly in PHP, by WP-CLI, or by another plugin's own code is not an
  * assistant triggering it through Albert, and is left alone — that matches issue
  * 04's scope boundary and avoids blocking non-AI flows that were never the
- * threat. Below WordPress 7.1 the filter never fires, so this is inert.
+ * threat.
  *
  * @since 1.5.0
  */
@@ -100,10 +100,6 @@ class Interceptor implements Hookable {
 
 	/**
 	 * Bind the interceptor to the pre-execute short-circuit filter.
-	 *
-	 * Registered unconditionally: below WordPress 7.1 the filter never fires, so
-	 * this costs one array entry and stays correct, exactly like
-	 * {@see \Albert\Core\InvocationRelay}.
 	 *
 	 * @return void
 	 * @since 1.5.0

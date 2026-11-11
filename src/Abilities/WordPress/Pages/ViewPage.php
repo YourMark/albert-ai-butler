@@ -238,6 +238,8 @@ class ViewPage extends BaseAbility {
 					'permalink'      => get_permalink( $page ),
 					'parent_id'      => (int) $page->post_parent,
 					'menu_order'     => (int) $page->menu_order,
+					'template'       => get_page_template_slug( $page ),
+					'comment_status' => $page->comment_status,
 					'featured_image' => get_post_thumbnail_id( $page ) ? get_post_thumbnail_id( $page ) : null,
 				],
 				PostTerms::for_post( $page )
