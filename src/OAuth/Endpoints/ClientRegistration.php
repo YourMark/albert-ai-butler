@@ -136,6 +136,10 @@ class ClientRegistration implements Hookable {
 
 		// Per-site client cap, against live clients only (see count_live_clients()).
 		if ( self::limit_reached( $client_repo ) ) {
+			$client_repo->evict_oldest_unused_client();
+		}
+
+		if ( self::limit_reached( $client_repo ) ) {
 			$this->log_rejected_registration( 'client_limit_reached', '', $client_name );
 
 			return new WP_Error(
@@ -333,6 +337,10 @@ class ClientRegistration implements Hookable {
 			return 'redirect_scheme_not_permitted';
 		}
 
+		if ( self::has_ambiguous_authority( $uri ) ) {
+			return 'redirect_uri_malformed';
+		}
+
 		// Optional strict mode: restrict to an explicit scheme allowlist.
 		/**
 		 * Optional strict-mode allowlist of redirect URI schemes.
@@ -374,6 +382,43 @@ class ClientRegistration implements Hookable {
 		// Any other well-formed scheme is a private-use (custom) scheme — allow.
 		// The scheme is the identity; there is no host to validate.
 		return '';
+	}
+
+	/**
+	 * Whether a URI could reach a different host than the one PHP reads from it.
+	 *
+	 * PHP's parse_url() and browsers (WHATWG URL) disagree on backslashes,
+	 * userinfo, percent-encoded and non-ASCII hosts: `https://evil.example\@claude.ai/cb`
+	 * is host claude.ai to PHP and evil.example to a browser. Any of those makes
+	 * the consent screen and the host checks untrustworthy, so they are refused.
+	 *
+	 * @param string $uri The redirect URI.
+	 *
+	 * @return bool Whether the URI must be refused.
+	 * @since 1.5.1
+	 */
+	public static function has_ambiguous_authority( string $uri ): bool {
+		if ( str_contains( $uri, '\\' ) || preg_match( '/[^\x21-\x7e]/', $uri ) === 1 ) {
+			return true;
+		}
+
+		if ( preg_match( '#^[A-Za-z][A-Za-z0-9+.-]*://#', $uri, $prefix ) !== 1 ) {
+			// No authority, as in a private-use `com.example.app:/cb`.
+			return false;
+		}
+
+		$rest      = substr( $uri, strlen( $prefix[0] ) );
+		$authority = substr( $rest, 0, strcspn( $rest, '/?#' ) );
+
+		// A host name, or a bracketed IPv6 literal, with an optional port. No
+		// userinfo, no percent-encoding.
+		if ( preg_match( '/^(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?$/', $authority ) !== 1 ) {
+			return true;
+		}
+
+		$host = wp_parse_url( $uri, PHP_URL_HOST );
+
+		return ! is_string( $host ) || strtolower( $host ) !== strtolower( (string) preg_replace( '/:[0-9]{1,5}$/', '', $authority ) );
 	}
 
 	/**
@@ -574,6 +619,7 @@ class ClientRegistration implements Hookable {
 	 * @param ClientRepository|null $repository Repository to count with.
 	 *
 	 * @return bool
+	 * @phpstan-impure
 	 * @since 1.5.0
 	 */
 	public static function limit_reached( ?ClientRepository $repository = null ): bool {

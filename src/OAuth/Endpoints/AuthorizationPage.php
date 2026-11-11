@@ -181,7 +181,11 @@ class AuthorizationPage implements Hookable {
 
 		// Validate redirect URI: must exactly match a registered URI. There is no
 		// wildcard: a client that did not register this exact URI is rejected.
-		if ( ! self::is_registered_redirect_uri( $client->getRedirectUri(), $redirect_uri ) ) {
+		// Re-checked here so a client registered before 1.5.1 with an ambiguous
+		// URI cannot be used.
+		if ( ! self::is_registered_redirect_uri( $client->getRedirectUri(), $redirect_uri )
+			|| ClientRegistration::has_ambiguous_authority( $redirect_uri )
+		) {
 			$this->render_error_page(
 				__( 'Invalid Redirect', 'albert-ai-butler' ),
 				__( 'The redirect URI is not allowed for this application.', 'albert-ai-butler' )
@@ -189,23 +193,9 @@ class AuthorizationPage implements Hookable {
 			return;
 		}
 
-		// PKCE policy: this server accepts only the S256 challenge method, and a
-		// public (native/loopback) client MUST use PKCE: a secret alone cannot
-		// protect it (RFC 8252). league enforces presence for public clients at
-		// token time; we reject a non-S256 method and a missing challenge up front.
-		if ( $code_challenge !== '' && $code_challenge_method !== 'S256' ) {
-			$this->render_error_page(
-				__( 'Invalid Request', 'albert-ai-butler' ),
-				__( 'This site requires PKCE using the S256 code challenge method.', 'albert-ai-butler' )
-			);
-			return;
-		}
-
-		if ( ! $client->isConfidential() && $code_challenge === '' ) {
-			$this->render_error_page(
-				__( 'Invalid Request', 'albert-ai-butler' ),
-				__( 'This application must use PKCE (a code challenge) to connect.', 'albert-ai-butler' )
-			);
+		$pkce_problem = self::pkce_problem( $code_challenge, $code_challenge_method );
+		if ( $pkce_problem !== '' ) {
+			$this->render_error_page( __( 'Invalid Request', 'albert-ai-butler' ), $pkce_problem );
 			return;
 		}
 
@@ -249,6 +239,53 @@ class AuthorizationPage implements Hookable {
 
 		// Show consent page.
 		$this->render_consent_page( $client, $redirect_uri, $state, $scope, $code_challenge, $code_challenge_method );
+	}
+
+	/**
+	 * Header lines every page this endpoint renders sends, besides no-cache.
+	 *
+	 * DENY rather than SAMEORIGIN: nothing frames these pages, and a framed
+	 * Authorize button is a clickjack.
+	 *
+	 * @return string[] Raw header lines, for header().
+	 * @since 1.5.1
+	 */
+	public static function page_headers(): array {
+		return [
+			'Content-Type: text/html; charset=utf-8',
+			'X-Frame-Options: DENY',
+			"Content-Security-Policy: frame-ancestors 'none'",
+		];
+	}
+
+	/**
+	 * Why a request's PKCE parameters are refused, or '' when they are fine.
+	 *
+	 * Required for every client, confidential ones too (OAuth 2.1, RFC 9700):
+	 * every https client registered through DCR is confidential, so a secret
+	 * alone would otherwise protect most connections.
+	 *
+	 * @param string $code_challenge        The code challenge.
+	 * @param string $code_challenge_method The challenge method.
+	 *
+	 * @return string The reason, translated, or ''.
+	 * @since 1.5.1
+	 */
+	public static function pkce_problem( string $code_challenge, string $code_challenge_method ): string {
+		if ( $code_challenge === '' ) {
+			return __( 'This application must use PKCE (a code challenge) to connect.', 'albert-ai-butler' );
+		}
+
+		if ( $code_challenge_method !== 'S256' ) {
+			return __( 'This site requires PKCE using the S256 code challenge method.', 'albert-ai-butler' );
+		}
+
+		// RFC 7636 §4.2.
+		if ( preg_match( '/^[A-Za-z0-9\-._~]{43,128}$/', $code_challenge ) !== 1 ) {
+			return __( 'The code challenge is not valid.', 'albert-ai-butler' );
+		}
+
+		return '';
 	}
 
 	/**
@@ -423,7 +460,7 @@ class AuthorizationPage implements Hookable {
 		} catch ( \Exception $e ) {
 			$this->render_error_page(
 				__( 'Server Error', 'albert-ai-butler' ),
-				$e->getMessage()
+				__( 'The authorization could not be completed. Please try again.', 'albert-ai-butler' )
 			);
 		}
 	}
@@ -451,7 +488,9 @@ class AuthorizationPage implements Hookable {
 
 		// Start output.
 		nocache_headers();
-		header( 'Content-Type: text/html; charset=utf-8' );
+		foreach ( self::page_headers() as $page_header ) {
+			header( $page_header );
+		}
 
 		$this->enqueue_oauth_styles();
 
@@ -552,7 +591,9 @@ class AuthorizationPage implements Hookable {
 	 */
 	private function render_error_page( string $title, string $message ): void {
 		nocache_headers();
-		header( 'Content-Type: text/html; charset=utf-8' );
+		foreach ( self::page_headers() as $page_header ) {
+			header( $page_header );
+		}
 		status_header( 400 );
 
 		$this->enqueue_oauth_styles();
@@ -594,7 +635,9 @@ class AuthorizationPage implements Hookable {
 	 */
 	private function render_access_denied_page( \WP_User $user, $client, string $redirect_uri, string $state ): void {
 		nocache_headers();
-		header( 'Content-Type: text/html; charset=utf-8' );
+		foreach ( self::page_headers() as $page_header ) {
+			header( $page_header );
+		}
 		status_header( 403 );
 
 		$this->enqueue_oauth_styles();
@@ -780,7 +823,9 @@ class AuthorizationPage implements Hookable {
 	 */
 	private function render_success_page( string $redirect_url, string $client_name ): void {
 		nocache_headers();
-		header( 'Content-Type: text/html; charset=utf-8' );
+		foreach ( self::page_headers() as $page_header ) {
+			header( $page_header );
+		}
 
 		$this->enqueue_oauth_styles();
 
@@ -909,8 +954,8 @@ class AuthorizationPage implements Hookable {
 	/**
 	 * Format the redirect destination shown on the consent screen.
 	 *
-	 * The destination is the primary trust signal: for an https/http URI show
-	 * the host; for a private-use scheme show the (short) URI itself.
+	 * The whole URI, not just its host: the destination is the primary trust
+	 * signal, and a host read by PHP is not always the host a browser visits.
 	 *
 	 * @param string $redirect_uri The validated redirect URI.
 	 *
@@ -918,12 +963,6 @@ class AuthorizationPage implements Hookable {
 	 * @since 1.3.1
 	 */
 	private function format_redirect_destination( string $redirect_uri ): string {
-		$host = wp_parse_url( $redirect_uri, PHP_URL_HOST );
-
-		if ( is_string( $host ) && $host !== '' ) {
-			return $host;
-		}
-
 		return $redirect_uri;
 	}
 

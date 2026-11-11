@@ -96,7 +96,7 @@ class OptionNames {
 		$args[] = bin2hex( $name );
 
 		$suppressed = $wpdb->suppress_errors();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Charset and collation are validated identifiers read from the column; every value is a placeholder.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Charset and collation are validated identifiers read from the column; every value is a placeholder.
 		$index = $wpdb->get_var( $wpdb->prepare( "SELECT i FROM ({$selects}) AS c WHERE n = {$as} LIMIT 1", $args ) );
 		$error = $wpdb->last_error;
 		$wpdb->suppress_errors( $suppressed );

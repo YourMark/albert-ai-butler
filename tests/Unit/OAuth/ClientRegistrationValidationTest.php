@@ -120,6 +120,8 @@ class ClientRegistrationValidationTest extends TestCase {
 			'http localhost with port'   => [ 'http://localhost:8080/callback' ],
 			'https public literal ip'    => [ 'https://93.184.216.34/cb' ],
 			'https hostname (dev)'       => [ 'https://app.example/cb', 'development' ],
+			'https with port and query'  => [ 'https://app.example:8443/cb?x=https://y', 'development' ],
+			'custom, url in query'       => [ 'com.example.app:/cb?u=a@b' ],
 		];
 	}
 
@@ -146,22 +148,29 @@ class ClientRegistrationValidationTest extends TestCase {
 	 */
 	public static function rejected_uris(): array {
 		return [
-			'empty'               => [ '', 'redirect_uri_empty' ],
-			'fragment'            => [ 'https://app.example/cb#x', 'redirect_uri_has_fragment' ],
-			'no scheme'           => [ 'not-a-uri', 'redirect_uri_malformed' ],
-			'javascript'          => [ 'javascript://alert(1)', 'redirect_scheme_not_permitted' ],
-			'javascript any case' => [ 'JaVaScRiPt://alert(1)', 'redirect_scheme_not_permitted' ],
-			'control character'   => [ "\x01javascript://alert(1)", 'redirect_uri_malformed' ],
-			'line break inside'   => [ "cursor://a\r\nb/cb", 'redirect_uri_malformed' ],
-			'space inside'        => [ 'https://app.example/c b', 'redirect_uri_malformed' ],
-			'data'                => [ 'data:text/html,x', 'redirect_scheme_not_permitted' ],
-			'vbscript'            => [ 'vbscript:msgbox', 'redirect_scheme_not_permitted' ],
-			'file'                => [ 'file:///etc/passwd', 'redirect_scheme_not_permitted' ],
-			'blob'                => [ 'blob:https://x/y', 'redirect_scheme_not_permitted' ],
-			'about'               => [ 'about:blank', 'redirect_scheme_not_permitted' ],
-			'http non-loopback'   => [ 'http://evil.example/cb', 'redirect_scheme_not_permitted' ],
-			'https private range' => [ 'https://10.0.0.5/cb', 'redirect_host_not_allowed' ],
-			'https loopback host' => [ 'https://localhost/cb', 'redirect_host_not_allowed' ],
+			'empty'                => [ '', 'redirect_uri_empty' ],
+			'fragment'             => [ 'https://app.example/cb#x', 'redirect_uri_has_fragment' ],
+			'no scheme'            => [ 'not-a-uri', 'redirect_uri_malformed' ],
+			'javascript'           => [ 'javascript://alert(1)', 'redirect_scheme_not_permitted' ],
+			'javascript any case'  => [ 'JaVaScRiPt://alert(1)', 'redirect_scheme_not_permitted' ],
+			'control character'    => [ "\x01javascript://alert(1)", 'redirect_uri_malformed' ],
+			'line break inside'    => [ "cursor://a\r\nb/cb", 'redirect_uri_malformed' ],
+			'space inside'         => [ 'https://app.example/c b', 'redirect_uri_malformed' ],
+			'data'                 => [ 'data:text/html,x', 'redirect_scheme_not_permitted' ],
+			'vbscript'             => [ 'vbscript:msgbox', 'redirect_scheme_not_permitted' ],
+			'file'                 => [ 'file:///etc/passwd', 'redirect_scheme_not_permitted' ],
+			'blob'                 => [ 'blob:https://x/y', 'redirect_scheme_not_permitted' ],
+			'about'                => [ 'about:blank', 'redirect_scheme_not_permitted' ],
+			'http non-loopback'    => [ 'http://evil.example/cb', 'redirect_scheme_not_permitted' ],
+			'https private range'  => [ 'https://10.0.0.5/cb', 'redirect_host_not_allowed' ],
+			'https loopback host'  => [ 'https://localhost/cb', 'redirect_host_not_allowed' ],
+			'backslash userinfo'   => [ 'https://evil.example\\@claude.ai/cb', 'redirect_uri_malformed' ],
+			'backslash loopback'   => [ 'http://evil.example\\@localhost/cb', 'redirect_uri_malformed' ],
+			'userinfo'             => [ 'https://user@claude.ai/cb', 'redirect_uri_malformed' ],
+			'encoded host'         => [ 'https://claude.ai%2eevil.example/cb', 'redirect_uri_malformed' ],
+			'non-ascii host'       => [ "https://cl\u{0430}ude.ai/cb", 'redirect_uri_malformed' ],
+			'empty authority'      => [ 'https:///cb', 'redirect_uri_malformed' ],
+			'custom with userinfo' => [ 'cursor://evil@cb/x', 'redirect_uri_malformed' ],
 		];
 	}
 

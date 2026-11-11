@@ -69,7 +69,7 @@ class AuthorizationPagesTest extends TestCase {
 
 		$this->assertStringContainsString( 'Ask an administrator to add you', $html );
 		$this->assertStringNotContainsString( 'You can add yourself', $html );
-		$this->assertStringContainsString( 'This link goes to app.example.com.', $html );
+		$this->assertStringContainsString( 'This link goes to https://app.example.com/callback.', $html );
 		$this->assertStringContainsString( 'state=s%26t', $html );
 		$this->assertStringNotContainsString( 'registered', $html );
 	}

@@ -44,7 +44,8 @@ class Update extends BaseAbility {
 			'annotations' => Annotations::update(
 				'This ability cannot change a password and will refuse the request if you supply one. '
 				. 'Changing an existing account\'s password is account takeover, and the account holder can '
-				. 'reset their own from the login screen. Tell the user to do that instead.'
+				. 'reset their own from the login screen. Tell the user to do that instead. '
+				. 'It also refuses to change another user\'s email address, for the same reason.'
 			),
 		];
 
@@ -72,7 +73,7 @@ class Update extends BaseAbility {
 				'email'       => [
 					'type'        => 'string',
 					'format'      => 'email',
-					'description' => 'The email address for the user',
+					'description' => 'The email address for the user. Only your own can be changed; a new email for another user is refused.',
 				],
 				'first_name'  => [
 					'type'        => 'string',
@@ -174,11 +175,24 @@ class Update extends BaseAbility {
 		$user_id = absint( $args['id'] );
 
 		// Check if user exists.
-		if ( ! get_userdata( $user_id ) ) {
+		$user = get_userdata( $user_id );
+		if ( ! $user ) {
 			return new WP_Error(
 				'user_not_found',
 				__( 'User not found.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
+			);
+		}
+
+		// A new email on someone else's account plus "Lost password" is the
+		// same takeover as setting their password, so it is refused too.
+		if ( isset( $args['email'] ) && $user_id !== get_current_user_id()
+			&& strtolower( sanitize_email( $args['email'] ) ) !== strtolower( $user->user_email )
+		) {
+			return new WP_Error(
+				'email_change_refused',
+				__( 'This ability cannot change another user\'s email address. The account holder can change it on their own profile.', 'albert-ai-butler' ),
+				[ 'status' => 403 ]
 			);
 		}
 

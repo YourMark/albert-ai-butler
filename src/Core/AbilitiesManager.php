@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Abstracts\BaseAbility;
 use Albert\Admin\AbilitiesPage;
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\OAuth\Server\ConnectionContext;
 
 /**
  * Abilities Manager class
@@ -82,6 +83,10 @@ class AbilitiesManager implements Hookable {
 		// registered. PHP_INT_MAX guarantees we run last so we can also strip
 		// abilities registered directly by third-party plugins.
 		add_action( 'wp_abilities_api_init', [ $this, 'enforce_disabled' ], PHP_INT_MAX );
+
+		// Unregistering is skipped in a management context, so refuse a disabled
+		// ability at execution as well. WordPress 7.1+; never fires below that.
+		add_filter( 'wp_pre_execute_ability', [ $this, 'refuse_disabled_execution' ], 1, 2 );
 
 		// Tell the admin when an upgrade disabled newly-added abilities by default.
 		add_action( 'admin_notices', [ $this, 'render_new_abilities_notice' ] );
@@ -292,6 +297,33 @@ class AbilitiesManager implements Hookable {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Refuse to execute an ability the site has switched off.
+	 *
+	 * Runs before safe mode, so a disabled call is refused rather than held.
+	 *
+	 * @param mixed  $pre          The short-circuit sentinel, or an earlier refusal.
+	 * @param string $ability_name The ability being executed.
+	 *
+	 * @return mixed The incoming value to proceed, or a WP_Error to refuse.
+	 * @since 1.5.1
+	 */
+	public function refuse_disabled_execution( $pre, $ability_name ) {
+		if ( is_wp_error( $pre ) || ! is_string( $ability_name ) || AbilitiesRegistry::is_transport_ability( $ability_name ) ) {
+			return $pre;
+		}
+
+		if ( ! in_array( $ability_name, $this->get_effective_disabled_list(), true ) ) {
+			return $pre;
+		}
+
+		return new \WP_Error(
+			'albert_ability_disabled',
+			__( 'This ability is switched off on this site.', 'albert-ai-butler' ),
+			[ 'status' => 403 ]
+		);
 	}
 
 	/**
@@ -630,7 +662,10 @@ class AbilitiesManager implements Hookable {
 		 *
 		 * @param bool $is_management_context Whether this request is a management context.
 		 */
-		return (bool) apply_filters( 'albert/abilities/is_management_context', $is_page );
+		$is_management_context = (bool) apply_filters( 'albert/abilities/is_management_context', $is_page );
+
+		// An assistant's request never keeps disabled abilities, whatever a filter says.
+		return $is_management_context && ConnectionContext::client_id() === null;
 	}
 
 	/**

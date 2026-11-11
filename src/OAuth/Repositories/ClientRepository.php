@@ -437,6 +437,44 @@ class ClientRepository implements ClientRepositoryInterface {
 	}
 
 	/**
+	 * Delete the oldest client that never got a token, to make room under the cap.
+	 *
+	 * Without this, anonymous registrations nobody completes fill the cap and
+	 * lock every real assistant out for a day. A client younger than
+	 * `$min_minutes`, or holding a live authorization code, is mid sign-in and kept.
+	 *
+	 * @param int $min_minutes Minimum age in minutes.
+	 *
+	 * @return bool Whether a client was deleted.
+	 * @since 1.5.1
+	 */
+	public function evict_oldest_unused_client( int $min_minutes = 10 ): bool {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, cap enforcement.
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i
+				WHERE created_at < DATE_SUB( NOW(), INTERVAL %d MINUTE )
+					AND client_id NOT IN ( SELECT t.client_id FROM %i t )
+					AND client_id NOT IN (
+						SELECT a.client_id FROM %i a WHERE a.revoked = 0 AND a.expires_at > UTC_TIMESTAMP()
+					)
+				ORDER BY created_at ASC
+				LIMIT 1',
+				$tables['clients'],
+				$min_minutes,
+				$tables['access_tokens'],
+				$tables['auth_codes']
+			)
+		);
+
+		return (int) $result > 0;
+	}
+
+	/**
 	 * Revoke one user's tokens for a client, access and refresh, leaving
 	 * anyone else who approved the same client connected.
 	 *

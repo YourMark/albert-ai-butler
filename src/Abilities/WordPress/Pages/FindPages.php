@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+use Albert\Abilities\WordPress\ProtectedContent;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
@@ -153,6 +154,7 @@ class FindPages extends BaseAbility {
 								'type'        => 'boolean',
 								'description' => 'Whether the stored content actually contains block markup.',
 							],
+							'protected'  => ProtectedContent::schema(),
 							'truncated'  => [
 								'type'        => 'boolean',
 								'description' => 'Present and true only when a text representation for this item was byte-capped (a "…[truncated, N more characters]" marker was appended). For the full content of a large page, call view-page, which paginates by block.',
@@ -274,8 +276,10 @@ class FindPages extends BaseAbility {
 
 		$pages = [];
 		foreach ( $data as $page_data ) {
-			$page        = get_post( (int) $page_data['id'] );
-			$raw_content = $page ? $page->post_content : '';
+			$page = get_post( (int) $page_data['id'] );
+			// Core REST blanks protected content, but it is re-read raw here.
+			$withheld    = $page && ProtectedContent::is_withheld( $page );
+			$raw_content = $page && ! $withheld ? $page->post_content : '';
 
 			$pages[] = array_merge(
 				[
@@ -287,6 +291,7 @@ class FindPages extends BaseAbility {
 				[
 					'excerpt'    => $page_data['excerpt']['rendered'] ?? '',
 					'status'     => $page_data['status'] ?? '',
+					'protected'  => $page ? ProtectedContent::is_protected( $page ) : false,
 					'date'       => $page_data['date'] ?? '',
 					'modified'   => $page_data['modified'] ?? '',
 					'author'     => $page_data['author'] ?? 0,

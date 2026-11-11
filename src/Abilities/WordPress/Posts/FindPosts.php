@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+use Albert\Abilities\WordPress\ProtectedContent;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
@@ -154,6 +155,7 @@ class FindPosts extends BaseAbility {
 								'type'        => 'boolean',
 								'description' => 'Whether the stored content actually contains block markup.',
 							],
+							'protected'  => ProtectedContent::schema(),
 							'truncated'  => [
 								'type'        => 'boolean',
 								'description' => 'Present and true only when a text representation for this item was byte-capped (a "…[truncated, N more characters]" marker was appended). For the full content of a large post, call view-post, which paginates by block.',
@@ -281,8 +283,10 @@ class FindPosts extends BaseAbility {
 
 		$posts = [];
 		foreach ( $data as $post_data ) {
-			$post        = get_post( (int) $post_data['id'] );
-			$raw_content = $post ? $post->post_content : '';
+			$post = get_post( (int) $post_data['id'] );
+			// Core REST blanks protected content, but it is re-read raw here.
+			$withheld    = $post && ProtectedContent::is_withheld( $post );
+			$raw_content = $post && ! $withheld ? $post->post_content : '';
 
 			$posts[] = array_merge(
 				[
@@ -294,6 +298,7 @@ class FindPosts extends BaseAbility {
 				[
 					'excerpt'    => $post_data['excerpt']['rendered'] ?? '',
 					'status'     => $post_data['status'] ?? '',
+					'protected'  => $post ? ProtectedContent::is_protected( $post ) : false,
 					'date'       => $post_data['date'] ?? '',
 					'modified'   => $post_data['modified'] ?? '',
 					'author'     => $post_data['author'] ?? 0,

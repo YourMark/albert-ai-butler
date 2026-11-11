@@ -200,6 +200,15 @@ class UploadLinkService {
 			);
 		}
 
+		// Core's media endpoint asks the same before attaching to a parent.
+		if ( $post_id > 0 && ! user_can( $user_id, 'edit_post', $post_id ) ) {
+			return new WP_Error(
+				'cannot_attach',
+				__( 'This user does not have permission to attach media to that post.', 'albert-ai-butler' ),
+				[ 'status' => 403 ]
+			);
+		}
+
 		$max_bytes = $this->resolve_max_bytes( (int) ( $args['max_bytes'] ?? 0 ) );
 
 		$issued = $this->tokens->issue(
@@ -281,6 +290,19 @@ class UploadLinkService {
 			);
 		}
 
+		// Re-checked: the user may have lost access to the post since minting.
+		$post_id = (int) ( $payload['post_id'] ?? 0 );
+		if ( $post_id > 0 && ! user_can( $user_id, 'edit_post', $post_id ) ) {
+			return new WP_Error(
+				'capability_revoked',
+				__( 'The user who created this upload link can no longer edit the post it attaches to.', 'albert-ai-butler' ),
+				[
+					'status'  => 403,
+					'user_id' => $user_id,
+				]
+			);
+		}
+
 		return [
 			'user_id'        => $user_id,
 			'mime_allowlist' => $effective_allowlist,
@@ -288,7 +310,7 @@ class UploadLinkService {
 			// been lowered since this link was minted, and the stored number
 			// would then promise more than core will accept.
 			'max_bytes'      => $this->apply_server_ceiling( (int) ( $payload['max_bytes'] ?? self::DEFAULT_MAX_BYTES ) ),
-			'post_id'        => (int) ( $payload['post_id'] ?? 0 ),
+			'post_id'        => $post_id,
 		];
 	}
 

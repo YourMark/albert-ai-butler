@@ -171,6 +171,24 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.5.1
+
+Security release. Closes a way someone could get an assistant connection to your site by tricking a person into approving it, and several smaller leaks. Update now.
+
+**Security**
+
+- **The approval screen can no longer be fooled about where access goes.** A sign-in address written to look like a trusted assistant could send the approval to someone else. Albert now refuses such addresses, also for apps that registered before this update, and the approval screen shows the full address the approval goes to.
+- **Every assistant must prove it is the app that started the sign-in.** This was required for desktop and command-line apps only; it now applies to all of them. Claude, ChatGPT, Cursor and the other common assistants already do this.
+- **Removing someone from the list of who may connect now takes effect at once.** Their assistants stop working straight away, including ones that were still signing in, instead of when their access ran out.
+- **Password-protected posts and pages stay protected.** An assistant only sees their content when the person who connected it may edit them, as in WordPress itself.
+- **Tools you switch off stay off.** A specially crafted request could still reach tools switched off on the Abilities screen. Switched-off tools are now also refused at the moment they would run, on WordPress 7.1 and later.
+- **Unpublished products stay private.** Viewing a WooCommerce product that is a draft, pending or private now needs the same rights as in WooCommerce itself.
+- **Files can only be attached to posts you may edit,** both when uploading and through an upload link.
+- **An assistant can no longer change another person's email address,** just as it could never change their password. Changing your own still works.
+- **More of Albert's own settings are out of an assistant's reach,** including the site description it is given, how long connections and invitations last, and the upload size limit.
+- **A flood of unfinished sign-ups can no longer lock real assistants out.** When the limit on connected apps is reached, Albert makes room by removing the oldest app that never finished connecting.
+- **Albert's sign-in pages can no longer be shown inside another website,** and unexpected errors no longer show internal details.
+
 ### 1.5.0
 
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.

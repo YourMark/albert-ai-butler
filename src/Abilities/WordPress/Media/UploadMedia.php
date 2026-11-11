@@ -178,6 +178,15 @@ class UploadMedia extends BaseAbility {
 					[ 'status' => 404 ]
 				);
 			}
+
+			// Core's media endpoint asks the same before attaching to a parent.
+			if ( ! current_user_can( 'edit_post', $post_id ) ) {
+				return new WP_Error(
+					'cannot_attach',
+					__( 'You do not have permission to attach media to this post.', 'albert-ai-butler' ),
+					[ 'status' => 403 ]
+				);
+			}
 		}
 
 		// download_url() needs this one; AttachmentImporter requires the rest itself.

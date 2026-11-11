@@ -10,6 +10,7 @@
 namespace Albert\OAuth\Repositories;
 
 use Albert\Database\Tables;
+use Albert\OAuth\AllowedUsers;
 use Albert\OAuth\Entities\AccessTokenEntity;
 use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
@@ -32,7 +33,12 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 	 * @param array<int, \League\OAuth2\Server\Entities\ScopeEntityInterface> $scopes          The scopes.
 	 * @param string|int|null                                                 $user_identifier The user identifier.
 	 *
+	 * Refuses a user who is no longer on the allowed list. Every grant that
+	 * mints a token for a person (code exchange, refresh) passes through here,
+	 * so removing somebody also stops their outstanding codes and refresh tokens.
+	 *
 	 * @return AccessTokenEntityInterface The new access token entity.
+	 * @throws OAuthServerException When the user is no longer allowed.
 	 * @since 1.0.0
 	 */
 	public function getNewToken(
@@ -48,6 +54,10 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 		}
 
 		if ( $user_identifier !== null && (string) $user_identifier !== '' ) {
+			if ( ! AllowedUsers::is_allowed( (int) $user_identifier ) ) {
+				throw OAuthServerException::accessDenied( 'The user is no longer allowed to connect.' );
+			}
+
 			$access_token->setUserIdentifier( (string) $user_identifier );
 		}
 
@@ -144,6 +154,31 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
 		}
 
 		return (bool) $revoked;
+	}
+
+	/**
+	 * The user a stored access token was issued to.
+	 *
+	 * @param string $token_id The token identifier.
+	 *
+	 * @return int|null The user ID, or null when the token is unknown.
+	 * @since 1.5.1
+	 */
+	public function getUserIdForToken( string $token_id ): ?int {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$user_id = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT user_id FROM %i WHERE token_id = %s',
+				$tables['access_tokens'],
+				$token_id
+			)
+		);
+
+		return $user_id === null ? null : (int) $user_id;
 	}
 
 	/**

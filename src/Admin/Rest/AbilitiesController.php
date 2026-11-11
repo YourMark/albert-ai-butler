@@ -16,6 +16,7 @@ use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\AbilitiesRegistry;
 use Albert\Core\AbilitiesState;
 use Albert\Core\Plugin;
+use Albert\OAuth\Server\ConnectionContext;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -204,8 +205,8 @@ class AbilitiesController implements Hookable {
 	 * Opt this controller's requests into the abilities management context.
 	 *
 	 * Keeps disabled abilities in the registry for our endpoint so the screen
-	 * can list and re-enable them. Matches by request URI (available before any
-	 * dispatch), mirroring how the admin page is detected by its `page` query arg.
+	 * can list and re-enable them. Only for a request that WordPress will
+	 * dispatch to our route, by a user who may use it, outside a connection.
 	 *
 	 * @param bool $is_management_context Incoming value.
 	 *
@@ -221,16 +222,50 @@ class AbilitiesController implements Hookable {
 	 *
 	 * @return bool
 	 * @since 1.3.0
+	 * @since 1.5.1 Matches the route WordPress dispatches, not the request path.
 	 */
 	private function is_abilities_request(): bool {
-		// Input sanitizer (not esc_url_raw, which is an output escaper and would
-		// mangle encoded path characters). The value is only substring-matched.
-		$uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		// Permission first: resolving the user is what records a connection.
+		if ( ! $this->check_permission() || ConnectionContext::client_id() !== null ) {
+			return false;
+		}
 
-		// Match the path only — a query string like ?q=albert/v1/abilities on an
-		// unrelated REST request must not count as our endpoint.
-		$path = strtok( $uri, '?' );
+		$route = self::requested_route();
 
-		return is_string( $path ) && str_contains( $path, '/' . Plugin::rest_namespace() . '/abilities' );
+		return preg_match( '#^/' . preg_quote( Plugin::rest_namespace(), '#' ) . '/abilities(?:/|$)#', $route ) === 1;
+	}
+
+	/**
+	 * The REST route this request is dispatched to, or '' when it is not a REST request.
+	 *
+	 * Mirrors WP::parse_request(): a `rest_route` from POST or GET overrides the
+	 * route in the path, so `/wp-json/albert/v1/abilities?rest_route=/other`
+	 * is a request for `/other`. The registry can be built before parse_request
+	 * runs, hence the fallback.
+	 *
+	 * @return string
+	 * @since 1.5.1
+	 */
+	private static function requested_route(): string {
+		if ( isset( $GLOBALS['wp'] ) && is_object( $GLOBALS['wp'] ) && isset( $GLOBALS['wp']->query_vars['rest_route'] ) ) {
+			return (string) $GLOBALS['wp']->query_vars['rest_route'];
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended -- Read-only routing decision.
+		foreach ( [ $_POST, $_GET ] as $source ) {
+			if ( isset( $source['rest_route'] ) ) {
+				return is_string( $source['rest_route'] ) ? sanitize_text_field( wp_unslash( $source['rest_route'] ) ) : '';
+			}
+		}
+		// phpcs:enable
+
+		$uri  = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		$path = (string) strtok( $uri, '?' );
+
+		if ( preg_match( '#/' . preg_quote( rest_get_url_prefix(), '#' ) . '(/.*)$#', $path, $matches ) !== 1 ) {
+			return '';
+		}
+
+		return $matches[1];
 	}
 }

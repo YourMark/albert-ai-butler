@@ -233,6 +233,48 @@ class ReadAbilityFormatTest extends TestCase {
 	 *
 	 * @return void
 	 */
+	public function test_view_post_withholds_password_protected_content_from_a_reader(): void {
+		$GLOBALS['albert_test_posts'][5]->post_password = 'secret';
+		$GLOBALS['albert_test_posts'][5]->post_excerpt  = 'Teaser';
+		$GLOBALS['albert_test_caps']                    = [ 'read', 'read_post' ];
+
+		$post = ( new ViewPost() )->execute( [ 'id' => 5 ] )['post'];
+
+		$this->assertTrue( $post['protected'] );
+		$this->assertSame( '', $post['content'] );
+		$this->assertSame( '', $post['plaintext'] );
+		$this->assertSame( [], $post['blocks'] );
+		$this->assertSame( '', $post['excerpt'] );
+	}
+
+	public function test_view_post_shows_password_protected_content_to_an_editor(): void {
+		$GLOBALS['albert_test_posts'][5]->post_password = 'secret';
+		$GLOBALS['albert_test_caps']                    = [ 'read', 'read_post', 'edit_post' ];
+
+		$post = ( new ViewPost() )->execute( [ 'id' => 5 ] )['post'];
+
+		$this->assertTrue( $post['protected'] );
+		$this->assertSame( self::MARKUP, $post['content'] );
+	}
+
+	public function test_view_post_reports_unprotected_post(): void {
+		$post = ( new ViewPost() )->execute( [ 'id' => 5 ] )['post'];
+
+		$this->assertFalse( $post['protected'] );
+	}
+
+	public function test_find_posts_withholds_password_protected_content_from_a_reader(): void {
+		$GLOBALS['albert_test_posts'][5]->post_password = 'secret';
+		$GLOBALS['albert_test_caps']                    = [ 'read' ];
+		$this->queue_find_response();
+
+		$item = ( new FindPosts() )->execute( [] )['posts'][0];
+
+		$this->assertTrue( $item['protected'] );
+		$this->assertSame( '', $item['content'] );
+		$this->assertSame( '', $item['plaintext'] );
+	}
+
 	private function queue_find_response(): void {
 		$GLOBALS['albert_test_rest_responses']['get'] = [
 			'is_error' => false,

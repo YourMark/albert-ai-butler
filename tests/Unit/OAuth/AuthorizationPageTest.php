@@ -175,4 +175,30 @@ class AuthorizationPageTest extends TestCase {
 
 		$this->assertSame( '', $this->read( 'redirect_uri', '', true ) );
 	}
+
+	/**
+	 * PKCE with S256 and a well-formed challenge is required for every client.
+	 *
+	 * @return void
+	 */
+	public function test_pkce_is_required_with_s256(): void {
+		$challenge = str_repeat( 'a', 43 );
+
+		$this->assertSame( '', AuthorizationPage::pkce_problem( $challenge, 'S256' ) );
+		$this->assertNotSame( '', AuthorizationPage::pkce_problem( '', '' ) );
+		$this->assertNotSame( '', AuthorizationPage::pkce_problem( $challenge, 'plain' ) );
+		$this->assertNotSame( '', AuthorizationPage::pkce_problem( 'short', 'S256' ) );
+	}
+
+	/**
+	 * The OAuth pages refuse to be framed.
+	 *
+	 * @return void
+	 */
+	public function test_page_headers_forbid_framing(): void {
+		$headers = AuthorizationPage::page_headers();
+
+		$this->assertContains( 'X-Frame-Options: DENY', $headers );
+		$this->assertContains( "Content-Security-Policy: frame-ancestors 'none'", $headers );
+	}
 }

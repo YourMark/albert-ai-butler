@@ -144,7 +144,7 @@ class AuthorizationServerFactory {
 		 *
 		 * @param string $duration ISO 8601 duration string (e.g. `PT1H`). Default varies by filter.
 		 */
-		$duration = (string) apply_filters( $filter_name, $default_value );
+		$duration = (string) apply_filters( $filter_name, $default_value ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- One of the albert/oauth/*_ttl filters.
 
 		try {
 			return new DateInterval( $duration );

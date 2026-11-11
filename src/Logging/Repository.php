@@ -271,19 +271,11 @@ class Repository {
 
 		$table_name = Tables::ability_log();
 
-		// Sanitize ability names for direct use in the query.
-		// Each name is escaped via esc_sql() and wrapped in quotes.
-		$escaped_names = array_map(
-			static function ( string $name ): string {
-				return "'" . esc_sql( $name ) . "'";
-			},
-			$ability_names
-		);
-		$in_clause     = implode( ',', $escaped_names );
+		$placeholders = implode( ',', array_fill( 0, count( $ability_names ), '%s' ) );
 
 		// Use a subquery to get the max id per ability, then join to get full rows.
 		// This is more efficient than a correlated subquery for each ability.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- IN clause built from esc_sql() escaped values.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- IN clause is placeholders only; every name is bound.
 		$results = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT l.id, l.ability_name, l.user_id, l.created_at, UNIX_TIMESTAMP( l.created_at ) AS created_ts, l.status, l.error_code, l.error_message
@@ -291,11 +283,12 @@ class Repository {
 				INNER JOIN (
 					SELECT ability_name, MAX(id) as max_id
 					FROM %i
-					WHERE ability_name IN ({$in_clause})
+					WHERE ability_name IN ({$placeholders})
 					GROUP BY ability_name
 				) latest ON l.id = latest.max_id",
 				$table_name,
-				$table_name
+				$table_name,
+				...$ability_names
 			)
 		);
 		// phpcs:enable

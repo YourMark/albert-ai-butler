@@ -397,12 +397,24 @@ class UsersAbilityTest extends TestCase {
 	// ─── UpdateUser ─────────────────────────────────────────────────
 
 	/**
-	 * UpdateUser changes email.
+	 * UpdateUser changes only the email of the user making the call.
 	 *
 	 * @return void
 	 */
 	public function test_update_user_email(): void {
 		$user_id = self::factory()->user->create( [ 'user_email' => 'old@albert.test' ] );
+
+		$refused = ( new UpdateUser() )->execute(
+			[
+				'id'    => $user_id,
+				'email' => 'new@albert.test',
+			]
+		);
+
+		$this->assertWPError( $refused );
+		$this->assertSame( 'old@albert.test', get_userdata( $user_id )->user_email );
+
+		wp_set_current_user( $user_id );
 
 		$result = ( new UpdateUser() )->execute(
 			[

@@ -388,8 +388,8 @@ class ExecuteSchemaTest extends TestCase {
 		$this->assert_execute_matches_schema(
 			new UpdateUser(),
 			[
-				'id'    => $user_id,
-				'email' => 'after-schema@albert.test',
+				'id'         => $user_id,
+				'first_name' => 'Schema',
 			],
 			'UpdateUser'
 		);

@@ -11,6 +11,8 @@ namespace Albert\OAuth\Server;
 
 use Exception;
 use Albert\OAuth\Endpoints\Psr7Bridge;
+use Albert\OAuth\AllowedUsers;
+use Albert\OAuth\Repositories\AccessTokenRepository;
 use Albert\OAuth\Repositories\ClientRepository;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use WP_Error;
@@ -64,6 +66,28 @@ class TokenValidator {
 				);
 			}
 
+			// The signature proves the key signed it; the row proves this server
+			// issued it to this user. A token forged with a leaked key and a
+			// real token ID still names the wrong user.
+			$token_id = (string) $validated_request->getAttribute( 'oauth_access_token_id' );
+			if ( ( new AccessTokenRepository() )->getUserIdForToken( $token_id ) !== (int) $user->ID ) {
+				return new WP_Error(
+					'oauth_invalid_token',
+					__( 'The access token is not valid.', 'albert-ai-butler' ),
+					[ 'status' => 401 ]
+				);
+			}
+
+			// The allowed list is otherwise checked only when an authorization
+			// starts, so somebody removed from it kept their connection.
+			if ( ! AllowedUsers::is_allowed( $user->ID ) ) {
+				return new WP_Error(
+					'oauth_user_not_allowed',
+					__( 'This account is no longer allowed to connect assistants to this site.', 'albert-ai-butler' ),
+					[ 'status' => 401 ]
+				);
+			}
+
 			$client_id = (string) $validated_request->getAttribute( 'oauth_client_id' );
 
 			// Suspending a connection when the site's address changes is
@@ -93,7 +117,7 @@ class TokenValidator {
 		} catch ( Exception $e ) {
 			return new WP_Error(
 				'oauth_error',
-				$e->getMessage(),
+				__( 'The access token could not be validated.', 'albert-ai-butler' ),
 				[ 'status' => 500 ]
 			);
 		}
@@ -132,7 +156,7 @@ class TokenValidator {
 		} catch ( Exception $e ) {
 			return new WP_Error(
 				'oauth_error',
-				$e->getMessage(),
+				__( 'The access token could not be validated.', 'albert-ai-butler' ),
 				[ 'status' => 500 ]
 			);
 		}
