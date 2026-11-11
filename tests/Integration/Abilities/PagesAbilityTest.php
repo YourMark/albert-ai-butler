@@ -279,11 +279,14 @@ class PagesAbilityTest extends TestCase {
 	 */
 	public function test_view_page_returns_tags_when_pages_support_them(): void {
 		register_taxonomy_for_object_type( 'post_tag', 'page' );
-		$page_id = self::factory()->post->create( [ 'post_type' => 'page' ] );
-		wp_set_post_tags( $page_id, [ 'page-tag' ] );
+		try {
+			$page_id = self::factory()->post->create( [ 'post_type' => 'page' ] );
+			wp_set_post_tags( $page_id, [ 'page-tag' ] );
 
-		$result = ( new ViewPage() )->execute( [ 'id' => $page_id ] );
-		unregister_taxonomy_for_object_type( 'post_tag', 'page' );
+			$result = ( new ViewPage() )->execute( [ 'id' => $page_id ] );
+		} finally {
+			unregister_taxonomy_for_object_type( 'post_tag', 'page' );
+		}
 
 		$this->assertSame( 'page-tag', $result['page']['tags'][0]['name'] );
 		$this->assertArrayNotHasKey( 'categories', $result['page'] );

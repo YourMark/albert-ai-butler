@@ -441,8 +441,113 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertIsArray( $result );
-		$this->assertNotContains( $cat_id, wp_get_post_categories( $post_id ) );
+		$this->assertSame( [], wp_get_post_categories( $post_id ) );
 		$this->assertSame( [], wp_get_post_tags( $post_id ) );
+	}
+
+	/**
+	 * UpdatePost refuses a category ID that does not exist and keeps the old ones.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_refuses_unknown_category(): void {
+		$post_id = self::factory()->post->create();
+		$cat_id  = self::factory()->term->create( [ 'taxonomy' => 'category' ] );
+		wp_set_post_categories( $post_id, [ $cat_id ] );
+
+		$result = ( new UpdatePost() )->execute(
+			[
+				'id'         => $post_id,
+				'categories' => [ 999999 ],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'albert_unknown_category', $result->get_error_code() );
+		$this->assertSame( [ $cat_id ], wp_get_post_categories( $post_id ) );
+	}
+
+	/**
+	 * UpdatePost finds a tag by its exact name when another tag contains it.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_finds_tag_by_exact_name(): void {
+		$post_id = self::factory()->post->create();
+		self::factory()->term->create(
+			[
+				'taxonomy' => 'post_tag',
+				'name'     => 'breaking news',
+			]
+		);
+		$news_id = self::factory()->term->create(
+			[
+				'taxonomy' => 'post_tag',
+				'name'     => 'news',
+			]
+		);
+
+		( new UpdatePost() )->execute(
+			[
+				'id'   => $post_id,
+				'tags' => [ 'news' ],
+			]
+		);
+
+		$this->assertSame( [ $news_id ], wp_get_post_tags( $post_id, [ 'fields' => 'ids' ] ) );
+	}
+
+	/**
+	 * A tag name with an ampersand is found on write and read back as written.
+	 *
+	 * @return void
+	 */
+	public function test_tag_with_ampersand_round_trips(): void {
+		$post_id = self::factory()->post->create();
+		$tag_id  = self::factory()->term->create(
+			[
+				'taxonomy' => 'post_tag',
+				'name'     => 'R&D',
+			]
+		);
+
+		( new UpdatePost() )->execute(
+			[
+				'id'   => $post_id,
+				'tags' => [ 'R&D' ],
+			]
+		);
+		$result = ( new ViewPost() )->execute( [ 'id' => $post_id ] );
+
+		$this->assertSame(
+			[
+				[
+					'id'   => $tag_id,
+					'name' => 'R&D',
+				],
+			],
+			$result['post']['tags']
+		);
+	}
+
+	/**
+	 * UpdatePost refuses the whole change when one tag cannot be created.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_refuses_tag_it_cannot_create(): void {
+		$post_id = self::factory()->post->create();
+		wp_set_post_tags( $post_id, [ 'keep-me' ] );
+
+		$result = ( new UpdatePost() )->execute(
+			[
+				'id'   => $post_id,
+				'tags' => [ 'fine', '' ],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'keep-me', wp_get_post_tags( $post_id )[0]->name );
 	}
 
 	/**

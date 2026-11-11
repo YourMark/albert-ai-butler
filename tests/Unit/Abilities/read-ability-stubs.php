@@ -6,22 +6,27 @@
  * call (get_permalink, get_post_thumbnail_id, the term readers). REST plumbing for the find
  * abilities is shared with the write-ability gate tests via block-write-rest-stubs.php.
  *
- * Drive get_post() with $GLOBALS['albert_test_posts'][ $id ] = (object) [ ... ].
+ * Drive get_post() with $GLOBALS['albert_test_posts'][ $id ] = (object) [ ... ];
+ * it hands back a WP_Post, as core does.
  *
  * @package Albert\Tests
  */
 
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 
+require_once dirname( __DIR__ ) . '/stubs/WP_Post.php';
+
 if ( ! function_exists( 'get_post' ) ) {
 	/**
 	 * Stub get_post().
 	 *
 	 * @param int $id Post ID.
-	 * @return object|null
+	 * @return WP_Post|null
 	 */
 	function get_post( $id = 0 ) {
-		return $GLOBALS['albert_test_posts'][ (int) $id ] ?? null;
+		$post = $GLOBALS['albert_test_posts'][ (int) $id ] ?? null;
+
+		return $post === null || $post instanceof WP_Post ? $post : new WP_Post( $post );
 	}
 }
 
@@ -46,7 +51,7 @@ if ( ! function_exists( 'is_object_in_taxonomy' ) ) {
 	 * @return bool
 	 */
 	function is_object_in_taxonomy( $object_type, $taxonomy ) {
-		return 'post' === $object_type && in_array( $taxonomy, [ 'category', 'post_tag' ], true );
+		return $object_type === 'post' && in_array( $taxonomy, [ 'category', 'post_tag' ], true );
 	}
 }
 

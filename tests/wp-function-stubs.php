@@ -458,18 +458,21 @@ if ( ! function_exists( 'sanitize_key' ) ) {
 	}
 }
 
+require_once __DIR__ . '/Unit/stubs/WP_Post.php';
+
 if ( ! function_exists( 'get_post' ) ) {
 	/**
-	 * Stub of get_post(): resolve a post object from
+	 * Stub of get_post(): the WP_Post for an entry of
 	 * $GLOBALS['albert_test_posts'] keyed by ID, or null.
 	 *
 	 * @param int $post_id Post ID.
-	 * @return object|null Post-like object or null.
+	 * @return WP_Post|null
 	 */
 	function get_post( $post_id = 0 ) {
 		$posts = (array) ( $GLOBALS['albert_test_posts'] ?? [] );
+		$post  = $posts[ (int) $post_id ] ?? null;
 
-		return $posts[ (int) $post_id ] ?? null;
+		return $post === null || $post instanceof WP_Post ? $post : new WP_Post( $post );
 	}
 }
 
