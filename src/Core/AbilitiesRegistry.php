@@ -270,9 +270,8 @@ class AbilitiesRegistry {
 	/**
 	 * Get the default set of disabled abilities.
 	 *
-	 * On fresh install, non-readonly abilities (write / delete) are disabled
-	 * by default. Derives the list from each registered ability's annotations
-	 * so it stays in sync automatically — no hardcoded slug lists.
+	 * On fresh install only abilities declared read-only start on; writes,
+	 * deletes and undeclared abilities start off.
 	 *
 	 * Reads the raw registry: the default state must describe every ability the
 	 * site really has, not a filtered view of it.
@@ -289,16 +288,8 @@ class AbilitiesRegistry {
 
 			$id = $ability->get_name();
 
-			// No annotations — fall back to the slug heuristic.
-			if ( empty( $annotations ) ) {
-				$chips = AnnotationPresenter::heuristic_chips( $id );
-				if ( ! empty( $chips ) && $chips[0]['key'] !== 'read' ) {
-					$disabled[] = $id;
-				}
-				continue;
-			}
-
-			if ( empty( $annotations['readonly'] ) ) {
+			// The transport tools are never off, so they never enter the list a save persists.
+			if ( ( $annotations['readonly'] ?? null ) !== true && ! self::is_transport_ability( $id ) ) {
 				$disabled[] = $id;
 			}
 		}
@@ -426,15 +417,16 @@ class AbilitiesRegistry {
 	private static function guess_capability( string $id, array $meta ): string {
 		$annotations = isset( $meta['annotations'] ) && is_array( $meta['annotations'] ) ? $meta['annotations'] : [];
 		$chips       = AnnotationPresenter::chips_for( $annotations, $id );
-		$operation   = $chips[0]['key'] ?? 'read';
+		$operation   = $chips[0]['key'] ?? 'undeclared';
 
 		if ( self::get_ability_source( $id )['slug'] === 'woo' ) {
 			return 'manage_woocommerce';
 		}
 
-		$action    = strtolower( strstr( $id, '/' ) ? substr( $id, (int) strpos( $id, '/' ) + 1 ) : $id );
-		$is_read   = $operation === 'read';
-		$is_delete = $operation === 'delete';
+		$action  = strtolower( strstr( $id, '/' ) ? substr( $id, (int) strpos( $id, '/' ) + 1 ) : $id );
+		$is_read = $operation === 'read';
+		// The name, not the group: update-user is destructive but needs edit_users.
+		$is_delete = (bool) preg_match( '/(^|-)(delete|trash)(-|$)/', $action );
 
 		if ( str_contains( $action, 'user' ) ) {
 			return $is_read ? 'list_users' : ( $is_delete ? 'delete_users' : 'edit_users' );

@@ -18,6 +18,8 @@ namespace Albert\Tests\Integration\Abilities;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\AbilitiesRegistry;
+use Albert\Core\AnnotationPresenter;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
 use Albert\Tests\Traits\ProvidesAbilities;
 use WP_Error;
@@ -70,7 +72,17 @@ class AbilityContractTest extends TestCase {
 	}
 
 	/**
-	 * Adding the ability to the disabled option makes guarded_execute refuse.
+	 * Clear the connection a test set.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		ConnectionContext::reset();
+		parent::tear_down();
+	}
+
+	/**
+	 * Over an Albert connection, a switched-off ability is refused.
 	 *
 	 * @dataProvider provideAbilities
 	 *
@@ -81,6 +93,7 @@ class AbilityContractTest extends TestCase {
 	public function test_disabled_ability_returns_403_wp_error( string $ability_class ): void {
 		$ability = new $ability_class();
 		update_option( 'albert_disabled_abilities', [ $ability->get_id() ] );
+		ConnectionContext::set( 'contract-test-client' );
 
 		$result = $ability->guarded_execute( [] );
 
@@ -231,6 +244,29 @@ class AbilityContractTest extends TestCase {
 				'%s is not exposed to MCP — set meta.mcp.public (or meta.public) so it is discoverable.',
 				$ability_class
 			)
+		);
+	}
+
+	/**
+	 * Every Albert ability declares what it does, so none shows "Not declared".
+	 *
+	 * @dataProvider provideAbilities
+	 *
+	 * @param class-string<BaseAbility> $ability_class Ability class.
+	 *
+	 * @return void
+	 */
+	public function test_ability_declares_its_behaviour( string $ability_class ): void {
+		$ability = new $ability_class();
+
+		$reflection = new \ReflectionClass( $ability );
+		$prop       = $reflection->getProperty( 'meta' );
+		$prop->setAccessible( true );
+		$meta = (array) $prop->getValue( $ability );
+
+		$this->assertTrue(
+			AnnotationPresenter::is_declared( (array) ( $meta['annotations'] ?? [] ) ),
+			sprintf( '%s declares neither readonly nor destructive.', $ability_class )
 		);
 	}
 
