@@ -70,7 +70,7 @@ abstract class AbstractAddBlock extends AbstractBlockEdit {
 	}
 
 	/**
-	 * Specs for the shared policy and serializer checks; a pattern is checked in {@see apply()}.
+	 * Specs for the shared policy and serializer checks; a pattern is checked in {@see pattern_blocks()}.
 	 *
 	 * @param array<string, mixed> $args Ability input.
 	 * @return array<int, array<string, mixed>>|null
@@ -93,7 +93,11 @@ abstract class AbstractAddBlock extends AbstractBlockEdit {
 		$position = isset( $args['position'] ) ? (string) $args['position'] : '';
 
 		if ( isset( $args['pattern'] ) ) {
-			$blocks = $this->pattern_blocks( (string) $args['pattern'], absint( $args['id'] ?? 0 ) );
+			if ( isset( $args['block'] ) || ! is_string( $args['pattern'] ) ) {
+				return new WP_Error( 'invalid_input', __( 'Send either `block` or `pattern` (a pattern name), not both.', 'albert-ai-butler' ), [ 'status' => 400 ] );
+			}
+
+			$blocks = $this->pattern_blocks( $args['pattern'], absint( $args['id'] ?? 0 ) );
 
 			return $blocks instanceof WP_Error ? $blocks : $editor->add_all( $tree, $this->read_path( $args ), $position, $blocks );
 		}
@@ -127,18 +131,6 @@ abstract class AbstractAddBlock extends AbstractBlockEdit {
 			);
 		}
 
-		if ( ( $pattern['syncStatus'] ?? '' ) === 'synced' && ! empty( $pattern['id'] ) ) {
-			return [
-				[
-					'blockName'    => 'core/block',
-					'attrs'        => [ 'ref' => (int) $pattern['id'] ],
-					'innerBlocks'  => [],
-					'innerHTML'    => '',
-					'innerContent' => [],
-				],
-			];
-		}
-
 		$blocks = array_values(
 			array_filter(
 				parse_blocks( (string) ( $pattern['content'] ?? '' ) ),
@@ -155,9 +147,24 @@ abstract class AbstractAddBlock extends AbstractBlockEdit {
 			);
 		}
 
-		$policy = new BlockPolicy();
-		$error  = BlockIssues::to_wp_error( $policy->enforce( $blocks, $this->post_type(), $post_id, $policy->existing_block_names( $post_id ) ) );
+		$insert = $blocks;
+		if ( ( $pattern['syncStatus'] ?? '' ) === 'synced' && ! empty( $pattern['id'] ) ) {
+			$insert = [
+				[
+					'blockName'    => 'core/block',
+					'attrs'        => [ 'ref' => (int) $pattern['id'] ],
+					'innerBlocks'  => [],
+					'innerHTML'    => '',
+					'innerContent' => [],
+				],
+			];
+		}
 
-		return $error ?? $blocks;
+		// A reference renders the pattern's blocks, so they are checked as well as the reference.
+		$policy = new BlockPolicy();
+		$checks = $insert === $blocks ? $insert : array_merge( $insert, $blocks );
+		$error  = BlockIssues::to_wp_error( $policy->enforce( $checks, $this->post_type(), $post_id, $policy->existing_block_names( $post_id ) ) );
+
+		return $error ?? $insert;
 	}
 }
