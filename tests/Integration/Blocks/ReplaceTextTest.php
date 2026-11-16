@@ -200,6 +200,74 @@ class ReplaceTextTest extends TestCase {
 	}
 
 	/**
+	 * Splitting a paragraph is a new element, not text; bold is text formatting.
+	 *
+	 * @return void
+	 */
+	public function test_a_new_element_is_refused_but_inline_formatting_is_not(): void {
+		$split = $this->replace(
+			[
+				'search'  => 'Once more',
+				'replace' => 'Once</p><p>more',
+			]
+		);
+		$this->assertSame( 'block_structure_changed', $split->get_error_code() );
+		$this->assertSame( self::CONTENT, $this->content() );
+
+		$bold = $this->replace(
+			[
+				'search'  => 'Once more',
+				'replace' => '<em>Once</em> more',
+			]
+		);
+		$this->assertIsArray( $bold );
+	}
+
+	/**
+	 * Classic content cannot gain blocks through a text edit.
+	 *
+	 * @return void
+	 */
+	public function test_classic_content_cannot_gain_a_block(): void {
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => '<p>Classic text.</p>',
+			]
+		);
+
+		$result = $this->replace(
+			[
+				'search'  => 'Classic text.',
+				'replace' => "Classic text.</p>\n<!-- wp:paragraph -->\n<p>New</p>\n<!-- /wp:paragraph -->\n<p>",
+			]
+		);
+
+		$this->assertSame( 'block_structure_changed', $result->get_error_code() );
+	}
+
+	/**
+	 * A user who may not edit the post learns nothing about its text.
+	 *
+	 * @return void
+	 */
+	public function test_another_authors_post_reveals_nothing(): void {
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
+
+		foreach ( [ 'Prices', 'not in the post' ] as $search ) {
+			$result = $this->replace(
+				[
+					'search'  => $search,
+					'replace' => 'x',
+				]
+			);
+
+			$this->assertSame( 'rest_cannot_edit', $result->get_error_code() );
+		}
+		$this->assertSame( self::CONTENT, $this->content() );
+	}
+
+	/**
 	 * Dropping a tag the content had needs confirmation.
 	 *
 	 * @return void

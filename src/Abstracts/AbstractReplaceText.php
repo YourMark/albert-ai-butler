@@ -98,6 +98,16 @@ abstract class AbstractReplaceText extends BaseAbility {
 			);
 		}
 
+		// Checked before searching: a found, not-found or count reply would reveal
+		// text of a post the user may not edit.
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return new WP_Error(
+				'rest_cannot_edit',
+				__( 'Sorry, you are not allowed to edit this item.', 'albert-ai-butler' ),
+				[ 'status' => rest_authorization_required_code() ]
+			);
+		}
+
 		$field                   = is_string( $args['field'] ?? null ) && isset( self::FIELDS[ $args['field'] ] ) ? $args['field'] : 'content';
 		[ $column, $rest_field ] = self::FIELDS[ $field ];
 
@@ -135,7 +145,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 
 		$after = str_replace( $search, $replace, $before );
 
-		$refused = $this->refuse( $field, $before, $after, $args, $post_id );
+		$refused = $this->refuse( $field, $before, $after, $args );
 		if ( $refused instanceof WP_Error ) {
 			return $refused;
 		}
@@ -167,16 +177,15 @@ abstract class AbstractReplaceText extends BaseAbility {
 	/**
 	 * Refuse an edit that changes blocks or drops a tag.
 	 *
-	 * @param string               $field   Field being edited.
-	 * @param string               $before  Field before.
-	 * @param string               $after   Field after.
-	 * @param array<string, mixed> $args    Ability input.
-	 * @param int                  $post_id Post ID.
+	 * @param string               $field  Field being edited.
+	 * @param string               $before Field before.
+	 * @param string               $after  Field after.
+	 * @param array<string, mixed> $args   Ability input.
 	 * @return WP_Error|null
 	 * @since 1.6.0
 	 */
-	private function refuse( string $field, string $before, string $after, array $args, int $post_id ): ?WP_Error {
-		if ( $field === 'content' && has_blocks( $before ) ) {
+	private function refuse( string $field, string $before, string $after, array $args ): ?WP_Error {
+		if ( $field === 'content' && ( has_blocks( $before ) || has_blocks( $after ) ) ) {
 			$difference = BlockStructure::difference( $before, $after );
 
 			if ( $difference !== null ) {
@@ -193,12 +202,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 			}
 		}
 
-		// The message names tags in the post, so only for someone who may edit it.
-		if ( current_user_can( 'edit_post', $post_id ) ) {
-			return MarkupTags::refuse_unconfirmed_drop( $before, $after, $args );
-		}
-
-		return null;
+		return MarkupTags::refuse_unconfirmed_drop( $before, $after, $args );
 	}
 
 	/**

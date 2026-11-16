@@ -91,8 +91,16 @@ class BlockStructure {
 	}
 
 	/**
-	 * The parts of a block's own markup its settings are written into: the
-	 * wrapper's tag name, and every element carrying a class or style.
+	 * Inline tags a text edit may add or remove inside a block, as rich text does.
+	 *
+	 * @var array<int, string>
+	 */
+	private const INLINE_TAGS = [ 'A', 'ABBR', 'B', 'BDI', 'BDO', 'BR', 'CITE', 'CODE', 'DATA', 'DEL', 'DFN', 'EM', 'I', 'IMG', 'INS', 'KBD', 'MARK', 'Q', 'S', 'SAMP', 'SMALL', 'SPAN', 'STRONG', 'SUB', 'SUP', 'TIME', 'U', 'VAR' ];
+
+	/**
+	 * The parts of a block's own markup the editor checks against its settings:
+	 * the wrapper, every element that is not inline text formatting, and every
+	 * element carrying a class or style.
 	 *
 	 * @param array<string, mixed> $block Parsed block.
 	 * @return array<int, string>
@@ -103,11 +111,12 @@ class BlockStructure {
 		$signature = [];
 
 		while ( $processor->next_tag() ) {
+			$tag   = (string) $processor->get_tag();
 			$class = $processor->get_attribute( 'class' );
 			$style = $processor->get_attribute( 'style' );
 
-			if ( $signature === [] || is_string( $class ) || is_string( $style ) ) {
-				$signature[] = $processor->get_tag() . '|' . ( is_string( $class ) ? $class : '' ) . '|' . ( is_string( $style ) ? $style : '' );
+			if ( $signature === [] || ! in_array( $tag, self::INLINE_TAGS, true ) || is_string( $class ) || is_string( $style ) ) {
+				$signature[] = $tag . '|' . ( is_string( $class ) ? $class : '' ) . '|' . ( is_string( $style ) ? $style : '' );
 			}
 		}
 
