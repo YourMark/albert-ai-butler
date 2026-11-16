@@ -13,7 +13,9 @@ namespace Albert\Tests\Unit\Abilities;
 
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 
+use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Media\FindMedia;
+use Albert\Abilities\WordPress\Media\UpdateMedia;
 use Albert\Abilities\WordPress\Menus\AddMenuItem;
 use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
 use Albert\Abilities\WordPress\Menus\CreateMenu;
@@ -94,6 +96,8 @@ class DirectCapabilityTest extends TestCase {
 			'find-media'         => [ FindMedia::class, 'upload_files' ],
 			'view-media'         => [ ViewMedia::class, 'upload_files' ],
 			'upload-media'       => [ UploadMedia::class, 'upload_files' ],
+			'update-media'       => [ UpdateMedia::class, 'upload_files' ],
+			'delete-media'       => [ DeleteMedia::class, 'upload_files' ],
 
 			// Posts/Pages (read-only).
 			'view-post'          => [ ViewPost::class, 'read' ],
