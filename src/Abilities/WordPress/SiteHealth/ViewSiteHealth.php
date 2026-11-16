@@ -186,7 +186,7 @@ class ViewSiteHealth extends BaseAbility {
 				continue;
 			}
 
-			$status = isset( self::STATUS_ORDER[ $result['status'] ?? '' ] ) ? (string) $result['status'] : 'good';
+			$status = isset( self::STATUS_ORDER[ $result['status'] ?? '' ] ) ? (string) $result['status'] : 'recommended';
 			++$counts[ $status ];
 
 			$results[] = [
