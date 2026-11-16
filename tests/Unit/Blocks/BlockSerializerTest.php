@@ -1380,4 +1380,36 @@ class BlockSerializerTest extends TestCase {
 
 		$this->assertSame( [], $result['issues'] );
 	}
+
+	public function test_text_escaped_the_editors_way_and_a_boolean_are_accepted(): void {
+		albert_test_register_block_type( 'core/paragraph', false, [ 'content' => [ 'source' => 'rich-text', 'type' => 'rich-text' ] ] );
+		albert_test_register_block_type(
+			'core/video',
+			false,
+			[
+				'src'      => [ 'source' => 'attribute', 'type' => 'string' ],
+				'controls' => [ 'source' => 'attribute', 'type' => 'boolean' ],
+			]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/paragraph',
+					'attributes' => [ 'content' => 'Don\'t & "co"' ],
+					'html'       => '<p>Don\'t &amp; "co"</p>',
+				],
+				[
+					'name'       => 'core/video',
+					'attributes' => [
+						'src'      => 'https://example.com/v.mp4',
+						'controls' => true,
+					],
+					'html'       => '<figure class="wp-block-video"><video controls src="https://example.com/v.mp4"></video></figure>',
+				],
+			]
+		);
+
+		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
+	}
 }

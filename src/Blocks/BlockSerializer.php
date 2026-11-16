@@ -595,7 +595,7 @@ class BlockSerializer {
 		foreach ( $this->schema->markup_sourced_attributes( $name ) as $attribute ) {
 			$value = $attributes[ $attribute ] ?? null;
 
-			if ( is_scalar( $value ) && (string) $value !== '' && ! $this->html_holds( $html, (string) $value ) ) {
+			if ( is_string( $value ) && $value !== '' && ! $this->html_holds( $html, $value ) ) {
 				$differs  = true;
 				$issues[] = $this->issue(
 					self::SEVERITY_ERROR,
@@ -664,7 +664,9 @@ class BlockSerializer {
 
 	/**
 	 * Whether a sourced attribute's value appears in the block's markup, as text
-	 * or as an escaped HTML attribute value.
+	 * or as an attribute value. Entities are decoded on both sides, since the
+	 * editor escapes `&` but not quotes. A best-effort check: a short value can
+	 * occur by chance, so it catches a clear mismatch, not every one.
 	 *
 	 * @param string $html  The block's saved markup.
 	 * @param string $value Attribute value.
@@ -673,13 +675,11 @@ class BlockSerializer {
 	 * @since 1.6.0
 	 */
 	private function html_holds( string $html, string $value ): bool {
-		foreach ( [ $value, esc_attr( $value ), esc_html( $value ), esc_url( $value ) ] as $candidate ) {
-			if ( $candidate !== '' && str_contains( $html, $candidate ) ) {
-				return true;
-			}
-		}
+		$decode = static fn ( string $text ): string => html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
-		return false;
+		return str_contains( $html, $value )
+			|| str_contains( $html, esc_url( $value ) )
+			|| str_contains( $decode( $html ), $decode( $value ) );
 	}
 
 	/**
@@ -688,7 +688,7 @@ class BlockSerializer {
 	 * Resolution order:
 	 *   - core/html (registered) — legitimate raw HTML, emitted with no issue.
 	 *   - registered dynamic     — emit comment + attrs, empty innerHTML (valid).
-	 *   - registered static      — refused: only save() knows its wrapper; send `html`.
+	 *   - registered static      : refused, only save() knows its wrapper; send `html`.
 	 *   - unregistered           — error with an actionable hint; still emit a
 	 *                              core/html fallback so output is never broken.
 	 *
@@ -745,7 +745,7 @@ class BlockSerializer {
 		// Only the block's save() knows its wrapper; a guessed one is invalid in the editor.
 		$issues[] = $this->issue(
 			self::SEVERITY_ERROR,
-			"{$path}.name '{$name}' is a registered block this server cannot build from attributes, so the editor would flag it as invalid. Send the block's saved markup in 'html' (inner blocks included), or use a fully supported block (e.g. core/paragraph, core/heading, core/group)."
+			"{$path}.name '{$name}' is a registered block this server cannot build from attributes, so the editor would flag it as invalid. Send the block's saved markup in 'html' (inner blocks included), or use a fully supported block (e.g. core/paragraph, core/heading, core/group). To copy a block that holds other blocks, read the post with format 'content' and send that markup as 'content'."
 		);
 
 		return null;

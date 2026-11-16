@@ -69,8 +69,11 @@ Blocks read with `"format": ["blocks"]` carry their saved `html` (every block wi
 inner blocks). Text, links and image sources live only there, so send each block back
 with its `html` unchanged. To change a block's text, edit it inside `html`; an attribute
 such as `content` that differs from the `html` you send is refused, because the editor
-would ignore it. Blocks Albert cannot build from attributes (Cover, Media & Text, File,
-Verse and most plugin blocks) are only accepted with their `html`.
+would ignore it. To change a setting (level, alignment, colour, size), leave `html` out
+and send the attributes: `html` sent unchanged next to a changed setting leaves the block
+invalid. Blocks Albert cannot build from attributes (Cover, Media & Text, File, Verse and
+most plugin blocks) are only accepted with their `html`; to copy one that holds other
+blocks, read the post with `"format": ["content"]` and send that markup as `content`.
 
 Text attributes (`content`, a button's `text`, a quote's `citation`) accept inline HTML
 (`<strong>`, `<em>`, `<a href="…">`, `<code>`). Use it for emphasis and for links inside
