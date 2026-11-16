@@ -11,6 +11,8 @@ namespace Albert\SafeMode;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Core\AbilitiesState;
+
 /**
  * Decides who may approve or reject a staged action.
  *
@@ -156,7 +158,7 @@ class ApprovalPolicy {
 			return __( 'Only an administrator, or the person who requested this, can decide it.', 'albert-ai-butler' );
 		}
 
-		if ( wp_get_ability( $action->ability_name ) === null ) {
+		if ( wp_get_ability( $action->ability_name ) === null || ! AbilitiesState::is_enabled( $action->ability_name ) ) {
 			return __( 'The action this request needs is no longer available. An administrator can clear it, or it will expire on its own.', 'albert-ai-butler' );
 		}
 
@@ -201,7 +203,7 @@ class ApprovalPolicy {
 
 		$ability = wp_get_ability( $action->ability_name );
 
-		if ( $ability === null ) {
+		if ( $ability === null || ! AbilitiesState::is_enabled( $action->ability_name ) ) {
 			return false;
 		}
 
