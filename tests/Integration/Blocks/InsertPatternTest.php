@@ -155,4 +155,92 @@ class InsertPatternTest extends TestCase {
 		$this->assertSame( 'block_validation_failed', $result->get_error_code() );
 		$this->assertStringContainsString( 'core/group', $result->get_error_message() );
 	}
+
+	/**
+	 * A synced pattern is refused when a block it renders is not allowed.
+	 *
+	 * @return void
+	 */
+	public function test_a_synced_pattern_with_a_disallowed_block_is_refused(): void {
+		self::factory()->post->create(
+			[
+				'post_type'    => 'wp_block',
+				'post_name'    => 'shared-hero',
+				'post_content' => self::MARKUP,
+			]
+		);
+		$no_groups = static fn (): array => [ 'core/paragraph', 'core/heading', 'core/block' ];
+		add_filter( 'allowed_block_types_all', $no_groups );
+
+		$result = $this->insert( 'shared-hero' );
+
+		remove_filter( 'allowed_block_types_all', $no_groups );
+
+		$this->assertSame( 'block_validation_failed', $result->get_error_code() );
+		$this->assertStringContainsString( 'core/group', $result->get_error_message() );
+	}
+
+	/**
+	 * An unsynced user pattern is inserted as a copy of its blocks.
+	 *
+	 * @return void
+	 */
+	public function test_an_unsynced_user_pattern_is_inserted_as_a_copy(): void {
+		$pattern_id = self::factory()->post->create(
+			[
+				'post_type'    => 'wp_block',
+				'post_name'    => 'copy-note',
+				'post_content' => '<!-- wp:paragraph --><p>Copied</p><!-- /wp:paragraph -->',
+			]
+		);
+		update_post_meta( $pattern_id, 'wp_pattern_sync_status', 'unsynced' );
+
+		$this->assertIsArray( $this->insert( 'copy-note' ) );
+		$this->assertSame(
+			'<!-- wp:paragraph --><p>Intro</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Copied</p><!-- /wp:paragraph -->',
+			get_post( $this->post_id )->post_content
+		);
+	}
+
+	/**
+	 * A pattern without blocks, a draft pattern, and pattern plus block are refused.
+	 *
+	 * @return void
+	 */
+	public function test_unusable_pattern_input_saves_nothing(): void {
+		self::factory()->post->create(
+			[
+				'post_type'    => 'wp_block',
+				'post_name'    => 'draft-note',
+				'post_status'  => 'draft',
+				'post_content' => '<!-- wp:paragraph --><p>Draft</p><!-- /wp:paragraph -->',
+			]
+		);
+		register_block_pattern(
+			'albert-test/empty',
+			[
+				'title'   => 'Empty',
+				'content' => "\n\n",
+			]
+		);
+
+		$empty = $this->insert( 'albert-test/empty' );
+		$draft = $this->insert( 'draft-note' );
+		$both  = ( new AddPostBlock() )->execute(
+			[
+				'id'       => $this->post_id,
+				'path'     => [ 0 ],
+				'position' => 'after',
+				'pattern'  => self::PATTERN,
+				'block'    => [ 'name' => 'core/paragraph' ],
+			]
+		);
+
+		unregister_block_pattern( 'albert-test/empty' );
+
+		$this->assertSame( 'pattern_empty', $empty->get_error_code() );
+		$this->assertSame( 'pattern_not_found', $draft->get_error_code() );
+		$this->assertSame( 'invalid_input', $both->get_error_code() );
+		$this->assertSame( '<!-- wp:paragraph --><p>Intro</p><!-- /wp:paragraph -->', get_post( $this->post_id )->post_content );
+	}
 }
