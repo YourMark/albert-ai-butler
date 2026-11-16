@@ -140,10 +140,10 @@ class AllowedUsersCommand {
 		$expiry_days = null;
 
 		if ( isset( $assoc_args['expires'] ) ) {
-			$expires = (string) $assoc_args['expires'];
+			$expires = $assoc_args['expires'];
 
-			// The Settings screen's limit; far beyond it the stored date no longer round-trips.
-			if ( ! ctype_digit( $expires ) || (int) $expires > 3650 ) {
+			// A bare --expires arrives as true. 3650 is the Settings screen's limit; far beyond it the stored date no longer round-trips.
+			if ( ! is_string( $expires ) || ! ctype_digit( $expires ) || (int) $expires > 3650 ) {
 				WP_CLI::error( '--expires takes a whole number of days up to 3650, 0 for never.' );
 			}
 
