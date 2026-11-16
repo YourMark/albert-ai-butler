@@ -98,8 +98,8 @@ abstract class AbstractReactPage implements Hookable {
 	abstract protected function stylesheet(): array;
 
 	/**
-	 * Whether this screen ships @wordpress/dataviews and needs its
-	 * stylesheet as a dependency.
+	 * Whether this screen uses @wordpress/dataviews, so it loads the shared
+	 * `albert-dataviews` script chunk and stylesheet.
 	 *
 	 * @return bool
 	 * @since 1.4.0
@@ -220,15 +220,16 @@ abstract class AbstractReactPage implements Hookable {
 	 *
 	 * Reads the wp-scripts asset manifest (dependencies + version) emitted to
 	 * assets/build/js/{asset_key}.asset.php. @wordpress/* deps load from
-	 * core's registered handles; @wordpress/dataviews (where used) is bundled
-	 * into the script and its stylesheet is shipped as
-	 * assets/build/css/dataviews.css. Bails quietly if the build is absent
-	 * (render_page shows the build notice in that case).
+	 * core's registered handles. The webpack runtime and, where used, the
+	 * shared DataViews chunk load ahead of the screen script; the DataViews
+	 * stylesheet is shipped as assets/build/css/dataviews.css. Bails quietly if
+	 * the build is absent (render_page shows the build notice in that case).
 	 *
 	 * @param string $hook Current admin page hook.
 	 *
 	 * @return void
 	 * @since 1.4.0
+	 * @since 1.6.0 Loads the shared `albert-runtime` and `albert-dataviews` scripts.
 	 */
 	public function enqueue_assets( string $hook ): void {
 		if ( Menu::PARENT_SLUG . '_page_' . static::PAGE_SLUG !== $hook ) {
@@ -241,28 +242,38 @@ abstract class AbstractReactPage implements Hookable {
 			return;
 		}
 
-		$asset   = require $asset_file;
-		$version = $asset['version'] ?? ALBERT_VERSION;
+		$asset        = require $asset_file;
+		$version      = $asset['version'] ?? ALBERT_VERSION;
+		$dependencies = $asset['dependencies'] ?? [];
+
+		if ( $this->register_chunk( Assets::RUNTIME_HANDLE, 'runtime' ) !== null ) {
+			$dependencies[] = Assets::RUNTIME_HANDLE;
+		}
 
 		// Component chrome (Button, ToggleControl, …).
 		wp_enqueue_style( 'wp-components' );
 
-		// DataViews ships its own stylesheet and core registers no handle for
-		// it, so we ship the vendor copy emitted by the build
-		// (CopyWebpackPlugin), where this screen uses DataViews at all.
 		$style_dependency = 'wp-components';
 
 		if ( $this->needs_dataviews_css() ) {
+			$dataviews_version = $this->register_chunk( Assets::DATAVIEWS_HANDLE, 'dataviews', [ Assets::RUNTIME_HANDLE ] );
+
+			if ( $dataviews_version !== null ) {
+				$dependencies[] = Assets::DATAVIEWS_HANDLE;
+			}
+
+			// Core registers no DataViews style handle, so the build copies the
+			// package's stylesheet alongside the chunk.
 			$dataviews_css = ALBERT_PLUGIN_DIR . 'assets/build/css/dataviews.css';
 
 			if ( file_exists( $dataviews_css ) ) {
 				wp_enqueue_style(
-					'albert-dataviews',
+					Assets::DATAVIEWS_HANDLE,
 					ALBERT_PLUGIN_URL . 'assets/build/css/dataviews.css',
 					[ 'wp-components' ],
-					$version
+					$dataviews_version ?? $version
 				);
-				$style_dependency = 'albert-dataviews';
+				$style_dependency = Assets::DATAVIEWS_HANDLE;
 			}
 		}
 
@@ -281,7 +292,7 @@ abstract class AbstractReactPage implements Hookable {
 		wp_enqueue_script(
 			$script_handle,
 			ALBERT_PLUGIN_URL . 'assets/build/js/' . $this->asset_key() . '.js',
-			$asset['dependencies'] ?? [],
+			$dependencies,
 			$version,
 			true
 		);
@@ -299,5 +310,39 @@ abstract class AbstractReactPage implements Hookable {
 		);
 
 		wp_set_script_translations( $script_handle, 'albert-ai-butler' );
+	}
+
+	/**
+	 * Register a shared chunk of the webpack build under a stable handle.
+	 *
+	 * Absent from a build made before 1.6.0, whose screen bundles carry their
+	 * own runtime and DataViews; the caller then leaves the dependency out.
+	 *
+	 * @param non-empty-string $handle       Script handle to register.
+	 * @param string           $chunk        Chunk basename in assets/build/js/.
+	 * @param string[]         $dependencies Handles to load first.
+	 *
+	 * @return string|null The chunk's version, or null when it is not built.
+	 * @since 1.6.0
+	 */
+	private function register_chunk( string $handle, string $chunk, array $dependencies = [] ): ?string {
+		$asset_file = ALBERT_PLUGIN_DIR . 'assets/build/js/' . $chunk . '.asset.php';
+
+		if ( ! file_exists( $asset_file ) ) {
+			return null;
+		}
+
+		$asset   = require $asset_file;
+		$version = (string) ( $asset['version'] ?? ALBERT_VERSION );
+
+		wp_register_script(
+			$handle,
+			ALBERT_PLUGIN_URL . 'assets/build/js/' . $chunk . '.js',
+			array_merge( $asset['dependencies'] ?? [], $dependencies ),
+			$version,
+			true
+		);
+
+		return $version;
 	}
 }
