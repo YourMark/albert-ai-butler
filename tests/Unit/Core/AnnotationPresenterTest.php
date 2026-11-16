@@ -55,7 +55,7 @@ class AnnotationPresenterTest extends TestCase {
 		$keys  = array_column( $chips, 'key' );
 
 		$this->assertSame( [ 'write' ], $keys );
-		$this->assertNotContains( 'delete', $keys );
+		$this->assertNotContains( 'destructive', $keys );
 	}
 
 	/**
@@ -63,12 +63,12 @@ class AnnotationPresenterTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_delete_annotation_yields_delete_chip(): void {
+	public function test_delete_annotation_yields_destructive_chip(): void {
 		$chips = AnnotationPresenter::chips_for( Annotations::delete() );
 		$keys  = array_column( $chips, 'key' );
 		$tones = array_column( $chips, 'tone' );
 
-		$this->assertSame( [ 'delete' ], $keys );
+		$this->assertSame( [ 'destructive' ], $keys );
 		$this->assertContains( 'danger', $tones );
 	}
 
@@ -203,7 +203,7 @@ class AnnotationPresenterTest extends TestCase {
 
 		$keys = array_column( AnnotationPresenter::heuristic_chips( 'albert/delete-post' ), 'key' );
 
-		$this->assertSame( [ 'delete' ], $keys );
+		$this->assertSame( [ 'destructive' ], $keys );
 		$this->assertCount( 1, $GLOBALS['albert_test_deprecated_calls'] );
 	}
 
@@ -237,5 +237,81 @@ class AnnotationPresenterTest extends TestCase {
 	 */
 	public function test_is_destructive_false_for_declared_readonly(): void {
 		$this->assertFalse( AnnotationPresenter::is_destructive( [ 'readonly' => true ] ) );
+	}
+
+	/**
+	 * A name on safe mode's high-risk list is destructive, whatever it annotates.
+	 *
+	 * @return void
+	 */
+	public function test_high_risk_name_is_destructive_over_its_annotation(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/high_risk_abilities'] = [ 'other/grant-access' ];
+
+		$chips       = AnnotationPresenter::chips_for( Annotations::update(), 'other/grant-access' );
+		$destructive = AnnotationPresenter::is_destructive( Annotations::update(), 'other/grant-access' );
+
+		unset( $GLOBALS['albert_test_filter_returns']['albert/safe_mode/high_risk_abilities'] );
+
+		$this->assertSame( [ 'destructive' ], array_column( $chips, 'key' ) );
+		$this->assertSame( 'Destructive', $chips[0]['label'] );
+		$this->assertTrue( $destructive );
+	}
+
+	/**
+	 * The destructive preset lands in the Destructive group.
+	 *
+	 * @return void
+	 */
+	public function test_destructive_preset_yields_destructive_chip(): void {
+		$this->assertSame( [ 'destructive' ], array_column( AnnotationPresenter::chips_for( Annotations::destructive() ), 'key' ) );
+	}
+
+	/**
+	 * Claiming read-only does not hide a destructive flag.
+	 *
+	 * @return void
+	 */
+	public function test_contradictory_annotations_read_as_destructive(): void {
+		$annotations = [
+			'readonly'    => true,
+			'destructive' => true,
+		];
+
+		$this->assertSame( [ 'destructive' ], array_column( AnnotationPresenter::chips_for( $annotations ), 'key' ) );
+	}
+
+	/**
+	 * A write that leaves `destructive` unset may delete, so its chip says Destructive,
+	 * as the environment policy and safe mode treat it.
+	 *
+	 * @return void
+	 */
+	public function test_write_without_destructive_flag_is_destructive(): void {
+		$annotations = [ 'readonly' => false ];
+
+		$this->assertSame( [ 'destructive' ], array_column( AnnotationPresenter::chips_for( $annotations ), 'key' ) );
+		$this->assertTrue( AnnotationPresenter::is_destructive( $annotations ) );
+	}
+
+	/**
+	 * Only a boolean declaration puts an ability outside the Destructive group,
+	 * and the chip says the same.
+	 *
+	 * @return void
+	 */
+	public function test_only_a_boolean_declaration_is_not_destructive(): void {
+		$this->assertFalse( AnnotationPresenter::is_destructive( Annotations::update() ) );
+		$this->assertFalse( AnnotationPresenter::is_destructive( [ 'readonly' => true ] ) );
+		$this->assertTrue( AnnotationPresenter::is_destructive( [ 'destructive' => 0 ] ) );
+		$this->assertTrue( AnnotationPresenter::is_destructive( [ 'readonly' => false ] ) );
+		$this->assertTrue( AnnotationPresenter::is_destructive( [] ) );
+
+		$annotations = [
+			'readonly'    => true,
+			'destructive' => 0,
+		];
+
+		$this->assertTrue( AnnotationPresenter::is_destructive( $annotations ) );
+		$this->assertSame( [ 'destructive' ], array_column( AnnotationPresenter::chips_for( $annotations ), 'key' ) );
 	}
 }

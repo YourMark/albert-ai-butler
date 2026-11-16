@@ -29,7 +29,7 @@ class EditBlock extends AbstractEditBlock {
 	public function __construct() {
 		$this->id          = 'albert/edit-post-block';
 		$this->label       = __( 'Edit Post Block', 'albert-ai-butler' );
-		$this->description = __( 'Replace a single block in a post by its position (path), leaving every other block untouched. Read the post first to get each block\'s path.', 'albert-ai-butler' );
+		$this->description = __( 'Replace a block in a post by its position (path), leaving every other block untouched. Read the post first to get each block\'s path. To change several blocks, send them together in `edits`: one save, one revision.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
@@ -46,7 +46,9 @@ class EditBlock extends AbstractEditBlock {
 				. 'that path, so a post that changed under you is rejected rather than overwritten. Send '
 				. 'only the one block, never the whole body. Every op returns the refreshed tree; paths '
 				. 'shift after an insert or a delete, so take your next path from that response and not '
-				. 'from an earlier read.'
+				. 'from an earlier read. To change more than one block of this post, send every edit in one '
+				. 'call as `edits` instead of one call each: every call saves a revision, which pushes older '
+				. 'ones out on a site that keeps only a few. In `edits`, each path is read against the tree as the earlier edits leave it.'
 			),
 		];
 
