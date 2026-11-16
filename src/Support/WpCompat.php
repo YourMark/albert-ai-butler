@@ -12,20 +12,11 @@ namespace Albert\Support;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Central detection of WordPress 7.1 Abilities-API capabilities.
+ * Detection of WordPress 7.1 Abilities-API capabilities.
  *
- * WordPress 7.1 reshaped the Abilities API — client-facing schema preparation,
- * a filtering pipeline for `wp_get_abilities()`, execution lifecycle filters and
- * an invocation audit action. Albert targets 7.1 as its primary path while
- * staying fully functional on 6.9/7.0, so every 7.1-only branch is gated behind
- * a single capability check here rather than scattered `function_exists()` /
- * `version_compare()` calls.
- *
- * Detection is by feature (`function_exists`), never by version number: a host
- * that back-ports a function, or filters one away, is then handled for what it
- * actually offers. When 6.9/7.0 support is eventually dropped, each fallback
- * collapses onto the 7.1 path by deleting these guards and the `else` branch at
- * every call site — grep `6.9 fallback — removable` to find them.
+ * Albert requires 7.1 since 1.6.0 and no longer calls these itself. Kept
+ * because add-ons (Premium's activity log) still ask; both answer true on
+ * every supported version.
  *
  * @since 1.4.0
  */

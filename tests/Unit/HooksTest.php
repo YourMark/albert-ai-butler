@@ -13,6 +13,7 @@ namespace Albert\Tests\Unit;
 require_once __DIR__ . '/stubs/wordpress.php';
 require_once __DIR__ . '/stubs/StubAbility.php';
 
+use Albert\OAuth\Server\ConnectionContext;
 use PHPUnit\Framework\TestCase;
 use WP_Error;
 
@@ -353,12 +354,23 @@ class HooksTest extends TestCase {
 	// ─── Disabled abilities ─────────────────────────────────────────
 
 	/**
+	 * Clear the connection a test set.
+	 *
+	 * @return void
+	 */
+	protected function tearDown(): void {
+		ConnectionContext::reset();
+		parent::tearDown();
+	}
+
+	/**
 	 * Test that no execution hooks fire when the ability is disabled.
 	 *
 	 * @return void
 	 */
 	public function test_no_hooks_fire_when_ability_is_disabled(): void {
 		$GLOBALS['albert_test_options']['albert_disabled_abilities'] = [ 'test/disabled' ];
+		ConnectionContext::set( 'client-1' );
 
 		$ability = new StubAbility( 'test/disabled' );
 		$result  = $ability->guarded_execute( [] );
@@ -379,11 +391,42 @@ class HooksTest extends TestCase {
 	 */
 	public function test_disabled_ability_returns_ability_disabled_error_code(): void {
 		$GLOBALS['albert_test_options']['albert_disabled_abilities'] = [ 'test/blocked' ];
+		ConnectionContext::set( 'client-1' );
 
 		$ability = new StubAbility( 'test/blocked' );
 		$result  = $ability->guarded_execute( [] );
 
+		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'ability_disabled', $result->get_error_code() );
+	}
+
+	/**
+	 * The switch is for assistants: without an Albert connection (WP-CLI,
+	 * another plugin, core's REST API) a switched-off ability still runs.
+	 *
+	 * @return void
+	 */
+	public function test_disabled_ability_runs_without_an_albert_connection(): void {
+		$GLOBALS['albert_test_options']['albert_disabled_abilities'] = [ 'test/blocked' ];
+
+		$ability = new StubAbility( 'test/blocked', [ 'ok' => true ] );
+
+		$this->assertSame( [ 'ok' => true ], $ability->guarded_execute( [] ) );
+	}
+
+	/**
+	 * The disabled-list filter reaches Albert's own abilities (#139).
+	 *
+	 * @return void
+	 */
+	public function test_disabled_list_filter_applies_to_albert_abilities(): void {
+		$GLOBALS['albert_test_options']['albert_disabled_abilities']             = [ 'test/blocked' ];
+		$GLOBALS['albert_test_filter_returns']['albert/abilities/disabled_list'] = [];
+		ConnectionContext::set( 'client-1' );
+
+		$ability = new StubAbility( 'test/blocked', [ 'ok' => true ] );
+
+		$this->assertSame( [ 'ok' => true ], $ability->guarded_execute( [] ) );
 	}
 
 	/**
