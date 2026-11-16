@@ -250,7 +250,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 * When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
 * When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
-* An ability's details on the Abilities screen now show the permission it really checks, and which roles have it, instead of a guess based on its name. Albert's own abilities state theirs. An ability from another plugin that does not say which permission it needs shows Not declared.
+* An ability's details on the Abilities screen now show the permission it really checks, instead of a guess based on its name. Albert's own abilities state theirs. An ability from another plugin that does not say which permission it needs shows Not declared.
 
 **Fixes**
 
