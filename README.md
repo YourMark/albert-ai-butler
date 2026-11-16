@@ -9,7 +9,7 @@
 
 ## Safe by default
 
-- **Deletions wait for you.** Safe mode is on from the start. Deleting content, creating or changing a user account, or changing a key site setting waits for your approval, and the assistant cannot approve its own request. Edits to posts and pages are not held.
+- **Deletions wait for you.** Safe mode is on from the start. Deleting content, creating or changing a user account, or changing a key site setting waits for your approval, and the assistant cannot approve its own request. Ordinary edits to posts and pages go ahead without approval.
 - **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 - **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 - **No tracking.** Albert sends nothing about your site or your usage anywhere.

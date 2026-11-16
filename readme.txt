@@ -20,7 +20,7 @@ Albert removes that step. Connect your AI assistant to your site once, and it wr
 
 **The easiest and safest way to use the WordPress MCP Adapter.** The MCP Adapter is WordPress's own way for AI assistants to reach a site, and on its own it leaves setup, sign-in and permissions to you. Albert adds them: a guided setup, a proper sign-in, a list of who may connect, and your approval before anything is deleted.
 
-* **Deletions wait for you.** Safe mode is on from the start. Deleting content, creating or changing a user account, or changing a key site setting waits for your approval, and the assistant cannot approve its own request. Edits to posts and pages are not held.
+* **Deletions wait for you.** Safe mode is on from the start. Deleting content, creating or changing a user account, or changing a key site setting waits for your approval, and the assistant cannot approve its own request. Ordinary edits to posts and pages go ahead without approval.
 * **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 * **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 * **No tracking.** Albert sends nothing about your site or your usage anywhere.
@@ -73,11 +73,11 @@ Not every guest needs a key to every room.
 
 ### Deletions wait for you
 
-Switched on by default. When your assistant asks to delete a post, create or change a user account, or rewrite a foundational setting, the action does not run. It waits for you. Edits to posts and pages go ahead without approval.
+Switched on by default. When your assistant asks to delete a post, create or change a user account, or rewrite a foundational setting, the action does not run. It waits for you. Ordinary edits to posts and pages go ahead without approval.
 
 * **Held, not logged after the fact.** The request is stopped before it happens, not reported once it has.
 * **You see what it would actually change**, resolved as it is now: "Delete the post 'Pricing' (published)", not a line of code. If the page changed since the request, you are told before you approve.
-* **Approve what you could do yourself.** Each person approves their own requests; administrators approve anyone's. Nobody gains reach they did not already have.
+* **Approve what you could do yourself.** Each person approves their own requests, as long as they may still do what was asked; administrators approve anyone's. Nobody gains reach they did not already have.
 * **The assistant cannot approve its own work**, cannot switch safe mode off, and cannot touch the settings that control it.
 * **Requests expire** if nobody decides, so an old intent cannot be approved against today's site.
 
