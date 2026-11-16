@@ -29,7 +29,7 @@ trait ResolvesTaxonomyRoute {
 	 * Get the REST route for a taxonomy's terms.
 	 *
 	 * The answer is `rest_get_route_for_taxonomy_items()`. WordPress has
-	 * resolved its own routes since 5.9, and this plugin requires 6.9, so
+	 * resolved its own routes since 5.9, and this plugin requires 7.1, so
 	 * asking core is both available and the only way to be right: it reads
 	 * `show_in_rest`, `rest_namespace` and `rest_base` in the same breath the
 	 * route registration does, and passes the result through the

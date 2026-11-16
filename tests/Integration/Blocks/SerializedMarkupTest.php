@@ -208,4 +208,95 @@ class SerializedMarkupTest extends TestCase {
 			$this->assertStringContainsString( $text, $html );
 		}
 	}
+
+	/**
+	 * Block supports reach the HTML through WordPress's own supports engine.
+	 *
+	 * @return void
+	 */
+	public function test_block_supports_reach_the_html(): void {
+		$result = ( new BlockSerializer() )->serialize_with_issues(
+			[
+				[
+					'name'        => 'core/columns',
+					'attributes'  => [
+						'className' => 'project-card',
+						'style'     => [ 'color' => [ 'background' => '#f7cc26' ] ],
+					],
+					'innerBlocks' => [
+						[
+							'name'        => 'core/column',
+							'innerBlocks' => [
+								[
+									'name'        => 'core/buttons',
+									'innerBlocks' => [
+										[
+											'name'       => 'core/button',
+											'attributes' => [
+												'text'            => 'Go',
+												'url'             => 'https://example.com/',
+												'backgroundColor' => 'accent',
+											],
+										],
+									],
+								],
+							],
+						],
+					],
+				],
+			]
+		);
+
+		$this->assertSame( [], $result['issues'] );
+		$this->assertStringContainsString( '<div class="wp-block-columns project-card has-background" style="background-color:#f7cc26;">', $result['markup'] );
+		$this->assertStringContainsString( '<div class="wp-block-button"><a class="wp-block-button__link has-accent-background-color has-background wp-element-button" href="https://example.com/">Go</a></div>', $result['markup'] );
+	}
+
+	/**
+	 * An attribute neither a template nor a registered support writes fails the write.
+	 *
+	 * @return void
+	 */
+	public function test_an_attribute_albert_cannot_write_fails_the_write(): void {
+		$result = ( new BlockSerializer() )->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/paragraph',
+					'attributes' => [
+						'content'  => 'Hi',
+						'sizeSlug' => 'large',
+					],
+				],
+			]
+		);
+
+		$errors = array_column( array_filter( $result['issues'], static fn ( $issue ) => $issue['severity'] === 'error' ), 'message' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'attributes.sizeSlug', $errors[0] );
+	}
+
+	/**
+	 * Block markup sent as `content` is stored exactly as sent.
+	 *
+	 * @return void
+	 */
+	public function test_block_markup_in_content_is_stored_as_sent(): void {
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'administrator' ] ) );
+		delete_option( 'albert_disabled_abilities' );
+		update_option( 'albert_abilities_saved', true );
+
+		$content = '<!-- wp:group {"tagName":"article","className":"project","layout":{"type":"constrained"}} -->' . "\n"
+			. '<article class="wp-block-group project"><!-- wp:paragraph -->' . "\n" . '<p>Copied</p>' . "\n" . '<!-- /wp:paragraph --></article>' . "\n"
+			. '<!-- /wp:group -->';
+
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'   => 'Copied pattern',
+				'content' => $content,
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertSame( $content, get_post( $result['id'] )->post_content );
+	}
 }

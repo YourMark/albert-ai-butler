@@ -505,6 +505,13 @@
 	line-height: 0;
 }
 
+/* In running text: centred on the line, without the 24px button
+   stretching the line box. */
+.albert-page__description .albert-info {
+	vertical-align: middle;
+	margin-block: -4px -2px;
+}
+
 .albert-info .components-button.is-small {
 	display: flex;
 	align-items: center;
