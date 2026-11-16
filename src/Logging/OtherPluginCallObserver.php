@@ -36,6 +36,10 @@ use WP_Error;
  * Calls from WP-CLI, the REST API or the plugin itself are not logged: Albert's
  * log is about what assistants did.
  *
+ * Input and output reach the hook unmasked: another plugin's ability declares no
+ * sensitive keys. Free's Logger stores only the outcome; a listener that stores
+ * payloads must mask them itself.
+ *
  * @since 1.6.0
  */
 class OtherPluginCallObserver implements Hookable {
