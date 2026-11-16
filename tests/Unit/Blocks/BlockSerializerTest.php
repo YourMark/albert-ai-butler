@@ -1114,7 +1114,7 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( '<!-- wp:group {"tagName":"article"} -->' . $html . '<!-- /wp:group -->', $result['markup'] );
+		$this->assertSame( '<!-- wp:group {"tagName":"article"} -->' . "\n" . $html . "\n" . '<!-- /wp:group -->', $result['markup'] );
 		$this->assertSame( [], $result['issues'] );
 
 		$tree = $this->reader->read( $result['markup'] );

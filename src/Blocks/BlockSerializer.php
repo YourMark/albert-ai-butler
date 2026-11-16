@@ -621,7 +621,8 @@ class BlockSerializer {
 			$inner_content[] = null;
 		}
 
-		$attributes = array_diff_key( $attributes, array_flip( $this->schema->unvalidatable_sourced_attributes( $name ) ) );
+		$inner_content = $this->outer_line_breaks( $inner_content );
+		$attributes    = array_diff_key( $attributes, array_flip( $this->schema->unvalidatable_sourced_attributes( $name ) ) );
 
 		return [
 			'blockName'    => $name,
@@ -630,6 +631,35 @@ class BlockSerializer {
 			'innerHTML'    => implode( '', array_filter( $inner_content, 'is_string' ) ),
 			'innerContent' => $inner_content,
 		];
+	}
+
+	/**
+	 * Put the editor's newline inside each delimiter of a block built from `html`,
+	 * leaving the sender's own spacing between its inner blocks alone.
+	 *
+	 * @param array<int, string|null> $inner_content Inner content chunks.
+	 * @return array<int, string|null>
+	 *
+	 * @since 1.6.0
+	 */
+	private function outer_line_breaks( array $inner_content ): array {
+		if ( ! is_string( $inner_content[0] ?? null ) ) {
+			array_unshift( $inner_content, '' );
+		}
+		if ( ! is_string( $inner_content[ count( $inner_content ) - 1 ] ) ) {
+			$inner_content[] = '';
+		}
+
+		$last = count( $inner_content ) - 1;
+
+		if ( ! str_starts_with( (string) $inner_content[0], "\n" ) ) {
+			$inner_content[0] = "\n" . $inner_content[0];
+		}
+		if ( ! str_ends_with( (string) $inner_content[ $last ], "\n" ) ) {
+			$inner_content[ $last ] .= "\n";
+		}
+
+		return $inner_content;
 	}
 
 	/**
