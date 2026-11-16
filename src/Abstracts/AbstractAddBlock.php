@@ -93,8 +93,11 @@ abstract class AbstractAddBlock extends AbstractBlockEdit {
 		$position = isset( $args['position'] ) ? (string) $args['position'] : '';
 
 		if ( isset( $args['pattern'] ) ) {
-			if ( isset( $args['block'] ) || ! is_string( $args['pattern'] ) ) {
+			if ( isset( $args['block'] ) ) {
 				return new WP_Error( 'invalid_input', __( 'Send either `block` or `pattern` (a pattern name), not both.', 'albert-ai-butler' ), [ 'status' => 400 ] );
+			}
+			if ( ! is_string( $args['pattern'] ) ) {
+				return new WP_Error( 'invalid_input', __( '`pattern` must be a pattern name from albert/find-patterns.', 'albert-ai-butler' ), [ 'status' => 400 ] );
 			}
 
 			$blocks = $this->pattern_blocks( $args['pattern'], absint( $args['id'] ?? 0 ) );
