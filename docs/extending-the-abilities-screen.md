@@ -158,9 +158,13 @@ add_filter(
 
 - **`$row`** — `{ id, label, description, category, categoryLabel, source, sourceLabel,
   operation, enabled, capability, capabilityRoles, lastUsed, badges, inputs, output, annotations }`.
+  `operation` is `read`, `write` or `destructive` (`delete` before 1.6.0).
   Free always sets `badges` to `[]`. `supplier`/`supplierLabel` are still present too, holding the
   same values as `source`/`sourceLabel` — deprecated since 1.4.0 in favour of the latter, kept for
   any add-on already reading them, and scheduled for removal in a future major version.
+- **`operation`**: `read`, `write` or `destructive` (`delete` before 1.6.0), or (since 1.6.0) `undeclared` for an ability
+  whose annotations set neither `readonly` nor `destructive`; before 1.6.0 such an ability came
+  through as `write`. Treat an unknown value like `undeclared`, since new values may be added.
 - **Badge shape** — `{ id, label, tone, title? }`; `tone` maps to the `albert-badge--{tone}` pill.
   Since 1.4.0 that pill is the shared `.albert-badge` primitive in
   `assets/css/albert-primitives.css` — there is one definition, not one per screen. Its size,
