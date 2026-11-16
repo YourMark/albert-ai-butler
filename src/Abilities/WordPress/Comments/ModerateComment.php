@@ -54,7 +54,7 @@ class ModerateComment extends BaseAbility {
 			],
 			'annotations' => Annotations::delete(
 				'Send several IDs in "ids" to moderate them in one call, so the person approves one request '
-				. 'instead of many. "trash" can be undone from wp-admin for 30 days; to remove a comment for '
+				. 'instead of many. "trash" can be undone from wp-admin until the trash is emptied; to remove a comment for '
 				. 'good use albert/delete-comment.'
 			),
 		];
