@@ -13,6 +13,10 @@ namespace Albert\Tests\Integration;
 use Albert\Abstracts\BaseAbility;
 use Albert\Admin\AbilitiesPage;
 use Albert\Core\AbilitiesManager;
+use Albert\Core\AbilitiesRegistry;
+use Albert\Core\AbilitiesState;
+use Albert\Core\AnnotationPresenter;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
 
 /**
@@ -197,11 +201,11 @@ class EnforceDisabledTest extends TestCase {
 	// ─── Albert-managed abilities ───────────────────────────────────
 
 	/**
-	 * Disabled Albert-managed abilities are unregistered.
+	 * A switched-off Albert ability stays registered; it is off for assistants only.
 	 *
 	 * @return void
 	 */
-	public function test_disabled_albert_ability_is_unregistered(): void {
+	public function test_disabled_albert_ability_stays_registered(): void {
 		$this->register_albert_ability( 'albert/test-disabled-target' );
 
 		update_option(
@@ -211,7 +215,30 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->manager->enforce_disabled();
 
-		$this->assertFalse( wp_has_ability( 'albert/test-disabled-target' ) );
+		$this->assertTrue( wp_has_ability( 'albert/test-disabled-target' ) );
+		$this->assertFalse( AbilitiesState::is_enabled( 'albert/test-disabled-target' ) );
+	}
+
+	/**
+	 * The switch applies to a call through an Albert connection, and to no other.
+	 *
+	 * @return void
+	 */
+	public function test_guarded_execute_applies_the_switch_only_through_a_connection(): void {
+		$ability = $this->register_albert_ability( 'albert/test-guarded-target' );
+		update_option( AbilitiesPage::DISABLED_ABILITIES_OPTION, [ 'albert/test-guarded-target' ] );
+
+		$this->assertSame( [ 'ok' => true ], $ability->guarded_execute( [] ), 'Without a connection the switch does not apply.' );
+
+		ConnectionContext::set( 'client-1' );
+		try {
+			$result = $ability->guarded_execute( [] );
+		} finally {
+			ConnectionContext::reset();
+		}
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( 'ability_disabled', $result->get_error_code() );
 	}
 
 	/**
@@ -230,11 +257,12 @@ class EnforceDisabledTest extends TestCase {
 	// ─── Third-party abilities ──────────────────────────────────────
 
 	/**
-	 * A third-party ability listed in the disabled option is unregistered.
+	 * A switched-off third-party ability stays registered, so the plugin that
+	 * owns it (and anything else using it) keeps working.
 	 *
 	 * @return void
 	 */
-	public function test_third_party_ability_is_unregistered_when_disabled(): void {
+	public function test_third_party_ability_stays_registered_when_disabled(): void {
 		$this->register_third_party_ability( 'thirdparty/test-disabled' );
 
 		update_option(
@@ -244,7 +272,38 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->manager->enforce_disabled();
 
-		$this->assertFalse( wp_has_ability( 'thirdparty/test-disabled' ) );
+		$this->assertTrue( wp_has_ability( 'thirdparty/test-disabled' ) );
+		$this->assertFalse( AbilitiesState::is_enabled( 'thirdparty/test-disabled' ) );
+	}
+
+	/**
+	 * A third-party ability without annotations is "Not declared" and starts off
+	 * on a fresh install. Core fills its annotations with nulls, which is the case
+	 * the unit doubles cannot reproduce.
+	 *
+	 * @return void
+	 */
+	public function test_undeclared_third_party_ability_starts_off_on_fresh_install(): void {
+		delete_option( 'albert_abilities_saved' );
+		$this->register_third_party_ability( 'thirdparty/test-find-things' );
+
+		$annotations = (array) wp_get_ability( 'thirdparty/test-find-things' )->get_meta_item( 'annotations', [] );
+
+		$this->assertSame( 'undeclared', AnnotationPresenter::chips_for( $annotations )[0]['key'] );
+		$this->assertFalse( AbilitiesState::is_enabled( 'thirdparty/test-find-things' ) );
+	}
+
+	/**
+	 * The transport tools never enter the fresh-install list a first save persists.
+	 *
+	 * @return void
+	 */
+	public function test_transport_tools_are_not_in_the_fresh_install_defaults(): void {
+		if ( ! wp_has_ability( 'mcp-adapter/execute-ability' ) ) {
+			$this->register_third_party_ability( 'mcp-adapter/execute-ability' );
+		}
+
+		$this->assertNotContains( 'mcp-adapter/execute-ability', AbilitiesRegistry::get_default_disabled_abilities() );
 	}
 
 	/**
@@ -354,11 +413,11 @@ class EnforceDisabledTest extends TestCase {
 	// ─── disabled_list filter ───────────────────────────────────────
 
 	/**
-	 * The disabled_list filter unregisters Albert-managed abilities at runtime.
+	 * The disabled_list filter switches an Albert ability off without unregistering it.
 	 *
 	 * @return void
 	 */
-	public function test_disabled_list_filter_unregisters_albert_ability(): void {
+	public function test_disabled_list_filter_switches_off_albert_ability(): void {
 		$this->register_albert_ability( 'albert/test-runtime-albert' );
 
 		add_filter(
@@ -371,15 +430,16 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->manager->enforce_disabled();
 
-		$this->assertFalse( wp_has_ability( 'albert/test-runtime-albert' ) );
+		$this->assertTrue( wp_has_ability( 'albert/test-runtime-albert' ) );
+		$this->assertFalse( AbilitiesState::is_enabled( 'albert/test-runtime-albert' ) );
 	}
 
 	/**
-	 * The disabled_list filter unregisters third-party abilities at runtime.
+	 * The disabled_list filter switches a third-party ability off without unregistering it.
 	 *
 	 * @return void
 	 */
-	public function test_disabled_list_filter_unregisters_third_party_ability(): void {
+	public function test_disabled_list_filter_switches_off_third_party_ability(): void {
 		$this->register_third_party_ability( 'thirdparty/test-runtime' );
 
 		add_filter(
@@ -392,7 +452,8 @@ class EnforceDisabledTest extends TestCase {
 
 		$this->manager->enforce_disabled();
 
-		$this->assertFalse( wp_has_ability( 'thirdparty/test-runtime' ) );
+		$this->assertTrue( wp_has_ability( 'thirdparty/test-runtime' ) );
+		$this->assertFalse( AbilitiesState::is_enabled( 'thirdparty/test-runtime' ) );
 	}
 
 	// ─── is_executable filter ───────────────────────────────────────
