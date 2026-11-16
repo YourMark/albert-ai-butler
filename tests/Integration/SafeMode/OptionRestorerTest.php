@@ -103,7 +103,7 @@ class OptionRestorerTest extends TestCase {
 		$this->restorer->restore();
 
 		$this->assertSame( 'on', $this->value( Gate::OPTION ) );
-		$this->assertSame( Gate::OPTION, $this->name( Gate::OPTION ) );
+		$this->assertSame( Gate::OPTION, $this->stored_name( Gate::OPTION ) );
 	}
 
 	/**
@@ -334,7 +334,7 @@ class OptionRestorerTest extends TestCase {
 	 *
 	 * @return string|null
 	 */
-	private function name( string $option ): ?string {
+	private function stored_name( string $option ): ?string {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Asserting on the table, not a cache.
 		return $wpdb->get_var( $wpdb->prepare( 'SELECT option_name FROM %i WHERE option_name = %s', $wpdb->options, $option ) );
