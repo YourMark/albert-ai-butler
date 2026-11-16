@@ -166,7 +166,7 @@ class PostTerms {
 				$data['code'] ?? 'albert_tag_not_created',
 				sprintf(
 					/* translators: 1: tag name, 2: reason from WordPress. */
-					__( 'The tag "%1$s" could not be created, so nothing was saved: %2$s', 'albert-ai-butler' ),
+					__( 'The tag "%1$s" could not be created, so the post was not changed: %2$s', 'albert-ai-butler' ),
 					$name,
 					$data['message'] ?? ''
 				),
