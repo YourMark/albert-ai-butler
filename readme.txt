@@ -258,6 +258,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
 * Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 * A group block sent with its contents written out was saved empty. It now keeps them.
+* When your assistant used an action from another plugin, it did not show in Recent activity, and the Abilities screen said it was never used. These calls are now recorded like Albert's own.
 
 **Security**
 
