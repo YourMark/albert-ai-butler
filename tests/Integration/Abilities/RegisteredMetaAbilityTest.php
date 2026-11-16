@@ -360,6 +360,31 @@ class RegisteredMetaAbilityTest extends TestCase {
 	}
 
 	/**
+	 * Without custom-fields support core ignores `meta`, so a write is refused instead of reported as saved.
+	 *
+	 * @return void
+	 */
+	public function test_meta_is_refused_on_a_post_type_without_custom_fields(): void {
+		$page_id = self::factory()->post->create( [ 'post_type' => 'page' ] );
+		remove_post_type_support( 'page', 'custom-fields' );
+
+		$view   = ( new ViewPage() )->execute( [ 'id' => $page_id ] );
+		$result = ( new UpdatePage() )->execute(
+			[
+				'id'   => $page_id,
+				'meta' => [ 'hero_text' => 'Welcome' ],
+			]
+		);
+		add_post_type_support( 'page', 'custom-fields' );
+
+		$this->assertIsArray( $view );
+		$this->assertSame( [], $view['page']['meta'] ?? [] );
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'meta_not_registered', $result->get_error_code() );
+		$this->assertSame( '', get_post_meta( $page_id, 'hero_text', true ) );
+	}
+
+	/**
 	 * Safe mode holds an update that overwrites meta, and passes one that does not.
 	 *
 	 * @return void

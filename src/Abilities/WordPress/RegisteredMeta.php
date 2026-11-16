@@ -153,6 +153,11 @@ class RegisteredMeta {
 	 * @since 1.6.0
 	 */
 	private static function reachable_keys( string $post_type ): array {
+		// Core's REST API only reads and saves `meta` for a post type with this support.
+		if ( ! post_type_supports( $post_type, 'custom-fields' ) ) {
+			return [];
+		}
+
 		$registered = array_merge( get_registered_meta_keys( 'post' ), get_registered_meta_keys( 'post', $post_type ) );
 		$keys       = [];
 

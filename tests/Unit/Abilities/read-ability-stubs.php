@@ -71,6 +71,19 @@ if ( ! function_exists( 'get_registered_meta_keys' ) ) {
 	}
 }
 
+if ( ! function_exists( 'post_type_supports' ) ) {
+	/**
+	 * Stub post_type_supports(): every feature is supported.
+	 *
+	 * @param string $post_type Post type.
+	 * @param string $feature   Feature.
+	 * @return bool
+	 */
+	function post_type_supports( $post_type, $feature ) {
+		return true;
+	}
+}
+
 if ( ! class_exists( 'WP_REST_Post_Meta_Fields' ) ) {
 	// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- test stub.
 	/**
