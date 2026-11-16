@@ -289,6 +289,23 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * Markdown between blocks is refused too, since that text is converted like a plain string.
+	 *
+	 * @return void
+	 */
+	public function test_create_post_refuses_markdown_between_blocks(): void {
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'   => 'Mixed Post',
+				'content' => "<!-- wp:paragraph -->\n<p>Intro.</p>\n<!-- /wp:paragraph -->\n\n## Heading\n\n- one\n- two",
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'content_is_markdown', $result->get_error_code() );
+	}
+
+	/**
 	 * UpdatePost refuses Markdown content and leaves the body untouched.
 	 *
 	 * @return void
