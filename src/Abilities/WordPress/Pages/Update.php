@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+use Albert\Abilities\WordPress\PostFields;
 use Albert\Abilities\WordPress\RegisteredMeta;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
@@ -67,40 +68,38 @@ class Update extends BaseAbility {
 		// Get all available post statuses dynamically.
 		$post_statuses = array_keys( get_post_statuses() );
 
+		$properties = [
+			'id'      => [
+				'type'        => 'integer',
+				'description' => 'The page ID to update',
+			],
+			'title'   => [
+				'type'        => 'string',
+				'description' => 'The page title',
+			],
+			'content' => [
+				'type'        => 'string',
+				'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire page body when set.',
+			],
+			'blocks'  => [
+				'type'        => 'array',
+				'description' => 'Structured block specs (preferred over "content"). Replaces the entire page body. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'items'       => BlockSpecSchema::spec(),
+			],
+			'status'  => [
+				'type'        => 'string',
+				'enum'        => $post_statuses,
+				'description' => 'Page status',
+			],
+			'excerpt' => [
+				'type'        => 'string',
+				'description' => 'Optional page excerpt',
+			],
+		];
+
 		return [
 			'type'       => 'object',
-			'properties' => [
-				'id'      => [
-					'type'        => 'integer',
-					'description' => 'The page ID to update',
-				],
-				'title'   => [
-					'type'        => 'string',
-					'description' => 'The page title',
-				],
-				'content' => [
-					'type'        => 'string',
-					'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire page body when set.',
-				],
-				'blocks'  => [
-					'type'        => 'array',
-					'description' => 'Structured block specs (preferred over "content"). Replaces the entire page body. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
-					'items'       => BlockSpecSchema::spec(),
-				],
-				'status'  => [
-					'type'        => 'string',
-					'enum'        => $post_statuses,
-					'description' => 'Page status',
-				],
-				'excerpt' => [
-					'type'        => 'string',
-					'description' => 'Optional page excerpt',
-				],
-				'parent'  => [
-					'type'        => 'integer',
-					'description' => 'Parent page ID for hierarchical pages',
-				],
-			] + RegisteredMeta::input_schema(),
+			'properties' => array_merge( $properties, PostFields::input_schema( PostFields::PAGE ) ) + RegisteredMeta::input_schema(),
 			'required'   => [ 'id' ],
 		];
 	}
@@ -123,6 +122,14 @@ class Update extends BaseAbility {
 				'meta'         => [
 					'type'        => 'object',
 					'description' => 'The custom fields that were sent, as saved. Present only when "meta" was sent.',
+				],
+				'slug'         => [
+					'type'        => 'string',
+					'description' => 'The slug that was saved, which may carry a number WordPress added to keep it unique.',
+				],
+				'date'         => [
+					'type'        => 'string',
+					'description' => 'The publish date in the site\'s timezone. With status "future" this is when it will be published.',
 				],
 				'block_issues' => [
 					'type'        => 'array',
@@ -157,7 +164,8 @@ class Update extends BaseAbility {
 	 *     @type string $content Page content.
 	 *     @type string $status  Page status.
 	 *     @type string $excerpt Page excerpt.
-	 *     @type int    $parent  Parent page ID.
+	 *
+	 *     Plus the fields in PostFields::PAGE.
 	 * }
 	 * @return array<string, mixed>|WP_Error Page data on success, WP_Error on failure.
 	 * @since 1.0.0
@@ -177,8 +185,11 @@ class Update extends BaseAbility {
 			);
 		}
 
-		// Prepare REST API request data (only include provided fields).
-		$request_data = [];
+		$request_data = PostFields::to_rest( $args, PostFields::PAGE, 'page', $page_id );
+		if ( is_wp_error( $request_data ) ) {
+			return $request_data;
+		}
+
 		$block_issues = [];
 
 		if ( isset( $args['title'] ) ) {
@@ -211,10 +222,6 @@ class Update extends BaseAbility {
 			$request_data['excerpt'] = sanitize_textarea_field( $args['excerpt'] );
 		}
 
-		if ( isset( $args['parent'] ) ) {
-			$request_data['parent'] = absint( $args['parent'] );
-		}
-
 		if ( isset( $args['meta'] ) ) {
 			$meta = RegisteredMeta::check_write( $args['meta'], $page_id, 'page' );
 			if ( is_wp_error( $meta ) ) {
@@ -245,7 +252,7 @@ class Update extends BaseAbility {
 		if ( $response->is_error() ) {
 			return new WP_Error(
 				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while updating the page.', 'albert-ai-butler' ),
+				self::rest_error_message( $data ) ?? __( 'An error occurred while updating the page.', 'albert-ai-butler' ),
 				[ 'status' => $response->get_status() ]
 			);
 		}
@@ -259,6 +266,8 @@ class Update extends BaseAbility {
 			'status'    => $data['status'],
 			'permalink' => $data['link'] ?? '',
 			'edit_url'  => admin_url( 'post.php?post=' . $page_id . '&action=edit' ),
+			'slug'      => $data['slug'] ?? '',
+			'date'      => $data['date'] ?? '',
 		];
 
 		if ( isset( $request_data['meta'] ) && is_array( $data['meta'] ?? null ) ) {
