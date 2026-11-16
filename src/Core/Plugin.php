@@ -39,6 +39,8 @@ use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
 use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
+use Albert\Abilities\WordPress\Media\UpdateMedia;
+use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Blocks\GetBlockType;
 use Albert\Abilities\WordPress\Blocks\ListBlockTypes;
 use Albert\Abilities\WordPress\Blocks\FindPatterns;
@@ -206,9 +208,8 @@ class Plugin {
 		( new InvocationRelay() )->register_hooks();
 
 		// Safe mode: hold assistant-initiated destructive (or unannotated) ability
-		// calls for a person to approve. Bound to WP 7.1's wp_pre_execute_ability;
-		// inert below 7.1, where that filter never fires. Not admin-only — the
-		// gate runs on MCP requests.
+		// calls for a person to approve. Bound to wp_pre_execute_ability. Not
+		// admin-only: the gate runs on MCP requests.
 		$safe_mode_repository = new SafeModeRepository();
 		( new SafeModeInterceptor(
 			new InterceptorDecision(),
@@ -429,6 +430,8 @@ class Plugin {
 		$this->abilities_manager->add_ability( new FindMedia() );
 		$this->abilities_manager->add_ability( new ViewMedia() );
 		$this->abilities_manager->add_ability( new UploadMedia() );
+		$this->abilities_manager->add_ability( new UpdateMedia() );
+		$this->abilities_manager->add_ability( new DeleteMedia() );
 		$this->abilities_manager->add_ability( new CreateUploadLink() );
 		$this->abilities_manager->add_ability( new SetFeaturedImage() );
 

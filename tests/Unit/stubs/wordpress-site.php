@@ -262,5 +262,19 @@ if ( ! class_exists( 'Albert_Test_Theme' ) ) {
 		public function parent(): bool {
 			return false;
 		}
+
+		/**
+		 * Templates offered for a post type, from albert_test_site( 'page_templates' ).
+		 *
+		 * @param mixed  $post      Unused.
+		 * @param string $post_type Post type.
+		 *
+		 * @return array<string, string>
+		 */
+		public function get_page_templates( $post = null, string $post_type = 'page' ): array {
+			$templates = (array) albert_test_site( 'page_templates', [] );
+
+			return (array) ( $templates[ $post_type ] ?? [] );
+		}
 	}
 }

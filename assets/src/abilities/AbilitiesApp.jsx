@@ -36,6 +36,7 @@ import { viewFromUrl, syncViewToUrl, openIdFromUrl } from './url';
 import Toolbar from './Toolbar';
 import useNarrowLayout from '../shared/useNarrowLayout';
 import FlyInPanel from './FlyInPanel';
+import PolicyNotice from './PolicyNotice';
 import InfoPopover from '../shared/InfoPopover';
 
 const DEFAULT_VIEW = {
@@ -78,6 +79,7 @@ export default function AbilitiesApp() {
 	const [ categories, setCategories ] = useState( [] );
 	const [ sources, setSources ] = useState( [] );
 	const [ roles, setRoles ] = useState( [] );
+	const [ policy, setPolicy ] = useState( null );
 	// Initialise from the URL so a shared/bookmarked link opens pre-filtered.
 	const [ view, setView ] = useState( () => viewFromUrl( DEFAULT_VIEW ) );
 
@@ -118,6 +120,7 @@ export default function AbilitiesApp() {
 				setCategories( payload.categories );
 				setSources( payload.sources );
 				setRoles( payload.roles || [] );
+				setPolicy( payload.policy || null );
 			} )
 			.catch(
 				( err ) => active && setError( err.message || String( err ) )
@@ -379,6 +382,8 @@ export default function AbilitiesApp() {
 			 * actions that change those counts on the right, sharing the list's
 			 * own measure.
 			 */ }
+			<PolicyNotice policy={ policy } hidden={ !! openItem } />
+
 			{ ! isLoading && (
 				<div
 					className="albert-abilities__summary-row"

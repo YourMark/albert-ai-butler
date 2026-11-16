@@ -21,8 +21,8 @@ use WP_Error;
  *
  * Switching an ability off used to unregister it site-wide, which broke other
  * plugins using it. It now stays registered, and this class is the switch:
- * left out of discovery, refused by get-info and execute. Through the
- * adapter's own filters, so it works below WordPress 7.1.
+ * left out of discovery, refused by get-info and execute, through the
+ * adapter's own filters.
  *
  * Needs an adapter with `McpServer::get_server_id()` and the 0.5.0 tool-call
  * filters. Without them it does nothing, and only the execute backstop in

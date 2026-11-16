@@ -5,11 +5,11 @@
  * Shared base for the granular per-block edit abilities (edit/add/remove/move,
  * for both posts and pages). It centralises the per-op flow so each concrete
  * ability stays tiny: resolve the target post, reject classic-editor targets,
- * parse the stored content, apply the operation to the block tree, enforce the
- * allowed-block policy on any new/changed block, fold the resulting issues
- * through BlockIssues (errors abort, warnings ride along), serialize, persist via
- * the capability-aware REST POST path, and return the refreshed block tree so the
- * model always has current paths for the next edit.
+ * parse the stored content, apply the operation (or each item of `edits`) to the
+ * block tree, enforce the allowed-block policy on any new/changed block, fold
+ * the resulting issues through BlockIssues (errors abort, warnings ride along),
+ * serialize, persist once via the capability-aware REST POST path, and return
+ * the refreshed block tree so the model always has current paths for the next edit.
  *
  * @package    Albert
  * @subpackage Abstracts
@@ -42,6 +42,14 @@ use Albert\Blocks\BlockSpecSchema;
  * @since 1.2.0
  */
 abstract class AbstractBlockEdit extends BaseAbility {
+
+	/**
+	 * Input key for several operations saved as one change.
+	 *
+	 * @var string
+	 * @since 1.6.0
+	 */
+	protected const EDITS = 'edits';
 
 	/**
 	 * The post type this ability targets.
@@ -176,32 +184,30 @@ abstract class AbstractBlockEdit extends BaseAbility {
 			);
 		}
 
-		$tree        = array_values( parse_blocks( (string) $post->post_content ) );
-		$result_tree = $this->apply( new BlockTreeEditor(), $tree, $args );
-
-		if ( is_wp_error( $result_tree ) ) {
-			return $result_tree;
+		$operations = $this->operations( $args );
+		if ( $operations instanceof WP_Error ) {
+			return $operations;
 		}
 
-		// Enforce the allowed-block set + serializer issues for ops that introduce
-		// a new/changed block (edit/add/move). Remove introduces nothing.
+		$batched      = array_key_exists( self::EDITS, $args );
+		$stored       = (string) $post->post_content;
+		$tree         = array_values( parse_blocks( $stored ) );
 		$block_issues = [];
-		if ( $this->enforces_policy() ) {
-			$issues = $this->collect_issues( $args, $post_id );
-			$error  = BlockIssues::to_wp_error( $issues );
-			if ( $error instanceof WP_Error ) {
-				return $error;
+
+		foreach ( $operations as $index => $op_args ) {
+			$applied = $this->apply_operation( $tree, $op_args, $post_id, $stored );
+
+			if ( $applied instanceof WP_Error ) {
+				return $batched ? $this->edit_failed( $index, $applied ) : $applied;
 			}
 
-			$block_issues = BlockIssues::warning_messages( $issues );
+			$tree = $applied['tree'];
+			foreach ( $applied['warnings'] as $warning ) {
+				$block_issues[] = $batched ? $this->name_edit( $index, $warning ) : $warning;
+			}
 		}
 
-		$markup = serialize_blocks( $result_tree );
-
-		$tag_error = $this->refuse_tag_drop( $tree, $result_tree, $args );
-		if ( $tag_error instanceof WP_Error ) {
-			return $tag_error;
-		}
+		$markup = serialize_blocks( $tree );
 
 		$persisted = $this->persist( $post_id, $markup );
 		if ( is_wp_error( $persisted ) ) {
@@ -209,6 +215,114 @@ abstract class AbstractBlockEdit extends BaseAbility {
 		}
 
 		return $this->build_result( $post_id, $markup, $persisted, $block_issues );
+	}
+
+	/**
+	 * The operations one call performs, each with its own ability input.
+	 *
+	 * One by default. An ability that takes a list returns one entry per item,
+	 * applied in order to the tree and saved once.
+	 *
+	 * @param array<string, mixed> $args Ability input.
+	 * @return array<int, array<string, mixed>>|WP_Error Operation inputs, or an error to return without saving.
+	 * @since 1.6.0
+	 */
+	protected function operations( array $args ): array|WP_Error {
+		return [ $args ];
+	}
+
+	/**
+	 * Apply one operation to the tree and run its checks: the allowed-block
+	 * policy, serializer issues and the tag-drop confirmation.
+	 *
+	 * @param array<int, mixed>    $tree    Tree as the earlier operations left it.
+	 * @param array<string, mixed> $args    This operation's input.
+	 * @param int                  $post_id Target post ID.
+	 * @param string               $stored  The saved content, so a tag an earlier edit added and a later one drops needs no confirmation.
+	 * @return array{tree: array<int, mixed>, warnings: array<int, string>}|WP_Error New tree and warnings, or an error.
+	 * @since 1.6.0
+	 */
+	private function apply_operation( array $tree, array $args, int $post_id, string $stored ): array|WP_Error {
+		$result_tree = $this->apply( new BlockTreeEditor(), $tree, $args );
+		if ( is_wp_error( $result_tree ) ) {
+			return $result_tree;
+		}
+
+		$warnings = [];
+		if ( $this->enforces_policy() ) {
+			$issues = $this->collect_issues( $args, $post_id );
+			$error  = BlockIssues::to_wp_error( $issues );
+			if ( $error instanceof WP_Error ) {
+				return $error;
+			}
+
+			$warnings = BlockIssues::warning_messages( $issues );
+		}
+
+		$changed = $this->can_edit( $post_id ) ? $this->changed_markup( $tree, $result_tree, $args ) : null;
+		if ( $changed !== null ) {
+			$dropped = MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args, $stored );
+			if ( $dropped instanceof WP_Error ) {
+				return $dropped;
+			}
+		}
+
+		return [
+			'tree'     => $result_tree,
+			'warnings' => $warnings,
+		];
+	}
+
+	/**
+	 * Whether the tag-drop check may run: its message names tags in the post, so
+	 * a post this user can't edit is left to the REST save, which refuses it
+	 * without revealing its content.
+	 *
+	 * @param int $post_id Target post ID.
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	private function can_edit( int $post_id ): bool {
+		return current_user_can( 'edit_post', $post_id );
+	}
+
+	/**
+	 * Say which item of `edits` failed; the code and data stay the original's.
+	 *
+	 * @param int      $index Zero-based position in `edits`.
+	 * @param WP_Error $error The item's error.
+	 * @return WP_Error The error, naming the item.
+	 * @since 1.6.0
+	 */
+	private function edit_failed( int $index, WP_Error $error ): WP_Error {
+		$data = $error->get_error_data();
+		$data = is_array( $data ) ? $data : [ 'status' => 400 ];
+
+		$data['edit_index'] = $index;
+
+		return new WP_Error(
+			(string) $error->get_error_code(),
+			sprintf(
+				/* translators: 1: zero-based position in the edits list, 2: the error message. */
+				__( 'edits[%1$d] failed, so nothing was saved: %2$s', 'albert-ai-butler' ),
+				$index,
+				$error->get_error_message()
+			),
+			$data
+		);
+	}
+
+	/**
+	 * Prefix a message with the item of `edits` it belongs to.
+	 *
+	 * @param int    $index   Zero-based position in `edits`.
+	 * @param string $message The message.
+	 * @return string
+	 * @since 1.6.0
+	 */
+	private function name_edit( int $index, string $message ): string {
+		/* translators: 1: zero-based position in the edits list, 2: a message about that edit. */
+		return sprintf( __( 'edits[%1$d]: %2$s', 'albert-ai-butler' ), $index, $message );
 	}
 
 	/**
@@ -241,27 +355,6 @@ abstract class AbstractBlockEdit extends BaseAbility {
 		}
 
 		return array_merge( $policy_issues, $serializer_issues );
-	}
-
-	/**
-	 * Refuse an edit that drops a tag the block had, unless `remove_tags` confirms it.
-	 *
-	 * @param array<int, mixed>    $tree        Parsed tree before the op.
-	 * @param array<int, mixed>    $result_tree Tree after the op.
-	 * @param array<string, mixed> $args        Ability input.
-	 * @return WP_Error|null Error to return without saving, or null.
-	 * @since 1.6.0
-	 */
-	private function refuse_tag_drop( array $tree, array $result_tree, array $args ): ?WP_Error {
-		// The message names tags in the post, so leave a post this user can't edit to
-		// the REST save, which refuses it without revealing its content.
-		if ( ! current_user_can( 'edit_post', absint( $args['id'] ?? 0 ) ) ) {
-			return null;
-		}
-
-		$changed = $this->changed_markup( $tree, $result_tree, $args );
-
-		return $changed === null ? null : MarkupTags::refuse_unconfirmed_drop( $changed[0], $changed[1], $args );
 	}
 
 	/**

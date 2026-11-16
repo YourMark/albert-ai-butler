@@ -88,11 +88,15 @@ class MarkupTags {
 	 * @param string               $before Markup before the change.
 	 * @param string               $after  Markup after the change.
 	 * @param array<string, mixed> $args   Ability input; `remove_tags` lists confirmed tag names.
+	 * @param string|null          $stored The saved content, when $before may hold tags an earlier edit of the same call added; only tags it has count.
 	 * @return WP_Error|null Error naming the unconfirmed tags, or null.
 	 * @since 1.6.0
 	 */
-	public static function refuse_unconfirmed_drop( string $before, string $after, array $args ): ?WP_Error {
+	public static function refuse_unconfirmed_drop( string $before, string $after, array $args, ?string $stored = null ): ?WP_Error {
 		$dropped = array_diff( self::content_names( $before ), self::content_names( $after ) );
+		if ( $stored !== null ) {
+			$dropped = array_intersect( $dropped, self::content_names( $stored ) );
+		}
 		$dropped = array_values( array_diff( $dropped, self::confirmed( $args ) ) );
 
 		if ( $dropped === [] ) {

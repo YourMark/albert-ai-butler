@@ -162,4 +162,24 @@ class BlockPolicyTest extends TestCase {
 	public function test_existing_block_names_null_returns_empty(): void {
 		$this->assertSame( [], ( new BlockPolicy() )->existing_block_names( null ) );
 	}
+
+	/**
+	 * Blocks inside a spec's `html` are enforced like innerBlocks.
+	 *
+	 * @return void
+	 */
+	public function test_blocks_inside_html_are_enforced(): void {
+		$issues = ( new BlockPolicy() )->enforce(
+			[
+				[
+					'name' => 'core/columns',
+					'html' => '<div class="wp-block-columns"><!-- wp:list --><ul class="wp-block-list"></ul><!-- /wp:list --></div>',
+				],
+			],
+			'post'
+		);
+
+		$this->assertCount( 1, $issues );
+		$this->assertStringContainsString( 'core/list', $issues[0]['message'] );
+	}
 }

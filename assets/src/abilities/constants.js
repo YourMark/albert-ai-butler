@@ -15,7 +15,7 @@ import { __ } from '@wordpress/i18n';
 export const OPERATION_LABELS = {
 	read: __( 'Read', 'albert-ai-butler' ),
 	write: __( 'Write', 'albert-ai-butler' ),
-	delete: __( 'Delete', 'albert-ai-butler' ),
+	destructive: __( 'Destructive', 'albert-ai-butler' ),
 	undeclared: __( 'Not declared', 'albert-ai-butler' ),
 };
 
