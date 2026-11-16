@@ -191,6 +191,21 @@ class BlockTreeEditor {
 	 * @since 1.2.0
 	 */
 	public function add( array $tree, array $path, string $position, array $new_block ): array|WP_Error {
+		return $this->add_all( $tree, $path, $position, [ $new_block ] );
+	}
+
+	/**
+	 * Insert several blocks, in order, relative to the block at a path.
+	 *
+	 * @param array<int, array<string, mixed>> $tree       Parsed block tree.
+	 * @param array<int, int>                  $path       Logical path of the reference block.
+	 * @param string                           $position   One of before|after|inside_start|inside_end.
+	 * @param array<int, array<string, mixed>> $new_blocks ParsedBlocks to insert, in order.
+	 * @return array<int, array<string, mixed>>|WP_Error New tree, or an error.
+	 *
+	 * @since 1.6.0
+	 */
+	public function add_all( array $tree, array $path, string $position, array $new_blocks ): array|WP_Error {
 		$allowed = [ 'before', 'after', 'inside_start', 'inside_end' ];
 		if ( ! in_array( $position, $allowed, true ) ) {
 			return new WP_Error(
@@ -210,9 +225,9 @@ class BlockTreeEditor {
 				$tree,
 				$path,
 				null,
-				static function ( array $siblings, int $actual_index ) use ( $position, $new_block ): array {
+				static function ( array $siblings, int $actual_index ) use ( $position, $new_blocks ): array {
 					$at = $position === 'after' ? $actual_index + 1 : $actual_index;
-					array_splice( $siblings, $at, 0, [ $new_block ] );
+					array_splice( $siblings, $at, 0, $new_blocks );
 
 					return $siblings;
 				}
@@ -224,7 +239,7 @@ class BlockTreeEditor {
 			$tree,
 			$path,
 			null,
-			static function ( array $node ) use ( $position, $new_block, $path ) {
+			static function ( array $node ) use ( $position, $new_blocks, $path ) {
 				if ( ! self::is_container_block( $node ) ) {
 					return new WP_Error(
 						'block_not_container',
@@ -242,11 +257,7 @@ class BlockTreeEditor {
 					? array_values( $node['innerBlocks'] )
 					: [];
 
-				if ( $position === 'inside_start' ) {
-					array_unshift( $inner, $new_block );
-				} else {
-					$inner[] = $new_block;
-				}
+				$inner = $position === 'inside_start' ? array_merge( $new_blocks, $inner ) : array_merge( $inner, $new_blocks );
 
 				$node['innerBlocks'] = $inner;
 
