@@ -54,4 +54,6 @@ if ( ! function_exists( '_prime_post_caches' ) ) {
 
 // get_permalink() is provided by block-write-rest-stubs.php (object-aware).
 
+require_once __DIR__ . '/post-fields-stubs.php';
+
 // phpcs:enable

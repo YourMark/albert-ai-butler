@@ -153,6 +153,54 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
+	 * A destructive write keeps the capability of what it does, not a delete capability.
+	 *
+	 * @return void
+	 */
+	public function test_destructive_write_requires_its_edit_capability(): void {
+		$annotations = [
+			'readonly'    => false,
+			'destructive' => true,
+		];
+
+		$user  = new WP_Ability( 'albert/update-user', [ 'annotations' => $annotations ] );
+		$block = new WP_Ability( 'albert/remove-page-block', [ 'annotations' => $annotations ] );
+
+		$this->assertSame( 'edit_users', AbilitiesRegistry::resolve_required_capability( $user ) );
+		$this->assertSame( 'edit_pages', AbilitiesRegistry::resolve_required_capability( $block ) );
+	}
+
+	/**
+	 * A delete or trash anywhere in an add-on's name still infers a delete capability.
+	 *
+	 * @return void
+	 */
+	public function test_delete_or_trash_in_the_name_requires_delete_posts(): void {
+		$annotations = [ 'destructive' => true ];
+
+		$bulk  = new WP_Ability( 'foo/bulk-delete-posts', [ 'annotations' => $annotations ] );
+		$trash = new WP_Ability( 'foo/trash-post', [ 'annotations' => $annotations ] );
+
+		$this->assertSame( 'delete_posts', AbilitiesRegistry::resolve_required_capability( $bulk ) );
+		$this->assertSame( 'delete_posts', AbilitiesRegistry::resolve_required_capability( $trash ) );
+	}
+
+	/**
+	 * "delete" only counts as a whole word of the name.
+	 *
+	 * @return void
+	 */
+	public function test_delete_inside_a_word_is_not_a_delete(): void {
+		$annotations = [ 'destructive' => true ];
+
+		$undelete = new WP_Ability( 'foo/undelete-post', [ 'annotations' => $annotations ] );
+		$deleted  = new WP_Ability( 'foo/restore-deleted-posts', [ 'annotations' => $annotations ] );
+
+		$this->assertSame( 'edit_posts', AbilitiesRegistry::resolve_required_capability( $undelete ) );
+		$this->assertSame( 'edit_posts', AbilitiesRegistry::resolve_required_capability( $deleted ) );
+	}
+
+	/**
 	 * The resolved value passes through the required_capability filter, so an
 	 * add-on can correct the best-effort guess.
 	 *
