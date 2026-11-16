@@ -11,7 +11,6 @@ namespace Albert\Core;
 
 defined( 'ABSPATH' ) || exit;
 
-use Albert\Support\WpCompat;
 use WP_Ability;
 
 /**
@@ -34,20 +33,12 @@ use WP_Ability;
  * Premium 1.2.0; there are no consumers in Free today, and that is
  * intentional. Doc 20 §5.
  *
- * Below WordPress 7.1 the core action never fires, so the listener is inert
- * rather than broken. Subscribers that must know whether the seam is live can
- * ask {@see WpCompat::supports_execution_lifecycle()}.
- *
  * @since 1.4.0
  */
 class InvocationRelay {
 
 	/**
 	 * Bind the relay to the core action.
-	 *
-	 * Registered unconditionally: `add_action()` on an action that never fires
-	 * costs one array entry, and gating registration on a version check would
-	 * mean a host that back-ports the lifecycle silently loses the seam.
 	 *
 	 * @return void
 	 * @since 1.4.0
@@ -92,9 +83,6 @@ class InvocationRelay {
 			 * call. Use `albert/abilities/after_execute` when the result matters. A
 			 * Throwable from an observer is caught and swallowed rather than allowed
 			 * to break the call being observed.
-			 *
-			 * Never fires below WordPress 7.1 — see
-			 * {@see WpCompat::supports_execution_lifecycle()}.
 			 *
 			 * @since 1.4.0
 			 *

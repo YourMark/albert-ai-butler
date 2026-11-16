@@ -83,6 +83,11 @@ class ApproverTest extends TestCase {
 
 		ApprovalTicket::clear();
 		$this->ensure_test_category_registered();
+
+		// The owner has switched every ability on; the test abilities are
+		// writes, which a fresh install starts off.
+		update_option( 'albert_abilities_saved', true );
+		delete_option( 'albert_disabled_abilities' );
 	}
 
 	/**
@@ -280,6 +285,28 @@ class ApproverTest extends TestCase {
 		$stored = $this->repository->find( $action->action_id );
 		$this->assertInstanceOf( PendingAction::class, $stored );
 		$this->assertSame( PendingAction::STATUS_FAILED, $stored->status );
+	}
+
+	/**
+	 * An ability switched off while the call waited is not run on approval.
+	 * It is still registered, so this is the only thing stopping it.
+	 *
+	 * @return void
+	 */
+	public function test_an_ability_switched_off_while_waiting_is_not_run(): void {
+		$this->register_recording_ability( 'albert-test/switched-off' );
+
+		$approver = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		wp_set_current_user( $approver );
+
+		$action = $this->repository->stage( 'albert-test/switched-off', [ 'id' => 1 ], $approver, 'client-a', 'Claude', DAY_IN_SECONDS );
+		update_option( 'albert_disabled_abilities', [ 'albert-test/switched-off' ] );
+
+		$result = ( new Approver( $this->repository ) )->approve( $action, $approver );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_pending_ability_missing', $result->get_error_code() );
+		$this->assertSame( [], $this->observed, 'The ability must not run.' );
 	}
 
 	/**

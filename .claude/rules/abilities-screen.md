@@ -12,6 +12,8 @@ paths:
 
 A React app on `@wordpress/dataviews` (`assets/src/abilities/`, built to `assets/build/` with `npm run build`). `AbilitiesPage` renders only the mount point; data comes over REST from `Admin\Rest\AbilitiesController`. Toggles save instantly. A missing build shows a notice instead of mounting.
 
+- DataViews ships once: webpack puts it and its vendor dependencies in the shared `dataviews` chunk (with `runtimeChunk: 'single'`), enqueued as `albert-dataviews` by `AbstractReactPage` for any screen whose `needs_dataviews_css()` is true. A new DataViews screen adds its entry to `dataviewsEntries` in `webpack.config.js` too, or it bundles its own copy.
+
 - Rows come from `AbilitiesPayload`, through `albert/abilities/payload_row` on both `build()` and `row()`. Add-ons append keys (notably `badges`) and never remove or overwrite core keys. Core only ever says "badges", never "permissions".
 - JS seams: `albert.abilities.permissions_section` and `albert.abilities.panel_sections`. Contract: `docs/extending-the-abilities-screen.md`; change it together with the code.
 - Source labels come from `AbilitiesRegistry::get_sources()` (`albert/abilities/sources`); an unknown prefix is prettified. The old names stay working: `get_suppliers()` is a deprecated wrapper, `albert/abilities/suppliers` still applies first via `apply_filters_deprecated()`, and rows still carry `supplier` / `supplierLabel`. Do not remove them.

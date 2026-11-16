@@ -2,7 +2,7 @@
 
 WordPress plugin that exposes WordPress functionality to AI assistants via MCP (Model Context Protocol).
 
-**Stack:** PHP 8.1+ | WordPress 6.9+ | OAuth 2.0 (league/oauth2-server) | PSR-4 autoloading
+**Stack:** PHP 8.1+ | WordPress 7.1+ | OAuth 2.0 (league/oauth2-server) | PSR-4 autoloading
 
 **Requires:** MySQL 8.0+ or MariaDB 10.5+, HTTPS for OAuth, any permalink structure except Plain.
 WooCommerce is optional; support is the current stable X.Y and the two before it, which is what CI tests.
@@ -37,6 +37,7 @@ Product-specific:
 - [Abilities](.claude/rules/abilities.md) - creating an ability
 - [Abilities screen](.claude/rules/abilities-screen.md) - the DataViews screen, row augmentation, source labels
 - [Agent context](.claude/rules/agent-context.md) - what `discover-abilities` tells an assistant, the skills registry
+- [Blocks](.claude/rules/blocks.md) - why block templates are hand-written, the editor validity check
 - [Safe mode](.claude/rules/safe-mode.md) - what is held for approval, and why
 - [Connections](.claude/rules/connections.md) - the Connections screen, connect dialog, allowed users
 - [OAuth](.claude/rules/oauth.md) - how the OAuth endpoints are served, token validation

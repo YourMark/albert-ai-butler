@@ -66,6 +66,11 @@ class ApprovalPolicyTest extends TestCase {
 		$this->registered_ids = [];
 		$this->permitted      = true;
 
+		// The owner has switched every ability on; the test abilities are
+		// writes, which a fresh install starts off.
+		update_option( 'albert_abilities_saved', true );
+		delete_option( 'albert_disabled_abilities' );
+
 		if ( function_exists( 'wp_has_ability_category' ) && ! wp_has_ability_category( self::TEST_CATEGORY ) ) {
 			$this->during(
 				'wp_abilities_api_categories_init',

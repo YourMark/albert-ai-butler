@@ -46,7 +46,7 @@ class Create extends BaseAbility {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::create(
+			'annotations' => Annotations::destructive(
 				'Do not supply a password; this ability does not accept one. The site generates it and returns '
 				. '`password_reset_url`, a one-time link. Give that link to the new user so they set their own '
 				. 'password. It is a credential, so hand it over directly rather than repeating it anywhere it '
