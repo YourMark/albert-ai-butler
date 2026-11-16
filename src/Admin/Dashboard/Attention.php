@@ -16,8 +16,6 @@ use Albert\Core\AbilitiesState;
 use Albert\MCP\Server as McpServer;
 use Albert\MCP\Skills\SkillRegistry;
 use Albert\OAuth\Endpoints\ClientRegistration;
-use Albert\SafeMode\Gate;
-use Albert\Support\WpCompat;
 
 /**
  * What on this site needs the owner to do something.
@@ -102,7 +100,6 @@ class Attention {
 			$this->plain_permalinks(),
 			$this->unreachable_skills(),
 			$this->broken_endpoint_override(),
-			$this->safe_mode_unenforceable(),
 			$this->client_limit_reached()
 		);
 
@@ -274,48 +271,6 @@ class Attention {
 				'title'       => __( 'The endpoint address set in code was rejected', 'albert-ai-butler' ),
 				'detail'      => __( 'An albert/mcp/external_url filter returned an address Albert could not use, so assistants are being given this site\'s own address instead.', 'albert-ai-butler' ),
 				'action'      => null,
-				'dismissible' => false,
-			],
-		];
-	}
-
-	/**
-	 * Safe mode is switched on but this WordPress cannot enforce it.
-	 *
-	 * The gate is `wp_pre_execute_ability`, added in WordPress 7.1. Below that
-	 * the filter never fires, so every destructive call runs unattended while
-	 * the setting reads On. Believing you are covered when you are not is worse
-	 * than knowing you are not, which is the whole reason this is here and not
-	 * left to the Settings screen alone.
-	 *
-	 * Only when safe mode is switched on: an owner who turned it off holds no
-	 * false belief to correct, and this card does not nag about deliberate
-	 * choices.
-	 *
-	 * @since 1.5.0
-	 *
-	 * @return array<int, array<string, mixed>>
-	 */
-	private function safe_mode_unenforceable(): array {
-		if ( WpCompat::supports_execution_lifecycle() || ! ( new Gate() )->is_enabled() ) {
-			return [];
-		}
-
-		return [
-			[
-				'id'          => 'safe-mode-unenforceable',
-				'tone'        => 'danger',
-				'tone_label'  => __( 'Not active', 'albert-ai-butler' ),
-				'title'       => __( 'Safe mode is on but cannot hold anything', 'albert-ai-butler' ),
-				'detail'      => sprintf(
-					/* translators: %s: the WordPress version this site is running. */
-					__( 'Holding destructive actions for approval needs WordPress 7.1. This site runs %s, so deletions an assistant requests are carried out immediately and the Approvals screen stays empty.', 'albert-ai-butler' ),
-					get_bloginfo( 'version' )
-				),
-				'action'      => [
-					'label' => __( 'Update WordPress', 'albert-ai-butler' ),
-					'url'   => admin_url( 'update-core.php' ),
-				],
 				'dismissible' => false,
 			],
 		];

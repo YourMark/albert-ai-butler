@@ -155,11 +155,11 @@ class WriteContentResolver {
 	 * Resolve content for a block-editor target.
 	 *
 	 * Structured `blocks` take precedence over the `content` string; both routes
-	 * go through {@see BlockSerializer::serialize_with_issues()} (specs → markup,
-	 * or a string → BlockConverter fallback for HTML/Markdown). Allowed-block
-	 * enforcement runs on submitted specs, exempting block names already present
-	 * in the post on Update. Enforcement and serializer errors both abort the
-	 * save; only warnings ride along.
+	 * go through {@see BlockSerializer::serialize_with_issues()} (specs → markup;
+	 * block markup kept as sent; HTML/Markdown through BlockConverter).
+	 * Allowed-block enforcement runs on submitted specs and on block markup,
+	 * exempting block names already present in the post on Update. Enforcement
+	 * and serializer errors both abort the save; only warnings ride along.
 	 *
 	 * @param array<string, mixed> $args             Ability input.
 	 * @param string|null          $post_type        Post type slug for the editor context, or null for the site-wide (pattern) scope.
@@ -177,7 +177,14 @@ class WriteContentResolver {
 			$policy_issues = $this->policy->enforce( $args['blocks'], $post_type, $post_id, $exempt );
 			$serialized    = $this->serializer->serialize_with_issues( $args['blocks'] );
 		} else {
-			$serialized = $this->serializer->serialize_with_issues( (string) ( $args['content'] ?? '' ) );
+			$content    = (string) ( $args['content'] ?? '' );
+			$serialized = $this->serializer->serialize_with_issues( $content );
+
+			// Block markup is enforced like `blocks`; plain HTML is not.
+			if ( has_blocks( $content ) ) {
+				$exempt        = $post_id ? $this->policy->existing_block_names( $post_id ) : [];
+				$policy_issues = $this->policy->enforce( parse_blocks( $serialized['markup'] ), $post_type, $post_id, $exempt );
+			}
 		}
 
 		// Enforcement errors and serializer errors both abort the save; only

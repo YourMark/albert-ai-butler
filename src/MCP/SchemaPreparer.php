@@ -11,7 +11,6 @@ namespace Albert\MCP;
 
 defined( 'ABSPATH' ) || exit;
 
-use Albert\Support\WpCompat;
 
 /**
  * Shapes the ability schemas Albert hands an MCP client.
@@ -29,12 +28,9 @@ use Albert\Support\WpCompat;
  * meta-tools, whose schemas carry neither problem. Abilities reach the client
  * through `get-ability-info`.
  *
- * Two things happen there. Server-only key stripping runs through
- * `wp_prepare_json_schema_for_client()` and needs WordPress 7.1; below that the
- * canonical schema keeps its server-only keys, the honest degraded behaviour
- * since the function does not exist. Correcting an object schema's empty
- * `default` from `[]` to `{}` is Albert's own and runs on every version, because
- * the contradiction it fixes is one Albert put there.
+ * Two things happen there. `wp_prepare_json_schema_for_client()` strips the
+ * server-only keys, and Albert corrects an object schema's empty `default`
+ * from `[]` to `{}`, a contradiction Albert put there itself.
  *
  * @since 1.4.0
  */
@@ -85,14 +81,7 @@ class SchemaPreparer {
 	private function prepare_schema( array $schema ): array {
 		$normalised = array_map( [ $this, 'to_array_deep' ], $schema );
 
-		// Stripping server-only keys needs 7.1; below that they stay, since the
-		// function does not exist. 6.9/7.0 fallback — removable, see WpCompat.
-		// The object-default correction below runs on every version.
-		if ( WpCompat::supports_client_schema_prep() ) {
-			$normalised = wp_prepare_json_schema_for_client( $normalised );
-		}
-
-		return $this->objectify_object_defaults( $normalised );
+		return $this->objectify_object_defaults( wp_prepare_json_schema_for_client( $normalised ) );
 	}
 
 	/**
@@ -217,7 +206,7 @@ class SchemaPreparer {
 	 * @param mixed  $mcp_tool  The MCP tool instance (unused).
 	 * @param mixed  $server    The MCP server firing the filter.
 	 *
-	 * @return mixed The result with client-prepared schemas on 7.1+.
+	 * @return mixed The result with client-prepared schemas.
 	 * @since 1.4.0
 	 */
 	public function prepare_ability_info_result( $result, $args, string $tool_name, $mcp_tool = null, $server = null ) {

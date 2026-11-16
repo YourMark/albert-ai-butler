@@ -95,7 +95,7 @@ class UpdatePattern extends BaseAbility {
 				],
 				'content'    => [
 					'type'        => 'string',
-					'description' => 'New content as block markup or HTML. Ignored when "blocks" is provided.',
+					'description' => 'New content as block markup (stored as sent) or HTML. Ignored when "blocks" is provided.',
 				],
 				'synced'     => [
 					'type'        => 'boolean',

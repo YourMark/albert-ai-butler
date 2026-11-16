@@ -11,6 +11,7 @@ namespace Albert\SafeMode;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Core\AbilitiesState;
 use Albert\OAuth\Server\ConnectionContext;
 use WP_Error;
 
@@ -70,7 +71,9 @@ class Approver {
 
 		$ability = wp_get_ability( $action->ability_name );
 
-		if ( $ability === null ) {
+		// Switched off while it waited: still registered, but no longer the
+		// assistant's to use.
+		if ( $ability === null || ! AbilitiesState::is_enabled( $action->ability_name ) ) {
 			$error = new WP_Error(
 				'albert_pending_ability_missing',
 				/* translators: %s: ability name. */
