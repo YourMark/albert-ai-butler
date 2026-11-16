@@ -117,18 +117,4 @@ class AbilitiesPage extends AbstractReactPage {
 	protected function needs_dataviews_css(): bool {
 		return true;
 	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	protected function unmet_requirement(): ?array {
-		if ( function_exists( 'wp_get_abilities' ) ) {
-			return null;
-		}
-
-		return [
-			'title'   => __( 'WordPress 6.9+ Required', 'albert-ai-butler' ),
-			'message' => __( 'The Abilities API requires WordPress 6.9 or later. Please update WordPress to use this feature.', 'albert-ai-butler' ),
-		];
-	}
 }
