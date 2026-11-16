@@ -53,6 +53,8 @@ class DeleteMedia extends BaseAbility {
 			),
 		];
 
+		$this->capability = 'upload_files';
+
 		parent::__construct();
 	}
 
