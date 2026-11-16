@@ -157,7 +157,6 @@ class FindComments extends BaseAbility {
 				'hold', 'spam', 'trash' => $status,
 				default    => 'all',
 			},
-			'type__not_in'  => CommentPresenter::EXCLUDED_TYPES,
 			'number'        => $per_page,
 			'offset'        => ( $page - 1 ) * $per_page,
 			'orderby'       => 'comment_date_gmt',
@@ -165,10 +164,8 @@ class FindComments extends BaseAbility {
 			'no_found_rows' => false,
 		];
 
-		$type = (string) ( $args['type'] ?? 'comment' );
-		if ( $type !== 'all' ) {
-			$query_args['type'] = $type;
-		}
+		$type               = (string) ( $args['type'] ?? 'comment' );
+		$query_args['type'] = $type === 'all' ? CommentPresenter::QUERY_TYPES : $type;
 
 		if ( ! empty( $args['post_id'] ) ) {
 			$query_args['post_id'] = absint( $args['post_id'] );

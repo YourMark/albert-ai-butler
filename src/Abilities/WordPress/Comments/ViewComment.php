@@ -131,12 +131,12 @@ class ViewComment extends BaseAbility {
 
 		$replies = get_comments(
 			[
-				'parent'       => (int) $comment->comment_ID,
-				'status'       => 'all',
-				'type__not_in' => CommentPresenter::EXCLUDED_TYPES,
-				'orderby'      => 'comment_date_gmt',
-				'order'        => 'ASC',
-				'number'       => self::MAX_REPLIES,
+				'parent'  => (int) $comment->comment_ID,
+				'status'  => 'all',
+				'type'    => CommentPresenter::QUERY_TYPES,
+				'orderby' => 'comment_date_gmt',
+				'order'   => 'ASC',
+				'number'  => self::MAX_REPLIES,
 			]
 		);
 

@@ -167,12 +167,12 @@ class CommentsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * A review or note asked for by ID is not found, by any ability.
+	 * A review, note, order note or other plugin's type asked for by ID is not found, by any ability.
 	 *
 	 * @return void
 	 */
 	public function test_reviews_and_notes_are_not_found_by_id(): void {
-		foreach ( [ 'review', 'note' ] as $type ) {
+		foreach ( [ 'review', 'note', 'order_note', 'some_plugin_type' ] as $type ) {
 			$id = $this->comment( [ 'comment_type' => $type ] );
 
 			foreach ( [ new ViewComment(), new DeleteComment() ] as $ability ) {

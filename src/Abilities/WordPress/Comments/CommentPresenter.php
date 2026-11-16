@@ -40,11 +40,20 @@ class CommentPresenter {
 	public const STATUSES = [ 'approved', 'hold', 'spam', 'trash' ];
 
 	/**
-	 * Comment types left to their own abilities: WooCommerce reviews and editor notes.
+	 * The only comment types these abilities handle: comments and pings.
+	 *
+	 * An allowlist, so reviews, editor notes, order notes and other plugins' types stay out.
 	 *
 	 * @since 1.6.0
 	 */
-	public const EXCLUDED_TYPES = [ 'review', 'note' ];
+	public const TYPES = [ '', 'comment', 'pingback', 'trackback' ];
+
+	/**
+	 * The same types in WP_Comment_Query's words.
+	 *
+	 * @since 1.6.0
+	 */
+	public const QUERY_TYPES = [ 'comment', 'pings' ];
 
 	/**
 	 * Input schema property for revealing personal data.
@@ -137,14 +146,14 @@ class CommentPresenter {
 	 * @since 1.6.0
 	 */
 	public static function can_access( WP_Comment $comment ): bool {
-		return ! in_array( $comment->comment_type, self::EXCLUDED_TYPES, true )
+		return in_array( $comment->comment_type, self::TYPES, true )
 			&& current_user_can( 'edit_comment', (int) $comment->comment_ID );
 	}
 
 	/**
 	 * The comment with this ID, or a not-found error.
 	 *
-	 * Reviews, notes and comments the user may not edit are reported as not found,
+	 * Other comment types and comments the user may not edit are reported as not found,
 	 * so their existence is not confirmed either.
 	 *
 	 * @param int $comment_id Comment ID.
