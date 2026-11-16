@@ -198,6 +198,8 @@ class AddMenuItem extends BaseAbility {
 		if ( isset( $args['position'] ) ) {
 			$placed = MenuItemOrder::place( $menu_id, $id, $parent, absint( $args['position'] ) );
 			if ( is_wp_error( $placed ) ) {
+				// The item already exists; remove it so a retry does not add it twice.
+				wp_delete_post( $id, true );
 				return $placed;
 			}
 		}
