@@ -228,6 +228,36 @@ class RevisionsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A revision holding a block the site no longer allows is refused, as update-post would.
+	 *
+	 * @return void
+	 */
+	public function test_restore_refuses_a_block_no_longer_allowed(): void {
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => "<!-- wp:html -->\n<p>Old widget</p>\n<!-- /wp:html -->",
+			]
+		);
+		$with_html = $this->save_revision();
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => "<!-- wp:paragraph -->\n<p>Plain.</p>\n<!-- /wp:paragraph -->",
+			]
+		);
+
+		$only_paragraphs = static fn(): array => [ 'core/paragraph' ];
+		add_filter( 'allowed_block_types_all', $only_paragraphs );
+		$result = ( new RestoreRevision() )->execute( [ 'id' => $with_html ] );
+		remove_filter( 'allowed_block_types_all', $only_paragraphs );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'block_validation_failed', $result->get_error_code() );
+		$this->assertStringNotContainsString( 'wp:html', get_post( $this->post_id )->post_content );
+	}
+
+	/**
 	 * A trashed post is not restored behind the owner's back.
 	 *
 	 * @return void

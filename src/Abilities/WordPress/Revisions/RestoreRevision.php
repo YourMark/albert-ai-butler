@@ -10,6 +10,8 @@
 namespace Albert\Abilities\WordPress\Revisions;
 
 use Albert\Abstracts\BaseAbility;
+use Albert\Blocks\BlockIssues;
+use Albert\Blocks\BlockPolicy;
 use Albert\Core\Annotations;
 use WP_Error;
 use WP_Post;
@@ -141,6 +143,17 @@ class RestoreRevision extends BaseAbility {
 				__( 'Revisions are turned off for this post, so restoring one would leave no way back.', 'albert-ai-butler' ),
 				[ 'status' => 409 ]
 			);
+		}
+
+		// As update-post: an old revision may not bring back a block the site no longer allows.
+		if ( has_blocks( $revision->post_content ) ) {
+			$policy = new BlockPolicy();
+			$error  = BlockIssues::to_wp_error(
+				$policy->enforce( parse_blocks( $revision->post_content ), $post->post_type, (int) $post->ID, $policy->existing_block_names( (int) $post->ID ) )
+			);
+			if ( $error instanceof WP_Error ) {
+				return $error;
+			}
 		}
 
 		$changed = RevisionDiff::changed_fields( $revision, $post );
