@@ -140,7 +140,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertStringContainsString( '>Go</a>', $markup );
 	}
 
-	public function test_untemplated_block_keeps_every_text_sourced_attribute_in_markup(): void {
+	public function test_untemplated_block_with_text_attributes_is_refused_not_guessed(): void {
 		albert_test_register_block_type(
 			'core/file',
 			false,
@@ -156,7 +156,7 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$markup = $this->serializer->serialize(
+		$result = $this->serializer->serialize_with_issues(
 			[
 				[
 					'name'       => 'core/file',
@@ -168,9 +168,10 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$this->assertStringContainsString( 'contract.pdf', $markup );
-		$this->assertStringContainsString( 'Download now', $markup );
-		$this->assertStringNotContainsString( 'fileName', $markup );
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( "'html'", $errors[0] );
+		$this->assertStringNotContainsString( 'wp:file', $result['markup'] );
 	}
 
 	public function test_paragraph_round_trip(): void {
@@ -579,8 +580,8 @@ class BlockSerializerTest extends TestCase {
 		$this->assertSame( 'core/latest-posts', $tree[0]['name'] );
 	}
 
-	public function test_registered_static_untemplated_block_warns_but_does_not_error(): void {
-		// A registered static block with no dedicated template here.
+	public function test_registered_static_untemplated_block_is_refused(): void {
+		// Without a template the wrapper would be a guess the editor rejects.
 		albert_test_register_block_type( 'core/verse', false );
 
 		$result = $this->serializer->serialize_with_issues(
@@ -592,18 +593,34 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$warnings = $this->messages( $result['issues'], 'warning' );
-		$this->assertNotEmpty( $warnings );
-		$this->assertStringContainsString( 'core/verse', $warnings[0] );
-		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
-		$this->assertStringContainsString( '<!-- wp:verse', $result['markup'] );
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertNotEmpty( $errors );
+		$this->assertStringContainsString( 'core/verse', $errors[0] );
+		$this->assertStringNotContainsString( '<!-- wp:verse', $result['markup'] );
+	}
+
+	public function test_untemplated_block_is_written_from_its_html(): void {
+		albert_test_register_block_type( 'core/verse', false, [ 'content' => [ 'source' => 'html' ] ] );
+
+		$html   = '<pre class="wp-block-verse">Roses are <em>red</em></pre>';
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name' => 'core/verse',
+					'html' => $html,
+				],
+			]
+		);
+
+		$this->assertSame( [], $result['issues'] );
+		$this->assertStringContainsString( $html, $result['markup'] );
 	}
 
 	// Hybrid blocks (render_callback + stored inner blocks, e.g. core/cover) must not self-close.
 
-	public function test_hybrid_block_with_inner_blocks_keeps_its_children(): void {
-		// core/cover: a dynamic block (render_callback) that nonetheless stores
-		// inner blocks — the exact shape that used to be dropped.
+	public function test_hybrid_block_with_inner_blocks_is_refused_without_its_html(): void {
+		// core/cover stores its wrapper in markup only save() can write; children
+		// placed without it would show unstyled on the site and invalid in the editor.
 		albert_test_register_block_type( 'core/cover', true, [ 'url' => [] ] );
 
 		$result = $this->serializer->serialize_with_issues(
@@ -616,59 +633,31 @@ class BlockSerializerTest extends TestCase {
 							'name'       => 'core/paragraph',
 							'attributes' => [ 'content' => 'First line' ],
 						],
-						[
-							'name'       => 'core/paragraph',
-							'attributes' => [ 'content' => 'Second line' ],
-						],
 					],
 				],
 			]
 		);
 
-		// The block must NOT be self-closing: it has a real closing delimiter.
-		$this->assertStringContainsString( '<!-- wp:cover', $result['markup'] );
-		$this->assertStringContainsString( '<!-- /wp:cover -->', $result['markup'] );
-		$this->assertStringNotContainsString( 'wp:cover {"url":"https://example.com/x.jpg"} /', $result['markup'] );
-
-		// Both children survive, in order.
-		$this->assertStringContainsString( 'First line', $result['markup'] );
-		$this->assertStringContainsString( 'Second line', $result['markup'] );
-
-		// And they round-trip back as two nested paragraph blocks.
-		$tree = $this->reader->read( $result['markup'] );
-		$this->assertCount( 1, $tree );
-		$this->assertSame( 'core/cover', $tree[0]['name'] );
-		$this->assertCount( 2, $tree[0]['innerBlocks'], 'Both cover children must survive serialization.' );
-		$this->assertSame( 'First line', $tree[0]['innerBlocks'][0]['plaintext'] );
-		$this->assertSame( 'Second line', $tree[0]['innerBlocks'][1]['plaintext'] );
-
-		// Fidelity of cover's own wrapper is not guaranteed here — that is a
-		// warning, never a silent success and never an error.
-		$this->assertNotEmpty( $this->messages( $result['issues'], 'warning' ) );
-		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'core/cover', $errors[0] );
+		$this->assertStringNotContainsString( 'wp:cover', $result['markup'] );
 	}
 
-	public function test_media_text_hybrid_block_keeps_its_children(): void {
+	public function test_hybrid_block_keeps_its_children_from_html(): void {
 		albert_test_register_block_type( 'core/media-text', true, [ 'mediaUrl' => [] ] );
 
 		$result = $this->serializer->serialize_with_issues(
 			[
 				[
-					'name'        => 'core/media-text',
-					'attributes'  => [ 'mediaUrl' => 'https://example.com/a.jpg' ],
-					'innerBlocks' => [
-						[
-							'name'       => 'core/heading',
-							'attributes' => [
-								'level'   => 3,
-								'content' => 'Nested heading',
-							],
-						],
-					],
+					'name'       => 'core/media-text',
+					'attributes' => [ 'mediaUrl' => 'https://example.com/a.jpg' ],
+					'html'       => '<div class="wp-block-media-text"><figure class="wp-block-media-text__media"><img src="https://example.com/a.jpg" alt=""/></figure><div class="wp-block-media-text__content"><!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Nested heading</h3><!-- /wp:heading --></div></div>',
 				],
 			]
 		);
 
+		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
 		$this->assertStringContainsString( '<!-- /wp:media-text -->', $result['markup'] );
 
 		$tree = $this->reader->read( $result['markup'] );
@@ -699,13 +688,9 @@ class BlockSerializerTest extends TestCase {
 		$this->assertSame( [], $result['issues'], 'A childless, all-JSON block self-closes losslessly with no issue.' );
 	}
 
-	public function test_third_party_block_with_markup_sourced_attribute_is_preserved(): void {
-		// A custom block Albert has no template or special knowledge of, whose
-		// content lives ONLY in a rich-text (text-sourced) attribute — no
-		// plaintext fallback. This is the documented "put text in attributes
-		// (content/text/value)" contract. The content must be materialised into
-		// innerHTML, not left inert in the comment JSON where the parser ignores
-		// it for a markup-sourced attribute and it would be lost on reload.
+	public function test_third_party_block_with_markup_sourced_attribute_is_refused_not_guessed(): void {
+		// Albert cannot know a plugin block's save() markup. Writing the text
+		// without its wrapper would keep the words and break the block.
 		albert_test_register_block_type(
 			'acme/callout',
 			false,
@@ -721,20 +706,15 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		// Not self-closed, and the attribute value lives in the block's markup
-		// (not only in the comment JSON, where a markup-sourced attribute is
-		// ignored on reload).
-		$this->assertStringContainsString( 'Heads up', $result['markup'] );
-		$this->assertStringNotContainsString( '/-->', $result['markup'] );
-		$this->assertStringContainsString( '<!-- /wp:acme/callout -->', $result['markup'] );
-		$this->assertNotEmpty( $this->messages( $result['issues'], 'warning' ) );
-		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( "'html'", $errors[0] );
+		$this->assertStringNotContainsString( 'acme/callout', $result['markup'] );
 	}
 
 	public function test_scalar_text_sourced_attribute_is_not_silently_dropped(): void {
-		// core/verse stores `content` in its markup (source: html), no template
-		// here, no plaintext given. The value must be kept in the markup, not
-		// self-closed away with the value inert in the comment JSON.
+		// core/verse stores `content` in its markup (source: html). Self-closing
+		// would leave the text inert in the comment JSON; refuse instead.
 		albert_test_register_block_type(
 			'core/verse',
 			false,
@@ -750,13 +730,8 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$this->assertStringNotContainsString( 'wp:verse {"content":"Roses are red"} /', $result['markup'] );
-		$this->assertStringContainsString( 'Roses are red', $result['markup'] );
-
-		// It round-trips as a verse whose plaintext survives.
-		$tree = $this->reader->read( $result['markup'] );
-		$this->assertSame( 'core/verse', $tree[0]['name'] );
-		$this->assertSame( 'Roses are red', $tree[0]['plaintext'] );
+		$this->assertNotEmpty( $this->messages( $result['issues'], 'error' ) );
+		$this->assertStringNotContainsString( 'wp:verse', $result['markup'] );
 	}
 
 	public function test_empty_markup_sourced_attribute_self_closes_losslessly(): void {
@@ -1334,5 +1309,75 @@ class BlockSerializerTest extends TestCase {
 				. "<!-- wp:separator -->\n<hr class=\"wp-block-separator has-alpha-channel-opacity\"/>\n<!-- /wp:separator -->",
 			$markup
 		);
+	}
+
+	public function test_image_without_url_is_refused(): void {
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/image',
+					'attributes' => [ 'alt' => 'Logo' ],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'url is required', $errors[0] );
+	}
+
+	public function test_children_under_a_block_that_cannot_nest_are_refused(): void {
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'        => 'core/heading',
+					'attributes'  => [ 'content' => 'Title' ],
+					'innerBlocks' => [
+						[
+							'name'       => 'core/paragraph',
+							'attributes' => [ 'content' => 'Lost' ],
+						],
+					],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'does not nest inner blocks', $errors[0] );
+	}
+
+	public function test_a_text_change_next_to_unchanged_html_is_refused(): void {
+		albert_test_register_block_type( 'core/paragraph', false, [ 'content' => [ 'source' => 'rich-text', 'type' => 'rich-text' ] ] );
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/paragraph',
+					'attributes' => [ 'content' => 'New text' ],
+					'html'       => '<p>Old text</p>',
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'attributes.content differs', $errors[0] );
+	}
+
+	public function test_a_sourced_attribute_matching_its_html_is_accepted(): void {
+		albert_test_register_block_type( 'core/image', false, [ 'url' => [ 'source' => 'attribute', 'type' => 'string' ] ] );
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/image',
+					'attributes' => [ 'url' => 'https://example.com/a&b.png' ],
+					'html'       => '<figure class="wp-block-image"><img src="https://example.com/a&amp;b.png" alt=""/></figure>',
+				],
+			]
+		);
+
+		$this->assertSame( [], $result['issues'] );
 	}
 }

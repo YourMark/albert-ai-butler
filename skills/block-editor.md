@@ -65,6 +65,13 @@ the editor would flag the block as invalid. To keep a block's markup exactly, se
 `html`: the markup inside the block's delimiters, as the editor stores it. Block markup
 nested in it becomes the block's inner blocks, so do not also send `innerBlocks`.
 
+Blocks read with `"format": ["blocks"]` carry their saved `html` (every block without
+inner blocks). Text, links and image sources live only there, so send each block back
+with its `html` unchanged. To change a block's text, edit it inside `html`; an attribute
+such as `content` that differs from the `html` you send is refused, because the editor
+would ignore it. Blocks Albert cannot build from attributes (Cover, Media & Text, File,
+Verse and most plugin blocks) are only accepted with their `html`.
+
 Text attributes (`content`, a button's `text`, a quote's `citation`) accept inline HTML
 (`<strong>`, `<em>`, `<a href="…">`, `<code>`). Use it for emphasis and for links inside
 text. WordPress removes any HTML the connected user may not post.
@@ -169,8 +176,12 @@ to `core/button` (its `url` attribute) and to `<a href>` links inside text attri
 2. **Check** which blocks you may use with `albert/list-block-types` before composing
    anything new (use `albert/get-block-type` for a block's attributes).
 3. **Edit** the structured blocks: change attributes, add or remove blocks, reorder them.
+   Keep every block you do not change exactly as read, `html` included.
 4. **Write** with `albert/create-post` (new) or `albert/update-post` (existing), sending
    your block specs in the `blocks` field.
+
+To copy a whole page or post, read it with `"format": ["content"]` and send that string
+as `content`: block markup is stored exactly as sent.
 
 For pages, use the equivalent `albert/*-page` abilities.
 
@@ -184,8 +195,8 @@ pattern's markup is known-valid.
 
 - **Discover:** `albert/find-patterns` (filter by `search` or `category`) lists
   summaries; `albert/view-pattern` returns one pattern's block markup by `name`.
-- **Reuse as a copy (default):** pass the returned `content` as your `blocks` or
-  `content`, or adapt it. The copy is independent; editing it never changes the
+- **Reuse as a copy (default):** pass the returned `content` as your `content`
+  (block markup is stored exactly as sent), or adapt it. The copy is independent; editing it never changes the
   source. Works for any pattern.
 - **Reuse synced (shared):** only user patterns with `syncStatus: "synced"`.
   Insert by reference with `<!-- wp:block {"ref":ID} /-->` using the pattern's
@@ -269,7 +280,8 @@ or `"format": ["markdown"]`.
 
 Choose the format(s) that fit the task:
 
-- `["blocks"]`: the structured tree. Use this when you intend to edit and write back.
+- `["blocks"]`: the structured tree, with each block's saved `html`. Use this when you
+  intend to edit and write back.
 - `["content"]`: the raw stored block markup (block comments included). Use only when you
   need the exact stored string.
 - `["plaintext"]`: text with all markup stripped. Use for summarizing or analyzing wording.

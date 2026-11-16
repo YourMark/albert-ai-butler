@@ -42,7 +42,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @phpstan-type Issue array{severity: string, message: string}
  * @phpstan-type ParsedBlock array{blockName: string|null, attrs: array<string, mixed>, innerBlocks: array<int, mixed>, innerHTML: string, innerContent: array<int, string|null>}
- * @phpstan-type TemplateResult array{0: array<string, mixed>, 1: string, 2: array<int, string>}
+ * @phpstan-type TemplateResult array{0: array<string, mixed>, 1: string, 2: array<int, string|Issue>}
  *
  * @since 1.2.0
  */
@@ -496,13 +496,13 @@ class BlockSerializer {
 		$context = new BlockContext( $attributes, $plaintext, $path );
 
 		// Templates take exactly one argument (the context) and return
-		// [ array $attrs, string $inner_html, array $tpl_issues ]. Any messages
-		// the template generated are recoverable degradations (clamped value,
-		// missing url, …), so they are recorded as warnings.
+		// [ array $attrs, string $inner_html, array $tpl_issues ]. A message string
+		// is a recoverable degradation (a clamped value) and becomes a warning; a
+		// template that would lose content returns a full error issue instead.
 		[ $attrs, $inner_html, $tpl_issues ] = $template( $context );
 
 		foreach ( $tpl_issues as $message ) {
-			$issues[] = $this->issue( self::SEVERITY_WARNING, $message );
+			$issues[] = is_array( $message ) ? $message : $this->issue( self::SEVERITY_WARNING, $message );
 		}
 
 		foreach ( $this->supports->unwritten( $name, $attributes, $this->template_attributes( $name ) ) as $attribute ) {
@@ -512,14 +512,12 @@ class BlockSerializer {
 			);
 		}
 
-		// Inner blocks under a leaf template (no %children% slot): make_block()
-		// keeps them, but the block's save() won't nest them, so the editor may
-		// drop them on next save. Warn.
+		// The block's save() never nests children, so the editor would drop them.
 		if ( $inner_blocks !== [] && ! str_contains( $inner_html, '%children%' ) ) {
 			$issues[] = $this->issue(
-				self::SEVERITY_WARNING,
+				self::SEVERITY_ERROR,
 				sprintf(
-					"%s.name '%s' does not nest inner blocks; the %d supplied child block(s) were kept in the markup but the editor may drop them on the next save. Use a block that accepts inner blocks (e.g. core/group).",
+					"%s.name '%s' does not nest inner blocks, so the editor would drop the %d supplied child block(s). Use a block that accepts inner blocks (e.g. core/group).",
 					$path,
 					$name,
 					count( $inner_blocks )
@@ -591,6 +589,25 @@ class BlockSerializer {
 			return null;
 		}
 
+		// The editor reads these attributes from the markup, so a value that is
+		// not in `html` would be dropped without a word.
+		$differs = false;
+		foreach ( $this->schema->markup_sourced_attributes( $name ) as $attribute ) {
+			$value = $attributes[ $attribute ] ?? null;
+
+			if ( is_scalar( $value ) && (string) $value !== '' && ! $this->html_holds( $html, (string) $value ) ) {
+				$differs  = true;
+				$issues[] = $this->issue(
+					self::SEVERITY_ERROR,
+					"{$path}.attributes.{$attribute} differs from the block's 'html', where the editor reads it from. Make the change inside 'html', or leave 'html' out to build the block from its attributes."
+				);
+			}
+		}
+
+		if ( $differs ) {
+			return null;
+		}
+
 		$inner_blocks  = [];
 		$inner_content = [];
 
@@ -616,12 +633,32 @@ class BlockSerializer {
 	}
 
 	/**
+	 * Whether a sourced attribute's value appears in the block's markup, as text
+	 * or as an escaped HTML attribute value.
+	 *
+	 * @param string $html  The block's saved markup.
+	 * @param string $value Attribute value.
+	 * @return bool
+	 *
+	 * @since 1.6.0
+	 */
+	private function html_holds( string $html, string $value ): bool {
+		foreach ( [ $value, esc_attr( $value ), esc_html( $value ), esc_url( $value ) ] as $candidate ) {
+			if ( $candidate !== '' && str_contains( $html, $candidate ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Serialize a block that has no per-block template here, using the registry.
 	 *
 	 * Resolution order:
 	 *   - core/html (registered) — legitimate raw HTML, emitted with no issue.
 	 *   - registered dynamic     — emit comment + attrs, empty innerHTML (valid).
-	 *   - registered static      — best-effort markup + one "untemplated" warning.
+	 *   - registered static      — refused: only save() knows its wrapper; send `html`.
 	 *   - unregistered           — error with an actionable hint; still emit a
 	 *                              core/html fallback so output is never broken.
 	 *
@@ -675,13 +712,13 @@ class BlockSerializer {
 			return null;
 		}
 
-		// Content preserved; only the block's own wrapper is best-effort.
+		// Only the block's save() knows its wrapper; a guessed one is invalid in the editor.
 		$issues[] = $this->issue(
-			self::SEVERITY_WARNING,
-			"{$path}.name '{$name}' is a registered block without dedicated handling. Its content is preserved, but the block's own markup could not be reproduced exactly; verify the result in the editor, or use a fully supported block (e.g. core/paragraph, core/heading, core/group)."
+			self::SEVERITY_ERROR,
+			"{$path}.name '{$name}' is a registered block this server cannot build from attributes, so the editor would flag it as invalid. Send the block's saved markup in 'html' (inner blocks included), or use a fully supported block (e.g. core/paragraph, core/heading, core/group)."
 		);
 
-		return $this->make_block( $name, $attributes, $inner_html, $inner_blocks );
+		return null;
 	}
 
 	/**
@@ -1154,7 +1191,7 @@ class BlockSerializer {
 	 * Template: core/image.
 	 *
 	 * @param BlockContext $context Block context.
-	 * @return array{0: array<string, mixed>, 1: string, 2: array<int, string>}
+	 * @return array{0: array<string, mixed>, 1: string, 2: array<int, string|Issue>}
 	 *
 	 * @since 1.2.0
 	 */
@@ -1164,7 +1201,8 @@ class BlockSerializer {
 
 		$url = isset( $attributes['url'] ) ? (string) $attributes['url'] : '';
 		if ( $url === '' ) {
-			$issues[] = "{$context->path}.attributes.url is required for core/image.";
+			// An image without a source saves as a broken <img src="">.
+			$issues[] = $this->issue( self::SEVERITY_ERROR, "{$context->path}.attributes.url is required for core/image. Send the image's url, or its saved markup in 'html'." );
 		}
 
 		// Width and height are strings in the block's schema; the editor drops a number.
