@@ -210,9 +210,9 @@ class FindRoles extends BaseAbility {
 		}
 
 		if ( $can( 'edit_others_posts' ) && $can( 'edit_others_pages' ) ) {
-			$things[] = __( 'edit and publish everyone\'s posts and pages', 'albert-ai-butler' );
+			$things[] = __( 'edit everyone\'s posts and pages', 'albert-ai-butler' );
 		} elseif ( $can( 'edit_others_posts' ) ) {
-			$things[] = __( 'edit and publish everyone\'s posts', 'albert-ai-butler' );
+			$things[] = __( 'edit everyone\'s posts', 'albert-ai-butler' );
 		} elseif ( $can( 'publish_posts' ) ) {
 			$things[] = __( 'write and publish their own posts', 'albert-ai-butler' );
 		} elseif ( $can( 'edit_posts' ) ) {
