@@ -128,7 +128,8 @@ class SearchContent extends BaseAbility {
 	/**
 	 * Check if the current user has permission to execute this ability.
 	 *
-	 * Core's search route is public; it returns only what any visitor could find.
+	 * Core's search route is public. As for any logged-in user, a search also matches
+	 * inside password-protected posts; only their title and URL come back.
 	 *
 	 * @return bool|WP_Error True if permitted, WP_Error with details otherwise.
 	 * @since 1.6.0
