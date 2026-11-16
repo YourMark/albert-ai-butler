@@ -123,6 +123,28 @@ class CommentsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * While details are masked, search only matches the comment text, so it cannot confirm an email.
+	 *
+	 * @return void
+	 */
+	public function test_masked_search_matches_only_the_comment_text(): void {
+		update_option( 'albert_privacy_mode', 'strict' );
+
+		$by_email   = ( new FindComments() )->execute( [ 'search' => 'jane@example.com' ] );
+		$by_content = ( new FindComments() )->execute( [ 'search' => 'still in stock' ] );
+
+		$this->assertIsArray( $by_email );
+		$this->assertSame( [], $by_email['comments'] );
+		$this->assertIsArray( $by_content );
+		$this->assertSame( [ $this->held_id ], array_column( $by_content['comments'], 'id' ) );
+
+		update_option( 'albert_privacy_mode', 'off' );
+		$unmasked = ( new FindComments() )->execute( [ 'search' => 'jane@example.com' ] );
+		$this->assertIsArray( $unmasked );
+		$this->assertSame( [ $this->held_id ], array_column( $unmasked['comments'], 'id' ) );
+	}
+
+	/**
 	 * Off returns the details unmasked.
 	 *
 	 * @return void

@@ -10,6 +10,7 @@
 namespace Albert\Abilities\WordPress\Comments;
 
 use Albert\Privacy\PiiPolicy;
+use Albert\Privacy\PrivacyMode;
 use WP_Comment;
 use WP_Error;
 
@@ -118,6 +119,19 @@ class CommentPresenter {
 				'reveal_capability'  => self::CAPABILITY,
 			]
 		);
+	}
+
+	/**
+	 * Whether this call returns commenters' details masked.
+	 *
+	 * @param array<string, mixed> $args The ability's input.
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	public static function masks( array $args ): bool {
+		$mode = PrivacyMode::resolve();
+
+		return $mode !== PrivacyMode::Off && ! PiiPolicy::allows_reveal( $args, $mode, [ 'reveal_capability' => self::CAPABILITY ] );
 	}
 
 	/**

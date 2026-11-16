@@ -83,7 +83,7 @@ class FindComments extends BaseAbility {
 				],
 				'search'   => [
 					'type'        => 'string',
-					'description' => 'Text to look for in the comment, its author name, email or website.',
+					'description' => 'Text to look for in the comment. While personal data is masked, only the comment text is searched; otherwise also its author name, email and website.',
 				],
 				'type'     => [
 					'type'        => 'string',
@@ -122,7 +122,10 @@ class FindComments extends BaseAbility {
 					'type'  => 'array',
 					'items' => [ 'type' => 'object' ],
 				],
-				'total'       => [ 'type' => 'integer' ],
+				'total'       => [
+					'type'        => 'integer',
+					'description' => 'Every matching comment, including ones on posts you cannot edit, which are left out. A page can therefore hold fewer than per_page.',
+				],
 				'total_pages' => [ 'type' => 'integer' ],
 			],
 			'required'   => [ 'comments', 'total' ],
@@ -175,12 +178,30 @@ class FindComments extends BaseAbility {
 			$query_args['parent'] = absint( $args['parent'] );
 		}
 
+		$content_only = null;
 		if ( isset( $args['search'] ) && $args['search'] !== '' ) {
-			$query_args['search'] = sanitize_text_field( (string) $args['search'] );
+			$search = sanitize_text_field( (string) $args['search'] );
+
+			if ( CommentPresenter::masks( $args ) ) {
+				// Core's search also matches email, IP and name, so a hit would confirm a masked value.
+				$like                       = '%' . $GLOBALS['wpdb']->esc_like( $search ) . '%';
+				$content_only               = static function ( array $clauses ) use ( $like ): array {
+					$clauses['where'] .= $GLOBALS['wpdb']->prepare( ' AND comment_content LIKE %s', $like );
+					return $clauses;
+				};
+				$query_args['cache_domain'] = 'albert_content_search_' . md5( $search );
+				add_filter( 'comments_clauses', $content_only );
+			} else {
+				$query_args['search'] = $search;
+			}
 		}
 
 		$query    = new WP_Comment_Query();
 		$comments = $query->query( $query_args );
+
+		if ( $content_only !== null ) {
+			remove_filter( 'comments_clauses', $content_only );
+		}
 		$comments = is_array( $comments ) ? $comments : [];
 
 		// Filtered after the query, as core's endpoint does, so `total` may count
