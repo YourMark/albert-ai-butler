@@ -283,7 +283,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'content_is_markdown', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
 		wp_cache_flush();
 		$this->assertSame( $before, wp_count_posts()->draft );
 	}
@@ -302,7 +302,44 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'content_is_markdown', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+	}
+
+	/**
+	 * A REST refusal on create is reported as the post permission code, not a generic error.
+	 *
+	 * @return void
+	 */
+	public function test_create_post_rest_refusal_is_permission_denied(): void {
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
+
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'  => 'Contributor Post',
+				'status' => 'publish',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Any other REST error keeps core's code.
+	 *
+	 * @return void
+	 */
+	public function test_create_post_passes_rest_error_code_through(): void {
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'    => 'Bad Template',
+				'template' => 'no-such-template.php',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rest_invalid_param', $result->get_error_code() );
 	}
 
 	/**
@@ -321,7 +358,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'content_is_markdown', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
 		$this->assertSame( '<p>Original</p>', get_post( $post_id )->post_content );
 	}
 

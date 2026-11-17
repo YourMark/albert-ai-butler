@@ -323,6 +323,27 @@ class PagesAbilityTest extends TestCase {
 	// ─── UpdatePage ─────────────────────────────────────────────────
 
 	/**
+	 * A REST refusal on create is reported as the page permission code.
+	 *
+	 * @return void
+	 */
+	public function test_create_page_rest_refusal_is_permission_denied(): void {
+		$user = self::factory()->user->create( [ 'role' => 'author' ] );
+		get_user_by( 'id', $user )->add_cap( 'edit_pages' );
+		wp_set_current_user( $user );
+
+		$result = ( new CreatePage() )->execute(
+			[
+				'title'  => 'Author Page',
+				'status' => 'publish',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_page_permission_denied', $result->get_error_code() );
+	}
+
+	/**
 	 * UpdatePage changes the title and status.
 	 *
 	 * @return void

@@ -181,7 +181,7 @@ class WriteContentResolver {
 			// The converter does not read Markdown: it would store the whole text as one paragraph.
 			if ( self::is_markdown( $content ) ) {
 				return new WP_Error(
-					'content_is_markdown',
+					'albert_invalid_content',
 					__( "This looks like Markdown, which isn't converted. Send it as `blocks` instead.", 'albert-ai-butler' ),
 					[ 'status' => 400 ]
 				);

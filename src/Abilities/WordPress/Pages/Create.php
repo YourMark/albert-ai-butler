@@ -33,7 +33,7 @@ class Create extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/create-page';
 		$this->label       = __( 'Create Page', 'albert-ai-butler' );
-		$this->description = __( 'Create a new WordPress page with specified title and content.', 'albert-ai-butler' );
+		$this->description = __( 'Create a new static page, saved as a draft unless you set a status. To change an existing page use albert/update-page; for a blog post use albert/create-post.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
@@ -68,28 +68,28 @@ class Create extends BaseAbility {
 		$properties = [
 			'title'   => [
 				'type'        => 'string',
-				'description' => 'The page title',
+				'description' => 'The page title, as plain text.',
 			],
 			'content' => [
 				'type'        => 'string',
-				'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). Markdown is not converted and is refused: send the structured "blocks" field instead, which is also preferred for multi-block, nested layouts. Ignored when "blocks" is provided.',
+				'description' => 'The page body as block markup (<!-- wp:... -->), stored as sent, or HTML, converted to blocks. Use it only for a classic-editor page or markup you already have; otherwise send "blocks", which wins when both are sent. Markdown is refused.',
 				'default'     => '',
 			],
 			'blocks'  => [
 				'type'        => 'array',
-				'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'description' => 'The page body as structured block specs. Preferred over "content", which is ignored when this is sent. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
 				'items'       => BlockSpecSchema::spec(),
 				'default'     => [],
 			],
 			'status'  => [
 				'type'        => 'string',
 				'enum'        => $post_statuses,
-				'description' => 'Page status',
+				'description' => 'Publication status: "draft" (the default) saves without publishing, "pending" waits for review, "private" is visible only to editors and administrators, "publish" makes it public. To schedule, send "publish" with a future "date".',
 				'default'     => 'draft',
 			],
 			'excerpt' => [
 				'type'        => 'string',
-				'description' => 'Optional page excerpt',
+				'description' => 'Short plain-text summary shown in archives and search results instead of the start of the page.',
 				'default'     => '',
 			],
 		];
@@ -202,11 +202,7 @@ class Create extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return new WP_Error(
-				$data['code'] ?? 'rest_error',
-				self::rest_error_message( $data ) ?? __( 'An error occurred while creating the page.', 'albert-ai-butler' ),
-				[ 'status' => $response->get_status() ]
-			);
+			return self::rest_failure( $data, $response->get_status(), __( 'The page could not be created.', 'albert-ai-butler' ), 'albert_page_permission_denied' );
 		}
 
 		// Return formatted page data.

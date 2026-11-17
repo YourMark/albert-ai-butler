@@ -78,11 +78,11 @@ class Update extends BaseAbility {
 			],
 			'content' => [
 				'type'        => 'string',
-				'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). Markdown is not converted and is refused: send the structured "blocks" field instead, which is also preferred for multi-block, nested layouts. Ignored when "blocks" is provided. Replaces the entire page body when set.',
+				'description' => 'Replaces the whole page body with block markup (<!-- wp:... -->), stored as sent, or HTML, converted to blocks. Use it only for a classic-editor page or markup you already have; otherwise send "blocks", which wins when both are sent. Markdown is refused. To change one block, use albert/edit-page-block instead.',
 			],
 			'blocks'  => [
 				'type'        => 'array',
-				'description' => 'Structured block specs (preferred over "content"). Replaces the entire page body. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'description' => 'Replaces the whole page body with structured block specs. Preferred over "content", which is ignored when this is sent. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
 				'items'       => BlockSpecSchema::spec(),
 			],
 			'status'  => [
