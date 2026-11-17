@@ -31,7 +31,7 @@ export default function AdvancedPermissionsUpsell( { capabilityContent } ) {
 		<div className="albert-perms-upsell albert-perms-panel">
 			<p className="albert-perms-panel__intro">
 				{ __(
-					'Control who can use this ability: the WordPress default, or custom per-role and per-user rules.',
+					'Control who can use this ability: its registered permission check, or custom per-role and per-user rules.',
 					'albert-ai-butler'
 				) }
 			</p>
@@ -92,7 +92,7 @@ export default function AdvancedPermissionsUpsell( { capabilityContent } ) {
 						</li>
 						<li>
 							{ __(
-								'Override the WordPress default',
+								'Replace the registered permission check',
 								'albert-ai-butler'
 							) }
 						</li>

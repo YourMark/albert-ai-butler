@@ -205,7 +205,7 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 	const capabilityContent = (
 		<p className="albert-perms-panel__default">
 			{ __(
-				'The same as in WordPress: your assistant can only do what the connected user is allowed to do.',
+				'Uses the permission check this ability was registered with.',
 				'albert-ai-butler'
 			) }
 		</p>
@@ -235,13 +235,13 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 				>
 					<p>
 						{ __(
-							'Controls who can invoke this ability over MCP. By default the same rules apply as in WordPress.',
+							'Controls who can invoke this ability over MCP. By default the ability uses the permission check it was registered with.',
 							'albert-ai-butler'
 						) }
 					</p>
 					<p>
 						{ __(
-							'Albert Premium adds custom per-role and per-user rules that replace them.',
+							'Albert Premium adds custom per-role and per-user rules that replace that check.',
 							'albert-ai-butler'
 						) }
 					</p>
