@@ -64,7 +64,8 @@ class FindUsers extends BaseAbility {
 			'properties' => [
 				'id'                   => [
 					'type'        => 'integer',
-					'description' => 'User id for direct querying.',
+					'description' => 'Return only the user with this ID, as a one-item list. For all of one user\'s details use albert/view-user.',
+					'minimum'     => 1,
 				],
 				'page'                 => [
 					'type'        => 'integer',
@@ -151,6 +152,7 @@ class FindUsers extends BaseAbility {
 	 * @param array<string, mixed> $args {
 	 *     Input parameters.
 	 *
+	 *     @type int    $id       Only this user.
 	 *     @type int    $page     Page number for pagination.
 	 *     @type int    $per_page Number of users per page.
 	 *     @type string $search   Search query.
@@ -160,15 +162,25 @@ class FindUsers extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		// Create REST request.
+		$request = new WP_REST_Request( 'GET', '/wp/v2/users' );
 
-		$route = '/wp/v2/users';
-
-		if ( isset( $args['id'] ) && ! empty( $args['id'] ) ) {
-			$route .= '/' . $args['id'];
+		// The collection with `include`, not /users/{id}: that route returns one object, not a list.
+		if ( isset( $args['id'] ) ) {
+			$user_id = is_int( $args['id'] ) || ( is_string( $args['id'] ) && ctype_digit( $args['id'] ) ) ? (int) $args['id'] : 0;
+			if ( $user_id < 1 ) {
+				return new WP_Error(
+					'albert_invalid_id',
+					__( 'The "id" parameter must be a user ID of 1 or more.', 'albert-ai-butler' ),
+					[ 'status' => 400 ]
+				);
+			}
+			$request->set_param( 'include', [ $user_id ] );
 		}
 
-		$request = new WP_REST_Request( 'GET', $route );
+		// Email, roles and the login are only in the edit context, which core allows with list_users.
+		if ( current_user_can( 'list_users' ) ) {
+			$request->set_param( 'context', 'edit' );
+		}
 
 		// Set pagination parameters.
 		$request->set_param( 'page', absint( $args['page'] ?? 1 ) );
@@ -207,7 +219,7 @@ class FindUsers extends BaseAbility {
 		foreach ( $data as $user_data ) {
 			$users[] = [
 				'id'          => $user_data['id'],
-				'username'    => $user_data['slug'] ?? '',
+				'username'    => $user_data['username'] ?? $user_data['slug'] ?? '',
 				'name'        => $user_data['name'] ?? '',
 				'email'       => $user_data['email'] ?? '',
 				'roles'       => $user_data['roles'] ?? [],
