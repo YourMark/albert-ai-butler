@@ -1,6 +1,6 @@
 <?php
 /**
- * View Comment Ability
+ * Get Comment Ability
  *
  * @package Albert
  * @subpackage Abilities\WordPress\Comments
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.6.0
  */
-class ViewComment extends BaseAbility {
+class GetComment extends BaseAbility {
 
 	/**
 	 * Most replies to include.
@@ -36,9 +36,9 @@ class ViewComment extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/view-comment';
-		$this->label       = __( 'View Comment', 'albert-ai-butler' );
-		$this->description = __( 'Retrieve one comment by ID, with the comment it replies to and its replies.', 'albert-ai-butler' );
+		$this->id          = 'albert/get-comment';
+		$this->label       = __( 'Get Comment', 'albert-ai-butler' );
+		$this->description = __( 'Read one comment in its thread before you act on it; get the ID from albert/find-comments.', 'albert-ai-butler' );
 		$this->category    = 'comments';
 		$this->group       = 'comments';
 
@@ -65,13 +65,13 @@ class ViewComment extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id' => [
+				'comment_id' => [
 					'type'        => 'integer',
-					'description' => 'The comment ID.',
+					'description' => 'The comment ID, from albert/find-comments.',
 					'minimum'     => 1,
 				],
 			] + CommentPresenter::reveal_schema(),
-			'required'   => [ 'id' ],
+			'required'   => [ 'comment_id' ],
 		];
 	}
 
@@ -85,17 +85,25 @@ class ViewComment extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'comment'   => [ 'type' => 'object' ],
-				'in_reply'  => [
+				'comment'           => [ 'type' => 'object' ],
+				'in_reply'          => [
 					'type'        => [ 'object', 'null' ],
 					'description' => 'The comment this one replies to, or null for a top-level comment.',
 				],
-				'replies'   => [
+				'replies'           => [
 					'type'        => 'array',
-					'description' => 'Direct replies, oldest first.',
+					'description' => 'Direct replies, oldest first, at most 50.',
 					'items'       => [ 'type' => 'object' ],
 				],
-				'edit_link' => [ 'type' => 'string' ],
+				'replies_total'     => [
+					'type'        => 'integer',
+					'description' => 'Every direct reply, spam and trash left out.',
+				],
+				'replies_truncated' => [
+					'type'        => 'boolean',
+					'description' => 'True when there are more replies than returned; list them with albert/find-comments and parent_id.',
+				],
+				'edit_link'         => [ 'type' => 'string' ],
 			],
 			'required'   => [ 'comment' ],
 		];
@@ -119,7 +127,7 @@ class ViewComment extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$comment = CommentPresenter::find( absint( $args['id'] ?? 0 ) );
+		$comment = CommentPresenter::find( is_int( $args['comment_id'] ?? null ) ? $args['comment_id'] : 0 );
 		if ( is_wp_error( $comment ) ) {
 			return $comment;
 		}
@@ -129,16 +137,16 @@ class ViewComment extends BaseAbility {
 			$parent = null;
 		}
 
-		$replies = get_comments(
-			[
-				'parent'  => (int) $comment->comment_ID,
-				'status'  => 'all',
-				'type'    => CommentPresenter::QUERY_TYPES,
-				'orderby' => 'comment_date_gmt',
-				'order'   => 'ASC',
-				'number'  => self::MAX_REPLIES,
-			]
-		);
+		$reply_query = [
+			'parent'  => (int) $comment->comment_ID,
+			'status'  => 'all',
+			'type'    => CommentPresenter::QUERY_TYPES,
+			'orderby' => 'comment_date_gmt',
+			'order'   => 'ASC',
+		];
+
+		$replies       = get_comments( $reply_query + [ 'number' => self::MAX_REPLIES ] );
+		$replies_total = (int) get_comments( $reply_query + [ 'count' => true ] );
 
 		$reply_items = [];
 		foreach ( is_array( $replies ) ? $replies : [] as $reply ) {
@@ -149,10 +157,12 @@ class ViewComment extends BaseAbility {
 
 		return CommentPresenter::redact(
 			[
-				'comment'   => CommentPresenter::format( $comment ),
-				'in_reply'  => $parent instanceof WP_Comment ? CommentPresenter::format( $parent ) : null,
-				'replies'   => $reply_items,
-				'edit_link' => admin_url( 'comment.php?action=editcomment&c=' . (int) $comment->comment_ID ),
+				'comment'           => CommentPresenter::format( $comment ),
+				'in_reply'          => $parent instanceof WP_Comment ? CommentPresenter::format( $parent ) : null,
+				'replies'           => $reply_items,
+				'replies_total'     => $replies_total,
+				'replies_truncated' => $replies_total > self::MAX_REPLIES,
+				'edit_link'         => admin_url( 'comment.php?action=editcomment&c=' . (int) $comment->comment_ID ),
 			],
 			$args
 		);

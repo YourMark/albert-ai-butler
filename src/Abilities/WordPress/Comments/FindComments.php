@@ -35,7 +35,7 @@ class FindComments extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/find-comments';
 		$this->label       = __( 'Find Comments', 'albert-ai-butler' );
-		$this->description = __( 'Find comments by status, post or text, such as the comments waiting for approval.', 'albert-ai-butler' );
+		$this->description = __( 'Find comments matching filters, for example the ones waiting for approval before you moderate them with albert/moderate-comment.', 'albert-ai-butler' );
 		$this->category    = 'comments';
 		$this->group       = 'comments';
 
@@ -65,39 +65,39 @@ class FindComments extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'status'   => [
+				'status'    => [
 					'type'        => 'string',
 					'enum'        => array_merge( [ 'all' ], CommentPresenter::STATUSES ),
 					'description' => 'Which comments to return. "hold" is waiting for approval. "all" is approved and held, without spam and trash. Default "all".',
 					'default'     => 'all',
 				],
-				'post_id'  => [
+				'post_id'   => [
 					'type'        => 'integer',
 					'description' => 'Only comments on this post or page.',
 					'minimum'     => 1,
 				],
-				'parent'   => [
+				'parent_id' => [
 					'type'        => 'integer',
-					'description' => 'Only replies to this comment. 0 for top-level comments only.',
+					'description' => 'Only direct replies to this comment ID. 0 for top-level comments only.',
 					'minimum'     => 0,
 				],
-				'search'   => [
+				'search'    => [
 					'type'        => 'string',
 					'description' => 'Text to look for in the comment. While personal data is masked, only the comment text is searched; otherwise also its author name, email and website.',
 				],
-				'type'     => [
+				'type'      => [
 					'type'        => 'string',
 					'enum'        => [ 'comment', 'pings', 'all' ],
 					'description' => '"comment" for comments (default), "pings" for pingbacks and trackbacks, "all" for both. Product reviews are never included.',
 					'default'     => 'comment',
 				],
-				'page'     => [
+				'page'      => [
 					'type'        => 'integer',
 					'description' => 'Page of results. Default 1.',
 					'minimum'     => 1,
 					'default'     => 1,
 				],
-				'per_page' => [
+				'per_page'  => [
 					'type'        => 'integer',
 					'description' => 'Comments per page. Default 20.',
 					'minimum'     => 1,
@@ -170,12 +170,12 @@ class FindComments extends BaseAbility {
 		$type               = (string) ( $args['type'] ?? 'comment' );
 		$query_args['type'] = $type === 'all' ? CommentPresenter::QUERY_TYPES : $type;
 
-		if ( ! empty( $args['post_id'] ) ) {
-			$query_args['post_id'] = absint( $args['post_id'] );
+		if ( isset( $args['post_id'] ) && is_int( $args['post_id'] ) ) {
+			$query_args['post_id'] = $args['post_id'];
 		}
 
-		if ( isset( $args['parent'] ) ) {
-			$query_args['parent'] = absint( $args['parent'] );
+		if ( isset( $args['parent_id'] ) && is_int( $args['parent_id'] ) ) {
+			$query_args['parent'] = $args['parent_id'];
 		}
 
 		$content_only = null;

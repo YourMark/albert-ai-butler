@@ -19,8 +19,9 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Turns comments into ability output, with the author's details masked per privacy mode.
  *
- * The author sits in its own sub-array without an `id`, so the anonymiser reduces the
- * name to initials instead of a "Customer #" reference, empties the URL and drops the IP.
+ * The author's name is `display_name`, which the anonymiser always masks, so the post
+ * reference can keep a plain `name`. The author has no `id`, so the name becomes initials
+ * instead of a "Customer #" reference; the URL is emptied and the IP dropped.
  *
  * @since 1.6.0
  */
@@ -57,6 +58,13 @@ class CommentPresenter {
 	public const QUERY_TYPES = [ 'comment', 'pings' ];
 
 	/**
+	 * Error code for a comment the user may not change, ending in `_permission_denied` so it logs as blocked.
+	 *
+	 * @since 1.6.0
+	 */
+	public const PERMISSION_DENIED = 'albert_comment_permission_denied';
+
+	/**
 	 * Input schema property for revealing personal data.
 	 *
 	 * @return array<string, array<string, mixed>>
@@ -66,7 +74,7 @@ class CommentPresenter {
 		return [
 			'reveal_personal_data' => [
 				'type'        => 'boolean',
-				'description' => "Return commenters' real names, emails, websites and IP addresses instead of masked ones. Ignored unless privacy mode is Balanced.",
+				'description' => "Return commenters' real names, emails, websites and IP addresses, which privacy mode otherwise masks or leaves out. Needs the moderate_comments capability; ignored unless privacy mode is Balanced.",
 				'default'     => false,
 			],
 		];
@@ -83,22 +91,35 @@ class CommentPresenter {
 		$post_id = (int) $comment->comment_post_ID;
 
 		return [
-			'id'         => (int) $comment->comment_ID,
-			'post_id'    => $post_id,
-			'post_title' => get_the_title( $post_id ),
-			'parent'     => (int) $comment->comment_parent,
-			'status'     => self::status( $comment ),
-			'type'       => $comment->comment_type !== '' ? $comment->comment_type : 'comment',
-			'date'       => $comment->comment_date,
-			'content'    => $comment->comment_content,
-			'link'       => get_comment_link( $comment ),
-			'author'     => [
-				'user_id'    => (int) $comment->user_id,
-				'name'       => $comment->comment_author,
-				'email'      => $comment->comment_author_email,
-				'url'        => $comment->comment_author_url,
-				'ip_address' => $comment->comment_author_IP,
+			'id'        => (int) $comment->comment_ID,
+			'post'      => self::post_reference( $post_id ),
+			'parent_id' => (int) $comment->comment_parent,
+			'status'    => self::status( $comment ),
+			'type'      => $comment->comment_type !== '' ? $comment->comment_type : 'comment',
+			'date'      => $comment->comment_date,
+			'content'   => $comment->comment_content,
+			'link'      => get_comment_link( $comment ),
+			'author'    => [
+				'user_id'      => (int) $comment->user_id,
+				'display_name' => $comment->comment_author,
+				'email'        => $comment->comment_author_email,
+				'url'          => $comment->comment_author_url,
+				'ip_address'   => $comment->comment_author_IP,
 			],
+		];
+	}
+
+	/**
+	 * The post a comment is on, as `{ id, name }`.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array{id: int, name: string}
+	 * @since 1.6.0
+	 */
+	public static function post_reference( int $post_id ): array {
+		return [
+			'id'   => $post_id,
+			'name' => get_the_title( $post_id ),
 		];
 	}
 
@@ -114,10 +135,7 @@ class CommentPresenter {
 		return PiiPolicy::redact(
 			$payload,
 			$args,
-			[
-				'mask_context_names' => true,
-				'reveal_capability'  => self::CAPABILITY,
-			]
+			[ 'reveal_capability' => self::CAPABILITY ]
 		);
 	}
 
@@ -179,10 +197,10 @@ class CommentPresenter {
 
 		if ( ! $comment instanceof WP_Comment || ! self::can_access( $comment ) ) {
 			return new WP_Error(
-				'comment_not_found',
+				'albert_comment_not_found',
 				sprintf(
 					/* translators: %d: Comment ID */
-					__( 'Comment with ID %d not found.', 'albert-ai-butler' ),
+					__( 'Comment with ID %d not found. Find comments with albert/find-comments.', 'albert-ai-butler' ),
 					$comment_id
 				),
 				[ 'status' => 404 ]
@@ -190,26 +208,5 @@ class CommentPresenter {
 		}
 
 		return $comment;
-	}
-
-	/**
-	 * A REST error as an ability error, with permission failures named as such.
-	 *
-	 * @param mixed  $data     Response data.
-	 * @param int    $status   HTTP status.
-	 * @param string $fallback Message when the response has none.
-	 * @return WP_Error
-	 * @since 1.6.0
-	 */
-	public static function rest_failure( $data, int $status, string $fallback ): WP_Error {
-		$data    = is_array( $data ) ? $data : [];
-		$code    = (string) ( $data['code'] ?? 'rest_error' );
-		$message = (string) ( $data['message'] ?? $fallback );
-
-		if ( $status === 401 || $status === 403 ) {
-			$code = 'comment_permission_denied';
-		}
-
-		return new WP_Error( $code, $message, [ 'status' => $status ] );
 	}
 }

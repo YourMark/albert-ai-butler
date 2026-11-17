@@ -21,9 +21,9 @@ use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Comments\DeleteComment;
 use Albert\Abilities\WordPress\Comments\FindComments;
+use Albert\Abilities\WordPress\Comments\GetComment;
 use Albert\Abilities\WordPress\Comments\ModerateComment;
 use Albert\Abilities\WordPress\Comments\ReplyToComment;
-use Albert\Abilities\WordPress\Comments\ViewComment;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
 use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Media\FindMedia;
@@ -505,24 +505,24 @@ class ExecuteSchemaTest extends TestCase {
 		);
 
 		$this->assert_execute_matches_schema( new FindComments(), [], 'FindComments' );
-		$this->assert_execute_matches_schema( new ViewComment(), [ 'id' => $comment_id ], 'ViewComment' );
+		$this->assert_execute_matches_schema( new GetComment(), [ 'comment_id' => $comment_id ], 'GetComment' );
 		$this->assert_execute_matches_schema(
 			new ReplyToComment(),
 			[
-				'id'      => $comment_id,
-				'content' => 'Thanks.',
+				'comment_id' => $comment_id,
+				'content'    => 'Thanks.',
 			],
 			'ReplyToComment'
 		);
 		$this->assert_execute_matches_schema(
 			new ModerateComment(),
 			[
-				'id'     => $comment_id,
-				'status' => 'spam',
+				'comment_ids' => [ $comment_id ],
+				'status'      => 'spam',
 			],
 			'ModerateComment'
 		);
-		$this->assert_execute_matches_schema( new DeleteComment(), [ 'id' => $comment_id ], 'DeleteComment' );
+		$this->assert_execute_matches_schema( new DeleteComment(), [ 'comment_id' => $comment_id ], 'DeleteComment' );
 	}
 
 	/**

@@ -11,16 +11,16 @@ namespace Albert\Abilities\WordPress\Comments;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
+use WP_Comment;
 use WP_Error;
 use WP_REST_Request;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Permanently deletes a comment, through core's comments endpoint.
+ * Moves a comment to the trash, or deletes it permanently with `force`, through core's comments endpoint.
  *
- * Always `force`: moving to the trash is `moderate-comment`'s job, so this one does
- * the one thing the name says.
+ * Annotated destructive because `force` purges the comment.
  *
  * @since 1.6.0
  */
@@ -34,7 +34,7 @@ class DeleteComment extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/delete-comment';
 		$this->label       = __( 'Delete Comment', 'albert-ai-butler' );
-		$this->description = __( 'Permanently delete a comment. Its replies stay and move up a level.', 'albert-ai-butler' );
+		$this->description = __( 'Move a comment to the trash; send force to delete it permanently. Get the ID from albert/find-comments.', 'albert-ai-butler' );
 		$this->category    = 'comments';
 		$this->group       = 'comments';
 
@@ -46,8 +46,8 @@ class DeleteComment extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::delete(
-				'This cannot be undone. To remove a comment from the site but keep a way back, use '
-				. 'albert/moderate-comment with "trash" instead.'
+				'A trashed comment can be restored from wp-admin until the trash is emptied. "force" cannot be '
+				. 'undone; ask the person before sending it.'
 			),
 		];
 
@@ -64,13 +64,18 @@ class DeleteComment extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id' => [
+				'comment_id' => [
 					'type'        => 'integer',
-					'description' => 'The comment ID to delete.',
+					'description' => 'The ID of the comment to delete, from albert/find-comments.',
 					'minimum'     => 1,
 				],
+				'force'      => [
+					'type'        => 'boolean',
+					'description' => 'Delete permanently instead of moving to the trash. Replies stay and move up a level. Default false.',
+					'default'     => false,
+				],
 			],
-			'required'   => [ 'id' ],
+			'required'   => [ 'comment_id' ],
 		];
 	}
 
@@ -84,10 +89,21 @@ class DeleteComment extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'      => [ 'type' => 'integer' ],
-				'deleted' => [ 'type' => 'boolean' ],
+				'id'              => [ 'type' => 'integer' ],
+				'trashed'         => [
+					'type'        => 'boolean',
+					'description' => 'True when the comment is now in the trash.',
+				],
+				'deleted'         => [
+					'type'        => 'boolean',
+					'description' => 'True when the comment is permanently deleted.',
+				],
+				'previous_status' => [
+					'type'        => 'string',
+					'description' => 'The status before this call: approved, hold, spam or trash.',
+				],
 			],
-			'required'   => [ 'id', 'deleted' ],
+			'required'   => [ 'id', 'trashed', 'deleted', 'previous_status' ],
 		];
 	}
 
@@ -109,28 +125,37 @@ class DeleteComment extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$comment = CommentPresenter::find( absint( $args['id'] ?? 0 ) );
+		$comment = CommentPresenter::find( is_int( $args['comment_id'] ?? null ) ? $args['comment_id'] : 0 );
 		if ( is_wp_error( $comment ) ) {
 			return $comment;
 		}
 
-		$id      = (int) $comment->comment_ID;
+		$force           = array_key_exists( 'force', $args ) && $args['force'] !== null ? (bool) $args['force'] : false;
+		$id              = (int) $comment->comment_ID;
+		$previous_status = CommentPresenter::status( $comment );
+
 		$request = new WP_REST_Request( 'DELETE', '/wp/v2/comments/' . $id );
-		$request->set_param( 'force', true );
+		$request->set_param( 'force', $force );
 
 		$response = rest_do_request( $request );
 
 		if ( $response->is_error() ) {
-			return CommentPresenter::rest_failure(
+			return self::rest_failure(
 				rest_get_server()->response_to_data( $response, false ),
 				$response->get_status(),
-				__( 'The comment could not be deleted.', 'albert-ai-butler' )
+				__( 'The comment could not be deleted.', 'albert-ai-butler' ),
+				CommentPresenter::PERMISSION_DENIED
 			);
 		}
 
+		// Read back, so the output says what happened rather than what was asked.
+		$after = get_comment( $id );
+
 		return [
-			'id'      => $id,
-			'deleted' => true,
+			'id'              => $id,
+			'trashed'         => $after instanceof WP_Comment && CommentPresenter::status( $after ) === 'trash',
+			'deleted'         => ! $after instanceof WP_Comment,
+			'previous_status' => $previous_status,
 		];
 	}
 }

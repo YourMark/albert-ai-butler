@@ -17,10 +17,11 @@ use WP_REST_Request;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Approves, holds, spams or trashes one or more comments, through core's comments endpoint.
+ * Approves, holds or marks as spam one or more comments, through core's comments endpoint.
  *
- * Annotated destructive, so safe mode holds it: until Revert ships nothing can put a
- * moderated comment back the way it was. 1.7.0 relaxes this.
+ * Not destructive, since another call can set the status back; safe mode holds it by name
+ * instead ({@see \Albert\SafeMode\RiskPolicy}), because approving publishes a visitor's
+ * text on the site.
  *
  * @since 1.6.0
  */
@@ -34,6 +35,13 @@ class ModerateComment extends BaseAbility {
 	private const MAX_IDS = 50;
 
 	/**
+	 * Statuses this ability sets; trash belongs to albert/delete-comment.
+	 *
+	 * @since 1.6.0
+	 */
+	private const STATUSES = [ 'approved', 'hold', 'spam' ];
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.6.0
@@ -41,7 +49,7 @@ class ModerateComment extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/moderate-comment';
 		$this->label       = __( 'Moderate Comment', 'albert-ai-butler' );
-		$this->description = __( 'Approve, hold, mark as spam or trash one or more comments.', 'albert-ai-butler' );
+		$this->description = __( 'Set the moderation status of up to 50 comments in one call; find them first with albert/find-comments.', 'albert-ai-butler' );
 		$this->category    = 'comments';
 		$this->group       = 'comments';
 
@@ -52,10 +60,9 @@ class ModerateComment extends BaseAbility {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::delete(
-				'Send several IDs in "ids" to moderate them in one call, so the person approves one request '
-				. 'instead of many. "trash" can be undone from wp-admin until the trash is emptied; to remove a comment for '
-				. 'good use albert/delete-comment.'
+			'annotations' => [ 'idempotent' => true ] + Annotations::update(
+				'Send every comment that gets the same status in one call, so the person approves one request '
+				. 'instead of many. To move a comment to the trash use albert/delete-comment.'
 			),
 		];
 
@@ -72,14 +79,9 @@ class ModerateComment extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'     => [
-					'type'        => 'integer',
-					'description' => 'The comment ID. Use "ids" for several.',
-					'minimum'     => 1,
-				],
-				'ids'    => [
+				'comment_ids' => [
 					'type'        => 'array',
-					'description' => 'Several comment IDs, all set to the same status.',
+					'description' => 'IDs of the comments to moderate, all set to the same status. One ID is fine.',
 					'items'       => [
 						'type'    => 'integer',
 						'minimum' => 1,
@@ -87,13 +89,13 @@ class ModerateComment extends BaseAbility {
 					'minItems'    => 1,
 					'maxItems'    => self::MAX_IDS,
 				],
-				'status' => [
+				'status'      => [
 					'type'        => 'string',
-					'enum'        => CommentPresenter::STATUSES,
-					'description' => '"approved" publishes it, "hold" takes it back to waiting for approval, "spam" marks it as spam, "trash" moves it to the trash.',
+					'enum'        => self::STATUSES,
+					'description' => '"approved" publishes the comments, "hold" takes them back to waiting for approval, "spam" marks them as spam.',
 				],
 			],
-			'required'   => [ 'status' ],
+			'required'   => [ 'comment_ids', 'status' ],
 		];
 	}
 
@@ -145,31 +147,7 @@ class ModerateComment extends BaseAbility {
 	 */
 	public function execute( array $args ): array|WP_Error {
 		$status = (string) ( $args['status'] ?? '' );
-		if ( ! in_array( $status, CommentPresenter::STATUSES, true ) ) {
-			return new WP_Error( 'comment_status_invalid', __( 'Status must be approved, hold, spam or trash.', 'albert-ai-butler' ), [ 'status' => 400 ] );
-		}
-
-		$ids = isset( $args['ids'] ) && is_array( $args['ids'] ) ? $args['ids'] : [];
-		if ( isset( $args['id'] ) ) {
-			$ids[] = $args['id'];
-		}
-		$ids = array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
-
-		if ( $ids === [] ) {
-			return new WP_Error( 'comment_id_missing', __( 'Send the comment to moderate in "id", or several in "ids".', 'albert-ai-butler' ), [ 'status' => 400 ] );
-		}
-
-		if ( count( $ids ) > self::MAX_IDS ) {
-			return new WP_Error(
-				'comment_too_many',
-				sprintf(
-					/* translators: %d: maximum number of comments */
-					__( 'Moderate at most %d comments per call.', 'albert-ai-butler' ),
-					self::MAX_IDS
-				),
-				[ 'status' => 400 ]
-			);
-		}
+		$ids    = isset( $args['comment_ids'] ) && is_array( $args['comment_ids'] ) ? array_values( array_unique( $args['comment_ids'], SORT_REGULAR ) ) : [];
 
 		$updated = [];
 		$failed  = [];
@@ -203,12 +181,20 @@ class ModerateComment extends BaseAbility {
 	/**
 	 * Set one comment's status.
 	 *
-	 * @param int    $id     Comment ID.
+	 * @param mixed  $id     Comment ID, refused unless a positive integer.
 	 * @param string $status REST status.
 	 * @return bool|WP_Error
 	 * @since 1.6.0
 	 */
-	private function moderate( int $id, string $status ): bool|WP_Error {
+	private function moderate( $id, string $status ): bool|WP_Error {
+		if ( ! is_int( $id ) || $id < 1 ) {
+			return new WP_Error(
+				'albert_invalid_comment_ids',
+				__( 'Every entry in "comment_ids" must be a positive comment ID. Find comments with albert/find-comments.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
+		}
+
 		$comment = CommentPresenter::find( $id );
 		if ( is_wp_error( $comment ) ) {
 			return $comment;
@@ -225,10 +211,11 @@ class ModerateComment extends BaseAbility {
 		$response = rest_do_request( $request );
 
 		if ( $response->is_error() ) {
-			return CommentPresenter::rest_failure(
+			return self::rest_failure(
 				rest_get_server()->response_to_data( $response, false ),
 				$response->get_status(),
-				__( 'The comment could not be moderated.', 'albert-ai-butler' )
+				__( 'The comment could not be moderated.', 'albert-ai-butler' ),
+				CommentPresenter::PERMISSION_DENIED
 			);
 		}
 

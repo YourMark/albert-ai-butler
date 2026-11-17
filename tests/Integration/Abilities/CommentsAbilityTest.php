@@ -11,9 +11,9 @@ namespace Albert\Tests\Integration\Abilities;
 
 use Albert\Abilities\WordPress\Comments\DeleteComment;
 use Albert\Abilities\WordPress\Comments\FindComments;
+use Albert\Abilities\WordPress\Comments\GetComment;
 use Albert\Abilities\WordPress\Comments\ModerateComment;
 use Albert\Abilities\WordPress\Comments\ReplyToComment;
-use Albert\Abilities\WordPress\Comments\ViewComment;
 use Albert\SafeMode\Gate;
 use Albert\Tests\TestCase;
 use WP_Error;
@@ -94,7 +94,7 @@ class CommentsAbilityTest extends TestCase {
 		$this->assertSame( $this->held_id, $comment['id'] );
 		$this->assertSame( 'hold', $comment['status'] );
 		$this->assertSame( 'Is this still in stock?', $comment['content'] );
-		$this->assertSame( 'J.V.', $comment['author']['name'] );
+		$this->assertSame( 'J.V.', $comment['author']['display_name'] );
 		$this->assertSame( 'j***@e***.com', $comment['author']['email'] );
 		$this->assertSame( '', $comment['author']['url'] );
 		$this->assertArrayNotHasKey( 'ip_address', $comment['author'] );
@@ -107,17 +107,17 @@ class CommentsAbilityTest extends TestCase {
 	 */
 	public function test_reveal_follows_privacy_mode(): void {
 		$args = [
-			'id'                   => $this->held_id,
+			'comment_id'           => $this->held_id,
 			'reveal_personal_data' => true,
 		];
 
-		$revealed = ( new ViewComment() )->execute( $args );
+		$revealed = ( new GetComment() )->execute( $args );
 		$this->assertIsArray( $revealed );
 		$this->assertSame( 'jane@example.com', $revealed['comment']['author']['email'] );
 		$this->assertSame( '203.0.113.7', $revealed['comment']['author']['ip_address'] );
 
 		update_option( 'albert_privacy_mode', 'strict' );
-		$strict = ( new ViewComment() )->execute( $args );
+		$strict = ( new GetComment() )->execute( $args );
 		$this->assertIsArray( $strict );
 		$this->assertSame( 'j***@e***.com', $strict['comment']['author']['email'] );
 	}
@@ -152,10 +152,10 @@ class CommentsAbilityTest extends TestCase {
 	public function test_privacy_off_returns_raw_details(): void {
 		update_option( 'albert_privacy_mode', 'off' );
 
-		$result = ( new ViewComment() )->execute( [ 'id' => $this->held_id ] );
+		$result = ( new GetComment() )->execute( [ 'comment_id' => $this->held_id ] );
 
 		$this->assertIsArray( $result );
-		$this->assertSame( 'Jane Visitor', $result['comment']['author']['name'] );
+		$this->assertSame( 'Jane Visitor', $result['comment']['author']['display_name'] );
 	}
 
 	/**
@@ -197,16 +197,16 @@ class CommentsAbilityTest extends TestCase {
 		foreach ( [ 'review', 'note', 'order_note', 'some_plugin_type' ] as $type ) {
 			$id = $this->comment( [ 'comment_type' => $type ] );
 
-			foreach ( [ new ViewComment(), new DeleteComment() ] as $ability ) {
-				$result = $ability->execute( [ 'id' => $id ] );
+			foreach ( [ new GetComment(), new DeleteComment() ] as $ability ) {
+				$result = $ability->execute( [ 'comment_id' => $id ] );
 				$this->assertInstanceOf( WP_Error::class, $result, $type );
-				$this->assertSame( 'comment_not_found', $result->get_error_code(), $type );
+				$this->assertSame( 'albert_comment_not_found', $result->get_error_code(), $type );
 			}
 
 			$moderated = ( new ModerateComment() )->execute(
 				[
-					'id'     => $id,
-					'status' => 'spam',
+					'comment_ids' => [ $id ],
+					'status'      => 'spam',
 				]
 			);
 			$this->assertInstanceOf( WP_Error::class, $moderated, $type );
@@ -236,13 +236,13 @@ class CommentsAbilityTest extends TestCase {
 		$this->assertIsArray( $found );
 		$this->assertNotContains( $hidden, array_column( $found['comments'], 'id' ) );
 
-		$viewed = ( new ViewComment() )->execute( [ 'id' => $hidden ] );
+		$viewed = ( new GetComment() )->execute( [ 'comment_id' => $hidden ] );
 		$this->assertInstanceOf( WP_Error::class, $viewed );
 
 		$replied = ( new ReplyToComment() )->execute(
 			[
-				'id'      => $hidden,
-				'content' => 'Thanks!',
+				'comment_id' => $hidden,
+				'content'    => 'Thanks!',
 			]
 		);
 		$this->assertInstanceOf( WP_Error::class, $replied );
@@ -264,8 +264,8 @@ class CommentsAbilityTest extends TestCase {
 
 		$result = ( new ReplyToComment() )->execute(
 			[
-				'id'      => $this->held_id,
-				'content' => 'Thanks!',
+				'comment_id' => $this->held_id,
+				'content'    => 'Thanks!',
 			]
 		);
 
@@ -286,11 +286,11 @@ class CommentsAbilityTest extends TestCase {
 			]
 		);
 
-		$result = ( new ViewComment() )->execute( [ 'id' => $reply ] );
+		$result = ( new GetComment() )->execute( [ 'comment_id' => $reply ] );
 		$this->assertIsArray( $result );
 		$this->assertSame( $this->held_id, $result['in_reply']['id'] );
 
-		$parent = ( new ViewComment() )->execute( [ 'id' => $this->held_id ] );
+		$parent = ( new GetComment() )->execute( [ 'comment_id' => $this->held_id ] );
 		$this->assertIsArray( $parent );
 		$this->assertSame( [ $reply ], array_column( $parent['replies'], 'id' ) );
 		$this->assertNull( $parent['in_reply'] );
@@ -302,10 +302,10 @@ class CommentsAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_unknown_comment_is_not_found(): void {
-		$result = ( new ViewComment() )->execute( [ 'id' => 999999 ] );
+		$result = ( new GetComment() )->execute( [ 'comment_id' => 999999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'comment_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_comment_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -316,8 +316,8 @@ class CommentsAbilityTest extends TestCase {
 	public function test_reply_approves_the_held_comment_and_posts_as_the_user(): void {
 		$result = ( new ReplyToComment() )->execute(
 			[
-				'id'      => $this->held_id,
-				'content' => 'Yes, it is.',
+				'comment_id' => $this->held_id,
+				'content'    => 'Yes, it is.',
 			]
 		);
 
@@ -339,13 +339,13 @@ class CommentsAbilityTest extends TestCase {
 
 		$result = ( new ReplyToComment() )->execute(
 			[
-				'id'      => $this->held_id,
-				'content' => 'Hello',
+				'comment_id' => $this->held_id,
+				'content'    => 'Hello',
 			]
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'comment_not_repliable', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_comment_id', $result->get_error_code() );
 	}
 
 	/**
@@ -359,8 +359,8 @@ class CommentsAbilityTest extends TestCase {
 		$this->assertIsArray(
 			$moderate->execute(
 				[
-					'id'     => $this->held_id,
-					'status' => 'approved',
+					'comment_ids' => [ $this->held_id ],
+					'status'      => 'approved',
 				]
 			)
 		);
@@ -368,8 +368,8 @@ class CommentsAbilityTest extends TestCase {
 
 		$again = $moderate->execute(
 			[
-				'id'     => $this->held_id,
-				'status' => 'approved',
+				'comment_ids' => [ $this->held_id ],
+				'status'      => 'approved',
 			]
 		);
 		$this->assertIsArray( $again );
@@ -377,19 +377,11 @@ class CommentsAbilityTest extends TestCase {
 
 		$moderate->execute(
 			[
-				'id'     => $this->held_id,
-				'status' => 'spam',
+				'comment_ids' => [ $this->held_id ],
+				'status'      => 'spam',
 			]
 		);
 		$this->assertSame( 'spam', wp_get_comment_status( $this->held_id ) );
-
-		$moderate->execute(
-			[
-				'id'     => $this->held_id,
-				'status' => 'trash',
-			]
-		);
-		$this->assertSame( 'trash', wp_get_comment_status( $this->held_id ) );
 	}
 
 	/**
@@ -402,41 +394,167 @@ class CommentsAbilityTest extends TestCase {
 
 		$result = ( new ModerateComment() )->execute(
 			[
-				'ids'    => [ $this->held_id, $other, 999999 ],
-				'status' => 'spam',
+				'comment_ids' => [ $this->held_id, $other, 999999 ],
+				'status'      => 'spam',
 			]
 		);
 
 		$this->assertIsArray( $result );
 		$this->assertSame( [ $this->held_id, $other ], $result['updated'] );
 		$this->assertSame( 999999, $result['failed'][0]['id'] );
-		$this->assertSame( 'comment_not_found', $result['failed'][0]['code'] );
+		$this->assertSame( 'albert_comment_not_found', $result['failed'][0]['code'] );
 		$this->assertSame( 'spam', wp_get_comment_status( $other ) );
 	}
 
 	/**
-	 * Moderating without an ID is refused.
+	 * A non-positive ID is refused, not dropped, and the rest still go ahead.
 	 *
 	 * @return void
 	 */
-	public function test_moderate_without_id_is_refused(): void {
-		$result = ( new ModerateComment() )->execute( [ 'status' => 'approved' ] );
+	public function test_moderate_refuses_non_positive_ids(): void {
+		$result = ( new ModerateComment() )->execute(
+			[
+				'comment_ids' => [ 0, -5, $this->held_id ],
+				'status'      => 'approved',
+			]
+		);
 
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'comment_id_missing', $result->get_error_code() );
+		$this->assertIsArray( $result );
+		$this->assertSame( [ $this->held_id ], $result['updated'] );
+		$this->assertSame( [ 0, -5 ], array_column( $result['failed'], 'id' ) );
+		$this->assertSame( [ 'albert_invalid_comment_ids', 'albert_invalid_comment_ids' ], array_column( $result['failed'], 'code' ) );
+
+		$single = ( new ModerateComment() )->execute(
+			[
+				'comment_ids' => [ 0 ],
+				'status'      => 'approved',
+			]
+		);
+		$this->assertInstanceOf( WP_Error::class, $single );
+		$this->assertSame( 'albert_invalid_comment_ids', $single->get_error_code() );
 	}
 
 	/**
-	 * Delete removes the comment for good.
+	 * Moderation offers no trash status and declares itself an idempotent, non-destructive update.
 	 *
 	 * @return void
 	 */
-	public function test_delete_is_permanent(): void {
-		$result = ( new DeleteComment() )->execute( [ 'id' => $this->held_id ] );
+	public function test_moderate_schema_and_annotations(): void {
+		$ability = wp_get_ability( 'albert/moderate-comment' );
+		$this->assertNotNull( $ability );
+
+		$schema = $ability->get_input_schema();
+		$this->assertSame( [ 'approved', 'hold', 'spam' ], $schema['properties']['status']['enum'] );
+		$this->assertSame( [ 'comment_ids', 'status' ], $schema['required'] );
+		$this->assertSame( 50, $schema['properties']['comment_ids']['maxItems'] );
+
+		$annotations = $ability->get_meta()['annotations'];
+		$this->assertFalse( $annotations['destructive'] );
+		$this->assertTrue( $annotations['idempotent'] );
+	}
+
+	/**
+	 * Delete moves the comment to the trash by default.
+	 *
+	 * @return void
+	 */
+	public function test_delete_trashes_by_default(): void {
+		$result = ( new DeleteComment() )->execute( [ 'comment_id' => $this->held_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertTrue( $result['trashed'] );
+		$this->assertFalse( $result['deleted'] );
+		$this->assertSame( 'hold', $result['previous_status'] );
+		$this->assertSame( 'trash', wp_get_comment_status( $this->held_id ) );
+	}
+
+	/**
+	 * With force the comment is deleted for good, from the trash too.
+	 *
+	 * @return void
+	 */
+	public function test_delete_with_force_is_permanent(): void {
+		wp_trash_comment( $this->held_id );
+
+		$result = ( new DeleteComment() )->execute(
+			[
+				'comment_id' => $this->held_id,
+				'force'      => true,
+			]
+		);
 
 		$this->assertIsArray( $result );
 		$this->assertTrue( $result['deleted'] );
+		$this->assertFalse( $result['trashed'] );
+		$this->assertSame( 'trash', $result['previous_status'] );
 		$this->assertNull( get_comment( $this->held_id ) );
+	}
+
+	/**
+	 * Get Comment says when it returns only some of the replies, and how many there are.
+	 *
+	 * @return void
+	 */
+	public function test_get_comment_marks_truncated_replies(): void {
+		for ( $i = 0; $i < 51; $i++ ) {
+			$this->comment(
+				[
+					'comment_parent'   => $this->held_id,
+					'comment_approved' => '1',
+				]
+			);
+		}
+
+		$result = ( new GetComment() )->execute( [ 'comment_id' => $this->held_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 50, $result['replies'] );
+		$this->assertSame( 51, $result['replies_total'] );
+		$this->assertTrue( $result['replies_truncated'] );
+	}
+
+	/**
+	 * Comments refer to their post as { id, name }, and the post title is never masked.
+	 *
+	 * @return void
+	 */
+	public function test_post_reference_is_id_and_name(): void {
+		update_option( 'albert_privacy_mode', 'strict' );
+
+		$result = ( new FindComments() )->execute(
+			[
+				'post_id'   => $this->post_id,
+				'parent_id' => 0,
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertSame(
+			[
+				'id'   => $this->post_id,
+				'name' => 'Commented post',
+			],
+			$result['comments'][0]['post']
+		);
+		$this->assertSame( 0, $result['comments'][0]['parent_id'] );
+	}
+
+	/**
+	 * An empty reply is refused as missing content.
+	 *
+	 * @return void
+	 */
+	public function test_empty_reply_is_refused(): void {
+		$result = ( new ReplyToComment() )->execute(
+			[
+				'comment_id' => $this->held_id,
+				'content'    => '   ',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_missing_content', $result->get_error_code() );
+		$this->assertSame( '0', get_comment( $this->held_id )->comment_approved );
 	}
 
 	/**
@@ -447,7 +565,7 @@ class CommentsAbilityTest extends TestCase {
 	public function test_authors_are_refused(): void {
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'author' ] ) );
 
-		foreach ( [ new FindComments(), new ViewComment(), new ReplyToComment(), new ModerateComment(), new DeleteComment() ] as $ability ) {
+		foreach ( [ new FindComments(), new GetComment(), new ReplyToComment(), new ModerateComment(), new DeleteComment() ] as $ability ) {
 			$this->assertInstanceOf( WP_Error::class, $ability->check_permission(), $ability->get_id() );
 		}
 	}
@@ -462,7 +580,7 @@ class CommentsAbilityTest extends TestCase {
 
 		$expected = [
 			'albert/find-comments'    => false,
-			'albert/view-comment'     => false,
+			'albert/get-comment'      => false,
 			'albert/reply-to-comment' => true,
 			'albert/moderate-comment' => true,
 			'albert/delete-comment'   => true,
@@ -471,7 +589,7 @@ class CommentsAbilityTest extends TestCase {
 		foreach ( $expected as $id => $held ) {
 			$ability = wp_get_ability( $id );
 			$this->assertNotNull( $ability, $id . ' is registered' );
-			$this->assertSame( $held, $gate->must_gate( $ability, [ 'id' => $this->held_id ] ), $id );
+			$this->assertSame( $held, $gate->must_gate( $ability, [ 'comment_id' => $this->held_id ] ), $id );
 		}
 	}
 }

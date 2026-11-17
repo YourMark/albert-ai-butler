@@ -52,6 +52,8 @@ class RiskPolicy {
 		'albert/delete-user',
 		// Public the moment it is saved, and it speaks for the site.
 		'albert/reply-to-comment',
+		// Approving publishes a visitor's text on the site.
+		'albert/moderate-comment',
 	];
 
 	/**
