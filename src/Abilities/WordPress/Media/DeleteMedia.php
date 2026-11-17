@@ -113,8 +113,11 @@ class DeleteMedia extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$media_id = absint( $args['id'] ?? 0 );
-		$missing  = self::media_not_found( $media_id );
+		$media_id = self::positive_id( $args, 'id' );
+		if ( $media_id instanceof WP_Error ) {
+			return $media_id;
+		}
+		$missing = self::media_not_found( $media_id );
 
 		if ( $missing !== null ) {
 			return $missing;

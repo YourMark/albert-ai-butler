@@ -71,6 +71,7 @@ class Update extends BaseAbility {
 			'id'         => [
 				'type'        => 'integer',
 				'description' => 'The post ID to update',
+				'minimum'     => 1,
 			],
 			'title'      => [
 				'type'        => 'string',
@@ -178,7 +179,10 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post_id = absint( $args['id'] );
+		$post_id = self::positive_id( $args, 'id' );
+		if ( $post_id instanceof WP_Error ) {
+			return $post_id;
+		}
 
 		// Check if post exists using REST API.
 		$check_request  = new WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );

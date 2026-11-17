@@ -154,8 +154,11 @@ abstract class AbstractBlockEdit extends BaseAbility {
 	 * @since 1.2.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post_id = absint( $args['id'] ?? 0 );
-		$post    = get_post( $post_id );
+		$post_id = self::positive_id( $args, 'id' );
+		if ( $post_id instanceof WP_Error ) {
+			return $post_id;
+		}
+		$post = get_post( $post_id );
 
 		if ( ! $post || $post->post_type !== $this->post_type() ) {
 			return new WP_Error(

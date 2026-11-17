@@ -189,8 +189,11 @@ class ViewPage extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$page_id = absint( $args['id'] );
-		$page    = get_post( $page_id );
+		$page_id = self::positive_id( $args, 'id' );
+		if ( $page_id instanceof WP_Error ) {
+			return $page_id;
+		}
+		$page = get_post( $page_id );
 
 		if ( ! $page || $page->post_type !== 'page' ) {
 			return new WP_Error(

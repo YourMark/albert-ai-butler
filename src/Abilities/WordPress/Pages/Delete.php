@@ -64,6 +64,7 @@ class Delete extends BaseAbility {
 				'id'    => [
 					'type'        => 'integer',
 					'description' => 'The page ID to delete',
+					'minimum'     => 1,
 				],
 				'force' => [
 					'type'        => 'boolean',
@@ -118,7 +119,10 @@ class Delete extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$page_id = absint( $args['id'] );
+		$page_id = self::positive_id( $args, 'id' );
+		if ( $page_id instanceof WP_Error ) {
+			return $page_id;
+		}
 
 		// Check if page exists.
 		$page = get_post( $page_id );

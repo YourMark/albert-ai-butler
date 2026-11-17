@@ -102,8 +102,11 @@ class ViewMedia extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$media_id = absint( $args['id'] );
-		$media    = get_post( $media_id );
+		$media_id = self::positive_id( $args, 'id' );
+		if ( $media_id instanceof WP_Error ) {
+			return $media_id;
+		}
+		$media = get_post( $media_id );
 
 		if ( ! $media || $media->post_type !== 'attachment' ) {
 			return new WP_Error(

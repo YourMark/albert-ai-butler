@@ -64,6 +64,7 @@ class Delete extends BaseAbility {
 				'id'       => [
 					'type'        => 'integer',
 					'description' => 'The user ID to delete',
+					'minimum'     => 1,
 				],
 				'reassign' => [
 					'type'        => 'integer',
@@ -117,7 +118,10 @@ class Delete extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$user_id = absint( $args['id'] );
+		$user_id = self::positive_id( $args, 'id' );
+		if ( $user_id instanceof WP_Error ) {
+			return $user_id;
+		}
 
 		// Check if user exists.
 		$user = get_userdata( $user_id );

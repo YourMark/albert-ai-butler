@@ -103,8 +103,11 @@ class ViewProduct extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$product_id = absint( $args['id'] );
-		$product    = wc_get_product( $product_id );
+		$product_id = self::positive_id( $args, 'id' );
+		if ( $product_id instanceof WP_Error ) {
+			return $product_id;
+		}
+		$product = wc_get_product( $product_id );
 
 		if ( ! $product ) {
 			return new WP_Error(

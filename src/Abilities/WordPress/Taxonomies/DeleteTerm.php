@@ -67,6 +67,7 @@ class DeleteTerm extends BaseAbility {
 				'id'       => [
 					'type'        => 'integer',
 					'description' => 'The term ID to delete (required)',
+					'minimum'     => 1,
 				],
 				'force'    => [
 					'type'        => 'boolean',
@@ -127,7 +128,10 @@ class DeleteTerm extends BaseAbility {
 	 */
 	public function execute( array $args ): array|WP_Error {
 		$taxonomy = $args['taxonomy'] ?? 'category';
-		$term_id  = absint( $args['id'] );
+		$term_id  = self::positive_id( $args, 'id' );
+		if ( $term_id instanceof WP_Error ) {
+			return $term_id;
+		}
 
 		// Determine the REST route WordPress serves this taxonomy's terms on.
 		$route = $this->get_taxonomy_route( $taxonomy );

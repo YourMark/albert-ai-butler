@@ -68,6 +68,7 @@ class Update extends BaseAbility {
 				'id'          => [
 					'type'        => 'integer',
 					'description' => 'The user ID to update',
+					'minimum'     => 1,
 				],
 				'email'       => [
 					'type'        => 'string',
@@ -171,7 +172,10 @@ class Update extends BaseAbility {
 			);
 		}
 
-		$user_id = absint( $args['id'] );
+		$user_id = self::positive_id( $args, 'id' );
+		if ( $user_id instanceof WP_Error ) {
+			return $user_id;
+		}
 
 		// Check if user exists.
 		if ( ! get_userdata( $user_id ) ) {
