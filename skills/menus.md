@@ -29,7 +29,8 @@ Always start with `albert/find-menus`. Read:
 When `header.fallback` is true, the navigation block names no menu and WordPress shows the most
 recently published navigation menu. Publishing a new navigation menu would change the header.
 
-Then call `albert/view-menu` with the menu's `id` and `type` to see its items.
+Then call `albert/get-menu` with the menu's `id` as `menu_id` (and `menu_type`: `classic` or `block`)
+to see its items.
 
 ## Classic menus
 
@@ -37,10 +38,12 @@ Use these only for a menu whose `visible` is true, or one the person is about to
 `albert/assign-menu-location`:
 
 - `albert/add-menu-item`, `albert/update-menu-item`, `albert/move-menu-item`: build and arrange
-  items. Item ids come from `view-menu`.
+  items. They take `menu_item_id` and `parent_item_id`, the item ids `get-menu` returns.
 - `albert/remove-menu-item`: removes one item; its sub-items move up a level. Held for approval.
-- `albert/create-menu`, `albert/assign-menu-location`, `albert/delete-menu`. Deleting a menu is
-  held for approval and cannot be undone.
+- `albert/create-menu` makes an empty menu; `albert/assign-menu-location` then shows it in a
+  location, and `albert/unassign-menu-location` empties one. Both return `previous_menu`, so a
+  location change is one call to undo.
+- `albert/delete-menu`: held for approval and cannot be undone.
 
 Every classic write returns `visible`. When it is false the result carries a `notice`: tell the
 person in plain words that visitors will not see the change, and why.
@@ -48,7 +51,7 @@ person in plain words that visitors will not see the change, and why.
 ## Navigation menus (block themes)
 
 Albert can find and read navigation menus but cannot change them yet. When the visible menu is a
-navigation menu, say so, show its items from `view-menu`, and point the person to
+navigation menu, say so, show its items from `get-menu`, and point the person to
 Appearance > Editor > Navigation. Do not edit a classic menu instead.
 
 ## Rules

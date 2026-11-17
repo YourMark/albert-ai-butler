@@ -25,6 +25,14 @@ defined( 'ABSPATH' ) || exit;
 class FindMenus extends BaseAbility {
 
 	/**
+	 * Most navigation menus listed.
+	 *
+	 * @since 1.6.0
+	 * @var int
+	 */
+	private const NAVIGATION_LIMIT = 100;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.6.0
@@ -32,7 +40,7 @@ class FindMenus extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/find-menus';
 		$this->label       = __( 'Find Menus', 'albert-ai-butler' );
-		$this->description = __( 'List the site\'s menus, classic menus and block theme navigation menus, with where each is shown and which one the header uses.', 'albert-ai-butler' );
+		$this->description = __( 'List every menu on the site with where visitors see it, starting from the menu the header shows; call this before changing any menu.', 'albert-ai-butler' );
 		$this->category    = 'menus';
 		$this->group       = 'menus';
 
@@ -44,7 +52,7 @@ class FindMenus extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::read(
-				'Start here before changing any menu. Read "header" and "summary": on a block theme the header shows a navigation menu (type "block"), and classic menus are not shown at all.'
+				'Read "header" and "summary" first: on a block theme the header shows a navigation menu (type "block"), not a classic menu. Pass a menu\'s "id" to albert/get-menu as menu_id to read its items.'
 			),
 		];
 
@@ -98,11 +106,11 @@ class FindMenus extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'summary'          => [
+				'summary'                    => [
 					'type'        => 'string',
 					'description' => 'Which menu visitors see, in plain words.',
 				],
-				'theme'            => [
+				'theme'                      => [
 					'type'       => 'object',
 					'properties' => [
 						'name'        => [ 'type' => 'string' ],
@@ -110,7 +118,7 @@ class FindMenus extends BaseAbility {
 						'block_theme' => [ 'type' => 'boolean' ],
 					],
 				],
-				'header'           => [
+				'header'                     => [
 					'type'        => 'object',
 					'description' => 'What the header shows. "type": "block" is a navigation menu, "classic" a classic menu, "classic_copy" a classic menu core will copy into a navigation menu, "inline" links kept in the template part itself, "page_list" the published pages, "none" nothing found.',
 					'properties'  => [
@@ -128,7 +136,7 @@ class FindMenus extends BaseAbility {
 						'description' => [ 'type' => 'string' ],
 					],
 				],
-				'classic_menus'    => [
+				'classic_menus'              => [
 					'type'  => 'array',
 					'items' => [
 						'type'       => 'object',
@@ -149,9 +157,10 @@ class FindMenus extends BaseAbility {
 						],
 					],
 				],
-				'navigation_menus' => [
-					'type'  => 'array',
-					'items' => [
+				'navigation_menus'           => [
+					'type'        => 'array',
+					'description' => 'Block theme navigation menus, newest first. At most ' . self::NAVIGATION_LIMIT . ' are listed; see "navigation_menus_truncated".',
+					'items'       => [
 						'type'       => 'object',
 						'properties' => [
 							'id'       => [ 'type' => 'integer' ],
@@ -167,23 +176,24 @@ class FindMenus extends BaseAbility {
 						],
 					],
 				],
-				'locations'        => [
+				'navigation_menus_truncated' => [
+					'type'        => 'boolean',
+					'description' => 'True when the site has more navigation menus than are listed; the oldest are left out. "header" still names the menu the header shows.',
+				],
+				'locations'                  => [
 					'type'        => 'array',
 					'description' => 'Menu locations the theme registers. A block theme usually has none, and does not show them.',
 					'items'       => [
 						'type'       => 'object',
 						'properties' => [
-							'slug'    => [ 'type' => 'string' ],
-							'name'    => [ 'type' => 'string' ],
-							'menu_id' => [
-								'type'        => 'integer',
-								'description' => 'The classic menu assigned, 0 for none.',
-							],
+							'slug' => [ 'type' => 'string' ],
+							'name' => [ 'type' => 'string' ],
+							'menu' => MenuSupport::menu_reference_schema( 'The classic menu assigned, null for none.' ),
 						],
 					],
 				],
 			],
-			'required'   => [ 'summary', 'theme', 'header', 'classic_menus', 'navigation_menus', 'locations' ],
+			'required'   => [ 'summary', 'theme', 'header', 'classic_menus', 'navigation_menus', 'navigation_menus_truncated', 'locations' ],
 		];
 	}
 
@@ -213,9 +223,9 @@ class FindMenus extends BaseAbility {
 		$locations = [];
 		foreach ( $registered as $slug => $name ) {
 			$locations[] = [
-				'slug'    => (string) $slug,
-				'name'    => (string) $name,
-				'menu_id' => (int) ( $assigned[ $slug ] ?? 0 ),
+				'slug' => (string) $slug,
+				'name' => (string) $name,
+				'menu' => MenuSupport::menu_reference( (int) ( $assigned[ $slug ] ?? 0 ) ),
 			];
 		}
 
@@ -244,12 +254,14 @@ class FindMenus extends BaseAbility {
 			[
 				'post_type'      => 'wp_navigation',
 				'post_status'    => [ 'publish', 'draft', 'pending', 'private', 'future' ],
-				'posts_per_page' => 100,
+				// One more than listed, to know whether any were left out.
+				'posts_per_page' => self::NAVIGATION_LIMIT + 1,
 				'orderby'        => 'date',
 				'order'          => 'DESC',
 			]
 		);
-		foreach ( $posts as $post ) {
+		$truncated = count( $posts ) > self::NAVIGATION_LIMIT;
+		foreach ( array_slice( $posts, 0, self::NAVIGATION_LIMIT ) as $post ) {
 			if ( ! $post instanceof WP_Post ) {
 				continue;
 			}
@@ -271,16 +283,17 @@ class FindMenus extends BaseAbility {
 		$header      = $locator->header();
 
 		return [
-			'summary'          => $this->summary( $block_theme, $header['description'], $classic ),
-			'theme'            => [
+			'summary'                    => $this->summary( $block_theme, $header['description'], $classic ),
+			'theme'                      => [
 				'name'        => (string) $theme->get( 'Name' ),
 				'stylesheet'  => $theme->get_stylesheet(),
 				'block_theme' => $block_theme,
 			],
-			'header'           => $header,
-			'classic_menus'    => $classic,
-			'navigation_menus' => $navigation,
-			'locations'        => $locations,
+			'header'                     => $header,
+			'classic_menus'              => $classic,
+			'navigation_menus'           => $navigation,
+			'navigation_menus_truncated' => $truncated,
+			'locations'                  => $locations,
 		];
 	}
 

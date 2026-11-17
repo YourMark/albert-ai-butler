@@ -16,7 +16,7 @@ use WP_Error;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Shows a classic menu in a theme's menu location, or empties the location.
+ * Shows a classic menu in a theme's menu location.
  *
  * Core's menu-locations route is read-only; a location is assigned through the
  * menus route's `locations` field, which replaces that menu's whole list.
@@ -33,7 +33,7 @@ class AssignMenuLocation extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/assign-menu-location';
 		$this->label       = __( 'Assign Menu Location', 'albert-ai-butler' );
-		$this->description = __( 'Show a classic menu in one of the theme\'s menu locations, replacing the menu there, or empty the location with menu_id 0.', 'albert-ai-butler' );
+		$this->description = __( 'Show a classic menu in one of the theme\'s menu locations, replacing the menu there; to empty a location use albert/unassign-menu-location.', 'albert-ai-butler' );
 		$this->category    = 'menus';
 		$this->group       = 'menus';
 
@@ -45,7 +45,7 @@ class AssignMenuLocation extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::update(
-				'This changes what visitors see straight away. Location slugs come from albert/find-menus; a block theme usually has none.'
+				'This changes what visitors see straight away. Location slugs come from albert/find-menus; a block theme usually has none. To undo, assign "previous_menu" again.'
 			),
 		];
 
@@ -64,13 +64,13 @@ class AssignMenuLocation extends BaseAbility {
 			'properties' => [
 				'location' => [
 					'type'        => 'string',
-					'description' => 'The menu location slug.',
+					'description' => 'The menu location slug from albert/find-menus.',
 					'minLength'   => 1,
 				],
 				'menu_id'  => [
 					'type'        => 'integer',
-					'description' => 'The classic menu to show there, or 0 to leave the location empty.',
-					'minimum'     => 0,
+					'description' => 'The classic menu to show there, from albert/find-menus.',
+					'minimum'     => 1,
 				],
 			],
 			'required'   => [ 'location', 'menu_id' ],
@@ -87,14 +87,11 @@ class AssignMenuLocation extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'location'         => [ 'type' => 'string' ],
-				'menu_id'          => [ 'type' => 'integer' ],
-				'previous_menu_id' => [
-					'type'        => 'integer',
-					'description' => 'The menu that was there before, 0 for none.',
-				],
+				'location'      => [ 'type' => 'string' ],
+				'menu'          => MenuSupport::menu_reference_schema( 'The menu now in the location.' ),
+				'previous_menu' => MenuSupport::menu_reference_schema( 'The menu that was there before, null for none.' ),
 			] + MenuSupport::visibility_schema(),
-			'required'   => [ 'location', 'menu_id', 'previous_menu_id', 'visible', 'shown_in' ],
+			'required'   => [ 'location', 'menu', 'previous_menu', 'visible', 'shown_in' ],
 		];
 	}
 
@@ -116,89 +113,41 @@ class AssignMenuLocation extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$location   = sanitize_text_field( (string) ( $args['location'] ?? '' ) );
-		$menu_id    = absint( $args['menu_id'] ?? 0 );
-		$registered = get_registered_nav_menus();
-
-		if ( ! isset( $registered[ $location ] ) ) {
-			$message = $registered === []
-				? __( 'This theme has no menu locations. On a block theme the header is a navigation block; call albert/find-menus to see which menu it shows.', 'albert-ai-butler' )
-				: sprintf(
-					/* translators: %s: comma-separated location slugs */
-					__( 'This theme has no menu location with that slug. Its locations are: %s.', 'albert-ai-butler' ),
-					implode( ', ', array_map( 'strval', array_keys( $registered ) ) )
-				);
-
-			return new WP_Error( 'menu_location_not_found', $message, [ 'status' => 404 ] );
+		$location = sanitize_text_field( (string) ( $args['location'] ?? '' ) );
+		$missing  = MenuSupport::unregistered_location( $location );
+		if ( $missing instanceof WP_Error ) {
+			return $missing;
 		}
 
-		$assigned = get_nav_menu_locations();
-		$previous = (int) ( $assigned[ $location ] ?? 0 );
-
-		if ( $menu_id > 0 ) {
-			$menu = MenuSupport::classic_menu( $menu_id );
-			if ( is_wp_error( $menu ) ) {
-				return $menu;
-			}
-
-			$target    = $menu_id;
-			$locations = array_merge( $this->locations_of( $assigned, $menu_id ), [ $location ] );
-		} else {
-			$target    = $previous;
-			$locations = array_values( array_diff( $this->locations_of( $assigned, $previous ), [ $location ] ) );
+		$menu = MenuSupport::classic_menu( (int) ( $args['menu_id'] ?? 0 ) );
+		if ( is_wp_error( $menu ) ) {
+			return $menu;
 		}
 
-		if ( $target > 0 ) {
-			$data = MenuSupport::rest(
-				'POST',
-				'/wp/v2/menus/' . $target,
-				[ 'locations' => array_values( array_unique( $locations ) ) ],
-				__( 'The menu location could not be assigned.', 'albert-ai-butler' )
-			);
-			if ( is_wp_error( $data ) ) {
-				return $data;
-			}
+		$menu_id   = (int) $menu->term_id;
+		$assigned  = get_nav_menu_locations();
+		$previous  = MenuSupport::menu_reference( (int) ( $assigned[ $location ] ?? 0 ) );
+		$locations = array_merge( MenuSupport::locations_of( $assigned, $menu_id ), [ $location ] );
+
+		$data = MenuSupport::rest(
+			'POST',
+			'/wp/v2/menus/' . $menu_id,
+			[ 'locations' => array_values( array_unique( $locations ) ) ],
+			__( 'The menu location could not be assigned.', 'albert-ai-butler' )
+		);
+		if ( is_wp_error( $data ) ) {
+			return $data;
 		}
 
-		// Core compares stored ids strictly, so a location saved as a string can survive the write.
-		if ( (int) ( get_nav_menu_locations()[ $location ] ?? 0 ) !== $menu_id ) {
-			return new WP_Error( 'menu_location_not_assigned', __( 'WordPress did not save the menu location.', 'albert-ai-butler' ), [ 'status' => 500 ] );
+		$saved = MenuSupport::location_saved( $location, $menu_id );
+		if ( $saved instanceof WP_Error ) {
+			return $saved;
 		}
 
-		$result = [
-			'location'         => $location,
-			'menu_id'          => $menu_id,
-			'previous_menu_id' => $previous,
-		];
-
-		if ( $menu_id === 0 ) {
-			return $result + [
-				'visible'  => false,
-				'shown_in' => [],
-			];
-		}
-
-		return $result + MenuSupport::visibility_fields( $menu_id );
-	}
-
-	/**
-	 * The locations a menu is in now.
-	 *
-	 * @param array<mixed> $assigned Location slug to menu id.
-	 * @param int          $menu_id  Menu term id.
-	 *
-	 * @return list<string>
-	 * @since 1.6.0
-	 */
-	private function locations_of( array $assigned, int $menu_id ): array {
-		$locations = [];
-
-		foreach ( $assigned as $slug => $id ) {
-			if ( (int) $id === $menu_id ) {
-				$locations[] = (string) $slug;
-			}
-		}
-
-		return $locations;
+		return [
+			'location'      => $location,
+			'menu'          => MenuSupport::menu_reference( $menu_id ),
+			'previous_menu' => $previous,
+		] + MenuSupport::visibility_fields( $menu_id );
 	}
 }

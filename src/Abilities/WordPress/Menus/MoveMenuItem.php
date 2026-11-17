@@ -30,7 +30,7 @@ class MoveMenuItem extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/move-menu-item';
 		$this->label       = __( 'Move Menu Item', 'albert-ai-butler' );
-		$this->description = __( 'Move a classic menu item, with its sub-items, to another position or under another item in the same menu.', 'albert-ai-butler' );
+		$this->description = __( 'Move a classic menu item with its sub-items to a new place in the same menu; read the menu with albert/get-menu first.', 'albert-ai-butler' );
 		$this->category    = 'menus';
 		$this->group       = 'menus';
 
@@ -55,25 +55,30 @@ class MoveMenuItem extends BaseAbility {
 	 */
 	private function get_input_schema(): array {
 		return [
-			'type'       => 'object',
-			'properties' => [
-				'id'       => [
+			'type'        => 'object',
+			'description' => 'Send "parent_item_id", "position" or both.',
+			'properties'  => [
+				'menu_item_id'   => [
 					'type'        => 'integer',
-					'description' => 'The menu item ID, from albert/view-menu.',
+					'description' => 'The menu item ID from albert/get-menu.',
 					'minimum'     => 1,
 				],
-				'parent'   => [
+				'parent_item_id' => [
 					'type'        => 'integer',
-					'description' => 'The item to nest it under, 0 for the top level. Default: where it is now.',
+					'description' => 'The item to nest it under, 0 for the top level. Leave it out to keep its parent.',
 					'minimum'     => 0,
 				],
-				'position' => [
+				'position'       => [
 					'type'        => 'integer',
 					'description' => '1-based position among the parent\'s items. Default: last.',
 					'minimum'     => 1,
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'    => [ 'menu_item_id' ],
+			'anyOf'       => [
+				[ 'required' => [ 'parent_item_id' ] ],
+				[ 'required' => [ 'position' ] ],
+			],
 		];
 	}
 
@@ -91,7 +96,7 @@ class MoveMenuItem extends BaseAbility {
 				'menu_id' => [ 'type' => 'integer' ],
 				'items'   => [
 					'type'        => 'array',
-					'description' => 'The menu\'s items after the move, as albert/view-menu returns them.',
+					'description' => 'The menu\'s items after the move, as albert/get-menu returns them.',
 					'items'       => [ 'type' => 'object' ],
 				],
 			] + MenuSupport::visibility_schema(),
@@ -117,25 +122,21 @@ class MoveMenuItem extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post = MenuSupport::menu_item( absint( $args['id'] ?? 0 ) );
+		$post = MenuSupport::menu_item( (int) ( $args['menu_item_id'] ?? 0 ) );
 		if ( is_wp_error( $post ) ) {
 			return $post;
 		}
 
-		if ( ! isset( $args['parent'] ) && ! isset( $args['position'] ) ) {
-			return new WP_Error( 'nothing_to_update', __( 'Send "parent", "position" or both.', 'albert-ai-butler' ), [ 'status' => 400 ] );
-		}
-
 		$id      = (int) $post->ID;
 		$menu_id = MenuSupport::menu_of_item( $id );
-		$parent  = isset( $args['parent'] ) ? absint( $args['parent'] ) : (int) get_post_meta( $id, '_menu_item_menu_item_parent', true );
+		$parent  = isset( $args['parent_item_id'] ) ? (int) $args['parent_item_id'] : (int) get_post_meta( $id, '_menu_item_menu_item_parent', true );
 
 		// A stored parent outside the menu is shown at the top level, so that is where it stays.
-		if ( ! isset( $args['parent'] ) && $parent > 0 && MenuSupport::menu_of_item( $parent ) !== $menu_id ) {
+		if ( ! isset( $args['parent_item_id'] ) && $parent > 0 && MenuSupport::menu_of_item( $parent ) !== $menu_id ) {
 			$parent = 0;
 		}
 
-		$placed = MenuItemOrder::place( $menu_id, $id, $parent, absint( $args['position'] ?? 0 ) );
+		$placed = MenuItemOrder::place( $menu_id, $id, $parent, (int) ( $args['position'] ?? 0 ) );
 		if ( is_wp_error( $placed ) ) {
 			return $placed;
 		}

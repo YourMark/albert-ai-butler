@@ -12,10 +12,11 @@ use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
 use Albert\Abilities\WordPress\Menus\CreateMenu;
 use Albert\Abilities\WordPress\Menus\DeleteMenu;
 use Albert\Abilities\WordPress\Menus\FindMenus;
+use Albert\Abilities\WordPress\Menus\GetMenu;
 use Albert\Abilities\WordPress\Menus\MoveMenuItem;
 use Albert\Abilities\WordPress\Menus\RemoveMenuItem;
+use Albert\Abilities\WordPress\Menus\UnassignMenuLocation;
 use Albert\Abilities\WordPress\Menus\UpdateMenuItem;
-use Albert\Abilities\WordPress\Menus\ViewMenu;
 use Albert\SafeMode\Gate;
 use Albert\Tests\TestCase;
 use WP_Error;
@@ -405,11 +406,11 @@ class MenusAbilityTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_view_menu_reads_a_navigation_menu_as_a_tree(): void {
+	public function test_get_menu_reads_a_navigation_menu_as_a_tree(): void {
 		$this->use_block_theme();
 		$nav = $this->navigation( 'Main' );
 
-		$result = ( new ViewMenu() )->execute( [ 'id' => $nav ] );
+		$result = ( new GetMenu() )->execute( [ 'menu_id' => $nav ] );
 
 		$this->assertSame( 'block', $result['type'] );
 		$this->assertTrue( $result['visible'] );
@@ -440,10 +441,20 @@ class MenusAbilityTest extends TestCase {
 		$this->assertSame( [ 'primary' ], $by_id[ $main ]['locations'] );
 		$this->assertFalse( $by_id[ $spare ]['visible'] );
 
-		$view = ( new ViewMenu() )->execute(
+		$locations = array_column( $result['locations'], 'menu', 'slug' );
+		$this->assertSame(
 			[
-				'id'   => $spare,
-				'type' => 'classic',
+				'id'   => $main,
+				'name' => 'Main',
+			],
+			$locations['primary']
+		);
+		$this->assertNull( $locations['footer'] );
+
+		$view = ( new GetMenu() )->execute(
+			[
+				'menu_id'   => $spare,
+				'menu_type' => 'classic',
 			]
 		);
 		$this->assertStringContainsString( 'not assigned to a menu location', $view['notice'] );
@@ -463,15 +474,18 @@ class MenusAbilityTest extends TestCase {
 			]
 		);
 
-		$menu = ( new CreateMenu() )->execute(
+		$menu = ( new CreateMenu() )->execute( [ 'name' => 'Header' ] );
+		$this->assertIsArray( $menu );
+		$this->assertFalse( $menu['visible'], 'A new menu is in no location.' );
+		$menu_id = $menu['id'];
+
+		$assigned = ( new AssignMenuLocation() )->execute(
 			[
-				'name'      => 'Header',
-				'locations' => [ 'primary' ],
+				'location' => 'primary',
+				'menu_id'  => $menu_id,
 			]
 		);
-		$this->assertIsArray( $menu );
-		$this->assertTrue( $menu['visible'] );
-		$menu_id = $menu['id'];
+		$this->assertTrue( $assigned['visible'] );
 
 		$home  = ( new AddMenuItem() )->execute(
 			[
@@ -483,7 +497,7 @@ class MenusAbilityTest extends TestCase {
 		$about = ( new AddMenuItem() )->execute(
 			[
 				'menu_id'   => $menu_id,
-				'type'      => 'post_type',
+				'item_type' => 'post_type',
 				'object_id' => $page,
 			]
 		);
@@ -491,21 +505,36 @@ class MenusAbilityTest extends TestCase {
 		$this->assertSame( 'About us', $about['title'] );
 		$team = ( new AddMenuItem() )->execute(
 			[
-				'menu_id'  => $menu_id,
-				'title'    => 'Team',
-				'url'      => 'https://example.com/team',
-				'parent'   => $about['id'],
-				'position' => 1,
+				'menu_id'        => $menu_id,
+				'title'          => 'Team',
+				'url'            => 'https://example.com/team',
+				'parent_item_id' => $about['id'],
+				'position'       => 1,
 			]
 		);
 		$this->assertIsArray( $team );
 
-		$view = ( new ViewMenu() )->execute( [ 'id' => $menu_id ] );
+		$view = ( new GetMenu() )->execute( [ 'menu_id' => $menu_id ] );
 		$this->assertSame( [ 'Home', 'About us', 'About us > Team' ], $this->titles( $view['items'] ) );
+
+		$renamed = ( new UpdateMenuItem() )->execute(
+			[
+				'menu_item_id' => $about['id'],
+				'title'        => 'Who we are',
+			]
+		);
+		$this->assertSame( 'Who we are', $renamed['title'] );
+		$restored = ( new UpdateMenuItem() )->execute(
+			[
+				'menu_item_id'       => $about['id'],
+				'use_original_title' => true,
+			]
+		);
+		$this->assertSame( 'About us', $restored['title'], 'The linked page\'s title is back.' );
 
 		$updated = ( new UpdateMenuItem() )->execute(
 			[
-				'id'              => $home['id'],
+				'menu_item_id'    => $home['id'],
 				'title'           => 'Start',
 				'open_in_new_tab' => true,
 			]
@@ -515,19 +544,19 @@ class MenusAbilityTest extends TestCase {
 
 		$moved = ( new MoveMenuItem() )->execute(
 			[
-				'id'       => $home['id'],
-				'position' => 2,
+				'menu_item_id' => $home['id'],
+				'position'     => 2,
 			]
 		);
 		$this->assertSame( [ 'About us', 'About us > Team', 'Start' ], $this->titles( $moved['items'] ) );
 
-		$removed = ( new RemoveMenuItem() )->execute( [ 'id' => $about['id'] ] );
+		$removed = ( new RemoveMenuItem() )->execute( [ 'menu_item_id' => $about['id'] ] );
 		$this->assertSame( [ $team['id'] ], $removed['moved_up'] );
-		$view = ( new ViewMenu() )->execute( [ 'id' => $menu_id ] );
+		$view = ( new GetMenu() )->execute( [ 'menu_id' => $menu_id ] );
 		$this->assertSame( [ 'Team', 'Start' ], $this->titles( $view['items'] ) );
 		$this->assertNotNull( get_post( $page ), 'The linked page is untouched.' );
 
-		$deleted = ( new DeleteMenu() )->execute( [ 'id' => $menu_id ] );
+		$deleted = ( new DeleteMenu() )->execute( [ 'menu_id' => $menu_id ] );
 		$this->assertTrue( $deleted['deleted'] );
 		$this->assertTrue( $deleted['was_visible'] );
 		$this->assertFalse( wp_get_nav_menu_object( $menu_id ) );
@@ -546,17 +575,17 @@ class MenusAbilityTest extends TestCase {
 
 		$result = ( new MoveMenuItem() )->execute(
 			[
-				'id'     => $parent,
-				'parent' => $child,
+				'menu_item_id'   => $parent,
+				'parent_item_id' => $child,
 			]
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'menu_item_parent_invalid', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_parent_item_id', $result->get_error_code() );
 	}
 
 	/**
-	 * Assigning a location replaces the menu there; menu_id 0 empties it.
+	 * Assigning a location replaces the menu there; unassigning empties it, and is idempotent.
 	 *
 	 * @return void
 	 */
@@ -578,18 +607,25 @@ class MenusAbilityTest extends TestCase {
 				'menu_id'  => $second,
 			]
 		);
-		$this->assertSame( $first, $result['previous_menu_id'] );
+		$this->assertSame(
+			[
+				'id'   => $first,
+				'name' => 'First',
+			],
+			$result['previous_menu']
+		);
+		$this->assertSame( $second, $result['menu']['id'] );
 		$this->assertTrue( $result['visible'] );
 		$this->assertSame( $second, get_nav_menu_locations()['primary'] );
 		$this->assertSame( $first, get_nav_menu_locations()['footer'], 'Other locations keep their menu.' );
 
-		( new AssignMenuLocation() )->execute(
-			[
-				'location' => 'footer',
-				'menu_id'  => 0,
-			]
-		);
+		$emptied = ( new UnassignMenuLocation() )->execute( [ 'location' => 'footer' ] );
+		$this->assertSame( $first, $emptied['previous_menu']['id'] );
 		$this->assertArrayNotHasKey( 'footer', array_filter( get_nav_menu_locations() ) );
+		$this->assertSame( $second, get_nav_menu_locations()['primary'], 'Other locations keep their menu.' );
+
+		$again = ( new UnassignMenuLocation() )->execute( [ 'location' => 'footer' ] );
+		$this->assertNull( $again['previous_menu'], 'Emptying an empty location succeeds.' );
 
 		$missing = ( new AssignMenuLocation() )->execute(
 			[
@@ -597,7 +633,8 @@ class MenusAbilityTest extends TestCase {
 				'menu_id'  => $first,
 			]
 		);
-		$this->assertSame( 'menu_location_not_found', $missing->get_error_code() );
+		$this->assertSame( 'albert_menu_location_not_found', $missing->get_error_code() );
+		$this->assertSame( 'albert_menu_location_not_found', ( new UnassignMenuLocation() )->execute( [ 'location' => 'sidebar' ] )->get_error_code() );
 	}
 
 	/**
@@ -626,8 +663,8 @@ class MenusAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_missing_menus_and_items_are_not_found(): void {
-		$this->assertSame( 'menu_not_found', ( new ViewMenu() )->execute( [ 'id' => 999999 ] )->get_error_code() );
-		$this->assertSame( 'menu_item_not_found', ( new RemoveMenuItem() )->execute( [ 'id' => 999999 ] )->get_error_code() );
+		$this->assertSame( 'albert_menu_not_found', ( new GetMenu() )->execute( [ 'menu_id' => 999999 ] )->get_error_code() );
+		$this->assertSame( 'albert_menu_item_not_found', ( new RemoveMenuItem() )->execute( [ 'menu_item_id' => 999999 ] )->get_error_code() );
 	}
 
 	/**
@@ -638,7 +675,7 @@ class MenusAbilityTest extends TestCase {
 	public function test_editors_are_refused(): void {
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'editor' ] ) );
 
-		foreach ( [ new FindMenus(), new ViewMenu(), new CreateMenu(), new AddMenuItem(), new RemoveMenuItem(), new DeleteMenu() ] as $ability ) {
+		foreach ( [ new FindMenus(), new GetMenu(), new CreateMenu(), new AddMenuItem(), new RemoveMenuItem(), new DeleteMenu(), new UnassignMenuLocation() ] as $ability ) {
 			$this->assertInstanceOf( WP_Error::class, $ability->check_permission(), $ability->get_id() );
 		}
 	}
@@ -652,15 +689,16 @@ class MenusAbilityTest extends TestCase {
 		$gate = new Gate();
 
 		$expected = [
-			'albert/find-menus'           => false,
-			'albert/view-menu'            => false,
-			'albert/create-menu'          => false,
-			'albert/add-menu-item'        => false,
-			'albert/update-menu-item'     => false,
-			'albert/move-menu-item'       => false,
-			'albert/assign-menu-location' => false,
-			'albert/remove-menu-item'     => true,
-			'albert/delete-menu'          => true,
+			'albert/find-menus'             => false,
+			'albert/get-menu'               => false,
+			'albert/create-menu'            => false,
+			'albert/add-menu-item'          => false,
+			'albert/update-menu-item'       => false,
+			'albert/move-menu-item'         => false,
+			'albert/assign-menu-location'   => false,
+			'albert/unassign-menu-location' => false,
+			'albert/remove-menu-item'       => true,
+			'albert/delete-menu'            => true,
 		];
 
 		foreach ( $expected as $id => $held ) {
@@ -668,5 +706,205 @@ class MenusAbilityTest extends TestCase {
 			$this->assertNotNull( $ability, $id . ' is registered' );
 			$this->assertSame( $held, $gate->must_gate( $ability, [ 'id' => 1 ] ), $id );
 		}
+	}
+
+	/**
+	 * Two menus sharing an ID need a menu_type.
+	 *
+	 * @return void
+	 */
+	public function test_get_menu_asks_for_the_type_when_ids_collide(): void {
+		$this->use_block_theme();
+		$classic = $this->classic_menu( 'Old' );
+		$nav     = (int) self::factory()->post->create(
+			[
+				'import_id'   => $classic,
+				'post_type'   => 'wp_navigation',
+				'post_title'  => 'Main',
+				'post_status' => 'publish',
+			]
+		);
+		if ( $nav !== $classic ) {
+			$this->markTestSkipped( 'A post already has the classic menu\'s ID.' );
+		}
+
+		$result = ( new GetMenu() )->execute( [ 'menu_id' => $nav ] );
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_missing_menu_type', $result->get_error_code() );
+		$this->assertSame(
+			'block',
+			( new GetMenu() )->execute(
+				[
+					'menu_id'   => $nav,
+					'menu_type' => 'block',
+				]
+			)['type']
+		);
+	}
+
+	/**
+	 * A new item that cannot be placed is removed again, so a retry does not add it twice.
+	 *
+	 * @return void
+	 */
+	public function test_add_item_rolls_back_when_placing_fails(): void {
+		$this->use_classic_theme();
+		$menu = $this->classic_menu( 'Rollback' );
+		$this->link( $menu, 'First', 0, 1 );
+
+		$refuse = static function ( $result, $server, $request ) {
+			if ( $request->get_method() === 'POST' && preg_match( '#^/wp/v2/menu-items/\d+$#', $request->get_route() ) ) {
+				return new WP_Error( 'test_refused', 'Refused.', [ 'status' => 500 ] );
+			}
+			return $result;
+		};
+		add_filter( 'rest_pre_dispatch', $refuse, 10, 3 );
+
+		$result = ( new AddMenuItem() )->execute(
+			[
+				'menu_id'  => $menu,
+				'title'    => 'Second',
+				'url'      => 'https://example.com/second',
+				'position' => 1,
+			]
+		);
+
+		remove_filter( 'rest_pre_dispatch', $refuse, 10 );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( [ 'First' ], $this->titles( ( new GetMenu() )->execute( [ 'menu_id' => $menu ] )['items'] ) );
+	}
+
+	/**
+	 * The schemas refuse calls that would do nothing or need a field for their type.
+	 *
+	 * @return void
+	 */
+	public function test_schemas_require_useful_input(): void {
+		$schema = static fn( string $id ): array => wp_get_ability( $id )->get_input_schema();
+		$valid  = static fn( string $id, array $input ): bool => rest_validate_value_from_schema( $input, $schema( $id ), 'input' ) === true;
+
+		$this->assertTrue(
+			$valid(
+				'albert/add-menu-item',
+				[
+					'menu_id' => 1,
+					'title'   => 'A',
+					'url'     => 'https://example.com',
+				]
+			)
+		);
+		$this->assertTrue(
+			$valid(
+				'albert/add-menu-item',
+				[
+					'menu_id'   => 1,
+					'item_type' => 'post_type',
+					'object_id' => 2,
+				]
+			)
+		);
+		$this->assertTrue(
+			$valid(
+				'albert/add-menu-item',
+				[
+					'menu_id'     => 1,
+					'item_type'   => 'post_type_archive',
+					'object_type' => 'post',
+				]
+			)
+		);
+		$this->assertFalse(
+			$valid(
+				'albert/add-menu-item',
+				[
+					'menu_id' => 1,
+					'title'   => 'A',
+				]
+			),
+			'A custom link needs a url.'
+		);
+		$this->assertFalse(
+			$valid(
+				'albert/add-menu-item',
+				[
+					'menu_id'   => 1,
+					'item_type' => 'custom',
+					'url'       => 'https://example.com',
+				]
+			),
+			'A custom link needs a title.'
+		);
+		$this->assertFalse(
+			$valid(
+				'albert/add-menu-item',
+				[
+					'menu_id'   => 1,
+					'item_type' => 'post_type',
+				]
+			),
+			'A page link needs object_id.'
+		);
+
+		$this->assertFalse( $valid( 'albert/move-menu-item', [ 'menu_item_id' => 1 ] ) );
+		$this->assertTrue(
+			$valid(
+				'albert/move-menu-item',
+				[
+					'menu_item_id'   => 1,
+					'parent_item_id' => 0,
+				]
+			)
+		);
+		$this->assertTrue(
+			$valid(
+				'albert/move-menu-item',
+				[
+					'menu_item_id' => 1,
+					'position'     => 2,
+				]
+			)
+		);
+
+		$this->assertFalse( $valid( 'albert/update-menu-item', [ 'menu_item_id' => 1 ] ) );
+		$this->assertFalse(
+			$valid(
+				'albert/update-menu-item',
+				[
+					'menu_item_id' => 1,
+					'title'        => '',
+				]
+			),
+			'An empty title is not a reset.'
+		);
+		$this->assertFalse(
+			$valid(
+				'albert/update-menu-item',
+				[
+					'menu_item_id'       => 1,
+					'use_original_title' => false,
+				]
+			)
+		);
+		$this->assertTrue(
+			$valid(
+				'albert/update-menu-item',
+				[
+					'menu_item_id'       => 1,
+					'use_original_title' => true,
+				]
+			)
+		);
+
+		$this->assertFalse(
+			$valid(
+				'albert/assign-menu-location',
+				[
+					'location' => 'primary',
+					'menu_id'  => 0,
+				]
+			),
+			'0 does not empty a location.'
+		);
 	}
 }

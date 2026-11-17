@@ -30,7 +30,7 @@ class DeleteMenu extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/delete-menu';
 		$this->label       = __( 'Delete Menu', 'albert-ai-butler' );
-		$this->description = __( 'Permanently delete a classic menu and all its items.', 'albert-ai-butler' );
+		$this->description = __( 'Permanently delete a classic menu with all its items; check its "visible" in albert/find-menus first.', 'albert-ai-butler' );
 		$this->category    = 'menus';
 		$this->group       = 'menus';
 
@@ -59,13 +59,13 @@ class DeleteMenu extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id' => [
+				'menu_id' => [
 					'type'        => 'integer',
-					'description' => 'The classic menu ID to delete.',
+					'description' => 'The classic menu ID from albert/find-menus.',
 					'minimum'     => 1,
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'   => [ 'menu_id' ],
 		];
 	}
 
@@ -109,7 +109,7 @@ class DeleteMenu extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$menu = MenuSupport::classic_menu( absint( $args['id'] ?? 0 ) );
+		$menu = MenuSupport::classic_menu( (int) ( $args['menu_id'] ?? 0 ) );
 		if ( is_wp_error( $menu ) ) {
 			return $menu;
 		}

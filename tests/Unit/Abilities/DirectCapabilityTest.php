@@ -21,10 +21,11 @@ use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
 use Albert\Abilities\WordPress\Menus\CreateMenu;
 use Albert\Abilities\WordPress\Menus\DeleteMenu;
 use Albert\Abilities\WordPress\Menus\FindMenus;
+use Albert\Abilities\WordPress\Menus\GetMenu;
 use Albert\Abilities\WordPress\Menus\MoveMenuItem;
 use Albert\Abilities\WordPress\Menus\RemoveMenuItem;
+use Albert\Abilities\WordPress\Menus\UnassignMenuLocation;
 use Albert\Abilities\WordPress\Menus\UpdateMenuItem;
-use Albert\Abilities\WordPress\Menus\ViewMenu;
 use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Pages\ViewPage;
@@ -82,45 +83,46 @@ class DirectCapabilityTest extends TestCase {
 	public static function provideAbilitiesWithCaps(): array {
 		return [
 			// Menus.
-			'find-menus'           => [ FindMenus::class, 'edit_theme_options' ],
-			'view-menu'            => [ ViewMenu::class, 'edit_theme_options' ],
-			'create-menu'          => [ CreateMenu::class, 'edit_theme_options' ],
-			'delete-menu'          => [ DeleteMenu::class, 'edit_theme_options' ],
-			'add-menu-item'        => [ AddMenuItem::class, 'edit_theme_options' ],
-			'update-menu-item'     => [ UpdateMenuItem::class, 'edit_theme_options' ],
-			'move-menu-item'       => [ MoveMenuItem::class, 'edit_theme_options' ],
-			'remove-menu-item'     => [ RemoveMenuItem::class, 'edit_theme_options' ],
-			'assign-menu-location' => [ AssignMenuLocation::class, 'edit_theme_options' ],
+			'find-menus'             => [ FindMenus::class, 'edit_theme_options' ],
+			'get-menu'               => [ GetMenu::class, 'edit_theme_options' ],
+			'create-menu'            => [ CreateMenu::class, 'edit_theme_options' ],
+			'delete-menu'            => [ DeleteMenu::class, 'edit_theme_options' ],
+			'add-menu-item'          => [ AddMenuItem::class, 'edit_theme_options' ],
+			'update-menu-item'       => [ UpdateMenuItem::class, 'edit_theme_options' ],
+			'move-menu-item'         => [ MoveMenuItem::class, 'edit_theme_options' ],
+			'remove-menu-item'       => [ RemoveMenuItem::class, 'edit_theme_options' ],
+			'assign-menu-location'   => [ AssignMenuLocation::class, 'edit_theme_options' ],
+			'unassign-menu-location' => [ UnassignMenuLocation::class, 'edit_theme_options' ],
 
 			// Media.
-			'find-media'         => [ FindMedia::class, 'upload_files' ],
-			'view-media'         => [ ViewMedia::class, 'upload_files' ],
-			'upload-media'       => [ UploadMedia::class, 'upload_files' ],
-			'update-media'       => [ UpdateMedia::class, 'upload_files' ],
-			'delete-media'       => [ DeleteMedia::class, 'upload_files' ],
+			'find-media'             => [ FindMedia::class, 'upload_files' ],
+			'view-media'             => [ ViewMedia::class, 'upload_files' ],
+			'upload-media'           => [ UploadMedia::class, 'upload_files' ],
+			'update-media'           => [ UpdateMedia::class, 'upload_files' ],
+			'delete-media'           => [ DeleteMedia::class, 'upload_files' ],
 
 			// Posts/Pages (read-only).
-			'view-post'          => [ ViewPost::class, 'read' ],
-			'view-page'          => [ ViewPage::class, 'read' ],
+			'view-post'              => [ ViewPost::class, 'read' ],
+			'view-page'              => [ ViewPage::class, 'read' ],
 
 			// Users.
-			'view-user'          => [ ViewUser::class, 'list_users' ],
+			'view-user'              => [ ViewUser::class, 'list_users' ],
 
 			// Taxonomies.
-			'find-taxonomies'    => [ FindTaxonomies::class, 'manage_categories' ],
-			'find-terms'         => [ FindTerms::class, 'manage_categories' ],
-			'view-term'          => [ ViewTerm::class, 'manage_categories' ],
-			'create-term'        => [ CreateTerm::class, 'manage_categories' ],
-			'update-term'        => [ UpdateTerm::class, 'manage_categories' ],
-			'delete-term'        => [ DeleteTerm::class, 'manage_categories' ],
+			'find-taxonomies'        => [ FindTaxonomies::class, 'manage_categories' ],
+			'find-terms'             => [ FindTerms::class, 'manage_categories' ],
+			'view-term'              => [ ViewTerm::class, 'manage_categories' ],
+			'create-term'            => [ CreateTerm::class, 'manage_categories' ],
+			'update-term'            => [ UpdateTerm::class, 'manage_categories' ],
+			'delete-term'            => [ DeleteTerm::class, 'manage_categories' ],
 
 			// WooCommerce.
-			'woo-find-products'  => [ FindProducts::class, 'edit_products' ],
-			'woo-view-product'   => [ ViewProduct::class, 'read' ],
-			'woo-find-orders'    => [ FindOrders::class, 'edit_shop_orders' ],
-			'woo-view-order'     => [ ViewOrder::class, 'edit_shop_orders' ],
-			'woo-find-customers' => [ FindCustomers::class, 'list_users' ],
-			'woo-view-customer'  => [ ViewCustomer::class, 'list_users' ],
+			'woo-find-products'      => [ FindProducts::class, 'edit_products' ],
+			'woo-view-product'       => [ ViewProduct::class, 'read' ],
+			'woo-find-orders'        => [ FindOrders::class, 'edit_shop_orders' ],
+			'woo-view-order'         => [ ViewOrder::class, 'edit_shop_orders' ],
+			'woo-find-customers'     => [ FindCustomers::class, 'list_users' ],
+			'woo-view-customer'      => [ ViewCustomer::class, 'list_users' ],
 		];
 	}
 

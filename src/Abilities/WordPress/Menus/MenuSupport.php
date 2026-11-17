@@ -52,7 +52,7 @@ class MenuSupport {
 
 		if ( ! $menu instanceof WP_Term ) {
 			return new WP_Error(
-				'menu_not_found',
+				'albert_menu_not_found',
 				__( 'No classic menu has that ID. Call albert/find-menus to list them.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
@@ -74,7 +74,7 @@ class MenuSupport {
 
 		if ( ! $post instanceof WP_Post || $post->post_type !== 'wp_navigation' || $post->post_status === 'trash' ) {
 			return new WP_Error(
-				'menu_not_found',
+				'albert_menu_not_found',
 				__( 'No navigation menu has that ID. Call albert/find-menus to list them.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
@@ -96,8 +96,8 @@ class MenuSupport {
 
 		if ( ! $post instanceof WP_Post || $post->post_type !== 'nav_menu_item' ) {
 			return new WP_Error(
-				'menu_item_not_found',
-				__( 'No menu item has that ID. Call albert/view-menu to see a menu\'s items.', 'albert-ai-butler' ),
+				'albert_menu_item_not_found',
+				__( 'No menu item has that ID. Call albert/get-menu to see a menu\'s items.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -117,6 +117,116 @@ class MenuSupport {
 		$terms = wp_get_object_terms( $item_id, 'nav_menu', [ 'fields' => 'ids' ] );
 
 		return is_array( $terms ) && $terms !== [] ? (int) $terms[0] : 0;
+	}
+
+	/**
+	 * A classic menu as an output reference.
+	 *
+	 * @param int $menu_id Menu term id.
+	 *
+	 * @return array{id: int, name: string}|null Null when no menu has that id.
+	 * @since 1.6.0
+	 */
+	public static function menu_reference( int $menu_id ): ?array {
+		$menu = $menu_id > 0 ? wp_get_nav_menu_object( $menu_id ) : false;
+
+		if ( ! $menu instanceof WP_Term ) {
+			return null;
+		}
+
+		return [
+			'id'   => (int) $menu->term_id,
+			'name' => $menu->name,
+		];
+	}
+
+	/**
+	 * Output schema for {@see self::menu_reference()}.
+	 *
+	 * @param string $description What the reference points to.
+	 *
+	 * @return array<string, mixed>
+	 * @since 1.6.0
+	 */
+	public static function menu_reference_schema( string $description ): array {
+		return [
+			'type'        => [ 'object', 'null' ],
+			'description' => $description,
+			'properties'  => [
+				'id'   => [ 'type' => 'integer' ],
+				'name' => [ 'type' => 'string' ],
+			],
+		];
+	}
+
+	/**
+	 * The locations a classic menu is assigned to.
+	 *
+	 * @param array<mixed> $assigned Location slug to menu id, from `get_nav_menu_locations()`.
+	 * @param int          $menu_id  Menu term id.
+	 *
+	 * @return list<string>
+	 * @since 1.6.0
+	 */
+	public static function locations_of( array $assigned, int $menu_id ): array {
+		$locations = [];
+
+		foreach ( $assigned as $slug => $id ) {
+			if ( (int) $id === $menu_id ) {
+				$locations[] = (string) $slug;
+			}
+		}
+
+		return $locations;
+	}
+
+	/**
+	 * Refuse a location slug the theme does not register.
+	 *
+	 * @param string $location Location slug.
+	 *
+	 * @return WP_Error|null Null when the theme registers it.
+	 * @since 1.6.0
+	 */
+	public static function unregistered_location( string $location ): ?WP_Error {
+		$registered = get_registered_nav_menus();
+
+		if ( isset( $registered[ $location ] ) ) {
+			return null;
+		}
+
+		$message = $registered === []
+			? __( 'This theme has no menu locations. On a block theme the header is a navigation block; call albert/find-menus to see which menu it shows.', 'albert-ai-butler' )
+			: sprintf(
+				/* translators: %s: comma-separated location slugs */
+				__( 'This theme has no menu location with that slug. Its locations are: %s.', 'albert-ai-butler' ),
+				implode( ', ', array_map( 'strval', array_keys( $registered ) ) )
+			);
+
+		return new WP_Error( 'albert_menu_location_not_found', $message, [ 'status' => 404 ] );
+	}
+
+	/**
+	 * Confirm a location holds the menu just written.
+	 *
+	 * Core compares stored ids strictly, so a location saved as a string can survive the write.
+	 *
+	 * @param string $location Location slug.
+	 * @param int    $menu_id  Expected menu term id, 0 for empty.
+	 *
+	 * @return WP_Error|null Null when it does.
+	 * @since 1.6.0
+	 */
+	public static function location_saved( string $location, int $menu_id ): ?WP_Error {
+		if ( (int) ( get_nav_menu_locations()[ $location ] ?? 0 ) === $menu_id ) {
+			return null;
+		}
+
+		return new WP_Error(
+			'albert_menu_location_data_unavailable',
+			__( 'WordPress did not save the menu location. Call albert/find-menus to check it, then try again.', 'albert-ai-butler' ),
+			[ 'status' => 500 ]
+		);
 	}
 
 	/**

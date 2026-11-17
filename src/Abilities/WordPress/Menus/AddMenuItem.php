@@ -31,7 +31,7 @@ class AddMenuItem extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/add-menu-item';
 		$this->label       = __( 'Add Menu Item', 'albert-ai-butler' );
-		$this->description = __( 'Add an item to a classic menu: a page, post, category or other term, a post type archive, or a custom link.', 'albert-ai-butler' );
+		$this->description = __( 'Add one link to a classic menu, pointing at content on the site or at any URL; read the menu with albert/get-menu first.', 'albert-ai-butler' );
 		$this->category    = 'menus';
 		$this->group       = 'menus';
 
@@ -43,7 +43,7 @@ class AddMenuItem extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::create(
-				MenuSupport::CHECK_FIRST . ' For a page or post send "type": "post_type" and its "object_id"; a custom link needs "title" and "url".'
+				MenuSupport::CHECK_FIRST . ' For a page or post send "item_type": "post_type" with its "object_id"; a custom link needs "title" and "url".'
 			),
 		];
 
@@ -58,14 +58,15 @@ class AddMenuItem extends BaseAbility {
 	 */
 	private function get_input_schema(): array {
 		return [
-			'type'       => 'object',
-			'properties' => [
+			'type'        => 'object',
+			'description' => 'A custom link needs "title" and "url"; a page, post or term needs "object_id"; a post type archive needs "object_type".',
+			'properties'  => [
 				'menu_id'         => [
 					'type'        => 'integer',
-					'description' => 'The classic menu ID.',
+					'description' => 'The classic menu ID from albert/find-menus.',
 					'minimum'     => 1,
 				],
-				'type'            => [
+				'item_type'       => [
 					'type'        => 'string',
 					'enum'        => [ 'custom', 'post_type', 'taxonomy', 'post_type_archive' ],
 					'description' => '"post_type" links a page or post, "taxonomy" a category or other term, "post_type_archive" a post type\'s archive, "custom" any URL. Default "custom".',
@@ -76,23 +77,25 @@ class AddMenuItem extends BaseAbility {
 					'description' => 'The page, post or term ID, for "post_type" and "taxonomy".',
 					'minimum'     => 1,
 				],
-				'object'          => [
+				'object_type'     => [
 					'type'        => 'string',
-					'description' => 'The post type or taxonomy slug. Worked out from object_id when left out; required for "post_type_archive".',
+					'description' => 'The post type or taxonomy slug, such as "page" or "category". Worked out from object_id when left out; required for "post_type_archive".',
+					'minLength'   => 1,
 				],
 				'title'           => [
 					'type'        => 'string',
-					'description' => 'The label. Required for a custom link; otherwise defaults to the linked item\'s title.',
+					'description' => 'The label. Required for a custom link; leave it out to use the linked item\'s own title.',
+					'minLength'   => 1,
 				],
 				'url'             => [
 					'type'        => 'string',
 					'description' => 'The address, for a custom link.',
+					'minLength'   => 1,
 				],
-				'parent'          => [
+				'parent_item_id'  => [
 					'type'        => 'integer',
-					'description' => 'The menu item to nest this under, 0 for the top level. Default 0.',
-					'minimum'     => 0,
-					'default'     => 0,
+					'description' => 'The menu item to nest this under, from albert/get-menu. Leave it out for the top level.',
+					'minimum'     => 1,
 				],
 				'position'        => [
 					'type'        => 'integer',
@@ -101,10 +104,48 @@ class AddMenuItem extends BaseAbility {
 				],
 				'open_in_new_tab' => [
 					'type'        => 'boolean',
-					'description' => 'Open the link in a new tab.',
+					'description' => 'Open the link in a new tab. Default false.',
 				],
 			],
-			'required'   => [ 'menu_id' ],
+			'required'    => [ 'menu_id' ],
+			// Core's validator has no if/then, so each item type is one branch. Each lists
+			// its properties so a refusal names the field missing for the type that was sent.
+			'anyOf'       => [
+				[
+					'title'      => 'custom link with "title" and "url"',
+					'properties' => [
+						'item_type' => [
+							'type' => 'string',
+							'enum' => [ 'custom' ],
+						],
+						'title'     => [ 'type' => 'string' ],
+						'url'       => [ 'type' => 'string' ],
+					],
+					'required'   => [ 'title', 'url' ],
+				],
+				[
+					'title'      => 'page, post or term link with "object_id"',
+					'properties' => [
+						'item_type' => [
+							'type' => 'string',
+							'enum' => [ 'post_type', 'taxonomy' ],
+						],
+						'object_id' => [ 'type' => 'integer' ],
+					],
+					'required'   => [ 'item_type', 'object_id' ],
+				],
+				[
+					'title'      => 'post type archive with "object_type"',
+					'properties' => [
+						'item_type'   => [
+							'type' => 'string',
+							'enum' => [ 'post_type_archive' ],
+						],
+						'object_type' => [ 'type' => 'string' ],
+					],
+					'required'   => [ 'item_type', 'object_type' ],
+				],
+			],
 		];
 	}
 
@@ -118,11 +159,14 @@ class AddMenuItem extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'      => [ 'type' => 'integer' ],
-				'menu_id' => [ 'type' => 'integer' ],
-				'title'   => [ 'type' => 'string' ],
-				'url'     => [ 'type' => 'string' ],
-				'parent'  => [ 'type' => 'integer' ],
+				'id'             => [ 'type' => 'integer' ],
+				'menu_id'        => [ 'type' => 'integer' ],
+				'title'          => [ 'type' => 'string' ],
+				'url'            => [ 'type' => 'string' ],
+				'parent_item_id' => [
+					'type'        => 'integer',
+					'description' => 'The item it is nested under, 0 for the top level.',
+				],
 			] + MenuSupport::visibility_schema(),
 			'required'   => [ 'id', 'menu_id', 'visible', 'shown_in' ],
 		];
@@ -146,16 +190,20 @@ class AddMenuItem extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$menu = MenuSupport::classic_menu( absint( $args['menu_id'] ?? 0 ) );
+		$menu = MenuSupport::classic_menu( (int) ( $args['menu_id'] ?? 0 ) );
 		if ( is_wp_error( $menu ) ) {
 			return $menu;
 		}
 
 		$menu_id = (int) $menu->term_id;
-		$parent  = absint( $args['parent'] ?? 0 );
+		$parent  = (int) ( $args['parent_item_id'] ?? 0 );
 
 		if ( $parent > 0 && MenuSupport::menu_of_item( $parent ) !== $menu_id ) {
-			return new WP_Error( 'menu_item_parent_invalid', __( 'The parent must be an item in the same menu, or 0 for the top level.', 'albert-ai-butler' ), [ 'status' => 400 ] );
+			return new WP_Error(
+				'albert_invalid_parent_item_id',
+				__( 'The "parent_item_id" must be an item in the same menu. Call albert/get-menu to see its items, or leave it out for the top level.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
 		}
 
 		// Core's route puts a new item at position 1 unless told otherwise.
@@ -166,17 +214,17 @@ class AddMenuItem extends BaseAbility {
 
 		$params = [
 			'menus'      => $menu_id,
-			'type'       => is_string( $args['type'] ?? null ) ? $args['type'] : 'custom',
+			'type'       => is_string( $args['item_type'] ?? null ) ? $args['item_type'] : 'custom',
 			'status'     => 'publish',
 			'parent'     => $parent,
 			'menu_order' => $last + 1,
 		];
 
 		if ( isset( $args['object_id'] ) ) {
-			$params['object_id'] = absint( $args['object_id'] );
+			$params['object_id'] = (int) $args['object_id'];
 		}
-		if ( isset( $args['object'] ) ) {
-			$params['object'] = sanitize_key( (string) $args['object'] );
+		if ( isset( $args['object_type'] ) ) {
+			$params['object'] = sanitize_key( (string) $args['object_type'] );
 		}
 		if ( isset( $args['title'] ) ) {
 			$params['title'] = sanitize_text_field( (string) $args['title'] );
@@ -196,10 +244,10 @@ class AddMenuItem extends BaseAbility {
 		$id = (int) ( $data['id'] ?? 0 );
 
 		if ( isset( $args['position'] ) ) {
-			$placed = MenuItemOrder::place( $menu_id, $id, $parent, absint( $args['position'] ) );
+			$placed = MenuItemOrder::place( $menu_id, $id, $parent, (int) $args['position'] );
 			if ( is_wp_error( $placed ) ) {
 				// The item already exists; remove it so a retry does not add it twice.
-				wp_delete_post( $id, true );
+				MenuSupport::rest( 'DELETE', '/wp/v2/menu-items/' . $id, [ 'force' => true ], '' );
 				return $placed;
 			}
 		}
@@ -208,11 +256,11 @@ class AddMenuItem extends BaseAbility {
 		$item = $post instanceof WP_Post ? wp_setup_nav_menu_item( $post ) : null;
 
 		return [
-			'id'      => $id,
-			'menu_id' => $menu_id,
-			'title'   => (string) ( $item->title ?? '' ),
-			'url'     => (string) ( $item->url ?? '' ),
-			'parent'  => $parent,
+			'id'             => $id,
+			'menu_id'        => $menu_id,
+			'title'          => (string) ( $item->title ?? '' ),
+			'url'            => (string) ( $item->url ?? '' ),
+			'parent_item_id' => $parent,
 		] + MenuSupport::visibility_fields( $menu_id );
 	}
 }

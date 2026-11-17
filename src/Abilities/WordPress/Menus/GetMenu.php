@@ -1,6 +1,6 @@
 <?php
 /**
- * View Menu Ability
+ * Get Menu Ability
  *
  * @package Albert
  * @subpackage Abilities\WordPress\Menus
@@ -20,7 +20,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.6.0
  */
-class ViewMenu extends BaseAbility {
+class GetMenu extends BaseAbility {
 
 	/**
 	 * Constructor.
@@ -28,9 +28,9 @@ class ViewMenu extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/view-menu';
-		$this->label       = __( 'View Menu', 'albert-ai-butler' );
-		$this->description = __( 'Show one menu\'s items as a tree, for a classic menu or a block theme navigation menu, and whether visitors see it.', 'albert-ai-butler' );
+		$this->id          = 'albert/get-menu';
+		$this->label       = __( 'Get Menu', 'albert-ai-butler' );
+		$this->description = __( 'Read one menu\'s items as a tree, with where visitors see it. Call albert/find-menus first for its ID.', 'albert-ai-butler' );
 		$this->category    = 'menus';
 		$this->group       = 'menus';
 
@@ -42,7 +42,7 @@ class ViewMenu extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::read(
-				'Pass the id and type from albert/find-menus. A classic menu and a navigation menu can share an id, so send "type" when you know it.'
+				'Pass menu_id and menu_type from albert/find-menus: a classic menu and a block theme navigation menu can share an ID. Item IDs in the result are what the menu item abilities take as menu_item_id.'
 			),
 		];
 
@@ -59,18 +59,18 @@ class ViewMenu extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'   => [
+				'menu_id'   => [
 					'type'        => 'integer',
 					'description' => 'The menu ID from albert/find-menus.',
 					'minimum'     => 1,
 				],
-				'type' => [
+				'menu_type' => [
 					'type'        => 'string',
 					'enum'        => [ 'classic', 'block' ],
 					'description' => '"classic" for a classic menu, "block" for a block theme navigation menu. Optional when only one kind has this ID.',
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'   => [ 'menu_id' ],
 		];
 	}
 
@@ -122,8 +122,8 @@ class ViewMenu extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$id   = absint( $args['id'] ?? 0 );
-		$type = is_string( $args['type'] ?? null ) ? $args['type'] : '';
+		$id   = (int) ( $args['menu_id'] ?? 0 );
+		$type = is_string( $args['menu_type'] ?? null ) ? $args['menu_type'] : '';
 
 		if ( $type === '' ) {
 			$classic = MenuSupport::classic_menu( $id );
@@ -131,8 +131,8 @@ class ViewMenu extends BaseAbility {
 
 			if ( ! is_wp_error( $classic ) && ! is_wp_error( $block ) ) {
 				return new WP_Error(
-					'menu_type_ambiguous',
-					__( 'A classic menu and a navigation menu both have this ID. Send "type": "classic" or "block".', 'albert-ai-butler' ),
+					'albert_missing_menu_type',
+					__( 'A classic menu and a navigation menu both have this ID. Send "menu_type": "classic" or "block".', 'albert-ai-butler' ),
 					[ 'status' => 400 ]
 				);
 			}

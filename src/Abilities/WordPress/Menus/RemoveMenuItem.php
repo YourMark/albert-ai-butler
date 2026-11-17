@@ -30,7 +30,7 @@ class RemoveMenuItem extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/remove-menu-item';
 		$this->label       = __( 'Remove Menu Item', 'albert-ai-butler' );
-		$this->description = __( 'Remove an item from a classic menu. Its sub-items stay and move up a level. The linked page or post is not touched.', 'albert-ai-butler' );
+		$this->description = __( 'Remove one item from a classic menu, moving its sub-items up a level without touching the linked content; read the menu with albert/get-menu first.', 'albert-ai-butler' );
 		$this->category    = 'menus';
 		$this->group       = 'menus';
 
@@ -58,13 +58,13 @@ class RemoveMenuItem extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id' => [
+				'menu_item_id' => [
 					'type'        => 'integer',
-					'description' => 'The menu item ID, from albert/view-menu.',
+					'description' => 'The menu item ID from albert/get-menu.',
 					'minimum'     => 1,
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'   => [ 'menu_item_id' ],
 		];
 	}
 
@@ -110,7 +110,7 @@ class RemoveMenuItem extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post = MenuSupport::menu_item( absint( $args['id'] ?? 0 ) );
+		$post = MenuSupport::menu_item( (int) ( $args['menu_item_id'] ?? 0 ) );
 		if ( is_wp_error( $post ) ) {
 			return $post;
 		}

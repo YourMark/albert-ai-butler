@@ -50,7 +50,7 @@ use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Skills\GetSkill;
 use Albert\Abilities\WordPress\Menus\FindMenus;
-use Albert\Abilities\WordPress\Menus\ViewMenu;
+use Albert\Abilities\WordPress\Menus\GetMenu;
 use Albert\Abilities\WordPress\Menus\CreateMenu;
 use Albert\Abilities\WordPress\Menus\DeleteMenu;
 use Albert\Abilities\WordPress\Menus\AddMenuItem;
@@ -58,6 +58,7 @@ use Albert\Abilities\WordPress\Menus\UpdateMenuItem;
 use Albert\Abilities\WordPress\Menus\MoveMenuItem;
 use Albert\Abilities\WordPress\Menus\RemoveMenuItem;
 use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
+use Albert\Abilities\WordPress\Menus\UnassignMenuLocation;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
 use Albert\Abilities\WordPress\Taxonomies\FindTerms;
 use Albert\Abilities\WordPress\Taxonomies\ViewTerm;
@@ -465,7 +466,7 @@ class Plugin {
 
 		// Menu abilities: classic menus, and finding the navigation menu a block theme shows.
 		$this->abilities_manager->add_ability( new FindMenus() );
-		$this->abilities_manager->add_ability( new ViewMenu() );
+		$this->abilities_manager->add_ability( new GetMenu() );
 		$this->abilities_manager->add_ability( new CreateMenu() );
 		$this->abilities_manager->add_ability( new DeleteMenu() );
 		$this->abilities_manager->add_ability( new AddMenuItem() );
@@ -473,6 +474,7 @@ class Plugin {
 		$this->abilities_manager->add_ability( new MoveMenuItem() );
 		$this->abilities_manager->add_ability( new RemoveMenuItem() );
 		$this->abilities_manager->add_ability( new AssignMenuLocation() );
+		$this->abilities_manager->add_ability( new UnassignMenuLocation() );
 
 		// Returns the full text of one task guide, by slug.
 		$this->abilities_manager->add_ability( new GetSkill() );

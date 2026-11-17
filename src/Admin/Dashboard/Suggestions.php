@@ -195,7 +195,7 @@ class Suggestions {
 			],
 			[
 				'text'     => __( 'Which menu do visitors see in the header, and what is in it?', 'albert-ai-butler' ),
-				'requires' => [ 'albert/find-menus', 'albert/view-menu' ],
+				'requires' => [ 'albert/find-menus', 'albert/get-menu' ],
 			],
 		];
 	}

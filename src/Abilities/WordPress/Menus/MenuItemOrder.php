@@ -45,11 +45,11 @@ class MenuItemOrder {
 		}
 
 		if ( ! isset( $by_id[ $item_id ] ) ) {
-			return new WP_Error( 'menu_item_not_found', __( 'That item is not in this menu.', 'albert-ai-butler' ), [ 'status' => 404 ] );
+			return new WP_Error( 'albert_menu_item_not_found', __( 'That item is not in this menu. Call albert/get-menu to see its items.', 'albert-ai-butler' ), [ 'status' => 404 ] );
 		}
 
 		if ( $parent_id !== 0 && ! isset( $by_id[ $parent_id ] ) ) {
-			return new WP_Error( 'menu_item_parent_invalid', __( 'The parent must be an item in the same menu, or 0 for the top level.', 'albert-ai-butler' ), [ 'status' => 400 ] );
+			return new WP_Error( 'albert_invalid_parent_item_id', __( 'The "parent_item_id" must be an item in the same menu, or 0 for the top level.', 'albert-ai-butler' ), [ 'status' => 400 ] );
 		}
 
 		$children = [];
@@ -62,7 +62,7 @@ class MenuItemOrder {
 		}
 
 		if ( $parent_id === $item_id || in_array( $parent_id, self::descendants( $children, $item_id ), true ) ) {
-			return new WP_Error( 'menu_item_parent_invalid', __( 'An item cannot move under itself or one of its own sub-items.', 'albert-ai-butler' ), [ 'status' => 400 ] );
+			return new WP_Error( 'albert_invalid_parent_item_id', __( 'An item cannot move under itself or one of its own sub-items. Choose another "parent_item_id".', 'albert-ai-butler' ), [ 'status' => 400 ] );
 		}
 
 		$siblings = $children[ $parent_id ] ?? [];
