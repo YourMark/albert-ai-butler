@@ -86,7 +86,7 @@ class RestoreRevision extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'post_id'         => [ 'type' => 'integer' ],
+				'post'            => RevisionDiff::post_reference_schema( 'The restored post, with its title after the restore.' ),
 				'restored_from'   => [ 'type' => 'integer' ],
 				'new_revision_id' => [
 					'type'        => [ 'integer', 'null' ],
@@ -96,10 +96,9 @@ class RestoreRevision extends BaseAbility {
 					'type'  => 'array',
 					'items' => [ 'type' => 'string' ],
 				],
-				'title'           => [ 'type' => 'string' ],
 				'edit_link'       => [ 'type' => 'string' ],
 			],
-			'required'   => [ 'post_id', 'restored_from', 'new_revision_id', 'changed_fields' ],
+			'required'   => [ 'post', 'restored_from', 'new_revision_id', 'changed_fields' ],
 		];
 	}
 
@@ -174,11 +173,10 @@ class RestoreRevision extends BaseAbility {
 		$current = get_post( $post->ID );
 
 		return [
-			'post_id'         => (int) $post->ID,
+			'post'            => RevisionDiff::post_reference( $current instanceof WP_Post ? $current : $post ),
 			'restored_from'   => (int) $revision->ID,
 			'new_revision_id' => $after !== $before ? $after : null,
 			'changed_fields'  => $changed,
-			'title'           => $current instanceof WP_Post ? (string) $current->post_title : '',
 			'edit_link'       => (string) get_edit_post_link( $post->ID, 'raw' ),
 		];
 	}

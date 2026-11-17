@@ -225,6 +225,14 @@ class RevisionsAbilityTest extends TestCase {
 		$this->assertIsArray( $result );
 		$this->assertSame( 1, $restored_hook );
 		$this->assertSame( [ 'post_title', 'post_content' ], $result['changed_fields'] );
+		$this->assertSame(
+			[
+				'id'   => $this->post_id,
+				'name' => 'Opening hours',
+			],
+			$result['post'],
+			'The post is referenced by ID and its title after the restore.'
+		);
 
 		$post = get_post( $this->post_id );
 		$this->assertSame( 'Opening hours', $post->post_title );

@@ -209,6 +209,38 @@ class RevisionDiff {
 	}
 
 	/**
+	 * A post as the revision abilities reference it.
+	 *
+	 * @param WP_Post $post The post.
+	 * @return array{id: int, name: string}
+	 * @since 1.6.0
+	 */
+	public static function post_reference( WP_Post $post ): array {
+		return [
+			'id'   => (int) $post->ID,
+			'name' => (string) $post->post_title,
+		];
+	}
+
+	/**
+	 * The output schema of a post reference.
+	 *
+	 * @param string $description What the post is to the caller.
+	 * @return array<string, mixed>
+	 * @since 1.6.0
+	 */
+	public static function post_reference_schema( string $description ): array {
+		return [
+			'type'        => 'object',
+			'description' => $description,
+			'properties'  => [
+				'id'   => [ 'type' => 'integer' ],
+				'name' => [ 'type' => 'string' ],
+			],
+		];
+	}
+
+	/**
 	 * The output schema of a revision summary.
 	 *
 	 * @return array<string, mixed>

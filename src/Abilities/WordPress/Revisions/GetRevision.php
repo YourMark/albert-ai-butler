@@ -96,14 +96,7 @@ class GetRevision extends BaseAbility {
 			'type'       => 'object',
 			'properties' => [
 				'revision'  => RevisionDiff::summary_schema(),
-				'post'      => [
-					'type'        => 'object',
-					'description' => 'The post the revision belongs to.',
-					'properties'  => [
-						'id'   => [ 'type' => 'integer' ],
-						'name' => [ 'type' => 'string' ],
-					],
-				],
+				'post'      => RevisionDiff::post_reference_schema( 'The post the revision belongs to.' ),
 				'from'      => $version,
 				'to'        => $version,
 				'changed'   => [ 'type' => 'boolean' ],
@@ -184,10 +177,7 @@ class GetRevision extends BaseAbility {
 
 		return [
 			'revision'  => RevisionDiff::summary( $revision ),
-			'post'      => [
-				'id'   => (int) $post->ID,
-				'name' => (string) $post->post_title,
-			],
+			'post'      => RevisionDiff::post_reference( $post ),
 			'from'      => $from,
 			'to'        => $to,
 			'changed'   => in_array( true, array_column( $fields, 'changed' ), true ),
