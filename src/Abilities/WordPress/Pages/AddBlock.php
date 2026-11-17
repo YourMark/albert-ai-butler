@@ -29,7 +29,7 @@ class AddBlock extends AbstractAddBlock {
 	public function __construct() {
 		$this->id          = 'albert/add-page-block';
 		$this->label       = __( 'Add Page Block', 'albert-ai-butler' );
-		$this->description = __( 'Insert a single block into a page before/after a block at a given position (path), or inside it. Every other block is left untouched. Read the page first to get block paths.', 'albert-ai-butler' );
+		$this->description = __( 'Insert a single block, or a pattern by name, into a page before/after a block at a given position (path), or inside it. Every other block is left untouched. Read the page first to get block paths.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
@@ -46,7 +46,8 @@ class AddBlock extends AbstractAddBlock {
 				. '`inside_start` or `inside_end` to nest inside a layout block. To append, use `after` '
 				. 'with the last top-level block\'s path. Pass `expect` set to the block name you read at '
 				. 'that path. Every op returns the refreshed tree; later paths shift after an insert, so '
-				. 'take your next path from that response.'
+				. 'take your next path from that response. To place a pattern from `albert/find-patterns`, send '
+				. 'its `name` as `pattern` instead of `block`: the server inserts it exactly as stored.'
 			),
 		];
 

@@ -184,8 +184,11 @@ pattern's markup is known-valid.
 
 - **Discover:** `albert/find-patterns` (filter by `search` or `category`) lists
   summaries; `albert/view-pattern` returns one pattern's block markup by `name`.
-- **Reuse as a copy (default):** pass the returned `content` as your `blocks` or
-  `content`, or adapt it. The copy is independent; editing it never changes the
+- **Insert into an existing post (best):** `albert/add-post-block` (or `add-page-block`)
+  with `pattern` set to the pattern's `name`. The server inserts the pattern exactly as
+  stored, so you never copy its markup and nothing can go wrong in the copy. A synced
+  user pattern is inserted as a reference.
+- **Reuse as a copy:** pass the returned `content` as your `content`, or adapt it. The copy is independent; editing it never changes the
   source. Works for any pattern.
 - **Reuse synced (shared):** only user patterns with `syncStatus: "synced"`.
   Insert by reference with `<!-- wp:block {"ref":ID} /-->` using the pattern's
