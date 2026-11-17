@@ -240,7 +240,7 @@ class ExecuteSchemaTest extends TestCase {
 		$this->assert_execute_matches_schema(
 			new ReplacePostText(),
 			[
-				'id'      => $post_id,
+				'post_id' => $post_id,
 				'search'  => 'Old',
 				'replace' => 'New',
 			],
@@ -264,7 +264,7 @@ class ExecuteSchemaTest extends TestCase {
 		$this->assert_execute_matches_schema(
 			new ReplacePageText(),
 			[
-				'id'      => $page_id,
+				'page_id' => $page_id,
 				'search'  => 'Old',
 				'replace' => 'New',
 			],

@@ -29,7 +29,7 @@ class ReplaceText extends AbstractReplaceText {
 	public function __construct() {
 		$this->id          = 'albert/replace-page-text';
 		$this->label       = __( 'Replace Page Text', 'albert-ai-butler' );
-		$this->description = __( 'Replace exact text in a page\'s content, title or excerpt, without sending the whole page. Refused when the text occurs a different number of times than expected_count, or when the change would alter blocks rather than text.', 'albert-ai-butler' );
+		$this->description = __( 'Replace exact text in a page field without resending the page; read it with albert/view-page first.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
@@ -40,11 +40,16 @@ class ReplaceText extends AbstractReplaceText {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::update(
-				'Use this to fix a word, a name, a price or a link in a long page: send only the text to find '
-				. 'and its replacement. Copy `search` from a fresh `albert/view-page` read with `"format": ["content"]`, '
-				. 'so it matches the stored markup exactly. To change a block\'s settings, or add, remove or move '
-				. 'blocks, use the block abilities instead.'
+			'annotations' => array_merge(
+				Annotations::update(
+					'Use this to fix a word, a name, a price or a link in a long page: send only the text to find '
+					. 'and its replacement. Copy `search` from a fresh `albert/view-page` read with `"format": ["content"]`, '
+					. 'so it matches the stored markup exactly. Nothing is saved when the text occurs a different number '
+					. 'of times than `expected_count`, or when the change would alter blocks rather than their text. '
+					. 'To change a block\'s settings, or add, remove or move blocks, use the block abilities instead.'
+				),
+				// Repeating a replacement can match again, e.g. "1" with "11".
+				[ 'idempotent' => false ]
 			),
 		];
 

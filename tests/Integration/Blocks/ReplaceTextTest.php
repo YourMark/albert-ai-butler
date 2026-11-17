@@ -62,7 +62,7 @@ class ReplaceTextTest extends TestCase {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	private function replace( array $args ): array|WP_Error {
-		return ( new ReplacePostText() )->execute( array_merge( [ 'id' => $this->post_id ], $args ) );
+		return ( new ReplacePostText() )->execute( array_merge( [ 'post_id' => $this->post_id ], $args ) );
 	}
 
 	/**
@@ -123,7 +123,7 @@ class ReplaceTextTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'match_count_mismatch', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_expected_count', $result->get_error_code() );
 		$this->assertSame( 2, $result->get_error_data()['count'] );
 		$this->assertSame( self::CONTENT, $this->content() );
 
@@ -152,7 +152,7 @@ class ReplaceTextTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'search_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_search', $result->get_error_code() );
 		$this->assertStringContainsString( 'Tom &amp; Jerry', $result->get_error_message() );
 	}
 
@@ -170,7 +170,7 @@ class ReplaceTextTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'block_structure_changed', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_replace', $result->get_error_code() );
 		$this->assertSame( self::CONTENT, $this->content() );
 	}
 
@@ -193,9 +193,9 @@ class ReplaceTextTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'block_structure_changed', $settings->get_error_code() );
+		$this->assertSame( 'albert_invalid_replace', $settings->get_error_code() );
 		$this->assertStringContainsString( 'settings of core/heading at [0]', $settings->get_error_message() );
-		$this->assertSame( 'block_structure_changed', $removed->get_error_code() );
+		$this->assertSame( 'albert_invalid_replace', $removed->get_error_code() );
 		$this->assertSame( self::CONTENT, $this->content() );
 	}
 
@@ -211,7 +211,7 @@ class ReplaceTextTest extends TestCase {
 				'replace' => 'Once</p><p>more',
 			]
 		);
-		$this->assertSame( 'block_structure_changed', $split->get_error_code() );
+		$this->assertSame( 'albert_invalid_replace', $split->get_error_code() );
 		$this->assertSame( self::CONTENT, $this->content() );
 
 		$bold = $this->replace(
@@ -243,7 +243,7 @@ class ReplaceTextTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'block_structure_changed', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_replace', $result->get_error_code() );
 	}
 
 	/**
@@ -262,7 +262,7 @@ class ReplaceTextTest extends TestCase {
 				]
 			);
 
-			$this->assertSame( 'rest_cannot_edit', $result->get_error_code() );
+			$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
 		}
 		$this->assertSame( self::CONTENT, $this->content() );
 	}
@@ -318,13 +318,46 @@ class ReplaceTextTest extends TestCase {
 	public function test_the_page_ability_refuses_a_post(): void {
 		$result = ( new ReplacePageText() )->execute(
 			[
-				'id'      => $this->post_id,
+				'page_id' => $this->post_id,
 				'search'  => '2025',
 				'replace' => '2026',
 			]
 		);
 
-		$this->assertSame( 'post_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * An ID of 0 is not found, never resolved to the global post.
+	 *
+	 * @return void
+	 */
+	public function test_a_zero_id_is_not_found(): void {
+		$GLOBALS['post'] = get_post( $this->post_id );
+
+		$result = $this->replace(
+			[
+				'post_id' => 0,
+				'search'  => '2025',
+				'replace' => '2026',
+			]
+		);
+
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertSame( self::CONTENT, $this->content() );
+	}
+
+	/**
+	 * Repeating a replacement can match again, so neither ability is idempotent.
+	 *
+	 * @return void
+	 */
+	public function test_replacing_is_not_idempotent(): void {
+		foreach ( [ new ReplacePostText(), new ReplacePageText() ] as $ability ) {
+			$meta = ( new \ReflectionProperty( $ability, 'meta' ) )->getValue( $ability );
+
+			$this->assertFalse( $meta['annotations']['idempotent'] );
+		}
 	}
 
 	/**

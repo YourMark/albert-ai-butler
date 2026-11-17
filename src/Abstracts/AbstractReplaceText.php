@@ -65,6 +65,16 @@ abstract class AbstractReplaceText extends BaseAbility {
 	abstract protected function edit_capability(): string;
 
 	/**
+	 * The input naming the item, e.g. `post_id`.
+	 *
+	 * @return string
+	 * @since 1.6.0
+	 */
+	private function id_input(): string {
+		return $this->post_type() . '_id';
+	}
+
+	/**
 	 * Check if the current user may save through the REST endpoint.
 	 *
 	 * @return bool|WP_Error
@@ -86,14 +96,22 @@ abstract class AbstractReplaceText extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post_id = absint( $args['id'] ?? 0 );
-		$post    = get_post( $post_id );
+		$type    = $this->post_type();
+		$post_id = $args[ $this->id_input() ] ?? null;
+		$post_id = is_int( $post_id ) ? $post_id : 0;
+		// get_post( 0 ) returns the global post, so never look up a non-positive ID.
+		$post = $post_id > 0 ? get_post( $post_id ) : null;
 
-		if ( ! $post || $post->post_type !== $this->post_type() ) {
+		if ( ! $post || $post->post_type !== $type ) {
 			return new WP_Error(
-				'post_not_found',
-				/* translators: 1: post type, 2: post ID. */
-				sprintf( __( 'No %1$s found with ID %2$d.', 'albert-ai-butler' ), $this->post_type(), $post_id ),
+				'albert_' . $type . '_not_found',
+				sprintf(
+					/* translators: 1: post type, 2: post ID, 3: the find ability id. */
+					__( 'No %1$s found with ID %2$d. Use %3$s to look up the ID.', 'albert-ai-butler' ),
+					$type,
+					$post_id,
+					'albert/find-' . $type . 's'
+				),
 				[ 'status' => 404 ]
 			);
 		}
@@ -102,8 +120,9 @@ abstract class AbstractReplaceText extends BaseAbility {
 		// text of a post the user may not edit.
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return new WP_Error(
-				'rest_cannot_edit',
-				__( 'Sorry, you are not allowed to edit this item.', 'albert-ai-butler' ),
+				'albert_' . $type . '_permission_denied',
+				/* translators: 1: post type, 2: post ID. */
+				sprintf( __( 'This account may not edit %1$s %2$d.', 'albert-ai-butler' ), $type, $post_id ),
 				[ 'status' => rest_authorization_required_code() ]
 			);
 		}
@@ -116,10 +135,6 @@ abstract class AbstractReplaceText extends BaseAbility {
 		$expected = max( 1, (int) ( $args['expected_count'] ?? 1 ) );
 		$before   = (string) $post->{$column};
 
-		if ( $search === '' ) {
-			return new WP_Error( 'search_empty', __( '`search` must not be empty.', 'albert-ai-butler' ), [ 'status' => 400 ] );
-		}
-
 		$found = substr_count( $before, $search );
 
 		if ( $found === 0 ) {
@@ -128,7 +143,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 
 		if ( $found !== $expected ) {
 			return new WP_Error(
-				'match_count_mismatch',
+				'albert_invalid_expected_count',
 				sprintf(
 					/* translators: 1: the field, 2: times found, 3: times expected. */
 					__( 'The text occurs %2$d times in the %1$s, not %3$d. Send a longer `search` that occurs once, or set `expected_count` to %2$d to replace every one. Nothing was saved.', 'albert-ai-butler' ),
@@ -190,7 +205,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 
 			if ( $difference !== null ) {
 				return new WP_Error(
-					'block_structure_changed',
+					'albert_invalid_replace',
 					sprintf(
 						/* translators: 1: what changed, e.g. "it changes the settings of core/heading at [2]", 2: the block edit ability id. */
 						__( 'This replacement changes blocks, not only text: %1$s. Use %2$s to change a block. Nothing was saved.', 'albert-ai-butler' ),
@@ -223,7 +238,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 				/* translators: %s: the text as stored, e.g. Tom &amp; Jerry. */
 				$message .= ' ' . sprintf( __( 'It is stored as `%s`; search for that.', 'albert-ai-butler' ), $stored_as );
 
-				return new WP_Error( 'search_not_found', $message, [ 'status' => 404 ] );
+				return new WP_Error( 'albert_invalid_search', $message, [ 'status' => 400 ] );
 			}
 		}
 
@@ -231,7 +246,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 			$message .= ' ' . __( 'It occurs with different capitalisation.', 'albert-ai-butler' );
 		}
 
-		return new WP_Error( 'search_not_found', $message, [ 'status' => 404 ] );
+		return new WP_Error( 'albert_invalid_search', $message, [ 'status' => 400 ] );
 	}
 
 	/**
@@ -256,10 +271,11 @@ abstract class AbstractReplaceText extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return new WP_Error(
-				is_array( $data ) && isset( $data['code'] ) ? (string) $data['code'] : 'rest_error',
-				is_array( $data ) && isset( $data['message'] ) ? (string) $data['message'] : __( 'An error occurred while saving.', 'albert-ai-butler' ),
-				[ 'status' => $response->get_status() ]
+			return self::rest_failure(
+				$data,
+				$response->get_status(),
+				__( 'An error occurred while saving.', 'albert-ai-butler' ),
+				'albert_' . $this->post_type() . '_permission_denied'
 			);
 		}
 
@@ -276,7 +292,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'              => [
+				$this->id_input() => [
 					'type'        => 'integer',
 					'minimum'     => 1,
 					/* translators: %s: post type. */
@@ -305,7 +321,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 				],
 				MarkupTags::INPUT => MarkupTags::input_schema(),
 			],
-			'required'   => [ 'id', 'search', 'replace' ],
+			'required'   => [ $this->id_input(), 'search', 'replace' ],
 		];
 	}
 
