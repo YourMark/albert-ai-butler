@@ -207,6 +207,7 @@ Website: https://yourmark.nl
 - Someone could fill the limit on connected apps with sign-ups they never finished, so a real assistant was refused for a day. Albert now makes room by removing the oldest sign-up that never connected. Apps that have connected are never removed.
 - Every app now has to use the sign-in protection that ties an approval to the app that asked for it, as the MCP standard requires. Apps that registered with a secret could skip it before.
 - Changing or resetting a person's password now disconnects every assistant connected as them. An assistant also stops working as soon as its person is no longer on the list of people who may connect one, however they were taken off it.
+- Anyone allowed to connect an assistant, even a subscriber, could read the full details of a WooCommerce product, including drafts and private products. Reading a product now needs the right to edit products, the same as searching them.
 
 **Developer**
 
@@ -225,6 +226,7 @@ Website: https://yourmark.nl
 - New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 - Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 - `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
+- `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
 
 ### 1.5.0
 
