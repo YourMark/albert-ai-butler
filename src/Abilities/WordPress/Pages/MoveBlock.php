@@ -40,11 +40,15 @@ class MoveBlock extends AbstractMoveBlock {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::update(
-				'Address the block by `path` from a fresh `albert/view-page` read with `"format": '
-				. '["blocks"]`, and pass `to_index`, the new position among that block\'s own siblings, not '
-				. 'a global position. Pass `expect` set to the block name you read at that path. Every op '
-				. 'returns the refreshed tree; take your next path from that response.'
+			'annotations' => array_merge(
+				// Not idempotent: paths shift, so a repeat acts on another block.
+				Annotations::update(
+					'Address the block by `path` from a fresh `albert/view-page` read with `"format": '
+					. '["blocks"]`, and pass `to_index`, the new position among that block\'s own siblings, not '
+					. 'a global position. Pass `expect` set to the block name you read at that path. Every op '
+					. 'returns the refreshed tree; take your next path from that response.'
+				),
+				[ 'idempotent' => false ]
 			),
 		];
 

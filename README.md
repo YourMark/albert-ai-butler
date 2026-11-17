@@ -192,6 +192,7 @@ Website: https://yourmark.nl
 - Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 - When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
 - When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
+- Albert now tells AI apps which of its tools can safely be repeated, so an app can retry one without doing something twice. Creating content or users, and adding, moving or removing a block, are marked as not safe to repeat.
 
 **Fixes**
 
@@ -225,6 +226,7 @@ Website: https://yourmark.nl
 - New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 - Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 - `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
+- Every `Annotations` preset now sets `idempotent`: `true` for `read()`, `update()`, `delete()` and `destructive()`, `false` for `create()` and `action()`. `albert/add-post-block`, `albert/add-page-block`, `albert/move-post-block`, `albert/move-page-block`, `albert/remove-post-block`, `albert/remove-page-block` and `albert/create-user` set it to `false`.
 
 ### 1.5.0
 

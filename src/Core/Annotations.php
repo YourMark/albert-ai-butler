@@ -22,6 +22,11 @@ namespace Albert\Core;
  * - **Destructive**: `readonly: false, destructive: true`, removes or overwrites
  *   data beyond recovery, or has a wide impact. Not only deletes.
  *
+ * Every preset also sets `idempotent`, so no hint is left null for a client to
+ * guess: a repeat call with the same input changes nothing more. An ability whose
+ * call inserts something or targets a position that shifts overrides it with
+ * `false`, e.g. `array_merge( Annotations::update(), [ 'idempotent' => false ] )`.
+ *
  * Every factory takes an optional `instructions` string. It is the guidance that
  * only matters once a model is about to call this particular ability: the
  * argument that is easy to get wrong, the call that has to come first, the thing
@@ -38,6 +43,7 @@ namespace Albert\Core;
  * moment of use, so lead with what to do, not with what the ability is.
  *
  * @since 1.0.0
+ * @since 1.6.0 Every preset sets `idempotent`.
  */
 class Annotations {
 	/**
@@ -47,13 +53,14 @@ class Annotations {
 	 *
 	 * @param string $instructions Optional guidance, surfaced through `get-ability-info`.
 	 *
-	 * @return array{readonly: bool, destructive: bool, instructions?: string}
+	 * @return array{readonly: bool, destructive: bool, idempotent: bool, instructions?: string}
 	 */
 	public static function read( string $instructions = '' ): array {
 		return self::with_instructions(
 			[
 				'readonly'    => true,
 				'destructive' => false,
+				'idempotent'  => true,
 			],
 			$instructions
 		);
@@ -66,13 +73,14 @@ class Annotations {
 	 *
 	 * @param string $instructions Optional guidance, surfaced through `get-ability-info`.
 	 *
-	 * @return array{readonly: bool, destructive: bool, instructions?: string}
+	 * @return array{readonly: bool, destructive: bool, idempotent: bool, instructions?: string}
 	 */
 	public static function create( string $instructions = '' ): array {
 		return self::with_instructions(
 			[
 				'readonly'    => false,
 				'destructive' => false,
+				'idempotent'  => false,
 			],
 			$instructions
 		);
@@ -85,13 +93,14 @@ class Annotations {
 	 *
 	 * @param string $instructions Optional guidance, surfaced through `get-ability-info`.
 	 *
-	 * @return array{readonly: bool, destructive: bool, instructions?: string}
+	 * @return array{readonly: bool, destructive: bool, idempotent: bool, instructions?: string}
 	 */
 	public static function update( string $instructions = '' ): array {
 		return self::with_instructions(
 			[
 				'readonly'    => false,
 				'destructive' => false,
+				'idempotent'  => true,
 			],
 			$instructions
 		);
@@ -104,13 +113,14 @@ class Annotations {
 	 *
 	 * @param string $instructions Optional guidance, surfaced through `get-ability-info`.
 	 *
-	 * @return array{readonly: bool, destructive: bool, instructions?: string}
+	 * @return array{readonly: bool, destructive: bool, idempotent: bool, instructions?: string}
 	 */
 	public static function delete( string $instructions = '' ): array {
 		return self::with_instructions(
 			[
 				'readonly'    => false,
 				'destructive' => true,
+				'idempotent'  => true,
 			],
 			$instructions
 		);
@@ -123,7 +133,7 @@ class Annotations {
 	 *
 	 * @param string $instructions Optional guidance, surfaced through `get-ability-info`.
 	 *
-	 * @return array{readonly: bool, destructive: bool, instructions?: string}
+	 * @return array{readonly: bool, destructive: bool, idempotent: bool, instructions?: string}
 	 */
 	public static function destructive( string $instructions = '' ): array {
 		return self::delete( $instructions );
@@ -136,13 +146,14 @@ class Annotations {
 	 *
 	 * @param string $instructions Optional guidance, surfaced through `get-ability-info`.
 	 *
-	 * @return array{readonly: bool, destructive: bool, instructions?: string}
+	 * @return array{readonly: bool, destructive: bool, idempotent: bool, instructions?: string}
 	 */
 	public static function action( string $instructions = '' ): array {
 		return self::with_instructions(
 			[
 				'readonly'    => false,
 				'destructive' => false,
+				'idempotent'  => false,
 			],
 			$instructions
 		);
@@ -157,10 +168,10 @@ class Annotations {
 	 *
 	 * @since 1.4.0
 	 *
-	 * @param array{readonly: bool, destructive: bool} $annotations  The behaviour flags.
-	 * @param string                                   $instructions Optional guidance.
+	 * @param array{readonly: bool, destructive: bool, idempotent: bool} $annotations  The behaviour flags.
+	 * @param string                                                     $instructions Optional guidance.
 	 *
-	 * @return array{readonly: bool, destructive: bool, instructions?: string}
+	 * @return array{readonly: bool, destructive: bool, idempotent: bool, instructions?: string}
 	 */
 	private static function with_instructions( array $annotations, string $instructions ): array {
 		$instructions = trim( $instructions );

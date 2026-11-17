@@ -46,12 +46,16 @@ class Create extends BaseAbility {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::destructive(
-				'Do not supply a password; this ability does not accept one. The site generates it and returns '
-				. '`password_reset_url`, a one-time link. Give that link to the new user so they set their own '
-				. 'password. It is a credential, so hand it over directly rather than repeating it anywhere it '
-				. 'would be stored. If the link is missing, `password_reset_note` says why: the account exists '
-				. 'but nobody can sign in to it yet, so report that rather than saying the user is ready.'
+			'annotations' => array_merge(
+				// A create, so not idempotent.
+				Annotations::destructive(
+					'Do not supply a password; this ability does not accept one. The site generates it and returns '
+					. '`password_reset_url`, a one-time link. Give that link to the new user so they set their own '
+					. 'password. It is a credential, so hand it over directly rather than repeating it anywhere it '
+					. 'would be stored. If the link is missing, `password_reset_note` says why: the account exists '
+					. 'but nobody can sign in to it yet, so report that rather than saying the user is ready.'
+				),
+				[ 'idempotent' => false ]
 			),
 		];
 

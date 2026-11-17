@@ -40,12 +40,16 @@ class RemoveBlock extends AbstractRemoveBlock {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::destructive(
-				'Address the block by `path` from a fresh `albert/view-page` read with `"format": '
-				. '["blocks"]`, and pass `expect` set to the block name you read there, without it, a page '
-				. 'that changed since your read means you delete the wrong block. Every op returns the '
-				. 'refreshed tree; the paths of later blocks shift after a delete, so take your next path '
-				. 'from that response.'
+			'annotations' => array_merge(
+				// Not idempotent: paths shift, so a repeat acts on another block.
+				Annotations::destructive(
+					'Address the block by `path` from a fresh `albert/view-page` read with `"format": '
+					. '["blocks"]`, and pass `expect` set to the block name you read there, without it, a page '
+					. 'that changed since your read means you delete the wrong block. Every op returns the '
+					. 'refreshed tree; the paths of later blocks shift after a delete, so take your next path '
+					. 'from that response.'
+				),
+				[ 'idempotent' => false ]
 			),
 		];
 

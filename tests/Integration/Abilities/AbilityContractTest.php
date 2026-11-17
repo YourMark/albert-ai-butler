@@ -271,6 +271,41 @@ class AbilityContractTest extends TestCase {
 	}
 
 	/**
+	 * Every Albert ability sets all three behaviour hints, never leaving one null.
+	 *
+	 * @dataProvider provideAbilities
+	 *
+	 * @param class-string<BaseAbility> $ability_class Ability class.
+	 *
+	 * @return void
+	 */
+	public function test_ability_sets_every_behaviour_hint( string $ability_class ): void {
+		$ability = new $ability_class();
+
+		$reflection = new \ReflectionClass( $ability );
+		$prop       = $reflection->getProperty( 'meta' );
+		$prop->setAccessible( true );
+		$annotations = (array) ( ( (array) $prop->getValue( $ability ) )['annotations'] ?? [] );
+
+		foreach ( [ 'readonly', 'destructive', 'idempotent' ] as $hint ) {
+			$this->assertIsBool( $annotations[ $hint ] ?? null, sprintf( '%s leaves "%s" unset.', $ability_class, $hint ) );
+		}
+	}
+
+	/**
+	 * Abilities whose repeat call does more are not idempotent.
+	 *
+	 * @return void
+	 */
+	public function test_position_and_create_abilities_are_not_idempotent(): void {
+		foreach ( [ 'albert/add-post-block', 'albert/add-page-block', 'albert/move-post-block', 'albert/move-page-block', 'albert/remove-post-block', 'albert/remove-page-block', 'albert/create-user' ] as $id ) {
+			$ability = wp_get_ability( $id );
+			$this->assertNotNull( $ability, $id );
+			$this->assertFalse( $ability->get_meta_item( 'annotations', [] )['idempotent'] ?? null, $id );
+		}
+	}
+
+	/**
 	 * The input_schema is a valid JSON Schema object.
 	 *
 	 * @dataProvider provideAbilities

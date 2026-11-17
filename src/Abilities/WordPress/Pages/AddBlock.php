@@ -40,13 +40,17 @@ class AddBlock extends AbstractAddBlock {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::update(
-				'Address the target by `path` from a fresh `albert/view-page` read with `"format": '
-				. '["blocks"]`, and say where with `position`: `before` or `after` for a sibling, '
-				. '`inside_start` or `inside_end` to nest inside a layout block. To append, use `after` '
-				. 'with the last top-level block\'s path. Pass `expect` set to the block name you read at '
-				. 'that path. Every op returns the refreshed tree; later paths shift after an insert, so '
-				. 'take your next path from that response.'
+			'annotations' => array_merge(
+				// Not idempotent: a repeat inserts another block.
+				Annotations::update(
+					'Address the target by `path` from a fresh `albert/view-page` read with `"format": '
+					. '["blocks"]`, and say where with `position`: `before` or `after` for a sibling, '
+					. '`inside_start` or `inside_end` to nest inside a layout block. To append, use `after` '
+					. 'with the last top-level block\'s path. Pass `expect` set to the block name you read at '
+					. 'that path. Every op returns the refreshed tree; later paths shift after an insert, so '
+					. 'take your next path from that response.'
+				),
+				[ 'idempotent' => false ]
 			),
 		];
 
