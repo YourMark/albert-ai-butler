@@ -201,7 +201,7 @@ class Create extends BaseAbility {
 		] + $fields;
 
 		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
-			$request_data['categories'] = array_map( 'absint', $args['categories'] );
+			$request_data['categories'] = array_map( 'intval', $args['categories'] );
 			$unknown                    = PostTerms::check_category_ids( $request_data['categories'] );
 			if ( $unknown ) {
 				return $unknown;

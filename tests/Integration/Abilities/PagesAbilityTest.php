@@ -241,7 +241,8 @@ class PagesAbilityTest extends TestCase {
 		$result = ( new ViewPage() )->execute( [ 'id' => 99999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'page_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+		$this->assertSame( 404, $result->get_error_data()['status'] );
 	}
 
 	/**
@@ -255,7 +256,88 @@ class PagesAbilityTest extends TestCase {
 		$result = ( new ViewPage() )->execute( [ 'id' => $post_id ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'page_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * ViewPage returns its author and parent as id and name, next to the released ID keys.
+	 *
+	 * @return void
+	 */
+	public function test_view_page_returns_author_and_parent_names(): void {
+		$author_id = self::factory()->user->create(
+			[
+				'role'         => 'editor',
+				'display_name' => 'Page Author',
+			]
+		);
+		$parent_id = self::factory()->post->create(
+			[
+				'post_type'  => 'page',
+				'post_title' => 'Parent Page',
+			]
+		);
+		$page_id   = self::factory()->post->create(
+			[
+				'post_type'   => 'page',
+				'post_author' => $author_id,
+				'post_parent' => $parent_id,
+			]
+		);
+
+		$page = ( new ViewPage() )->execute( [ 'id' => $page_id ] )['page'];
+
+		$this->assertSame( $author_id, $page['author_id'] );
+		$this->assertSame(
+			[
+				'id'   => $author_id,
+				'name' => 'Page Author',
+			],
+			$page['author']
+		);
+		$this->assertSame( $parent_id, $page['parent_id'] );
+		$this->assertSame(
+			[
+				'id'   => $parent_id,
+				'name' => 'Parent Page',
+			],
+			$page['parent']
+		);
+	}
+
+	/**
+	 * ViewPage returns a null parent for a top-level page.
+	 *
+	 * @return void
+	 */
+	public function test_view_page_top_level_has_null_parent(): void {
+		$page_id = self::factory()->post->create( [ 'post_type' => 'page' ] );
+
+		$page = ( new ViewPage() )->execute( [ 'id' => $page_id ] )['page'];
+
+		$this->assertSame( 0, $page['parent_id'] );
+		$this->assertNull( $page['parent'] );
+	}
+
+	/**
+	 * ViewPage refuses a private page the user cannot read.
+	 *
+	 * @return void
+	 */
+	public function test_view_page_refuses_unreadable_page(): void {
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'   => 'page',
+				'post_status' => 'private',
+			]
+		);
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
+
+		$result = ( new ViewPage() )->execute( [ 'id' => $page_id ] );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'albert_page_permission_denied', $result->get_error_code() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
 	}
 
 	/**

@@ -56,8 +56,9 @@ class PostFieldsTest extends TestCase {
 		];
 		$GLOBALS['albert_test_posts']          = [
 			10 => (object) [
-				'ID'        => 10,
-				'post_type' => 'page',
+				'ID'         => 10,
+				'post_type'  => 'page',
+				'post_title' => 'Parent',
 			],
 			11 => (object) [
 				'ID'        => 11,
@@ -380,6 +381,13 @@ class PostFieldsTest extends TestCase {
 		$page = ( new ViewPage() )->execute( [ 'id' => 11 ] )['page'];
 
 		$this->assertSame( 10, $page['parent_id'] );
+		$this->assertSame(
+			[
+				'id'   => 10,
+				'name' => 'Parent',
+			],
+			$page['parent']
+		);
 		$this->assertSame( 4, $page['menu_order'] );
 		$this->assertSame( '', $page['template'] );
 		$this->assertSame( 'open', $page['comment_status'] );

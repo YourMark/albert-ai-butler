@@ -144,8 +144,8 @@ class Outcome {
 	 *     capability. The link is fine; the person behind it no longer qualifies.
 	 *   - `rest_forbidden` — WordPress core's REST refusal, reached through the
 	 *     `rest_do_request()` abilities.
-	 *   - `forbidden` — Albert's own per-object read refusal in ViewPost and
-	 *     ViewPage ("You do not have permission to view this post.").
+	 *   - `forbidden`: the per-object refusal of Albert Premium's CPT abilities,
+	 *     and of ViewPost and ViewPage before 1.6.0.
 	 *
 	 * Deliberately *not* here: `ability_invalid_input` and `rest_invalid_param`
 	 * are malformed requests rather than policy; `link_expired` and

@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+use Albert\Abilities\WordPress\Shared\PostReferences;
 use Albert\Abilities\WordPress\Shared\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
@@ -32,7 +33,7 @@ class ViewPost extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/view-post';
 		$this->label       = __( 'View Post', 'albert-ai-butler' );
-		$this->description = __( 'Retrieve a single WordPress post by ID.', 'albert-ai-butler' );
+		$this->description = __( 'Read one post by its ID. Use it before editing a post, to get its block paths and current terms; find the ID with albert/find-posts.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
@@ -102,37 +103,37 @@ class ViewPost extends BaseAbility {
 					'type'        => 'object',
 					'description' => 'The requested post object.',
 					'properties'  => [
-						'content'    => [
+						'content'                => [
 							'type'        => 'string',
 							'description' => 'The stored post content: raw block markup (<!-- wp:... --> comment-delimited) for block-editor posts, plain HTML for classic-editor posts (see "has_blocks" / "editor"). When a block window is applied (see "_meta"), this is the re-serialised window, not a verbatim excerpt of the stored markup. Included when "content" is requested (default).',
 						],
-						'blocks'     => [
+						'blocks'                 => [
 							'type'        => 'array',
 							'description' => 'The post content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path }; innerBlocks is the same shape recursively. "path" (e.g. [2], [2,0]) is the block\'s address: pass it to the edit/add/remove/move-post-block abilities. Included when "blocks" is requested (default).',
 							'items'       => [ 'type' => 'object' ],
 						],
-						'plaintext'  => [
+						'plaintext'              => [
 							'type'        => 'string',
 							'description' => 'Human-readable plain text of the whole post content. Included when "plaintext" is requested (default).',
 						],
-						'html'       => [
+						'html'                   => [
 							'type'        => 'string',
 							'description' => 'Rendered HTML produced by do_blocks(), so it reflects dynamic/server-rendered block output. Only included when "html" is requested.',
 						],
-						'markdown'   => [
+						'markdown'               => [
 							'type'        => 'string',
 							'description' => 'Markdown rendering of the post content. Only included when "markdown" is requested.',
 						],
-						'editor'     => [
+						'editor'                 => [
 							'type'        => 'string',
 							'enum'        => [ 'block', 'classic' ],
 							'description' => 'Which editor this post uses. "block" means send structured "blocks" when writing; "classic" means send plain HTML in "content" instead.',
 						],
-						'has_blocks' => [
+						'has_blocks'             => [
 							'type'        => 'boolean',
 							'description' => 'Whether the stored content actually contains block markup. May differ from "editor" (e.g. classic content saved on a block-editor type).',
 						],
-						'_meta'      => [
+						'_meta'                  => [
 							'type'        => 'object',
 							'description' => 'Block-window pagination metadata. The returned content/blocks/plaintext/html/markdown reflect only the requested window of top-level blocks. When "truncated" is true, fetch the rest by re-requesting with the suggested "next_offset".',
 							'properties'  => [
@@ -166,6 +167,8 @@ class ViewPost extends BaseAbility {
 								],
 							],
 						],
+						'author'                 => PostReferences::reference_schema( 'Who wrote it, or null when that user no longer exists.' ),
+						'featured_image_details' => PostReferences::featured_image_schema(),
 						...PostTerms::schema(),
 					],
 				],
@@ -191,23 +194,28 @@ class ViewPost extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post_id = absint( $args['id'] );
+		$post_id = (int) $args['id'];
 		$post    = get_post( $post_id );
 
 		if ( ! $post || $post->post_type !== 'post' ) {
 			return new WP_Error(
-				'post_not_found',
+				'albert_post_not_found',
 				sprintf(
 					/* translators: %d: Post ID */
-					__( 'Post with ID %d not found.', 'albert-ai-butler' ),
+					__( 'No post exists with ID %d. Find the post with albert/find-posts.', 'albert-ai-butler' ),
 					$post_id
-				)
+				),
+				[ 'status' => 404 ]
 			);
 		}
 
 		// Check if user can read this specific post.
 		if ( ! current_user_can( 'read_post', $post_id ) ) {
-			return new WP_Error( 'forbidden', __( 'You do not have permission to view this post.', 'albert-ai-butler' ) );
+			return new WP_Error(
+				'albert_post_permission_denied',
+				__( 'You do not have permission to view this post. Ask the site owner for access.', 'albert-ai-butler' ),
+				[ 'status' => 403 ]
+			);
 		}
 
 		$format  = isset( $args['format'] ) && is_array( $args['format'] ) ? $args['format'] : [];
@@ -230,18 +238,20 @@ class ViewPost extends BaseAbility {
 				$content,
 				EditorMode::signal( $post ),
 				[
-					'excerpt'        => $post->post_excerpt,
-					'status'         => $post->post_status,
-					'author_id'      => (int) $post->post_author,
-					'date'           => $post->post_date,
-					'modified'       => $post->post_modified,
-					'slug'           => $post->post_name,
-					'permalink'      => get_permalink( $post ),
-					'template'       => get_page_template_slug( $post ),
-					'comment_status' => $post->comment_status,
-					'sticky'         => is_sticky( $post->ID ),
-					'format'         => $post_format ? $post_format : 'standard',
-					'featured_image' => get_post_thumbnail_id( $post ) ? get_post_thumbnail_id( $post ) : null,
+					'excerpt'                => $post->post_excerpt,
+					'status'                 => $post->post_status,
+					'author_id'              => (int) $post->post_author,
+					'author'                 => PostReferences::author( $post ),
+					'date'                   => $post->post_date,
+					'modified'               => $post->post_modified,
+					'slug'                   => $post->post_name,
+					'permalink'              => get_permalink( $post ),
+					'template'               => get_page_template_slug( $post ),
+					'comment_status'         => $post->comment_status,
+					'sticky'                 => is_sticky( $post->ID ),
+					'format'                 => $post_format ? $post_format : 'standard',
+					'featured_image'         => get_post_thumbnail_id( $post ) ? get_post_thumbnail_id( $post ) : null,
+					'featured_image_details' => PostReferences::featured_image( $post ),
 				],
 				PostTerms::for_post( $post )
 			),

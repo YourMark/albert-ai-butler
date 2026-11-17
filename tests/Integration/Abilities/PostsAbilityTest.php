@@ -10,9 +10,11 @@
 
 namespace Albert\Tests\Integration\Abilities;
 
+use Albert\Abilities\WordPress\Posts\AddTerms as AddPostTerms;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
 use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
 use Albert\Abilities\WordPress\Posts\FindPosts;
+use Albert\Abilities\WordPress\Posts\RemoveTerms as RemovePostTerms;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Tests\TestCase;
@@ -257,7 +259,8 @@ class PostsAbilityTest extends TestCase {
 		$result = ( new ViewPost() )->execute( [ 'id' => 99999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'post_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertSame( 404, $result->get_error_data()['status'] );
 	}
 
 	/**
@@ -271,7 +274,75 @@ class PostsAbilityTest extends TestCase {
 		$result = ( new ViewPost() )->execute( [ 'id' => $page_id ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'post_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * ViewPost refuses a private post the user cannot read.
+	 *
+	 * @return void
+	 */
+	public function test_view_post_refuses_unreadable_post(): void {
+		$post_id = self::factory()->post->create( [ 'post_status' => 'private' ] );
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
+
+		$result = ( new ViewPost() )->execute( [ 'id' => $post_id ] );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * ViewPost returns the author by name and the featured image with its URL and alt text.
+	 *
+	 * @return void
+	 */
+	public function test_view_post_returns_author_and_featured_image_details(): void {
+		$author_id = self::factory()->user->create(
+			[
+				'role'         => 'author',
+				'display_name' => 'Post Author',
+			]
+		);
+		$post_id   = self::factory()->post->create( [ 'post_author' => $author_id ] );
+		$image_id  = self::factory()->attachment->create(
+			[
+				'post_mime_type' => 'image/jpeg',
+				'file'           => 'photo.jpg',
+			]
+		);
+		update_post_meta( $image_id, '_wp_attachment_image_alt', 'A photo' );
+		set_post_thumbnail( $post_id, $image_id );
+
+		$post = ( new ViewPost() )->execute( [ 'id' => $post_id ] )['post'];
+
+		$this->assertSame( $author_id, $post['author_id'] );
+		$this->assertSame(
+			[
+				'id'   => $author_id,
+				'name' => 'Post Author',
+			],
+			$post['author']
+		);
+		$this->assertSame( $image_id, $post['featured_image'] );
+		$this->assertSame( $image_id, $post['featured_image_details']['id'] );
+		$this->assertSame( wp_get_attachment_url( $image_id ), $post['featured_image_details']['url'] );
+		$this->assertSame( 'A photo', $post['featured_image_details']['alt'] );
+	}
+
+	/**
+	 * ViewPost returns null featured image details for a post without one.
+	 *
+	 * @return void
+	 */
+	public function test_view_post_without_featured_image_has_null_details(): void {
+		$post_id = self::factory()->post->create();
+
+		$post = ( new ViewPost() )->execute( [ 'id' => $post_id ] )['post'];
+
+		$this->assertNull( $post['featured_image'] );
+		$this->assertNull( $post['featured_image_details'] );
 	}
 
 	// ─── CreatePost ─────────────────────────────────────────────────
@@ -422,11 +493,11 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * UpdatePost clears categories and tags when sent an empty array.
+	 * UpdatePost leaves categories and tags alone when sent an empty list.
 	 *
 	 * @return void
 	 */
-	public function test_update_post_empty_arrays_clear_terms(): void {
+	public function test_update_post_empty_arrays_change_nothing(): void {
 		$post_id = self::factory()->post->create();
 		$cat_id  = self::factory()->term->create( [ 'taxonomy' => 'category' ] );
 		wp_set_post_categories( $post_id, [ $cat_id ] );
@@ -441,8 +512,8 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertIsArray( $result );
-		$this->assertSame( [], wp_get_post_categories( $post_id ) );
-		$this->assertSame( [], wp_get_post_tags( $post_id ) );
+		$this->assertSame( [ $cat_id ], wp_get_post_categories( $post_id ) );
+		$this->assertSame( 'clear-me', wp_get_post_tags( $post_id )[0]->name );
 	}
 
 	/**
@@ -463,7 +534,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'albert_unknown_category', $result->get_error_code() );
+		$this->assertSame( 'albert_category_not_found', $result->get_error_code() );
 		$this->assertSame( [ $cat_id ], wp_get_post_categories( $post_id ) );
 	}
 
@@ -547,6 +618,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertWPError( $result );
+		$this->assertSame( 'albert_invalid_tags', $result->get_error_code() );
 		$this->assertSame( 'keep-me', wp_get_post_tags( $post_id )[0]->name );
 	}
 
@@ -586,6 +658,215 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
+	}
+
+	/**
+	 * AddPostTerms adds tags, creating a new one, and keeps the tags already there.
+	 *
+	 * @return void
+	 */
+	public function test_add_post_terms_keeps_existing_tags(): void {
+		$post_id = self::factory()->post->create();
+		wp_set_post_tags( $post_id, [ 'old-tag' ] );
+
+		$result = ( new AddPostTerms() )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ 'new-tag', 'old-tag' ],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$names = wp_list_pluck( $result['terms'], 'name' );
+		sort( $names );
+		$this->assertSame( [ 'new-tag', 'old-tag' ], $names );
+		$this->assertCount( 2, wp_get_post_tags( $post_id ) );
+	}
+
+	/**
+	 * AddPostTerms adds a category and keeps the post's other categories.
+	 *
+	 * @return void
+	 */
+	public function test_add_post_terms_keeps_existing_categories(): void {
+		$post_id = self::factory()->post->create();
+		$old_id  = self::factory()->category->create( [ 'name' => 'Old Cat' ] );
+		$new_id  = self::factory()->category->create( [ 'name' => 'New Cat' ] );
+		wp_set_post_categories( $post_id, [ $old_id ] );
+
+		$result = ( new AddPostTerms() )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'category',
+				'terms'    => [ $new_id ],
+			]
+		);
+
+		$ids = wp_get_post_categories( $post_id );
+		sort( $ids );
+		$this->assertSame( [ $old_id, $new_id ], $ids );
+		$this->assertContains(
+			[
+				'id'   => $new_id,
+				'name' => 'New Cat',
+			],
+			$result['terms']
+		);
+	}
+
+	/**
+	 * AddPostTerms refuses a category ID that does not exist and changes nothing.
+	 *
+	 * @return void
+	 */
+	public function test_add_post_terms_refuses_unknown_category(): void {
+		$post_id = self::factory()->post->create();
+		$cat_id  = self::factory()->category->create();
+		wp_set_post_categories( $post_id, [ $cat_id ] );
+
+		$result = ( new AddPostTerms() )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'category',
+				'terms'    => [ 999999 ],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'albert_category_not_found', $result->get_error_code() );
+		$this->assertSame( [ $cat_id ], wp_get_post_categories( $post_id ) );
+	}
+
+	/**
+	 * AddPostTerms refuses category names: categories are sent by ID.
+	 *
+	 * @return void
+	 */
+	public function test_add_post_terms_refuses_category_names(): void {
+		$post_id = self::factory()->post->create();
+
+		$result = ( new AddPostTerms() )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'category',
+				'terms'    => [ 'News' ],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'albert_invalid_terms', $result->get_error_code() );
+	}
+
+	/**
+	 * AddPostTerms answers albert_post_not_found for a page ID.
+	 *
+	 * @return void
+	 */
+	public function test_add_post_terms_refuses_page(): void {
+		$page_id = self::factory()->post->create( [ 'post_type' => 'page' ] );
+
+		$result = ( new AddPostTerms() )->execute(
+			[
+				'post_id'  => $page_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ 'x' ],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * AddPostTerms refuses a post the user cannot edit.
+	 *
+	 * @return void
+	 */
+	public function test_add_post_terms_refuses_post_user_cannot_edit(): void {
+		$post_id = self::factory()->post->create( [ 'post_status' => 'publish' ] );
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
+
+		$result = ( new AddPostTerms() )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ 'x' ],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
+		$this->assertSame( [], wp_get_post_tags( $post_id ) );
+	}
+
+	/**
+	 * RemovePostTerms removes one tag and keeps the others; an unknown name is skipped.
+	 *
+	 * @return void
+	 */
+	public function test_remove_post_terms_keeps_other_tags(): void {
+		$post_id = self::factory()->post->create();
+		wp_set_post_tags( $post_id, [ 'keep-tag', 'drop-tag' ] );
+
+		$result = ( new RemovePostTerms() )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ 'drop-tag', 'never-existed' ],
+			]
+		);
+
+		$this->assertSame( [ 'keep-tag' ], wp_list_pluck( $result['terms'], 'name' ) );
+		$this->assertFalse( $result['default_category_applied'] );
+		$this->assertFalse( get_term_by( 'name', 'never-existed', 'post_tag' ) );
+	}
+
+	/**
+	 * RemovePostTerms puts the default category back when the last one is removed, and says so.
+	 *
+	 * @return void
+	 */
+	public function test_remove_post_terms_last_category_applies_default(): void {
+		$post_id    = self::factory()->post->create();
+		$cat_id     = self::factory()->category->create();
+		$default_id = (int) get_option( 'default_category' );
+		wp_set_post_categories( $post_id, [ $cat_id ] );
+
+		$result = ( new RemovePostTerms() )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'category',
+				'terms'    => [ $cat_id ],
+			]
+		);
+
+		$this->assertTrue( $result['default_category_applied'] );
+		$this->assertSame( [ $default_id ], wp_list_pluck( $result['terms'], 'id' ) );
+		$this->assertSame( [ $default_id ], wp_get_post_categories( $post_id ) );
+	}
+
+	/**
+	 * RemovePostTerms keeps the other categories when one of several is removed.
+	 *
+	 * @return void
+	 */
+	public function test_remove_post_terms_keeps_other_categories(): void {
+		$post_id = self::factory()->post->create();
+		$keep_id = self::factory()->category->create();
+		$drop_id = self::factory()->category->create();
+		wp_set_post_categories( $post_id, [ $keep_id, $drop_id ] );
+
+		$result = ( new RemovePostTerms() )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'category',
+				'terms'    => [ $drop_id ],
+			]
+		);
+
+		$this->assertFalse( $result['default_category_applied'] );
+		$this->assertSame( [ $keep_id ], wp_get_post_categories( $post_id ) );
 	}
 
 	// ─── DeletePost ─────────────────────────────────────────────────

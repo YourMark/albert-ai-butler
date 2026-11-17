@@ -98,12 +98,12 @@ class Update extends BaseAbility {
 			'categories' => [
 				'type'        => 'array',
 				'items'       => [ 'type' => 'integer' ],
-				'description' => 'Category IDs. Replaces the post\'s categories; [] removes them all, though WordPress puts the default category back the next time the post is saved elsewhere. Omit to leave them unchanged.',
+				'description' => 'Deprecated: use albert/add-post-terms or albert/remove-post-terms. Category IDs that replace the post\'s categories; an empty list changes nothing.',
 			],
 			'tags'       => [
 				'type'        => 'array',
 				'items'       => [ 'type' => 'string' ],
-				'description' => 'Tag names, created when missing. Replaces the post\'s tags; [] removes them all. Omit to leave them unchanged.',
+				'description' => 'Deprecated: use albert/add-post-terms or albert/remove-post-terms. Tag names, created when missing, that replace the post\'s tags; an empty list changes nothing.',
 			],
 		];
 
@@ -230,16 +230,16 @@ class Update extends BaseAbility {
 			$request_data['excerpt'] = sanitize_textarea_field( $args['excerpt'] );
 		}
 
-		// An absent field leaves the terms alone; a supplied [] clears them.
-		if ( isset( $args['categories'] ) && is_array( $args['categories'] ) ) {
-			$request_data['categories'] = array_map( 'absint', $args['categories'] );
+		// An empty list never clears: removing terms is albert/remove-post-terms.
+		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
+			$request_data['categories'] = array_map( 'intval', $args['categories'] );
 			$unknown                    = PostTerms::check_category_ids( $request_data['categories'] );
 			if ( $unknown ) {
 				return $unknown;
 			}
 		}
 
-		if ( isset( $args['tags'] ) && is_array( $args['tags'] ) ) {
+		if ( ! empty( $args['tags'] ) && is_array( $args['tags'] ) ) {
 			$tag_ids = PostTerms::tag_ids( $args['tags'] );
 			if ( is_wp_error( $tag_ids ) ) {
 				return $tag_ids;
