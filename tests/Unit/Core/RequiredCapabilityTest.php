@@ -85,6 +85,20 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
+	 * Comment abilities, reads included, need moderate_comments: comments carry
+	 * visitors' personal data.
+	 *
+	 * @return void
+	 */
+	public function test_comment_abilities_require_moderate_comments(): void {
+		foreach ( [ 'albert/find-comments', 'albert/reply-to-comment', 'albert/delete-comment' ] as $id ) {
+			$ability = new WP_Ability( $id, [ 'annotations' => [ 'readonly' => $id === 'albert/find-comments' ] ] );
+
+			$this->assertSame( 'moderate_comments', AbilitiesRegistry::resolve_required_capability( $ability ), $id );
+		}
+	}
+
+	/**
 	 * Uploading media requires upload_files.
 	 *
 	 * @return void
