@@ -115,6 +115,89 @@ class UsersAbilityTest extends TestCase {
 		$this->assertNotSame( $page1['users'][0]['id'], $page2['users'][0]['id'] );
 	}
 
+	/**
+	 * Email, roles and the login come back: the request runs in the edit context.
+	 *
+	 * @return void
+	 */
+	public function test_find_users_returns_email_roles_and_login(): void {
+		$user_id = self::factory()->user->create(
+			[
+				'user_login'    => 'login_differs',
+				'user_nicename' => 'nice-slug',
+				'user_email'    => 'differs@albert.test',
+				'role'          => 'editor',
+			]
+		);
+
+		$result = ( new FindUsers() )->execute( [ 'search' => 'differs@albert.test' ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( $user_id, $result['users'][0]['id'] );
+		$this->assertSame( 'login_differs', $result['users'][0]['username'] );
+		$this->assertSame( 'differs@albert.test', $result['users'][0]['email'] );
+		$this->assertSame( [ 'editor' ], $result['users'][0]['roles'] );
+	}
+
+	/**
+	 * With `id`, the one user comes back as a one-item list.
+	 *
+	 * @return void
+	 */
+	public function test_find_users_by_id_returns_one_user(): void {
+		self::factory()->user->create();
+		$user_id = self::factory()->user->create(
+			[
+				'user_login' => 'the_one',
+				'user_email' => 'one@albert.test',
+			]
+		);
+
+		$result = ( new FindUsers() )->execute( [ 'id' => $user_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 1, $result['total'] );
+		$this->assertCount( 1, $result['users'] );
+		$this->assertSame( $user_id, $result['users'][0]['id'] );
+		$this->assertSame( 'the_one', $result['users'][0]['username'] );
+		$this->assertSame( 'one@albert.test', $result['users'][0]['email'] );
+	}
+
+	/**
+	 * An `id` below 1 is refused rather than dropped.
+	 *
+	 * @return void
+	 */
+	public function test_find_users_refuses_an_invalid_id(): void {
+		foreach ( [ 0, '0', -5 ] as $value ) {
+			$result = ( new FindUsers() )->execute( [ 'id' => $value ] );
+
+			$this->assertInstanceOf( WP_Error::class, $result );
+			$this->assertSame( 'albert_invalid_id', $result->get_error_code() );
+		}
+	}
+
+	/**
+	 * Privacy mode still masks the email and login.
+	 *
+	 * @return void
+	 */
+	public function test_find_users_anonymises_with_privacy_mode_on(): void {
+		update_option( 'albert_privacy_mode', 'strict' );
+		$user_id = self::factory()->user->create(
+			[
+				'user_login' => 'private_login',
+				'user_email' => 'private@albert.test',
+			]
+		);
+
+		$result = ( new FindUsers() )->execute( [ 'id' => $user_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertNotSame( 'private@albert.test', $result['users'][0]['email'] );
+		$this->assertNotSame( 'private_login', $result['users'][0]['username'] );
+	}
+
 	// ─── ViewUser ───────────────────────────────────────────────────
 
 	/**
