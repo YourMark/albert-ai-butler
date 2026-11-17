@@ -959,6 +959,7 @@ class ExecuteSchemaTest extends TestCase {
 		);
 
 		$this->assertTrue( $result['deleted'] );
+		$this->assertFalse( $result['trashed'] );
 		$this->assertNull( get_post( (int) $created['id'] ) );
 	}
 

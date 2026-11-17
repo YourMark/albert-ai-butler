@@ -222,4 +222,95 @@ class GateTest extends TestCase {
 
 		$this->assertFalse( $this->gate->must_gate( $this->ability( [ 'destructive' => false ] ) ) );
 	}
+
+	/**
+	 * A delete ability that declares its permanent flag, like Albert's delete-post.
+	 *
+	 * @param string               $name Ability id.
+	 * @param array<string, mixed> $meta Extra meta; `safe_mode` declares the flag.
+	 * @param string               $type Schema type of `force`.
+	 * @return WP_Ability
+	 */
+	private function trash_ability( string $name = 'albert/delete-post', array $meta = [ 'safe_mode' => [ 'permanent_flag' => 'force' ] ], string $type = 'boolean' ): WP_Ability {
+		return new WP_Ability(
+			$name,
+			array_merge( [ 'annotations' => [ 'destructive' => true ] ], $meta ),
+			[ 'properties' => [ 'force' => [ 'type' => $type ] ] ]
+		);
+	}
+
+	/**
+	 * Moving to the trash is not held: trash is core's own undo.
+	 *
+	 * @return void
+	 */
+	public function test_a_declared_trash_call_is_not_held(): void {
+		$this->assertFalse( $this->gate->must_gate( $this->trash_ability(), [ 'id' => 5 ] ) );
+		$this->assertFalse(
+			$this->gate->must_gate(
+				$this->trash_ability(),
+				[
+					'id'    => 5,
+					'force' => false,
+				]
+			)
+		);
+	}
+
+	/**
+	 * The permanent call is held, and so is any value that is not exactly false.
+	 *
+	 * @return void
+	 */
+	public function test_a_permanent_call_is_held(): void {
+		foreach ( [ true, 'false', 0, null, 'true' ] as $force ) {
+			$this->assertTrue(
+				$this->gate->must_gate(
+					$this->trash_ability(),
+					[
+						'id'    => 5,
+						'force' => $force,
+					]
+				),
+				var_export( $force, true )
+			);
+		}
+	}
+
+	/**
+	 * A third-party ability with the same input, even the same declaration, is still held.
+	 *
+	 * @return void
+	 */
+	public function test_a_third_party_ability_with_a_force_input_is_held(): void {
+		$input = [
+			'id'    => 5,
+			'force' => false,
+		];
+
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability( 'vendor/delete-thing', [] ), $input ) );
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability( 'vendor/delete-thing' ), $input ) );
+	}
+
+	/**
+	 * An Albert ability that declares nothing, or names a flag that is not a boolean input, is held.
+	 *
+	 * @return void
+	 */
+	public function test_an_undeclared_or_mistyped_flag_is_held(): void {
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability( 'albert/delete-media', [] ), [ 'id' => 5 ] ) );
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability( 'albert/delete-post', [ 'safe_mode' => [ 'permanent_flag' => 'purge' ] ] ), [ 'id' => 5 ] ) );
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability( 'albert/delete-post', [ 'safe_mode' => [ 'permanent_flag' => 'force' ] ], 'string' ), [ 'id' => 5 ] ) );
+	}
+
+	/**
+	 * The risk list still holds a declared trash call.
+	 *
+	 * @return void
+	 */
+	public function test_the_risk_list_still_holds_a_trash_call(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/high_risk_abilities'] = [ 'albert/delete-post' ];
+
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability(), [ 'id' => 5 ] ) );
+	}
 }
