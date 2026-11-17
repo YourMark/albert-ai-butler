@@ -50,4 +50,18 @@ class AbilitiesPayloadCapabilityTest extends TestCase {
 
 		$this->assertSame( '', $rows[0]['capability'] );
 	}
+
+	/**
+	 * The removed resolver still answers, so an add-on calling it gets a notice, not a fatal.
+	 *
+	 * @return void
+	 */
+	public function test_resolve_required_capability_is_deprecated(): void {
+		$this->setExpectedDeprecated( 'Albert\Core\AbilitiesRegistry::resolve_required_capability' );
+
+		$ability = wp_get_ability( 'albert/find-posts' );
+		$this->assertInstanceOf( \WP_Ability::class, $ability );
+
+		$this->assertSame( '', \Albert\Core\AbilitiesRegistry::resolve_required_capability( $ability ) );
+	}
 }

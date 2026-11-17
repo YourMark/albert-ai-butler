@@ -365,4 +365,22 @@ class AbilitiesRegistry {
 	public static function is_mcp_public( array $meta ): bool {
 		return McpAbilityExposure::is_meta_public( $meta );
 	}
+
+	/**
+	 * Formerly the guessed capability shown on the Abilities screen.
+	 *
+	 * A permission check is code, so no capability can be read from it.
+	 *
+	 * @deprecated 1.6.0 No replacement.
+	 *
+	 * @param \WP_Ability $ability The ability.
+	 *
+	 * @return string Always ''.
+	 * @since 1.3.0
+	 */
+	public static function resolve_required_capability( \WP_Ability $ability ): string { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Kept for callers of the old signature.
+		_deprecated_function( __METHOD__, '1.6.0' );
+
+		return '';
+	}
 }
