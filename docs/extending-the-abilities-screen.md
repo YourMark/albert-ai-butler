@@ -42,8 +42,9 @@ addFilter(
   - **`ability`** — the normalized row (see the shape under [payload_row](#3-surface-a-row-indicator--albertabilitiespayload_row)).
   - **`roles`** — `[ { value: <slug>, label } ]` for every site role (use for a role picker). For
     per-user pickers, query users via core REST `/wp/v2/users`.
-  - **`capabilityContent`** — always `null` since 1.6.0 (deprecated). It held the guessed
-    required-capability block.
+  - **`capabilityContent`** — deprecated since 1.6.0. It held the guessed required-capability
+    block; it now holds one neutral sentence so an add-on that still renders it shows no empty
+    space. Don't use it in new code.
   - **`registerCloseGuard( fn )`** — see [Confirming on close](#confirming-on-close).
 
 ### Confirming on close

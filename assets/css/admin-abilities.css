@@ -670,6 +670,14 @@ code.albert-flyin__card-value {
 }
 
 /* Tab content sits directly under the toggle; the panel's flex gap spaces it. */
+/* Deprecated capabilityContent, rendered only by Albert Premium 1.1.0 and older. */
+.albert-flyin__legacy-default {
+	margin: 0;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--albert-color-neutral);
+}
+
 .albert-perms-upsell__custom {
 	display: flex;
 	flex-direction: column;

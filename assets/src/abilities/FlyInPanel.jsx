@@ -203,13 +203,20 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 	/**
 	 * [Premium seam] Replace the whole Permissions section. Returning the
 	 * unchanged default keeps Free's behaviour when no add-on is present.
-	 * `capabilityContent` is always null since 1.6.0; kept so an older add-on
-	 * reading it renders nothing instead of breaking.
+	 * `capabilityContent` is deprecated since 1.6.0: only Albert Premium 1.1.0
+	 * and older render it, under their "Capability only" tab.
 	 */
 	const permissionsApi = {
 		ability,
 		roles,
-		capabilityContent: null,
+		capabilityContent: (
+			<p className="albert-flyin__legacy-default">
+				{ __(
+					'No advanced permissions: the ability decides who may use it.',
+					'albert-ai-butler'
+				) }
+			</p>
+		),
 		registerCloseGuard,
 		setSaveStatus: reportSaveStatus,
 	};
