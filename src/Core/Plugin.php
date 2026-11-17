@@ -20,6 +20,8 @@ use Albert\Abilities\WordPress\Posts\EditBlock as EditPostBlock;
 use Albert\Abilities\WordPress\Posts\AddBlock as AddPostBlock;
 use Albert\Abilities\WordPress\Posts\RemoveBlock as RemovePostBlock;
 use Albert\Abilities\WordPress\Posts\MoveBlock as MovePostBlock;
+use Albert\Abilities\WordPress\Posts\AddMeta as AddPostMeta;
+use Albert\Abilities\WordPress\Posts\RemoveMeta as RemovePostMeta;
 use Albert\Abilities\WordPress\Pages\FindPages;
 use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Pages\Create as CreatePage;
@@ -405,6 +407,10 @@ class Plugin {
 		$this->abilities_manager->add_ability( new AddPostBlock() );
 		$this->abilities_manager->add_ability( new RemovePostBlock() );
 		$this->abilities_manager->add_ability( new MovePostBlock() );
+
+		// Custom fields that hold a list, on any post type.
+		$this->abilities_manager->add_ability( new AddPostMeta() );
+		$this->abilities_manager->add_ability( new RemovePostMeta() );
 
 		// Pages abilities.
 		$this->abilities_manager->add_ability( new FindPages() );

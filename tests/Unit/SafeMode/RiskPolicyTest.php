@@ -109,6 +109,22 @@ class RiskPolicyTest extends TestCase {
 	}
 
 	/**
+	 * Adding to or removing from a list custom field is held like a `meta` overwrite.
+	 *
+	 * @return void
+	 */
+	public function test_holds_list_meta_changes(): void {
+		$input = [
+			'post_id' => 5,
+			'key'     => 'related',
+			'values'  => [ 'a' ],
+		];
+
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/add-post-meta' ), $input ) );
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/remove-post-meta' ), $input ) );
+	}
+
+	/**
 	 * An empty `meta` writes nothing, and another ability's `meta` is not Albert's field.
 	 *
 	 * @return void

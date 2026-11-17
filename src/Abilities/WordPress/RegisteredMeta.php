@@ -164,6 +164,78 @@ class RegisteredMeta {
 	}
 
 	/**
+	 * Check the values to add to or remove from a multi-value field.
+	 *
+	 * Refuses a key that is not a reachable multi-value field, a key the user may not
+	 * change (the key's `auth_callback`), and a value the field's item schema rejects.
+	 *
+	 * @param string            $name       Field name as REST shows it.
+	 * @param array<int, mixed> $values     Values sent.
+	 * @param int               $post_id    Post being changed.
+	 * @param string            $post_type  Post type.
+	 * @param string            $capability `add_post_meta` or `delete_post_meta`.
+	 * @return array<int, mixed>|WP_Error The values as core's REST API returns them, so they compare to stored ones.
+	 * @since 1.6.0
+	 */
+	public static function check_list_values( string $name, array $values, int $post_id, string $post_type, string $capability ): array|WP_Error {
+		$keys    = self::reachable_keys( $post_type );
+		$schemas = ( new WP_REST_Post_Meta_Fields( $post_type ) )->get_field_schema()['properties'] ?? [];
+
+		if ( isset( $keys[ $name ] ) && $keys[ $name ]['single'] ) {
+			return new WP_Error(
+				'albert_invalid_key',
+				sprintf(
+					/* translators: %s: custom field key */
+					__( '"%s" holds one value, not a list. Set it with "meta" on albert/update-post or albert/update-page.', 'albert-ai-butler' ),
+					$name
+				),
+				[ 'status' => 400 ]
+			);
+		}
+
+		if ( ! isset( $keys[ $name ], $schemas[ $name ] ) ) {
+			$lists = array_keys( array_filter( $keys, static fn( array $field ): bool => ! $field['single'] ) );
+
+			return new WP_Error(
+				'albert_invalid_key',
+				sprintf(
+					/* translators: 1: custom field key, 2: comma-separated list of keys */
+					__( '"%1$s" is not a list custom field that can be changed here. Fields registered for the REST API that hold a list: %2$s.', 'albert-ai-butler' ),
+					$name,
+					$lists === [] ? __( 'none on this item', 'albert-ai-butler' ) : implode( ', ', $lists )
+				),
+				[ 'status' => 400 ]
+			);
+		}
+
+		if ( ! current_user_can( $capability, $post_id, $keys[ $name ]['key'] ) ) {
+			return new WP_Error(
+				'albert_meta_permission_denied',
+				sprintf(
+					/* translators: %s: custom field key */
+					__( 'You are not allowed to change the "%s" custom field.', 'albert-ai-butler' ),
+					$name
+				),
+				[ 'status' => 403 ]
+			);
+		}
+
+		$item_schema = $schemas[ $name ]['items'] ?? [];
+		$checked     = [];
+
+		foreach ( array_values( $values ) as $index => $value ) {
+			$valid = rest_validate_value_from_schema( $value, $item_schema, 'values[' . $index . ']' );
+			if ( is_wp_error( $valid ) ) {
+				return new WP_Error( 'albert_invalid_values', $valid->get_error_message(), [ 'status' => 400 ] );
+			}
+
+			$checked[] = rest_sanitize_value_from_schema( $value, $item_schema );
+		}
+
+		return $checked;
+	}
+
+	/**
 	 * REST names of the registered, unprotected fields, mapped to their meta key and
 	 * whether the field holds a single value.
 	 *

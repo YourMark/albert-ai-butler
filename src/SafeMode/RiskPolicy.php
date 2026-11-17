@@ -55,15 +55,17 @@ class RiskPolicy {
 	/**
 	 * Input fields that hold an otherwise ordinary write of Albert's.
 	 *
-	 * Overwriting a custom field has no way back until Revert ships (1.7.0): core
+	 * Changing a custom field has no way back until Revert ships (1.7.0): core
 	 * keeps no revision of meta. Creating content with them overwrites nothing.
 	 *
 	 * @since 1.6.0
 	 * @var array<string, list<string>>
 	 */
 	private const HELD_FIELDS = [
-		'albert/update-post' => [ 'meta' ],
-		'albert/update-page' => [ 'meta' ],
+		'albert/update-post'      => [ 'meta' ],
+		'albert/update-page'      => [ 'meta' ],
+		'albert/add-post-meta'    => [ 'values' ],
+		'albert/remove-post-meta' => [ 'values' ],
 	];
 
 	/**

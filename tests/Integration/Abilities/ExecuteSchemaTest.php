@@ -34,6 +34,8 @@ use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
 use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
 use Albert\Abilities\WordPress\Posts\FindPosts;
+use Albert\Abilities\WordPress\Posts\AddMeta as AddPostMeta;
+use Albert\Abilities\WordPress\Posts\RemoveMeta as RemovePostMeta;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
@@ -225,6 +227,33 @@ class ExecuteSchemaTest extends TestCase {
 			],
 			'UpdatePost'
 		);
+	}
+
+	/**
+	 * AddPostMeta and RemovePostMeta return the field's values matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_post_meta_list_output_matches_schema(): void {
+		register_post_meta(
+			'post',
+			'schema_list',
+			[
+				'type'         => 'string',
+				'single'       => false,
+				'show_in_rest' => true,
+			]
+		);
+		$args = [
+			'post_id' => self::factory()->post->create(),
+			'key'     => 'schema_list',
+			'values'  => [ 'a' ],
+		];
+
+		$this->assert_execute_matches_schema( new AddPostMeta(), $args, 'AddPostMeta' );
+		$this->assert_execute_matches_schema( new RemovePostMeta(), $args, 'RemovePostMeta' );
+
+		unregister_post_meta( 'post', 'schema_list' );
 	}
 
 	/**
