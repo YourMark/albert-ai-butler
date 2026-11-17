@@ -200,38 +200,20 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 		api
 	).slice().sort( ( a, b ) => ( a.priority ?? 10 ) - ( b.priority ?? 10 ) );
 
-	// Who may use the ability by default. Reused by an add-on that takes over the
-	// Permissions section (see the seam below), so both show the same text.
+	// What happens without custom rules. Reused by an add-on that takes over the
+	// Permissions section (see the seam below), so both say the same.
 	const capabilityContent = (
-		<div className="albert-flyin__card albert-flyin__card--capability">
-			<div className="albert-flyin__card-head">
-				<span className="albert-flyin__card-label">
-					{ __( 'Default access', 'albert-ai-butler' ) }
-				</span>
-				<InfoPopover
-					inline
-					label={ __( 'About default access', 'albert-ai-butler' ) }
-				>
-					<p>
-						{ __(
-							'Each ability checks who may use it when it runs, usually from the WordPress role and capabilities of the connected user. For a single post, page or user, WordPress also checks that item, for example whether you may edit someone else\'s post.',
-							'albert-ai-butler'
-						) }
-					</p>
-				</InfoPopover>
-			</div>
-			<span className="albert-flyin__card-value">
-				{ __(
-					'The ability decides with its own check.',
-					'albert-ai-butler'
-				) }
-			</span>
-		</div>
+		<p className="albert-perms-panel__default">
+			{ __(
+				'The same as in WordPress: your assistant can only do what the connected user is allowed to do.',
+				'albert-ai-butler'
+			) }
+		</p>
 	);
 
 	/**
 	 * [Premium seam] Replace the whole Permissions section. Free's default shows
-	 * the default access; an add-on (Albert Premium) returns its own UI and
+	 * what applies by default; an add-on (Albert Premium) returns its own UI and
 	 * reuses `api.capabilityContent` inside its default tab. Returning
 	 * the unchanged default keeps Free's behaviour when no add-on is present.
 	 */
@@ -253,13 +235,13 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 				>
 					<p>
 						{ __(
-							'Controls who can invoke this ability over MCP. By default the ability decides with its own check.',
+							'Controls who can invoke this ability over MCP. By default the same rules apply as in WordPress.',
 							'albert-ai-butler'
 						) }
 					</p>
 					<p>
 						{ __(
-							'Albert Premium adds custom per-role and per-user rules that replace that check.',
+							'Albert Premium adds custom per-role and per-user rules that replace them.',
 							'albert-ai-butler'
 						) }
 					</p>

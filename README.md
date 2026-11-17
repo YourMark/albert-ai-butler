@@ -184,7 +184,7 @@ Website: https://yourmark.nl
 **Improvements**
 
 - The Abilities screen now labels an ability from another plugin that doesn't say whether it only reads or can change something as Not declared, instead of guessing Write, and explains what that means. Albert still treats it as one that can make changes, so safe mode holds it.
-- The Abilities screen no longer shows a "Required capability" for each ability. It was a guess from the ability's name and was wrong in places; it now says that the ability decides with its own check.
+- The Abilities screen no longer shows a "Required capability" for each ability. It was a guess from the ability's name and was wrong in places. It now says what applies: the same as in WordPress, your assistant can only do what the connected user is allowed to do.
 - When your assistant edits a single block and the new text would lose a tag the block had, such as a ThirstyAffiliates link, Albert refuses the edit and tells the assistant to ask you first. Nothing is saved until you agree.
 - Albert is about 2 MB smaller: the Abilities and Skills screens now share one copy of their table instead of each carrying its own.
 - Ordinary page views on your site no longer load Albert's abilities, so the pages your visitors see do a little less work.

@@ -2,7 +2,7 @@
  * Permissions section — Free default (no Premium).
  *
  * Mirrors the structure of Albert Premium's real editor: a Default/Custom
- * toggle. "Default" shows the default-access card; "Custom rules"
+ * toggle. "Default" says what applies without rules; "Custom rules"
  * is gated behind Premium and shows a locked preview of the rule builder plus an
  * upgrade call to action.
  *
@@ -31,7 +31,7 @@ export default function AdvancedPermissionsUpsell( { capabilityContent } ) {
 		<div className="albert-perms-upsell albert-perms-panel">
 			<p className="albert-perms-panel__intro">
 				{ __(
-					'Control who can use this ability: by its own check, or with custom per-role and per-user rules.',
+					'Control who can use this ability: the WordPress default, or custom per-role and per-user rules.',
 					'albert-ai-butler'
 				) }
 			</p>
@@ -92,7 +92,7 @@ export default function AdvancedPermissionsUpsell( { capabilityContent } ) {
 						</li>
 						<li>
 							{ __(
-								'Replace the ability\'s own check',
+								'Override the WordPress default',
 								'albert-ai-butler'
 							) }
 						</li>

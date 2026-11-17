@@ -34,7 +34,7 @@ import { Button, Dropdown } from '@wordpress/components';
  * Render an info control.
  *
  * @param {Object}  props          Props.
- * @param {string}  props.label    Accessible name for the trigger, e.g. "About default access".
+ * @param {string}  props.label    Accessible name for the trigger, e.g. "About permissions".
  * @param {Element} props.children Popover content.
  * @param {boolean} [props.inline] Render in place instead of portalling. Set it when the
  *                                 control sits inside a focus trap, as the fly-in does.
