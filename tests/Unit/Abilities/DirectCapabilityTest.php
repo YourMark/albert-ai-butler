@@ -20,6 +20,7 @@ use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\SiteHealth\GetSiteHealth;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
@@ -82,6 +83,9 @@ class DirectCapabilityTest extends TestCase {
 			// Posts/Pages (read-only).
 			'view-post'          => [ ViewPost::class, 'read' ],
 			'view-page'          => [ ViewPage::class, 'read' ],
+
+			// Site Health.
+			'get-site-health'    => [ GetSiteHealth::class, 'view_site_health_checks' ],
 
 			// Users.
 			'view-user'          => [ ViewUser::class, 'list_users' ],
