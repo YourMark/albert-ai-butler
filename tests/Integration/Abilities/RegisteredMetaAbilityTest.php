@@ -157,11 +157,11 @@ class RegisteredMetaAbilityTest extends TestCase {
 	}
 
 	/**
-	 * Null clears a field, as in core's REST API.
+	 * Null never clears a field: an empty value must not mean "remove".
 	 *
 	 * @return void
 	 */
-	public function test_null_clears_a_field(): void {
+	public function test_null_is_refused_and_keeps_the_value(): void {
 		$result = ( new UpdatePost() )->execute(
 			[
 				'id'   => $this->post_id,
@@ -169,8 +169,9 @@ class RegisteredMetaAbilityTest extends TestCase {
 			]
 		);
 
-		$this->assertIsArray( $result );
-		$this->assertSame( '', get_post_meta( $this->post_id, 'subtitle', true ) );
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_invalid_meta', $result->get_error_code() );
+		$this->assertSame( 'Old subtitle', get_post_meta( $this->post_id, 'subtitle', true ) );
 	}
 
 	/**
@@ -188,7 +189,7 @@ class RegisteredMetaAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'meta_not_registered', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_meta', $result->get_error_code() );
 		$this->assertStringContainsString( 'subtitle', $result->get_error_message(), 'The refusal names the fields that can be written.' );
 		$this->assertSame( 'Meta host', get_post( $this->post_id )->post_title );
 		$this->assertSame( 'hidden', get_post_meta( $this->post_id, 'not_in_rest', true ) );
@@ -208,7 +209,7 @@ class RegisteredMetaAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'meta_not_registered', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_meta', $result->get_error_code() );
 		$this->assertSame( 'secret', get_post_meta( $this->post_id, '_plugin_private', true ) );
 	}
 
@@ -226,7 +227,7 @@ class RegisteredMetaAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'meta_invalid', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_meta', $result->get_error_code() );
 	}
 
 	/**
@@ -243,7 +244,7 @@ class RegisteredMetaAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'meta_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'albert_meta_permission_denied', $result->get_error_code() );
 		$this->assertSame( '', get_post_meta( $this->post_id, 'locked_note', true ) );
 	}
 
@@ -261,7 +262,7 @@ class RegisteredMetaAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'meta_invalid', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_meta', $result->get_error_code() );
 	}
 
 	/**
@@ -293,11 +294,14 @@ class RegisteredMetaAbilityTest extends TestCase {
 	}
 
 	/**
-	 * An empty list clears a multi-value field, so it needs the delete capability.
+	 * A multi-value field is readable but cannot be replaced or cleared through "meta".
 	 *
+	 * @dataProvider provide_list_writes
+	 *
+	 * @param mixed $value Value sent for the multi-value field.
 	 * @return void
 	 */
-	public function test_empty_list_on_a_multi_value_field_checks_delete(): void {
+	public function test_multi_value_field_is_refused_and_points_to_add_and_remove( $value ): void {
 		register_post_meta(
 			'post',
 			'related',
@@ -308,23 +312,38 @@ class RegisteredMetaAbilityTest extends TestCase {
 			]
 		);
 		add_post_meta( $this->post_id, 'related', 'a' );
-		$deny_delete = static fn( array $caps, string $cap ): array => $cap === 'delete_post_meta' ? [ 'do_not_allow' ] : $caps;
-		add_filter( 'map_meta_cap', $deny_delete, 10, 2 );
+		add_post_meta( $this->post_id, 'related', 'b' );
 
+		$view   = ( new ViewPost() )->execute( [ 'id' => $this->post_id ] );
 		$result = ( new UpdatePost() )->execute(
 			[
 				'id'    => $this->post_id,
 				'title' => 'Changed title',
-				'meta'  => [ 'related' => [] ],
+				'meta'  => [ 'related' => $value ],
 			]
 		);
 
-		remove_filter( 'map_meta_cap', $deny_delete, 10 );
 		unregister_post_meta( 'post', 'related' );
+		$this->assertSame( [ 'a', 'b' ], $view['post']['meta']['related'] );
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'meta_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_meta', $result->get_error_code() );
+		$this->assertStringContainsString( 'albert/add-post-meta', $result->get_error_message() );
+		$this->assertStringContainsString( 'albert/remove-post-meta', $result->get_error_message() );
 		$this->assertSame( 'Meta host', get_post( $this->post_id )->post_title );
-		$this->assertSame( [ 'a' ], get_post_meta( $this->post_id, 'related' ) );
+		$this->assertSame( [ 'a', 'b' ], get_post_meta( $this->post_id, 'related' ) );
+	}
+
+	/**
+	 * Writes that would replace or clear a list.
+	 *
+	 * @return array<string, array{0: mixed}>
+	 */
+	public static function provide_list_writes(): array {
+		return [
+			'replacement list' => [ [ 'c' ] ],
+			'empty list'       => [ [] ],
+			'null'             => [ null ],
+		];
 	}
 
 	/**
@@ -356,7 +375,7 @@ class RegisteredMetaAbilityTest extends TestCase {
 			]
 		);
 		$this->assertInstanceOf( WP_Error::class, $refused );
-		$this->assertSame( 'meta_not_registered', $refused->get_error_code() );
+		$this->assertSame( 'albert_invalid_meta', $refused->get_error_code() );
 	}
 
 	/**
@@ -380,7 +399,7 @@ class RegisteredMetaAbilityTest extends TestCase {
 		$this->assertIsArray( $view );
 		$this->assertSame( [], $view['page']['meta'] ?? [] );
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'meta_not_registered', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_meta', $result->get_error_code() );
 		$this->assertSame( '', get_post_meta( $page_id, 'hero_text', true ) );
 	}
 

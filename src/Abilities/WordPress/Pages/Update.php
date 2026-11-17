@@ -34,7 +34,7 @@ class Update extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/update-page';
 		$this->label       = __( 'Update Page', 'albert-ai-butler' );
-		$this->description = __( 'Update an existing WordPress page with new title and content.', 'albert-ai-butler' );
+		$this->description = __( 'Update an existing page: only the fields you send change. Read it first with albert/view-page; to change one block use albert/edit-page-block, and for a new page use albert/create-page.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
@@ -98,9 +98,11 @@ class Update extends BaseAbility {
 		];
 
 		return [
-			'type'       => 'object',
-			'properties' => array_merge( $properties, PostFields::input_schema( PostFields::PAGE ) ) + RegisteredMeta::input_schema(),
-			'required'   => [ 'id' ],
+			'type'          => 'object',
+			'properties'    => array_merge( $properties, PostFields::input_schema( PostFields::PAGE ) ) + RegisteredMeta::input_schema(),
+			'required'      => [ 'id' ],
+			// Every property besides `id` is a change, so this means at least one change.
+			'minProperties' => 2,
 		];
 	}
 
@@ -173,16 +175,20 @@ class Update extends BaseAbility {
 	public function execute( array $args ): array|WP_Error {
 		$page_id = absint( $args['id'] );
 
-		// Check if page exists using REST API.
 		$check_request  = new WP_REST_Request( 'GET', '/wp/v2/pages/' . $page_id );
 		$check_response = rest_do_request( $check_request );
 
-		if ( $check_response->is_error() ) {
+		if ( $check_response->get_status() === 404 ) {
 			return new WP_Error(
-				'page_not_found',
-				__( 'Page not found.', 'albert-ai-butler' ),
+				'albert_page_not_found',
+				/* translators: %d: page ID */
+				sprintf( __( 'No page with ID %d. Find it with albert/find-pages.', 'albert-ai-butler' ), $page_id ),
 				[ 'status' => 404 ]
 			);
+		}
+
+		if ( $check_response->is_error() ) {
+			return self::rest_failure( rest_get_server()->response_to_data( $check_response, false ), $check_response->get_status(), __( 'The page could not be read.', 'albert-ai-butler' ), 'albert_page_permission_denied' );
 		}
 
 		$request_data = PostFields::to_rest( $args, PostFields::PAGE, 'page', $page_id );
@@ -250,11 +256,7 @@ class Update extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return new WP_Error(
-				$data['code'] ?? 'rest_error',
-				self::rest_error_message( $data ) ?? __( 'An error occurred while updating the page.', 'albert-ai-butler' ),
-				[ 'status' => $response->get_status() ]
-			);
+			return self::rest_failure( $data, $response->get_status(), __( 'The page could not be updated.', 'albert-ai-butler' ), 'albert_page_permission_denied' );
 		}
 
 		// Return formatted page data.

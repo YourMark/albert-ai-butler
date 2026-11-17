@@ -34,7 +34,7 @@ class Update extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/update-post';
 		$this->label       = __( 'Update Post', 'albert-ai-butler' );
-		$this->description = __( 'Update an existing WordPress post with new title, content, and metadata.', 'albert-ai-butler' );
+		$this->description = __( 'Update an existing post: only the fields you send change. Read it first with albert/view-post; to change one block use albert/edit-post-block, and for a new post use albert/create-post.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
@@ -108,9 +108,11 @@ class Update extends BaseAbility {
 		];
 
 		return [
-			'type'       => 'object',
-			'properties' => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ) + RegisteredMeta::input_schema(),
-			'required'   => [ 'id' ],
+			'type'          => 'object',
+			'properties'    => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ) + RegisteredMeta::input_schema(),
+			'required'      => [ 'id' ],
+			// Every property besides `id` is a change, so this means at least one change.
+			'minProperties' => 2,
 		];
 	}
 
@@ -185,16 +187,20 @@ class Update extends BaseAbility {
 	public function execute( array $args ): array|WP_Error {
 		$post_id = absint( $args['id'] );
 
-		// Check if post exists using REST API.
 		$check_request  = new WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );
 		$check_response = rest_do_request( $check_request );
 
-		if ( $check_response->is_error() ) {
+		if ( $check_response->get_status() === 404 ) {
 			return new WP_Error(
-				'post_not_found',
-				__( 'Post not found.', 'albert-ai-butler' ),
+				'albert_post_not_found',
+				/* translators: %d: post ID */
+				sprintf( __( 'No post with ID %d. Find it with albert/find-posts.', 'albert-ai-butler' ), $post_id ),
 				[ 'status' => 404 ]
 			);
+		}
+
+		if ( $check_response->is_error() ) {
+			return self::rest_failure( rest_get_server()->response_to_data( $check_response, false ), $check_response->get_status(), __( 'The post could not be read.', 'albert-ai-butler' ), 'albert_post_permission_denied' );
 		}
 
 		$request_data = PostFields::to_rest( $args, PostFields::POST, 'post', $post_id );
@@ -275,11 +281,7 @@ class Update extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return new WP_Error(
-				$data['code'] ?? 'rest_error',
-				self::rest_error_message( $data ) ?? __( 'An error occurred while updating the post.', 'albert-ai-butler' ),
-				[ 'status' => $response->get_status() ]
-			);
+			return self::rest_failure( $data, $response->get_status(), __( 'The post could not be updated.', 'albert-ai-butler' ), 'albert_post_permission_denied' );
 		}
 
 		// Return formatted post data.

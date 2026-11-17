@@ -41,8 +41,9 @@ class RegisteredMeta {
 	public static function input_schema(): array {
 		return [
 			'meta' => [
-				'type'        => 'object',
-				'description' => 'Custom fields to set, as { "key": value }. Only fields a plugin registered for the REST API are accepted: the "meta" object returned when viewing this item lists every one, with its current value. Each value must match that field\'s type. Send null to clear a field. Other custom fields are left as they are.',
+				'type'          => 'object',
+				'description'   => 'Custom fields to set, as { "key": value }. Only single-value fields a plugin registered for the REST API are accepted: the "meta" object returned when viewing this item lists every one, with its current value. Each value must match that field\'s type. A field that holds a list is changed with albert/add-post-meta and albert/remove-post-meta. Other custom fields are left as they are.',
+				'minProperties' => 1,
 			],
 		];
 	}
@@ -76,8 +77,12 @@ class RegisteredMeta {
 	/**
 	 * Check a `meta` input before it is sent to core's REST endpoint.
 	 *
-	 * Refuses an unknown or protected key, a key the user may not edit (the key's
-	 * `auth_callback`), and a value its schema rejects.
+	 * Refuses an unknown or protected key, a multi-value key, `null`, a key the user
+	 * may not edit (the key's `auth_callback`), and a value its schema rejects.
+	 *
+	 * Core replaces a whole list on a multi-value write and deletes on `null` or `[]`:
+	 * an empty value must never clear, so lists go through add-post-meta and
+	 * remove-post-meta, and nothing here deletes.
 	 *
 	 * @param mixed  $meta      The `meta` input.
 	 * @param int    $post_id   Post being updated.
@@ -88,7 +93,7 @@ class RegisteredMeta {
 	public static function check_write( mixed $meta, int $post_id, string $post_type ): array|WP_Error {
 		if ( ! is_array( $meta ) || ( $meta !== [] && array_is_list( $meta ) ) ) {
 			return new WP_Error(
-				'meta_invalid',
+				'albert_invalid_meta',
 				__( '"meta" must be an object of { "key": value } pairs.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -102,7 +107,7 @@ class RegisteredMeta {
 
 			if ( ! isset( $keys[ $name ], $schemas[ $name ] ) ) {
 				return new WP_Error(
-					'meta_not_registered',
+					'albert_invalid_meta',
 					sprintf(
 						/* translators: 1: custom field key, 2: comma-separated list of keys */
 						__( '"%1$s" is not a custom field that can be written here. Only fields registered for the REST API can be: %2$s.', 'albert-ai-butler' ),
@@ -113,12 +118,33 @@ class RegisteredMeta {
 				);
 			}
 
-			// Core deletes on null, and on an empty list for a multi-value field.
-			$deletes    = $value === null || ( $value === [] && ! $keys[ $name ]['single'] );
-			$capability = $deletes ? 'delete_post_meta' : 'edit_post_meta';
-			if ( ! current_user_can( $capability, $post_id, $keys[ $name ]['key'] ) ) {
+			if ( ! $keys[ $name ]['single'] ) {
 				return new WP_Error(
-					'meta_permission_denied',
+					'albert_invalid_meta',
+					sprintf(
+						/* translators: %s: custom field key */
+						__( '"%s" holds a list of values, which "meta" cannot replace. Use albert/add-post-meta to add values and albert/remove-post-meta to remove them.', 'albert-ai-butler' ),
+						$name
+					),
+					[ 'status' => 400 ]
+				);
+			}
+
+			if ( $value === null ) {
+				return new WP_Error(
+					'albert_invalid_meta',
+					sprintf(
+						/* translators: %s: custom field key */
+						__( '"%s" cannot be cleared with null. Send the value the field should hold, such as "" for text.', 'albert-ai-butler' ),
+						$name
+					),
+					[ 'status' => 400 ]
+				);
+			}
+
+			if ( ! current_user_can( 'edit_post_meta', $post_id, $keys[ $name ]['key'] ) ) {
+				return new WP_Error(
+					'albert_meta_permission_denied',
 					sprintf(
 						/* translators: %s: custom field key */
 						__( 'You are not allowed to change the "%s" custom field.', 'albert-ai-butler' ),
@@ -128,13 +154,9 @@ class RegisteredMeta {
 				);
 			}
 
-			if ( $deletes ) {
-				continue;
-			}
-
 			$valid = rest_validate_value_from_schema( $value, $schemas[ $name ], 'meta.' . $name );
 			if ( is_wp_error( $valid ) ) {
-				return new WP_Error( 'meta_invalid', $valid->get_error_message(), [ 'status' => 400 ] );
+				return new WP_Error( 'albert_invalid_meta', $valid->get_error_message(), [ 'status' => 400 ] );
 			}
 		}
 

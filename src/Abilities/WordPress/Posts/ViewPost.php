@@ -134,7 +134,7 @@ class ViewPost extends BaseAbility {
 						],
 						'meta'       => [
 							'type'        => 'object',
-							'description' => 'Custom fields registered for the REST API, as { "key": value }. These are the fields update-post accepts in "meta"; other custom fields are not shown.',
+							'description' => 'Custom fields registered for the REST API, as { "key": value }; a field that holds several values is a list. Set a single value with albert/update-post "meta"; change a list with albert/add-post-meta and albert/remove-post-meta. Other custom fields are not shown.',
 						],
 						'_meta'      => [
 							'type'        => 'object',
