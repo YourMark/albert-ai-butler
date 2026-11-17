@@ -85,14 +85,16 @@ class RequiredCapabilityTest extends TestCase {
 	}
 
 	/**
-	 * Listing roles needs list_users, like listing the users who hold them.
+	 * Reading roles needs list_users, like listing the users who hold them.
 	 *
 	 * @return void
 	 */
-	public function test_find_roles_requires_list_users(): void {
-		$ability = new WP_Ability( 'albert/find-roles', [ 'annotations' => [ 'readonly' => true ] ] );
+	public function test_role_abilities_require_list_users(): void {
+		foreach ( [ 'albert/find-roles', 'albert/get-role' ] as $id ) {
+			$ability = new WP_Ability( $id, [ 'annotations' => [ 'readonly' => true ] ] );
 
-		$this->assertSame( 'list_users', AbilitiesRegistry::resolve_required_capability( $ability ) );
+			$this->assertSame( 'list_users', AbilitiesRegistry::resolve_required_capability( $ability ), $id );
+		}
 	}
 
 	/**

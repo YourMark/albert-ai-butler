@@ -1,6 +1,6 @@
 <?php
 /**
- * Integration tests for the find-roles ability.
+ * Integration tests for the find-roles and get-role abilities.
  *
  * Real roles, including a custom one, and real user counts.
  *
@@ -10,15 +10,16 @@
 namespace Albert\Tests\Integration\Abilities;
 
 use Albert\Abilities\WordPress\Users\FindRoles;
+use Albert\Abilities\WordPress\Users\GetRole;
 use Albert\SafeMode\Gate;
 use Albert\Support\WpCompat;
 use Albert\Tests\TestCase;
 use WP_Error;
 
 /**
- * Find roles ability tests.
+ * Role ability tests.
  */
-class FindRolesAbilityTest extends TestCase {
+class RolesAbilityTest extends TestCase {
 
 	/**
 	 * Run as an administrator, with two editors and a plugin-style role.
@@ -69,7 +70,7 @@ class FindRolesAbilityTest extends TestCase {
 		$this->assertSame( 2, $roles['editor']['user_count'] );
 		$this->assertStringContainsString( 'everyone\'s posts and pages', $roles['editor']['summary'] );
 		$this->assertFalse( $roles['editor']['assigning_is_held'] );
-		$this->assertArrayNotHasKey( 'capabilities', $roles['editor'], 'The full list is only sent for one role.' );
+		$this->assertArrayNotHasKey( 'capabilities', $roles['editor'], 'The full list is only sent by get-role.' );
 
 		$this->assertStringContainsString( 'change site settings', $roles['administrator']['summary'] );
 		$this->assertSame( WpCompat::supports_execution_lifecycle(), $roles['administrator']['assigning_is_held'] );
@@ -89,24 +90,24 @@ class FindRolesAbilityTest extends TestCase {
 	public function test_nothing_is_held_with_safe_mode_off(): void {
 		update_option( Gate::OPTION, 'off' );
 
-		$result = ( new FindRoles() )->execute( [ 'slug' => 'administrator' ] );
+		$result = ( new GetRole() )->execute( [ 'role_slug' => 'administrator' ] );
 
 		$this->assertIsArray( $result );
-		$this->assertFalse( $result['roles'][0]['assigning_is_held'] );
+		$this->assertFalse( $result['role']['assigning_is_held'] );
 	}
 
 	/**
-	 * Naming a role returns it alone, with every capability.
+	 * get-role returns one role with every capability.
 	 *
 	 * @return void
 	 */
-	public function test_one_role_lists_its_capabilities(): void {
-		$result = ( new FindRoles() )->execute( [ 'slug' => 'albert_booking_manager' ] );
+	public function test_get_role_lists_its_capabilities(): void {
+		$result = ( new GetRole() )->execute( [ 'role_slug' => 'albert_booking_manager' ] );
 
 		$this->assertIsArray( $result );
-		$this->assertCount( 1, $result['roles'] );
-		$this->assertSame( [ 'export_bookings', 'manage_bookings', 'read' ], $result['roles'][0]['capabilities'] );
-		$this->assertSame( 3, $result['roles'][0]['capability_count'] );
+		$this->assertSame( 'Booking Manager', $result['role']['name'] );
+		$this->assertSame( [ 'export_bookings', 'manage_bookings', 'read' ], $result['role']['capabilities'] );
+		$this->assertSame( 3, $result['role']['capability_count'] );
 	}
 
 	/**
@@ -115,10 +116,10 @@ class FindRolesAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_unknown_role_is_not_found(): void {
-		$result = ( new FindRoles() )->execute( [ 'slug' => 'wizard' ] );
+		$result = ( new GetRole() )->execute( [ 'role_slug' => 'wizard' ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'role_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_role_not_found', $result->get_error_code() );
 		$this->assertStringContainsString( 'editor', $result->get_error_message() );
 	}
 
@@ -131,17 +132,35 @@ class FindRolesAbilityTest extends TestCase {
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'editor' ] ) );
 
 		$this->assertInstanceOf( WP_Error::class, ( new FindRoles() )->check_permission() );
+		$this->assertInstanceOf( WP_Error::class, ( new GetRole() )->check_permission() );
 	}
 
 	/**
-	 * A read, so safe mode never holds it.
+	 * Reads, so safe mode never holds them, not even for the administrator role.
 	 *
 	 * @return void
 	 */
-	public function test_safe_mode_passes_it(): void {
-		$ability = wp_get_ability( 'albert/find-roles' );
+	public function test_safe_mode_passes_them(): void {
+		$gate = new Gate();
 
-		$this->assertNotNull( $ability );
-		$this->assertFalse( ( new Gate() )->must_gate( $ability, [ 'slug' => 'administrator' ] ) );
+		$find = wp_get_ability( 'albert/find-roles' );
+		$this->assertNotNull( $find );
+		$this->assertFalse( $gate->must_gate( $find, [] ) );
+
+		$get = wp_get_ability( 'albert/get-role' );
+		$this->assertNotNull( $get );
+		$this->assertFalse( $gate->must_gate( $get, [ 'role_slug' => 'administrator' ] ), 'role_slug is not the role key RiskPolicy reads.' );
+	}
+
+	/**
+	 * find-roles takes no input: one role is get-role's job.
+	 *
+	 * @return void
+	 */
+	public function test_find_roles_refuses_a_slug(): void {
+		$result = wp_get_ability( 'albert/find-roles' )->execute( [ 'slug' => 'editor' ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
 	}
 }

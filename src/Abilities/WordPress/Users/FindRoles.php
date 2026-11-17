@@ -33,11 +33,15 @@ class FindRoles extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/find-roles';
 		$this->label       = __( 'Find Roles', 'albert-ai-butler' );
-		$this->description = __( 'List the site\'s user roles with a one-line summary of what each can do and how many users have it. Name one role to get its full list of capabilities.', 'albert-ai-butler' );
+		$this->description = __( 'List the site\'s user roles with a one-line summary of what each can do; use it before suggesting a role for someone, then albert/get-role for one role\'s full capabilities.', 'albert-ai-butler' );
 		$this->category    = 'user';
 		$this->group       = 'users';
 
-		$this->input_schema  = $this->get_input_schema();
+		// Takes no input; albert/get-role returns one role. The MCP adapter sends empty properties as {}.
+		$this->input_schema  = [
+			'type'       => 'object',
+			'properties' => [],
+		];
 		$this->output_schema = $this->get_output_schema();
 
 		$this->meta = [
@@ -45,31 +49,11 @@ class FindRoles extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::read(
-				'Check a role here before suggesting it for a user. Giving someone a role with assigning_is_held true is held for the owner\'s approval.'
+				'Each role has its user_count and capability_count. Giving someone a role with assigning_is_held true is held for the owner\'s approval.'
 			),
 		];
 
 		parent::__construct();
-	}
-
-	/**
-	 * Get the input schema for this ability.
-	 *
-	 * @return array<string, mixed> JSON Schema array.
-	 * @since 1.6.0
-	 */
-	private function get_input_schema(): array {
-		// `slug`, not `role`: safe mode's RiskPolicy holds any call whose `role`
-		// names an administrator role, which would hold this read.
-		return [
-			'type'       => 'object',
-			'properties' => [
-				'slug' => [
-					'type'        => 'string',
-					'description' => 'A role slug, such as "editor", to return that role only, with every capability it has.',
-				],
-			],
-		];
 	}
 
 	/**
@@ -84,25 +68,7 @@ class FindRoles extends BaseAbility {
 			'properties' => [
 				'roles'        => [
 					'type'  => 'array',
-					'items' => [
-						'type'       => 'object',
-						'properties' => [
-							'slug'              => [ 'type' => 'string' ],
-							'name'              => [ 'type' => 'string' ],
-							'summary'           => [ 'type' => 'string' ],
-							'user_count'        => [ 'type' => 'integer' ],
-							'capability_count'  => [ 'type' => 'integer' ],
-							'assigning_is_held' => [
-								'type'        => 'boolean',
-								'description' => 'Giving this role to someone over Albert waits for approval: it can manage the site and safe mode is on.',
-							],
-							'capabilities'      => [
-								'type'        => 'array',
-								'description' => 'Only when one role was asked for.',
-								'items'       => [ 'type' => 'string' ],
-							],
-						],
-					],
+					'items' => self::role_schema(),
 				],
 				'default_role' => [
 					'type'        => 'string',
@@ -134,55 +100,92 @@ class FindRoles extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$wp_roles = wp_roles();
-		$only     = isset( $args['slug'] ) ? sanitize_key( (string) $args['slug'] ) : '';
-
-		if ( $only !== '' && ! $wp_roles->is_role( $only ) ) {
-			return new WP_Error(
-				'role_not_found',
-				sprintf(
-					/* translators: 1: role slug, 2: comma-separated role slugs */
-					__( 'There is no "%1$s" role. Roles on this site: %2$s.', 'albert-ai-butler' ),
-					$only,
-					implode( ', ', array_keys( $wp_roles->roles ) )
-				),
-				[ 'status' => 404 ]
-			);
-		}
-
-		$counts = count_users();
-		$roles  = [];
-		// Below WordPress 7.1, or with safe mode off, nothing is held.
-		$gate_active = WpCompat::supports_execution_lifecycle() && ( new Gate() )->is_enabled();
+		$wp_roles    = wp_roles();
+		$counts      = count_users();
+		$gate_active = self::gate_active();
+		$roles       = [];
 
 		foreach ( $wp_roles->role_objects as $slug => $role ) {
-			if ( ! $role instanceof WP_Role || ( $only !== '' && $slug !== $only ) ) {
-				continue;
+			if ( $role instanceof WP_Role ) {
+				$roles[] = self::describe( (string) $slug, $role, $counts, $gate_active );
 			}
-
-			$capabilities = array_keys( array_filter( $role->capabilities ) );
-			sort( $capabilities );
-
-			$item = [
-				'slug'              => (string) $slug,
-				'name'              => translate_user_role( (string) ( $wp_roles->role_names[ $slug ] ?? $slug ) ),
-				'summary'           => self::summarise( $role ),
-				'user_count'        => (int) ( $counts['avail_roles'][ $slug ] ?? 0 ),
-				'capability_count'  => count( $capabilities ),
-				'assigning_is_held' => $gate_active && $role->has_cap( 'manage_options' ),
-			];
-
-			if ( $only !== '' ) {
-				$item['capabilities'] = array_map( 'strval', $capabilities );
-			}
-
-			$roles[] = $item;
 		}
 
 		return [
 			'roles'        => $roles,
 			'default_role' => (string) get_option( 'default_role', 'subscriber' ),
 		];
+	}
+
+	/**
+	 * The output schema of one role, shared with albert/get-role.
+	 *
+	 * @return array<string, mixed>
+	 * @since 1.6.0
+	 */
+	public static function role_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'slug'              => [ 'type' => 'string' ],
+				'name'              => [ 'type' => 'string' ],
+				'summary'           => [ 'type' => 'string' ],
+				'user_count'        => [ 'type' => 'integer' ],
+				'capability_count'  => [ 'type' => 'integer' ],
+				'assigning_is_held' => [
+					'type'        => 'boolean',
+					'description' => 'Giving this role to someone over Albert waits for approval: it can manage the site and safe mode is on.',
+				],
+			],
+		];
+	}
+
+	/**
+	 * One role as the role abilities return it.
+	 *
+	 * @param string               $slug        Role slug.
+	 * @param WP_Role              $role        The role.
+	 * @param array<string, mixed> $counts      count_users() result.
+	 * @param bool                 $gate_active Whether safe mode would hold an admin role grant.
+	 * @return array{slug: string, name: string, summary: string, user_count: int, capability_count: int, assigning_is_held: bool}
+	 * @since 1.6.0
+	 */
+	public static function describe( string $slug, WP_Role $role, array $counts, bool $gate_active ): array {
+		$names = wp_roles()->role_names;
+
+		return [
+			'slug'              => $slug,
+			'name'              => translate_user_role( (string) ( $names[ $slug ] ?? $slug ) ),
+			'summary'           => self::summarise( $role ),
+			'user_count'        => (int) ( $counts['avail_roles'][ $slug ] ?? 0 ),
+			'capability_count'  => count( self::capabilities( $role ) ),
+			'assigning_is_held' => $gate_active && $role->has_cap( 'manage_options' ),
+		];
+	}
+
+	/**
+	 * The capabilities a role grants, sorted.
+	 *
+	 * @param WP_Role $role The role.
+	 * @return array<int, string>
+	 * @since 1.6.0
+	 */
+	public static function capabilities( WP_Role $role ): array {
+		$capabilities = array_map( 'strval', array_keys( array_filter( $role->capabilities ) ) );
+		sort( $capabilities );
+		return $capabilities;
+	}
+
+	/**
+	 * Whether safe mode would hold giving someone an administrator role.
+	 *
+	 * Below WordPress 7.1, or with safe mode off, nothing is held.
+	 *
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	public static function gate_active(): bool {
+		return WpCompat::supports_execution_lifecycle() && ( new Gate() )->is_enabled();
 	}
 
 	/**
@@ -239,7 +242,7 @@ class FindRoles extends BaseAbility {
 		if ( $other ) {
 			return sprintf(
 				/* translators: %d: number of capabilities */
-				_n( 'Has %d capability, not for content, users, settings, plugins or themes; ask for this role by name to see it.', 'Has %d capabilities, none for content, users, settings, plugins or themes; ask for this role by name to see them.', count( $other ), 'albert-ai-butler' ),
+				_n( 'Has %d capability, not for content, users, settings, plugins or themes; use albert/get-role to see it.', 'Has %d capabilities, none for content, users, settings, plugins or themes; use albert/get-role to see them.', count( $other ), 'albert-ai-butler' ),
 				count( $other )
 			);
 		}

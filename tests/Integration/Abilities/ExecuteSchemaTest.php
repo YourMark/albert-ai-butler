@@ -45,6 +45,7 @@ use Albert\Abilities\WordPress\Taxonomies\ViewTerm;
 use Albert\Abilities\WordPress\Users\Create as CreateUser;
 use Albert\Abilities\WordPress\Users\Delete as DeleteUser;
 use Albert\Abilities\WordPress\Users\FindRoles;
+use Albert\Abilities\WordPress\Users\GetRole;
 use Albert\Abilities\WordPress\Users\FindUsers;
 use Albert\Abilities\WordPress\Users\Update as UpdateUser;
 use Albert\Abilities\WordPress\Users\ViewUser;
@@ -487,13 +488,13 @@ class ExecuteSchemaTest extends TestCase {
 	}
 
 	/**
-	 * FindRoles returns roles matching the output schema, listed and named.
+	 * FindRoles and GetRole return roles matching their output schemas.
 	 *
 	 * @return void
 	 */
 	public function test_find_roles_output_matches_schema(): void {
 		$this->assert_execute_matches_schema( new FindRoles(), [], 'FindRoles' );
-		$this->assert_execute_matches_schema( new FindRoles(), [ 'slug' => 'editor' ], 'FindRoles (one role)' );
+		$this->assert_execute_matches_schema( new GetRole(), [ 'role_slug' => 'editor' ], 'GetRole' );
 	}
 
 	/**

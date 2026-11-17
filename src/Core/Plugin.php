@@ -32,6 +32,7 @@ use Albert\Abilities\WordPress\Pages\MoveBlock as MovePageBlock;
 use Albert\Abilities\WordPress\Users\FindUsers;
 use Albert\Abilities\WordPress\Users\ViewUser;
 use Albert\Abilities\WordPress\Users\FindRoles;
+use Albert\Abilities\WordPress\Users\GetRole;
 use Albert\Abilities\WordPress\Users\Create as CreateUser;
 use Albert\Abilities\WordPress\Users\Update as UpdateUser;
 use Albert\Abilities\WordPress\Users\Delete as DeleteUser;
@@ -427,6 +428,7 @@ class Plugin {
 		$this->abilities_manager->add_ability( new UpdateUser() );
 		$this->abilities_manager->add_ability( new DeleteUser() );
 		$this->abilities_manager->add_ability( new FindRoles() );
+		$this->abilities_manager->add_ability( new GetRole() );
 
 		// Media abilities.
 		$this->abilities_manager->add_ability( new FindMedia() );
