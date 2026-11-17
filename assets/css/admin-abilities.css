@@ -614,7 +614,7 @@ code.albert-flyin__card-value {
 	color: var(--albert-color-neutral);
 }
 
-/* The shared "Required capability" card is unframed inside the panel (no
+/* The shared "Default access" card is unframed inside the panel (no
    box-in-box); scoped so the card keeps its border anywhere else. */
 .albert-perms-panel .albert-flyin__card--capability {
 	border: 0;

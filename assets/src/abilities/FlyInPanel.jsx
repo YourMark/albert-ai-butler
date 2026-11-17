@@ -200,59 +200,39 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 		api
 	).slice().sort( ( a, b ) => ( a.priority ?? 10 ) - ( b.priority ?? 10 ) );
 
-	// The required-capability display. Reused by Free's default Permissions
-	// section and — when an add-on takes over — inside its UI (see the seam
-	// below). Kept as one node so the capability is rendered identically either
-	// way.
+	// Who may use the ability by default. Reused by an add-on that takes over the
+	// Permissions section (see the seam below), so both show the same text.
 	const capabilityContent = (
 		<div className="albert-flyin__card albert-flyin__card--capability">
 			<div className="albert-flyin__card-head">
 				<span className="albert-flyin__card-label">
-					{ __( 'Required capability', 'albert-ai-butler' ) }
+					{ __( 'Default access', 'albert-ai-butler' ) }
 				</span>
 				<InfoPopover
 					inline
-					label={ __(
-						'About required capability',
-						'albert-ai-butler'
-					) }
+					label={ __( 'About default access', 'albert-ai-butler' ) }
 				>
 					<p>
 						{ __(
-							'A WordPress capability that gates this ability: it can run only for users whose role grants this capability. This value is best-effort; an ability or add-on can override it.',
+							'Each ability checks who may use it when it runs, usually from the WordPress role and capabilities of the connected user. For a single post, page or user, WordPress also checks that item, for example whether you may edit someone else\'s post.',
 							'albert-ai-butler'
 						) }
 					</p>
-					{ ability.capabilityRoles?.length > 0 ? (
-						<p>
-							<strong>
-								{ __(
-									'Roles with this capability:',
-									'albert-ai-butler'
-								) }
-							</strong>{ ' ' }
-							{ ability.capabilityRoles.join( ', ' ) }
-						</p>
-					) : (
-						<p>
-							{ __(
-								'No roles currently grant this capability.',
-								'albert-ai-butler'
-							) }
-						</p>
-					) }
 				</InfoPopover>
 			</div>
-			<code className="albert-flyin__card-value">
-				{ ability.capability }
-			</code>
+			<span className="albert-flyin__card-value">
+				{ __(
+					'The ability decides with its own check.',
+					'albert-ai-butler'
+				) }
+			</span>
 		</div>
 	);
 
 	/**
 	 * [Premium seam] Replace the whole Permissions section. Free's default shows
-	 * the required capability; an add-on (Albert Premium) returns its own UI and
-	 * reuses `api.capabilityContent` inside its "Capability only" tab. Returning
+	 * the default access; an add-on (Albert Premium) returns its own UI and
+	 * reuses `api.capabilityContent` inside its default tab. Returning
 	 * the unchanged default keeps Free's behaviour when no add-on is present.
 	 */
 	const permissionsApi = {
@@ -273,13 +253,13 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 				>
 					<p>
 						{ __(
-							'Controls who can invoke this ability over MCP. By default it follows the required WordPress capability.',
+							'Controls who can invoke this ability over MCP. By default the ability decides with its own check.',
 							'albert-ai-butler'
 						) }
 					</p>
 					<p>
 						{ __(
-							'Albert Premium adds custom per-role and per-user rules that override the capability check.',
+							'Albert Premium adds custom per-role and per-user rules that replace that check.',
 							'albert-ai-butler'
 						) }
 					</p>
