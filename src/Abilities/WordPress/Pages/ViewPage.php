@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+use Albert\Abilities\WordPress\RegisteredMeta;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
@@ -131,6 +132,10 @@ class ViewPage extends BaseAbility {
 							'type'        => 'boolean',
 							'description' => 'Whether the stored content actually contains block markup. May differ from "editor" (e.g. classic content saved on a block-editor type).',
 						],
+						'meta'       => [
+							'type'        => 'object',
+							'description' => 'Custom fields registered for the REST API, as { "key": value }; a field that holds several values is a list. Set a single value with albert/update-page "meta"; change a list with albert/add-post-meta and albert/remove-post-meta. Other custom fields are not shown.',
+						],
 						'_meta'      => [
 							'type'        => 'object',
 							'description' => 'Block-window pagination metadata. The returned content/blocks/plaintext/html/markdown reflect only the requested window of top-level blocks. When "truncated" is true, fetch the rest by re-requesting with the suggested "next_offset".',
@@ -239,6 +244,7 @@ class ViewPage extends BaseAbility {
 					'template'       => get_page_template_slug( $page ),
 					'comment_status' => $page->comment_status,
 					'featured_image' => get_post_thumbnail_id( $page ) ? get_post_thumbnail_id( $page ) : null,
+					'meta'           => RegisteredMeta::read( $page->ID, 'page' ),
 				]
 			),
 		];

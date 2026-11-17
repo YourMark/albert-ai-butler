@@ -383,6 +383,50 @@ class PagesAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * A page the user may not read is a permission refusal, not a missing page.
+	 *
+	 * @return void
+	 */
+	public function test_update_page_rest_refusal_is_not_reported_as_not_found(): void {
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'   => 'page',
+				'post_status' => 'draft',
+			]
+		);
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
+
+		$result = ( new UpdatePage() )->execute(
+			[
+				'id'    => $page_id,
+				'title' => 'Not mine',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_page_permission_denied', $result->get_error_code() );
+		$this->assertNotSame( 'Not mine', get_post( $page_id )->post_title );
+	}
+
+	/**
+	 * The schema refuses an update that sends only the id, before anything runs.
+	 *
+	 * @return void
+	 */
+	public function test_update_page_needs_a_field_besides_the_id(): void {
+		$ability = wp_get_ability( 'albert/update-page' );
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-page is not registered.' );
+		}
+
+		$result = $ability->execute( [ 'id' => self::factory()->post->create( [ 'post_type' => 'page' ] ) ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
 	}
 
 	// ─── DeletePage ─────────────────────────────────────────────────

@@ -241,7 +241,7 @@ class PostFieldsAbilityTest extends TestCase {
 		wp_set_current_user( $author );
 
 		$this->assertRefused(
-			'rest_cannot_edit_others',
+			'albert_post_permission_denied',
 			( new UpdatePost() )->execute(
 				[
 					'id'     => $post_id,
