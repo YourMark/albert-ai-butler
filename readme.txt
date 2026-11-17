@@ -243,6 +243,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 **Improvements**
 
 * The Abilities screen now labels an ability from another plugin that doesn't say whether it only reads or can change something as Not declared, instead of guessing Write, and explains what that means. Albert still treats it as one that can make changes, so safe mode holds it.
+* The Abilities screen no longer shows a "Required capability" for each ability. It was a guess from the ability's name and was wrong in places. Without Albert Premium's advanced permissions, the ability's own permission check decides, as it always did.
 * When your assistant edits a single block and the new text would lose a tag the block had, such as a ThirstyAffiliates link, Albert refuses the edit and tells the assistant to ask you first. Nothing is saved until you agree.
 * Albert is about 2 MB smaller: the Abilities and Skills screens now share one copy of their table instead of each carrying its own.
 * Ordinary page views on your site no longer load Albert's abilities, so the pages your visitors see do a little less work.
@@ -251,6 +252,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 * When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
 * When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
+* Albert no longer saves a block it can only guess, such as an image without an address, a cover or a block from another plugin without its markup, or blocks nested where the editor would drop them. Your assistant gets a message saying what to send instead, and nothing is saved.
 
 **Fixes**
 
@@ -259,6 +261,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
 * Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 * A group block sent with its contents written out was saved empty. It now keeps them.
+* Copying a page or post block by block lost its bold text, links and images, and centred headings opened in the editor as broken, while the assistant was told it had worked. Each block now comes with its saved markup when your assistant reads it, so it is written back exactly as it was.
 
 **Security**
 
@@ -269,6 +272,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 **Developer**
 
+* Deprecated the `albert/abilities/required_capability` filter and `AbilitiesRegistry::resolve_required_capability()`; neither has any effect now, and the method returns an empty string. The `capability` and `capabilityRoles` keys of an Abilities screen row are always empty and will be removed in a future version.
 * Switching an ability off no longer unregisters it. Albert's MCP server leaves it out of discovery and refuses to describe or run it, and safe mode refuses to approve a held call for it. An Albert ability that an add-on refuses, such as one that needs a licence, is still unregistered.
 * `albert/abilities/disabled_list` now also applies to Albert's own abilities.
 * An Abilities screen row's `operation` is now `undeclared` (it was `write`) for an ability whose annotations set neither `readonly` nor `destructive`.
@@ -284,6 +288,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 * Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 * `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
+* The `blocks` tree from `albert/view-post`, `albert/view-page`, `albert/find-posts`, `albert/find-pages` and the block-edit abilities gives each block without inner blocks its saved markup in `html`. A block spec whose markup-sourced attribute (such as `content` or `url`) differs from the `html` sent with it is refused, as are an image without `url`, children under a block that cannot nest them, and a registered block Albert has no template for unless it comes with `html`; these were warnings in `block_issues`.
 * New abilities `albert/replace-post-text` and `albert/replace-page-text`: `post_id` or `page_id`, `search`, `replace`, `field` (`content`, `title` or `excerpt`), `expected_count` (default 1) and `remove_tags`. Errors: `albert_invalid_search` (text not found), `albert_invalid_expected_count` (with `count`), `albert_invalid_replace` (the change alters blocks), `albert_post_not_found` or `albert_page_not_found`, `albert_post_permission_denied` or `albert_page_permission_denied`, and `tags_removed`. A `notice` in the result says when WordPress stored something other than what was sent.
 
 = 1.5.0 =
