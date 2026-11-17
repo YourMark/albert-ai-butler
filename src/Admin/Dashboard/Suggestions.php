@@ -186,6 +186,10 @@ class Suggestions {
 				'requires' => [ 'albert/find-media', 'albert/update-media' ],
 			],
 			[
+				'text'     => __( 'Find everything on this site that mentions our opening hours.', 'albert-ai-butler' ),
+				'requires' => [ 'albert/search-content' ],
+			],
+			[
 				'text'     => __( 'Who has administrator access to this site?', 'albert-ai-butler' ),
 				'requires' => [ 'albert/find-users' ],
 			],
