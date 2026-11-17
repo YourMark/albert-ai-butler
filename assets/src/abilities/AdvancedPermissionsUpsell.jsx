@@ -1,81 +1,48 @@
 /**
- * Permissions section — Free default (no Premium).
+ * Permissions section without Premium.
  *
- * Mirrors the structure of Albert Premium's real editor: a Default/Custom
- * toggle. "Default" says what applies without rules; "Custom rules"
- * is gated behind Premium and shows a locked preview of the rule builder plus an
- * upgrade call to action.
+ * Mirrors Albert Premium's editor: an "Advanced permissions" switch. Switching
+ * it on here shows a locked preview of the rule builder and an upgrade link.
+ * Off, nothing is shown: the ability's own permission check decides, and Albert
+ * cannot read that check, so it says nothing about it.
  *
  * When Premium is active it replaces this whole section via the
- * `albert.abilities.permissions_section` filter, so this is only ever seen
- * without Premium — no add-on dependency and no activation check here.
+ * `albert.abilities.permissions_section` filter.
  *
  * The locked preview is decorative (aria-hidden); the pitch and CTA carry the
  * accessible content.
  */
-import {
-	Button,
-	__experimentalToggleGroupControl as ToggleGroupControl,
-	__experimentalToggleGroupControlOption as ToggleGroupControlOption,
-} from '@wordpress/components';
+import { Button, ToggleControl } from '@wordpress/components';
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 const UPGRADE_URL =
 	'https://albertwp.com/add-ons/premium-service/?utm_source=plugin&utm_medium=abilities-flyin&utm_campaign=advanced-permissions';
 
-export default function AdvancedPermissionsUpsell( { capabilityContent } ) {
-	const [ mode, setMode ] = useState( 'capability' );
+export default function AdvancedPermissionsUpsell() {
+	const [ isOn, setIsOn ] = useState( false );
 
 	return (
 		<div className="albert-perms-upsell albert-perms-panel">
-			<p className="albert-perms-panel__intro">
-				{ __(
-					'Control who can use this ability: its registered permission check, or custom per-role and per-user rules.',
-					'albert-ai-butler'
-				) }
-			</p>
-
-			<ToggleGroupControl
+			<ToggleControl
 				__nextHasNoMarginBottom
-				__next40pxDefaultSize
-				isBlock
-				hideLabelFromVision
-				label={ __( 'Permission mode', 'albert-ai-butler' ) }
-				value={ mode }
-				onChange={ ( value ) =>
-					setMode( value === 'custom' ? 'custom' : 'capability' )
-				}
-			>
-				<ToggleGroupControlOption
-					value="capability"
-					label={ __( 'Default', 'albert-ai-butler' ) }
-				/>
-				<ToggleGroupControlOption
-					value="custom"
-					aria-label={ __(
-						'Custom rules (Premium)',
-						'albert-ai-butler'
-					) }
-					label={
-						<span className="albert-perms-upsell__custom-label">
-							{ __( 'Custom rules', 'albert-ai-butler' ) }
-							<span
-								className="dashicons dashicons-lock"
-								aria-hidden="true"
-							/>
+				label={
+					<span className="albert-perms-upsell__custom-label">
+						{ __( 'Advanced permissions', 'albert-ai-butler' ) }
+						<span
+							className="dashicons dashicons-lock"
+							aria-hidden="true"
+						/>
+						<span className="screen-reader-text">
+							{ __( '(Premium)', 'albert-ai-butler' ) }
 						</span>
-					}
-				/>
-			</ToggleGroupControl>
+					</span>
+				}
+				checked={ isOn }
+				onChange={ setIsOn }
+			/>
 
-			{ mode === 'capability' && (
-				<div className="albert-perms-upsell__capability">
-					{ capabilityContent }
-				</div>
-			) }
-
-			{ mode === 'custom' && (
+			{ isOn && (
 				<div className="albert-perms-upsell__custom">
 					<ul className="albert-perms-upsell__benefits">
 						<li>
@@ -87,12 +54,6 @@ export default function AdvancedPermissionsUpsell( { capabilityContent } ) {
 						<li>
 							{ __(
 								'Block everyone else automatically',
-								'albert-ai-butler'
-							) }
-						</li>
-						<li>
-							{ __(
-								'Replace the registered permission check',
 								'albert-ai-butler'
 							) }
 						</li>

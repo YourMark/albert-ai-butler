@@ -607,20 +607,6 @@ code.albert-flyin__card-value {
 	background: var(--albert-color-surface);
 }
 
-.albert-perms-panel__intro {
-	margin: 0;
-	font-size: 13px;
-	line-height: 1.5;
-	color: var(--albert-color-neutral);
-}
-
-.albert-perms-panel__default {
-	margin: 0;
-	font-size: 13px;
-	line-height: 1.5;
-	color: var(--albert-color-text);
-}
-
 /* Custom toggle option: label + a small lock icon signalling it's gated. */
 .albert-perms-upsell__custom-label {
 	display: inline-flex;

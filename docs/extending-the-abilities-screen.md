@@ -17,7 +17,7 @@ The two JS seams need the add-on script enqueued on the abilities page; see
 
 ## 1. Replace the Permissions section — `albert.abilities.permissions_section`
 
-The fly-in renders one **Permissions** section. Free's default says what applies without rules; an
+The fly-in renders one **Permissions** section. Free's default offers Albert Premium's advanced permissions; an
 add-on can replace it with its own UI (this is how Premium adds the per-role/per-user rule builder).
 The filter receives Free's default node and returns the node to render in its place; returning the
 default unchanged keeps Free's behaviour.
@@ -42,8 +42,8 @@ addFilter(
   - **`ability`** — the normalized row (see the shape under [payload_row](#3-surface-a-row-indicator--albertabilitiespayload_row)).
   - **`roles`** — `[ { value: <slug>, label } ]` for every site role (use for a role picker). For
     per-user pickers, query users via core REST `/wp/v2/users`.
-  - **`capabilityContent`** — Free's sentence on what applies by default (a React node). Render it inside your
-    own UI (e.g. a "Default" tab) so it reads the same with or without the add-on.
+  - **`capabilityContent`** — always `null` since 1.6.0 (deprecated). It held the guessed
+    required-capability block.
   - **`registerCloseGuard( fn )`** — see [Confirming on close](#confirming-on-close).
 
 ### Confirming on close

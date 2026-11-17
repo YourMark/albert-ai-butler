@@ -200,27 +200,16 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 		api
 	).slice().sort( ( a, b ) => ( a.priority ?? 10 ) - ( b.priority ?? 10 ) );
 
-	// What happens without custom rules. Reused by an add-on that takes over the
-	// Permissions section (see the seam below), so both say the same.
-	const capabilityContent = (
-		<p className="albert-perms-panel__default">
-			{ __(
-				'Uses the permission check this ability was registered with.',
-				'albert-ai-butler'
-			) }
-		</p>
-	);
-
 	/**
-	 * [Premium seam] Replace the whole Permissions section. Free's default shows
-	 * what applies by default; an add-on (Albert Premium) returns its own UI and
-	 * reuses `api.capabilityContent` inside its default tab. Returning
-	 * the unchanged default keeps Free's behaviour when no add-on is present.
+	 * [Premium seam] Replace the whole Permissions section. Returning the
+	 * unchanged default keeps Free's behaviour when no add-on is present.
+	 * `capabilityContent` is always null since 1.6.0; kept so an older add-on
+	 * reading it renders nothing instead of breaking.
 	 */
 	const permissionsApi = {
 		ability,
 		roles,
-		capabilityContent,
+		capabilityContent: null,
 		registerCloseGuard,
 		setSaveStatus: reportSaveStatus,
 	};
@@ -235,22 +224,14 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 				>
 					<p>
 						{ __(
-							'Controls who can invoke this ability over MCP. By default the ability uses the permission check it was registered with.',
-							'albert-ai-butler'
-						) }
-					</p>
-					<p>
-						{ __(
-							'Albert Premium adds custom per-role and per-user rules that replace that check.',
+							'Albert Premium adds advanced permissions: rules per role or user that decide who can use this ability over MCP.',
 							'albert-ai-butler'
 						) }
 					</p>
 				</InfoPopover>
 			}
 		>
-			<AdvancedPermissionsUpsell
-				capabilityContent={ capabilityContent }
-			/>
+			<AdvancedPermissionsUpsell />
 		</Section>,
 		permissionsApi
 	);
