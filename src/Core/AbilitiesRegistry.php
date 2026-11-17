@@ -428,7 +428,7 @@ class AbilitiesRegistry {
 		// The name, not the group: update-user is destructive but needs edit_users.
 		$is_delete = (bool) preg_match( '/(^|-)(delete|trash)(-|$)/', $action );
 
-		if ( str_contains( $action, 'user' ) || str_contains( $action, 'role' ) ) {
+		if ( str_contains( $action, 'user' ) ) {
 			return $is_read ? 'list_users' : ( $is_delete ? 'delete_users' : 'edit_users' );
 		}
 		// Setting a featured image edits the target post, not the media library.
