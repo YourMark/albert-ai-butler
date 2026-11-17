@@ -26,6 +26,13 @@ defined( 'ABSPATH' ) || exit;
 class BlockStructure {
 
 	/**
+	 * Inline tags a text edit may add or remove inside a block, as rich text does.
+	 *
+	 * @var array<int, string>
+	 */
+	private const INLINE_TAGS = [ 'A', 'ABBR', 'B', 'BDI', 'BDO', 'BR', 'CITE', 'CODE', 'DATA', 'DEL', 'DFN', 'EM', 'I', 'IMG', 'INS', 'KBD', 'MARK', 'Q', 'S', 'SAMP', 'SMALL', 'SPAN', 'STRONG', 'SUB', 'SUP', 'TIME', 'U', 'VAR' ];
+
+	/**
 	 * Describe how the blocks of $after differ from those of $before.
 	 *
 	 * @param string $before Markup before the edit.
@@ -90,12 +97,6 @@ class BlockStructure {
 		return array_values( array_filter( $parsed, static fn ( array $block ): bool => ! BlockReader::is_empty_separator( $block ) ) );
 	}
 
-	/**
-	 * Inline tags a text edit may add or remove inside a block, as rich text does.
-	 *
-	 * @var array<int, string>
-	 */
-	private const INLINE_TAGS = [ 'A', 'ABBR', 'B', 'BDI', 'BDO', 'BR', 'CITE', 'CODE', 'DATA', 'DEL', 'DFN', 'EM', 'I', 'IMG', 'INS', 'KBD', 'MARK', 'Q', 'S', 'SAMP', 'SMALL', 'SPAN', 'STRONG', 'SUB', 'SUP', 'TIME', 'U', 'VAR' ];
 
 	/**
 	 * The parts of a block's own markup the editor checks against its settings:

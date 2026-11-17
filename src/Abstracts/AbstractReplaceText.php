@@ -29,15 +29,15 @@ defined( 'ABSPATH' ) || exit;
 abstract class AbstractReplaceText extends BaseAbility {
 
 	/**
-	 * Fields that can be edited, keyed by input value, with their post and REST names.
+	 * Fields that can be edited, keyed by input value: post column, REST field, post type feature.
 	 *
-	 * @var array<string, array{0: string, 1: string}>
+	 * @var array<string, array{0: string, 1: string, 2: string}>
 	 * @since 1.6.0
 	 */
 	private const FIELDS = [
-		'content' => [ 'post_content', 'content' ],
-		'title'   => [ 'post_title', 'title' ],
-		'excerpt' => [ 'post_excerpt', 'excerpt' ],
+		'content' => [ 'post_content', 'content', 'editor' ],
+		'title'   => [ 'post_title', 'title', 'title' ],
+		'excerpt' => [ 'post_excerpt', 'excerpt', 'excerpt' ],
 	];
 
 	/**
@@ -127,8 +127,19 @@ abstract class AbstractReplaceText extends BaseAbility {
 			);
 		}
 
-		$field                   = is_string( $args['field'] ?? null ) && isset( self::FIELDS[ $args['field'] ] ) ? $args['field'] : 'content';
-		[ $column, $rest_field ] = self::FIELDS[ $field ];
+		$field                             = is_string( $args['field'] ?? null ) && isset( self::FIELDS[ $args['field'] ] ) ? $args['field'] : 'content';
+		[ $column, $rest_field, $feature ] = self::FIELDS[ $field ];
+
+		// REST ignores a field the type does not support and still answers 200,
+		// so the replacement would be reported without being saved.
+		if ( ! post_type_supports( $type, $feature ) ) {
+			return new WP_Error(
+				'albert_invalid_field',
+				/* translators: 1: post type, 2: the field. */
+				sprintf( __( 'A %1$s has no %2$s. Nothing was saved.', 'albert-ai-butler' ), $type, $field ),
+				[ 'status' => 400 ]
+			);
+		}
 
 		$search   = (string) ( $args['search'] ?? '' );
 		$replace  = (string) ( $args['replace'] ?? '' );

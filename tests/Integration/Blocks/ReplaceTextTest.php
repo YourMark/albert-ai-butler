@@ -328,6 +328,83 @@ class ReplaceTextTest extends TestCase {
 	}
 
 	/**
+	 * A page's text is replaced like a post's.
+	 *
+	 * @return void
+	 */
+	public function test_a_page_is_replaced(): void {
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'    => 'page',
+				'post_content' => self::CONTENT,
+			]
+		);
+
+		$result = ( new ReplacePageText() )->execute(
+			[
+				'page_id' => $page_id,
+				'search'  => 'Prices 2025',
+				'replace' => 'Prices 2026',
+			]
+		);
+
+		$this->assertSame( 1, $result['replacements'] );
+		$this->assertStringContainsString( 'Prices 2026', get_post( $page_id )->post_content );
+	}
+
+	/**
+	 * A field the type does not support is refused, since REST would ignore it and report success.
+	 *
+	 * @return void
+	 */
+	public function test_an_unsupported_field_is_refused(): void {
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'    => 'page',
+				'post_excerpt' => 'Old summary',
+			]
+		);
+
+		$result = ( new ReplacePageText() )->execute(
+			[
+				'page_id' => $page_id,
+				'field'   => 'excerpt',
+				'search'  => 'Old',
+				'replace' => 'New',
+			]
+		);
+
+		$this->assertSame( 'albert_invalid_field', $result->get_error_code() );
+		$this->assertSame( 'Old summary', get_post( $page_id )->post_excerpt );
+	}
+
+	/**
+	 * When KSES strips part of the replacement, the result says so.
+	 *
+	 * @return void
+	 */
+	public function test_a_change_kses_strips_carries_a_notice(): void {
+		$author = self::factory()->user->create( [ 'role' => 'author' ] );
+		wp_update_post(
+			[
+				'ID'          => $this->post_id,
+				'post_author' => $author,
+			]
+		);
+		wp_set_current_user( $author );
+
+		$result = $this->replace(
+			[
+				'search'  => 'Once more',
+				'replace' => '<span onclick="alert(1)">Once</span> more',
+			]
+		);
+
+		$this->assertArrayHasKey( 'notice', $result );
+		$this->assertStringNotContainsString( 'onclick', $this->content() );
+	}
+
+	/**
 	 * An ID of 0 is not found, never resolved to the global post.
 	 *
 	 * @return void
