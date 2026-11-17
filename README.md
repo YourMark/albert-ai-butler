@@ -200,6 +200,8 @@ Website: https://yourmark.nl
 - Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
 - Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 - A group block sent with its contents written out was saved empty. It now keeps them.
+- Deleting a category or tag through your assistant always failed. Terms have no trash in WordPress, so Albert now deletes them permanently, and the assistant is told so before it asks.
+- Deleting a user through your assistant always failed unless it named someone to take over their posts, while it was told their content would be deleted with them. It must now name the user who receives everything the deleted user wrote.
 
 **Security**
 
@@ -225,6 +227,7 @@ Website: https://yourmark.nl
 - New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 - Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 - `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
+- `albert/delete-term` always deletes permanently; its `force` input is still accepted and ignored. `albert/delete-user` requires `reassign` (`minimum: 1`) and refuses a call without it with `albert_missing_reassign`, or a value below 1 with `albert_invalid_reassign`.
 
 ### 1.5.0
 
