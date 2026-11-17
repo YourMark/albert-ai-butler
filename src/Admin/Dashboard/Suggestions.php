@@ -186,6 +186,10 @@ class Suggestions {
 				'requires' => [ 'albert/find-media', 'albert/update-media' ],
 			],
 			[
+				'text'     => __( 'What changed the last time my homepage was edited?', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-pages', 'albert/find-revisions', 'albert/get-revision' ],
+			],
+			[
 				'text'     => __( 'Who has administrator access to this site?', 'albert-ai-butler' ),
 				'requires' => [ 'albert/find-users' ],
 			],

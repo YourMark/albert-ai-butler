@@ -49,6 +49,9 @@ use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Skills\GetSkill;
+use Albert\Abilities\WordPress\Revisions\FindRevisions;
+use Albert\Abilities\WordPress\Revisions\GetRevision;
+use Albert\Abilities\WordPress\Revisions\RestoreRevision;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
 use Albert\Abilities\WordPress\Taxonomies\FindTerms;
 use Albert\Abilities\WordPress\Taxonomies\ViewTerm;
@@ -442,6 +445,11 @@ class Plugin {
 		$this->abilities_manager->add_ability( new CreateTerm() );
 		$this->abilities_manager->add_ability( new UpdateTerm() );
 		$this->abilities_manager->add_ability( new DeleteTerm() );
+
+		// Revision abilities.
+		$this->abilities_manager->add_ability( new FindRevisions() );
+		$this->abilities_manager->add_ability( new GetRevision() );
+		$this->abilities_manager->add_ability( new RestoreRevision() );
 
 		// Block abilities (block type discovery).
 		$this->abilities_manager->add_ability( new ListBlockTypes() );

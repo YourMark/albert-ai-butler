@@ -180,6 +180,7 @@ Website: https://yourmark.nl
 - **Abilities that stay on for your staging site.** A setting in your site's code can switch abilities on for assistants on a staging, development or local copy of your site, without changing the switches on the Abilities screen. Copying your live site over a staging copy no longer turns everything back off. You choose to switch on every ability, or every ability that is not marked Destructive; your live site keeps using its own switches. Safe mode still holds what it would hold, and the Abilities screen says when such a setting is in use.
 - **Schedule posts and set their details.** Your assistant can now schedule a post or page to publish later, and set its address (slug), author, parent page, page order, template, whether comments are open, whether a post stays at the top of the blog, and its post format. If a request would not work, such as an author who cannot edit that content or a template your theme does not offer, Albert refuses it and says what to send instead.
 - **Fill in missing alt text.** Your assistant can now find the images in your media library that have no alt text, and write the alt text, title, caption and description of any media file. It can also delete a media file; deleting is permanent, so safe mode holds it for your approval. Both new tools are off until you switch them on, and the Dashboard then suggests asking which images are missing alt text.
+- **See what changed, and put it back.** Your assistant can now list the saved revisions of a post or page, show what changed in each one line by line, and restore an earlier version. Restoring is switched off until you turn it on, waits for your approval in safe mode, and is saved as a new revision, so it can be undone too. Only people who can edit a post can see or restore its revisions.
 
 **Improvements**
 
@@ -225,6 +226,7 @@ Website: https://yourmark.nl
 - New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 - Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 - `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
+- New abilities: `albert/find-revisions`, `albert/get-revision` and `albert/restore-revision`. `albert/restore-revision` is annotated as an idempotent update, since the restore is itself a revision, and is on the safe mode high-risk list.
 
 ### 1.5.0
 
