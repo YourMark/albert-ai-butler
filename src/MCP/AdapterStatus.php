@@ -117,6 +117,63 @@ class AdapterStatus {
 	 * @since 1.4.0
 	 */
 	public static function adapter_path(): ?string {
+		$file = self::loaded_file();
+		if ( $file === null ) {
+			return null;
+		}
+
+		return str_replace( self::plugins_dir(), '', $file );
+	}
+
+	/**
+	 * The version of the resolved adapter copy.
+	 *
+	 * @return string|null Version, or null when nothing is loaded or the copy predates the constant.
+	 * @since 1.6.0
+	 */
+	public static function adapter_version(): ?string {
+		$constant = McpAdapter::class . '::VERSION';
+
+		return class_exists( McpAdapter::class ) && defined( $constant ) ? (string) constant( $constant ) : null;
+	}
+
+	/**
+	 * Which plugin supplied the resolved adapter copy.
+	 *
+	 * @return string|null `albert` for Albert's bundled copy, another plugin's folder name, or null when
+	 *                     nothing is loaded or it lives outside the plugins folder (a path we would rather not send).
+	 * @since 1.6.0
+	 */
+	public static function adapter_source(): ?string {
+		$file = self::loaded_file();
+		if ( $file === null ) {
+			return null;
+		}
+
+		if ( str_starts_with( $file, str_replace( '\\', '/', dirname( __DIR__, 2 ) ) . '/' . AdapterSource::FALLBACK_DIR . '/' ) ) {
+			return 'albert';
+		}
+
+		$plugins = self::plugins_dir();
+		if ( ! str_starts_with( $file, $plugins ) ) {
+			return null;
+		}
+
+		$folder = strstr( substr( $file, strlen( $plugins ) ), '/', true );
+
+		return is_string( $folder ) && $folder !== '' ? $folder : null;
+	}
+
+	/**
+	 * The file the resolved adapter class was loaded from, with forward slashes.
+	 *
+	 * Normalised by hand, not with wp_normalize_path(): the site context reads
+	 * this, and its unit tests run without WordPress.
+	 *
+	 * @return string|null Path, or null when nothing is loaded.
+	 * @since 1.6.0
+	 */
+	private static function loaded_file(): ?string {
 		if ( ! class_exists( McpAdapter::class ) ) {
 			return null;
 		}
@@ -127,12 +184,16 @@ class AdapterStatus {
 			return null;
 		}
 
-		if ( ! is_string( $file ) ) {
-			return null;
-		}
+		return is_string( $file ) ? str_replace( '\\', '/', $file ) : null;
+	}
 
-		$plugins = wp_normalize_path( trailingslashit( WP_PLUGIN_DIR ) );
-
-		return str_replace( $plugins, '', wp_normalize_path( $file ) );
+	/**
+	 * The plugins folder with forward slashes and a trailing slash.
+	 *
+	 * @return string
+	 * @since 1.6.0
+	 */
+	private static function plugins_dir(): string {
+		return str_replace( '\\', '/', rtrim( WP_PLUGIN_DIR, '/\\' ) ) . '/';
 	}
 }

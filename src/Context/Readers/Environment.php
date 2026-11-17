@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Blocks\EditorMode;
 use Albert\Context\Symbols;
+use Albert\MCP\AdapterStatus;
 
 /**
  * Reads the resolved facts about this WordPress install.
@@ -70,6 +71,21 @@ class Environment {
 		$parent = $theme->parent();
 		if ( $parent instanceof \WP_Theme ) {
 			$environment['theme']['parent'] = (string) $parent->get( 'Name' );
+		}
+
+		// Versions are what a bug report needs first, and an assistant cannot find them on its own.
+		if ( defined( 'ALBERT_VERSION' ) ) {
+			$environment['albert'] = (string) ALBERT_VERSION;
+		}
+
+		$adapter_version = AdapterStatus::adapter_version();
+		if ( $adapter_version !== null ) {
+			$environment['mcp_adapter'] = [ 'version' => $adapter_version ];
+
+			$source = AdapterStatus::adapter_source();
+			if ( $source !== null ) {
+				$environment['mcp_adapter']['loaded_from'] = $source;
+			}
 		}
 
 		$multilingual = $this->multilingual();

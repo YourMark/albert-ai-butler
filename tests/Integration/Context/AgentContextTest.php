@@ -140,6 +140,20 @@ class AgentContextTest extends TestCase {
 	}
 
 	/**
+	 * The environment section carries Albert's version and the adapter that is loaded.
+	 *
+	 * @return void
+	 */
+	public function test_environment_carries_albert_and_adapter_versions(): void {
+		$environment = SiteContext::detected()['environment'];
+
+		$this->assertSame( ALBERT_VERSION, $environment['albert'] );
+		$this->assertSame( \WP\MCP\Core\McpAdapter::VERSION, $environment['mcp_adapter']['version'] );
+		// Albert's copy, or WooCommerce's when a Woo run loads it first.
+		$this->assertContains( $environment['mcp_adapter']['loaded_from'], [ 'albert', 'woocommerce' ] );
+	}
+
+	/**
 	 * A tool that is not discovery is never given context.
 	 *
 	 * @return void

@@ -193,6 +193,7 @@ Website: https://yourmark.nl
 - Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 - When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
 - When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
+- Your assistant now knows which version of Albert and of the MCP Adapter your site runs, and whether the adapter is Albert's own copy or comes from another plugin. When something goes wrong, it can put the right versions in a bug report without you looking them up.
 
 **Fixes**
 
@@ -227,6 +228,11 @@ Website: https://yourmark.nl
 - New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 - Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 - `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
+- The environment in the `albert/context/site` filter now carries `albert` (the version) and `mcp_adapter` (`version`, and `loaded_from`: `albert` for the bundled copy or the supplying plugin's folder name).
+
+**Credits**
+
+- [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for asking for the versions in the site context.
 
 ### 1.5.0
 
