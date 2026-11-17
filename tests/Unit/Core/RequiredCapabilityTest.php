@@ -91,7 +91,7 @@ class RequiredCapabilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_revision_abilities_require_edit_posts(): void {
-		foreach ( [ 'albert/find-revisions', 'albert/view-revision', 'albert/restore-revision' ] as $id ) {
+		foreach ( [ 'albert/find-revisions', 'albert/get-revision', 'albert/restore-revision' ] as $id ) {
 			$ability = new WP_Ability( $id, [ 'annotations' => [ 'readonly' => $id !== 'albert/restore-revision' ] ] );
 
 			$this->assertSame( 'edit_posts', AbilitiesRegistry::resolve_required_capability( $ability ), $id );

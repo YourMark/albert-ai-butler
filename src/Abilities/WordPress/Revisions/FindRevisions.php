@@ -31,7 +31,7 @@ class FindRevisions extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/find-revisions';
 		$this->label       = __( 'Find Revisions', 'albert-ai-butler' );
-		$this->description = __( 'List the saved revisions of a post or page, newest first, with the fields (title, content, excerpt) each one differs in from the current version.', 'albert-ai-butler' );
+		$this->description = __( 'List the saved revisions of a post or page, newest first, with the fields each one differs in from the current version; use albert/get-revision to see what one revision changed.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'revisions';
 
@@ -42,7 +42,7 @@ class FindRevisions extends BaseAbility {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::read( 'Use view-revision to see the line-by-line changes of one revision.' ),
+			'annotations' => Annotations::read( 'Use albert/get-revision to see the line-by-line changes of one revision, and albert/restore-revision to put one back.' ),
 		];
 
 		parent::__construct();
@@ -60,19 +60,21 @@ class FindRevisions extends BaseAbility {
 			'properties' => [
 				'post_id'  => [
 					'type'        => 'integer',
-					'description' => 'The post or page ID.',
+					'description' => 'The ID of the post or page whose revisions to list.',
 					'minimum'     => 1,
 				],
 				'page'     => [
-					'type'    => 'integer',
-					'default' => 1,
-					'minimum' => 1,
+					'type'        => 'integer',
+					'description' => 'Page of results to return, starting at 1. Use total_pages to see how many there are.',
+					'default'     => 1,
+					'minimum'     => 1,
 				],
 				'per_page' => [
-					'type'    => 'integer',
-					'default' => 10,
-					'minimum' => 1,
-					'maximum' => 50,
+					'type'        => 'integer',
+					'description' => 'Revisions per page, newest first.',
+					'default'     => 10,
+					'minimum'     => 1,
+					'maximum'     => 50,
 				],
 			],
 			'required'   => [ 'post_id' ],
@@ -86,6 +88,14 @@ class FindRevisions extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	private function get_output_schema(): array {
+		$item = RevisionDiff::summary_schema();
+
+		$item['properties']['differs_from_current'] = [
+			'type'        => 'array',
+			'description' => 'Fields whose value differs from the current version. Empty means this revision matches it.',
+			'items'       => [ 'type' => 'string' ],
+		];
+
 		return [
 			'type'       => 'object',
 			'properties' => [
@@ -100,22 +110,7 @@ class FindRevisions extends BaseAbility {
 				],
 				'revisions'   => [
 					'type'  => 'array',
-					'items' => [
-						'type'       => 'object',
-						'properties' => [
-							'id'                   => [ 'type' => 'integer' ],
-							'date'                 => [ 'type' => 'string' ],
-							'date_gmt'             => [ 'type' => 'string' ],
-							'author_id'            => [ 'type' => 'integer' ],
-							'autosave'             => [ 'type' => 'boolean' ],
-							'title'                => [ 'type' => 'string' ],
-							'differs_from_current' => [
-								'type'        => 'array',
-								'description' => 'Fields whose value differs from the current version. Empty means this revision matches it.',
-								'items'       => [ 'type' => 'string' ],
-							],
-						],
-					],
+					'items' => $item,
 				],
 				'total'       => [ 'type' => 'integer' ],
 				'total_pages' => [ 'type' => 'integer' ],
@@ -144,7 +139,7 @@ class FindRevisions extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post = RevisionDiff::find_post( absint( $args['post_id'] ?? 0 ) );
+		$post = RevisionDiff::find_post( (int) ( $args['post_id'] ?? 0 ) );
 		if ( is_wp_error( $post ) ) {
 			return $post;
 		}

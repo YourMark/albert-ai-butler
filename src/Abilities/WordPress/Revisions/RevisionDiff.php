@@ -16,6 +16,7 @@ use Text_Diff_Op_copy;
 use Text_Diff_Op_delete;
 use WP_Error;
 use WP_Post;
+use WP_User;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -128,8 +129,8 @@ class RevisionDiff {
 		$revision = $revision_id > 0 ? wp_get_post_revision( $revision_id ) : null;
 		if ( ! $revision instanceof WP_Post ) {
 			return new WP_Error(
-				'revision_not_found',
-				__( 'No revision with that ID. Use find-revisions to list the revisions of a post.', 'albert-ai-butler' ),
+				'albert_revision_not_found',
+				__( 'No revision with that ID. Use albert/find-revisions to list the revisions of a post.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -155,26 +156,26 @@ class RevisionDiff {
 		$post = $post_id > 0 ? get_post( $post_id ) : null;
 		if ( ! $post instanceof WP_Post || $post->post_type === 'revision' ) {
 			return new WP_Error(
-				'post_not_found',
-				__( 'No post with that ID.', 'albert-ai-butler' ),
+				'albert_post_not_found',
+				__( 'No post with that ID. Use albert/find-posts or albert/find-pages to find its ID.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
 		}
 
 		if ( ! current_user_can( 'edit_post', $post->ID ) ) {
 			return new WP_Error(
-				'revision_permission_denied',
-				__( 'You may not see the revisions of this post, because you cannot edit it.', 'albert-ai-butler' ),
+				'albert_post_permission_denied',
+				__( 'You cannot edit this post, so you may not see or restore its revisions.', 'albert-ai-butler' ),
 				[ 'status' => 403 ]
 			);
 		}
 
 		if ( ! post_type_supports( $post->post_type, 'revisions' ) ) {
 			return new WP_Error(
-				'revisions_not_supported',
+				'albert_invalid_post_id',
 				sprintf(
 					/* translators: %s: post type name */
-					__( 'The "%s" post type does not keep revisions.', 'albert-ai-butler' ),
+					__( 'The "%s" post type does not keep revisions. Send the ID of a post or page.', 'albert-ai-butler' ),
 					$post->post_type
 				),
 				[ 'status' => 400 ]
@@ -188,17 +189,49 @@ class RevisionDiff {
 	 * A revision as the abilities list it.
 	 *
 	 * @param WP_Post $revision The revision.
-	 * @return array{id: int, date: string, date_gmt: string, author_id: int, autosave: bool, title: string}
+	 * @return array{id: int, date: string, date_gmt: string, author: array{id: int, name: string}, autosave: bool, title: string}
 	 * @since 1.6.0
 	 */
 	public static function summary( WP_Post $revision ): array {
+		$author = get_userdata( (int) $revision->post_author );
+
 		return [
-			'id'        => (int) $revision->ID,
-			'date'      => (string) mysql_to_rfc3339( $revision->post_date ),
-			'date_gmt'  => (string) mysql_to_rfc3339( $revision->post_date_gmt ),
-			'author_id' => (int) $revision->post_author,
-			'autosave'  => (bool) wp_is_post_autosave( $revision ),
-			'title'     => (string) $revision->post_title,
+			'id'       => (int) $revision->ID,
+			'date'     => (string) mysql_to_rfc3339( $revision->post_date ),
+			'date_gmt' => (string) mysql_to_rfc3339( $revision->post_date_gmt ),
+			'author'   => [
+				'id'   => (int) $revision->post_author,
+				'name' => $author instanceof WP_User ? (string) $author->display_name : '',
+			],
+			'autosave' => (bool) wp_is_post_autosave( $revision ),
+			'title'    => (string) $revision->post_title,
+		];
+	}
+
+	/**
+	 * The output schema of a revision summary.
+	 *
+	 * @return array<string, mixed>
+	 * @since 1.6.0
+	 */
+	public static function summary_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'id'       => [ 'type' => 'integer' ],
+				'date'     => [ 'type' => 'string' ],
+				'date_gmt' => [ 'type' => 'string' ],
+				'author'   => [
+					'type'        => 'object',
+					'description' => 'Who saved the revision.',
+					'properties'  => [
+						'id'   => [ 'type' => 'integer' ],
+						'name' => [ 'type' => 'string' ],
+					],
+				],
+				'autosave' => [ 'type' => 'boolean' ],
+				'title'    => [ 'type' => 'string' ],
+			],
 		];
 	}
 

@@ -50,6 +50,8 @@ class RiskPolicy {
 		'albert/update-user',
 		'albert/create-user',
 		'albert/delete-user',
+		// Undoable through a new revision, but it replaces live content in one call.
+		'albert/restore-revision',
 	];
 
 	/**

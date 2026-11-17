@@ -1,6 +1,6 @@
 <?php
 /**
- * View Revision Ability
+ * Get Revision Ability
  *
  * @package Albert
  * @subpackage Abilities\WordPress\Revisions
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.6.0
  */
-class ViewRevision extends BaseAbility {
+class GetRevision extends BaseAbility {
 
 	/**
 	 * Constructor.
@@ -29,9 +29,9 @@ class ViewRevision extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/view-revision';
-		$this->label       = __( 'View Revision', 'albert-ai-butler' );
-		$this->description = __( 'Show what changed between one revision and the current version of its post (or the revision before it), as a line diff of the title, content and excerpt.', 'albert-ai-butler' );
+		$this->id          = 'albert/get-revision';
+		$this->label       = __( 'Get Revision', 'albert-ai-butler' );
+		$this->description = __( 'Show one revision\'s changes as a line diff; use it before albert/restore-revision.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'revisions';
 
@@ -43,7 +43,7 @@ class ViewRevision extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::read(
-				'The diff runs from older to newer: "-" lines are only in the older version, "+" lines only in the newer one. With compare_to "current", the older version is this revision.'
+				'Get the revision ID from albert/find-revisions. The diff covers the title, content and excerpt and runs from older to newer: "-" lines are only in the older version, "+" lines only in the newer one. With compare_to "current", the older version is this revision.'
 			),
 		];
 
@@ -60,19 +60,19 @@ class ViewRevision extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'         => [
+				'revision_id' => [
 					'type'        => 'integer',
-					'description' => 'The revision ID, from find-revisions.',
+					'description' => 'The revision ID, from albert/find-revisions.',
 					'minimum'     => 1,
 				],
-				'compare_to' => [
+				'compare_to'  => [
 					'type'        => 'string',
 					'description' => '"current" compares with the post as it is now; "previous" shows what this revision changed compared with the revision before it.',
 					'enum'        => [ 'current', 'previous' ],
 					'default'     => 'current',
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'   => [ 'revision_id' ],
 		];
 	}
 
@@ -95,8 +95,15 @@ class ViewRevision extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'revision'  => [ 'type' => 'object' ],
-				'post_id'   => [ 'type' => 'integer' ],
+				'revision'  => RevisionDiff::summary_schema(),
+				'post'      => [
+					'type'        => 'object',
+					'description' => 'The post the revision belongs to.',
+					'properties'  => [
+						'id'   => [ 'type' => 'integer' ],
+						'name' => [ 'type' => 'string' ],
+					],
+				],
 				'from'      => $version,
 				'to'        => $version,
 				'changed'   => [ 'type' => 'boolean' ],
@@ -121,7 +128,7 @@ class ViewRevision extends BaseAbility {
 					'description' => 'The revisions screen in wp-admin for this revision.',
 				],
 			],
-			'required'   => [ 'revision', 'post_id', 'from', 'to', 'changed', 'fields' ],
+			'required'   => [ 'revision', 'post', 'from', 'to', 'changed', 'fields' ],
 		];
 	}
 
@@ -145,7 +152,7 @@ class ViewRevision extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$found = RevisionDiff::find_revision( absint( $args['id'] ?? 0 ) );
+		$found = RevisionDiff::find_revision( (int) ( $args['revision_id'] ?? 0 ) );
 		if ( is_wp_error( $found ) ) {
 			return $found;
 		}
@@ -157,9 +164,9 @@ class ViewRevision extends BaseAbility {
 			$previous = $this->previous_revision( $revision, $post );
 			if ( ! $previous instanceof WP_Post ) {
 				return new WP_Error(
-					'revision_not_found',
-					__( 'This is the oldest revision of the post, so there is nothing before it to compare with.', 'albert-ai-butler' ),
-					[ 'status' => 404 ]
+					'albert_invalid_compare_to',
+					__( 'This is the oldest revision of the post, so there is nothing before it. Use compare_to "current" instead.', 'albert-ai-butler' ),
+					[ 'status' => 400 ]
 				);
 			}
 			$older = $previous;
@@ -177,7 +184,10 @@ class ViewRevision extends BaseAbility {
 
 		return [
 			'revision'  => RevisionDiff::summary( $revision ),
-			'post_id'   => (int) $post->ID,
+			'post'      => [
+				'id'   => (int) $post->ID,
+				'name' => (string) $post->post_title,
+			],
 			'from'      => $from,
 			'to'        => $to,
 			'changed'   => in_array( true, array_column( $fields, 'changed' ), true ),

@@ -226,7 +226,7 @@ Website: https://yourmark.nl
 - New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 - Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 - `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
-- New abilities: `albert/find-revisions`, `albert/view-revision` and `albert/restore-revision`.
+- New abilities: `albert/find-revisions`, `albert/get-revision` and `albert/restore-revision`. `albert/restore-revision` is annotated as an idempotent update, since the restore is itself a revision, and is on the safe mode high-risk list.
 
 ### 1.5.0
 

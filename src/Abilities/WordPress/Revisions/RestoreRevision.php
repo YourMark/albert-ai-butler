@@ -21,8 +21,9 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Restores a post to one of its revisions through core, so the restore is itself a revision.
  *
- * Annotated destructive: it overwrites the live title, content and excerpt, and
- * until Revert ships there is no undo in Albert, so safe mode holds it.
+ * Not destructive and idempotent: core records the restore as a new revision, so
+ * it can be undone, and restoring the same revision twice changes nothing more.
+ * It still replaces the live content, so RiskPolicy holds it by name.
  *
  * @since 1.6.0
  */
@@ -36,7 +37,7 @@ class RestoreRevision extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/restore-revision';
 		$this->label       = __( 'Restore Revision', 'albert-ai-butler' );
-		$this->description = __( 'Restore a post or page to one of its revisions. The title, content and excerpt are replaced by the revision\'s, and WordPress records the restore as a new revision.', 'albert-ai-butler' );
+		$this->description = __( 'Put a post back to one of its revisions, recorded as a new revision so it can be undone; show the owner the changes with albert/get-revision first.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'revisions';
 
@@ -47,8 +48,8 @@ class RestoreRevision extends BaseAbility {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::delete(
-				'Show the owner what will change first, with view-revision. The current version is replaced, so restore only the revision the owner chose.'
+			'annotations' => [ 'idempotent' => true ] + Annotations::update(
+				'The title, content and excerpt are replaced by the revision\'s, so restore only the revision the owner chose. To undo, restore the revision recorded before it.'
 			),
 		];
 
@@ -65,13 +66,13 @@ class RestoreRevision extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id' => [
+				'revision_id' => [
 					'type'        => 'integer',
-					'description' => 'The revision ID to restore, from find-revisions.',
+					'description' => 'The revision ID to restore, from albert/find-revisions.',
 					'minimum'     => 1,
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'   => [ 'revision_id' ],
 		];
 	}
 
@@ -122,7 +123,7 @@ class RestoreRevision extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$found = RevisionDiff::find_revision( absint( $args['id'] ?? 0 ) );
+		$found = RevisionDiff::find_revision( (int) ( $args['revision_id'] ?? 0 ) );
 		if ( is_wp_error( $found ) ) {
 			return $found;
 		}
@@ -130,18 +131,18 @@ class RestoreRevision extends BaseAbility {
 
 		if ( $post->post_status === 'trash' ) {
 			return new WP_Error(
-				'post_in_trash',
-				__( 'This post is in the trash. Restore it from the trash before restoring a revision.', 'albert-ai-butler' ),
-				[ 'status' => 409 ]
+				'albert_invalid_revision_id',
+				__( 'This revision belongs to a post in the trash. Ask the owner to restore the post from the trash first.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
 			);
 		}
 
 		// As core's revision.php: with revisions off, the restore would leave no revision to undo it.
 		if ( ! wp_revisions_enabled( $post ) && ! wp_is_post_autosave( $revision ) ) {
 			return new WP_Error(
-				'revisions_disabled',
-				__( 'Revisions are turned off for this post, so restoring one would leave no way back.', 'albert-ai-butler' ),
-				[ 'status' => 409 ]
+				'albert_invalid_revision_id',
+				__( 'Revisions are turned off for this post, so a restore here could not be undone.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
 			);
 		}
 
@@ -163,8 +164,8 @@ class RestoreRevision extends BaseAbility {
 		$restored = wp_restore_post_revision( $revision->ID );
 		if ( ! $restored ) {
 			return new WP_Error(
-				'revision_restore_failed',
-				__( 'WordPress could not restore this revision.', 'albert-ai-butler' ),
+				'albert_revision_data_unavailable',
+				__( 'WordPress could not restore this revision. Try again in a moment.', 'albert-ai-butler' ),
 				[ 'status' => 500 ]
 			);
 		}

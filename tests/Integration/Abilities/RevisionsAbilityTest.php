@@ -12,8 +12,9 @@ namespace Albert\Tests\Integration\Abilities;
 use Albert\Abilities\WordPress\Revisions\FindRevisions;
 use Albert\Abilities\WordPress\Revisions\RestoreRevision;
 use Albert\Abilities\WordPress\Revisions\RevisionDiff;
-use Albert\Abilities\WordPress\Revisions\ViewRevision;
+use Albert\Abilities\WordPress\Revisions\GetRevision;
 use Albert\SafeMode\Gate;
+use Albert\SafeMode\RiskPolicy;
 use Albert\Tests\TestCase;
 use WP_Error;
 
@@ -129,11 +130,18 @@ class RevisionsAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_view_diffs_against_the_current_version(): void {
-		$result = ( new ViewRevision() )->execute( [ 'id' => $this->first_revision ] );
+		$result = ( new GetRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
 
 		$this->assertIsArray( $result );
 		$this->assertTrue( $result['changed'] );
 		$this->assertSame( $this->post_id, $result['to']['id'] );
+		$this->assertSame(
+			[
+				'id'   => $this->post_id,
+				'name' => 'Opening times',
+			],
+			$result['post']
+		);
 
 		$fields = array_column( $result['fields'], null, 'field' );
 		$this->assertSame( "@@ -1,1 +1,1 @@\n-Opening hours\n+Opening times", $fields['post_title']['diff'] );
@@ -150,10 +158,10 @@ class RevisionsAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_view_compares_with_the_previous_revision(): void {
-		$result = ( new ViewRevision() )->execute(
+		$result = ( new GetRevision() )->execute(
 			[
-				'id'         => $this->second_revision,
-				'compare_to' => 'previous',
+				'revision_id' => $this->second_revision,
+				'compare_to'  => 'previous',
 			]
 		);
 
@@ -164,22 +172,22 @@ class RevisionsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * The oldest revision has nothing before it.
+	 * The oldest revision has nothing before it: the input is wrong, the revision exists.
 	 *
 	 * @return void
 	 */
-	public function test_view_previous_of_the_oldest_is_not_found(): void {
+	public function test_view_previous_of_the_oldest_is_an_invalid_compare_to(): void {
 		$oldest = (int) array_key_last( wp_get_post_revisions( $this->post_id ) );
 
-		$result = ( new ViewRevision() )->execute(
+		$result = ( new GetRevision() )->execute(
 			[
-				'id'         => $oldest,
-				'compare_to' => 'previous',
+				'revision_id' => $oldest,
+				'compare_to'  => 'previous',
 			]
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'revision_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_compare_to', $result->get_error_code() );
 	}
 
 	/**
@@ -212,7 +220,7 @@ class RevisionsAbilityTest extends TestCase {
 			}
 		);
 
-		$result = ( new RestoreRevision() )->execute( [ 'id' => $this->first_revision ] );
+		$result = ( new RestoreRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
 
 		$this->assertIsArray( $result );
 		$this->assertSame( 1, $restored_hook );
@@ -249,7 +257,7 @@ class RevisionsAbilityTest extends TestCase {
 
 		$only_paragraphs = static fn(): array => [ 'core/paragraph' ];
 		add_filter( 'allowed_block_types_all', $only_paragraphs );
-		$result = ( new RestoreRevision() )->execute( [ 'id' => $with_html ] );
+		$result          = ( new RestoreRevision() )->execute( [ 'revision_id' => $with_html ] );
 		remove_filter( 'allowed_block_types_all', $only_paragraphs );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
@@ -265,10 +273,10 @@ class RevisionsAbilityTest extends TestCase {
 	public function test_restore_refuses_a_trashed_post(): void {
 		wp_trash_post( $this->post_id );
 
-		$result = ( new RestoreRevision() )->execute( [ 'id' => $this->first_revision ] );
+		$result = ( new RestoreRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'post_in_trash', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_revision_id', $result->get_error_code() );
 	}
 
 	/**
@@ -279,12 +287,12 @@ class RevisionsAbilityTest extends TestCase {
 	public function test_restore_refuses_when_revisions_are_off(): void {
 		add_filter( 'wp_revisions_to_keep', '__return_zero' );
 
-		$result = ( new RestoreRevision() )->execute( [ 'id' => $this->first_revision ] );
+		$result = ( new RestoreRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
 
 		remove_filter( 'wp_revisions_to_keep', '__return_zero' );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'revisions_disabled', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_revision_id', $result->get_error_code() );
 		$this->assertSame( 'Opening times', get_post( $this->post_id )->post_title );
 	}
 
@@ -294,17 +302,17 @@ class RevisionsAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_unknown_ids_are_not_found(): void {
-		$view = ( new ViewRevision() )->execute( [ 'id' => $this->post_id ] );
+		$view = ( new GetRevision() )->execute( [ 'revision_id' => $this->post_id ] );
 		$this->assertInstanceOf( WP_Error::class, $view );
-		$this->assertSame( 'revision_not_found', $view->get_error_code() );
+		$this->assertSame( 'albert_revision_not_found', $view->get_error_code() );
 
 		$find = ( new FindRevisions() )->execute( [ 'post_id' => 999999 ] );
 		$this->assertInstanceOf( WP_Error::class, $find );
-		$this->assertSame( 'post_not_found', $find->get_error_code() );
+		$this->assertSame( 'albert_post_not_found', $find->get_error_code() );
 
 		$find_revision = ( new FindRevisions() )->execute( [ 'post_id' => $this->first_revision ] );
 		$this->assertInstanceOf( WP_Error::class, $find_revision );
-		$this->assertSame( 'post_not_found', $find_revision->get_error_code() );
+		$this->assertSame( 'albert_post_not_found', $find_revision->get_error_code() );
 	}
 
 	/**
@@ -318,7 +326,7 @@ class RevisionsAbilityTest extends TestCase {
 		$result = ( new FindRevisions() )->execute( [ 'post_id' => $attachment ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'revisions_not_supported', $result->get_error_code() );
+		$this->assertSame( 'albert_invalid_post_id', $result->get_error_code() );
 	}
 
 	/**
@@ -331,12 +339,12 @@ class RevisionsAbilityTest extends TestCase {
 
 		$find = ( new FindRevisions() )->execute( [ 'post_id' => $this->post_id ] );
 		$this->assertInstanceOf( WP_Error::class, $find );
-		$this->assertSame( 'revision_permission_denied', $find->get_error_code() );
+		$this->assertSame( 'albert_post_permission_denied', $find->get_error_code() );
 
-		foreach ( [ new ViewRevision(), new RestoreRevision() ] as $ability ) {
-			$result = $ability->execute( [ 'id' => $this->first_revision ] );
+		foreach ( [ new GetRevision(), new RestoreRevision() ] as $ability ) {
+			$result = $ability->execute( [ 'revision_id' => $this->first_revision ] );
 			$this->assertInstanceOf( WP_Error::class, $result, $ability->get_id() );
-			$this->assertSame( 'revision_permission_denied', $result->get_error_code(), $ability->get_id() );
+			$this->assertSame( 'albert_post_permission_denied', $result->get_error_code(), $ability->get_id() );
 		}
 
 		$this->assertSame( 'Opening times', get_post( $this->post_id )->post_title, 'Nothing was restored.' );
@@ -350,7 +358,7 @@ class RevisionsAbilityTest extends TestCase {
 	public function test_subscribers_are_refused(): void {
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
 
-		foreach ( [ new FindRevisions(), new ViewRevision(), new RestoreRevision() ] as $ability ) {
+		foreach ( [ new FindRevisions(), new GetRevision(), new RestoreRevision() ] as $ability ) {
 			$this->assertInstanceOf( WP_Error::class, $ability->check_permission(), $ability->get_id() );
 		}
 	}
@@ -365,14 +373,52 @@ class RevisionsAbilityTest extends TestCase {
 
 		$expected = [
 			'albert/find-revisions'   => false,
-			'albert/view-revision'    => false,
+			'albert/get-revision'     => false,
 			'albert/restore-revision' => true,
 		];
 
 		foreach ( $expected as $id => $held ) {
 			$ability = wp_get_ability( $id );
 			$this->assertNotNull( $ability, $id . ' is registered' );
-			$this->assertSame( $held, $gate->must_gate( $ability, [ 'id' => $this->first_revision ] ), $id );
+			$this->assertSame( $held, $gate->must_gate( $ability, [ 'revision_id' => $this->first_revision ] ), $id );
 		}
+	}
+
+	/**
+	 * Each revision names its author alongside the ID.
+	 *
+	 * @return void
+	 */
+	public function test_revisions_name_their_author(): void {
+		$author                = self::factory()->user->create(
+			[
+				'role'         => 'editor',
+				'display_name' => 'Ada Editor',
+			]
+		);
+		$revision              = get_post( $this->first_revision );
+		$revision->post_author = (string) $author;
+
+		$this->assertSame(
+			[
+				'id'   => $author,
+				'name' => 'Ada Editor',
+			],
+			RevisionDiff::summary( $revision )['author']
+		);
+	}
+
+	/**
+	 * Restore is undoable through the revision it records, so it is not destructive, yet safe mode holds it by name.
+	 *
+	 * @return void
+	 */
+	public function test_restore_is_an_idempotent_non_destructive_update(): void {
+		$annotations = wp_get_ability( 'albert/restore-revision' )->get_meta()['annotations'];
+
+		$this->assertFalse( $annotations['readonly'] );
+		$this->assertFalse( $annotations['destructive'] );
+		$this->assertTrue( $annotations['idempotent'] );
+		$this->assertTrue( RiskPolicy::is_high_risk_ability( 'albert/restore-revision' ) );
 	}
 }
