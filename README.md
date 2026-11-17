@@ -184,6 +184,7 @@ Website: https://yourmark.nl
 **Improvements**
 
 - The Abilities screen now labels an ability from another plugin that doesn't say whether it only reads or can change something as Not declared, instead of guessing Write, and explains what that means. Albert still treats it as one that can make changes, so safe mode holds it.
+- The Abilities screen no longer shows a "Required capability" for each ability. It was a guess from the ability's name and was wrong in places. Without Albert Premium's advanced permissions, the ability's own permission check decides, as it always did.
 - When your assistant edits a single block and the new text would lose a tag the block had, such as a ThirstyAffiliates link, Albert refuses the edit and tells the assistant to ask you first. Nothing is saved until you agree.
 - Albert is about 2 MB smaller: the Abilities and Skills screens now share one copy of their table instead of each carrying its own.
 - Ordinary page views on your site no longer load Albert's abilities, so the pages your visitors see do a little less work.
@@ -210,6 +211,7 @@ Website: https://yourmark.nl
 
 **Developer**
 
+- Deprecated the `albert/abilities/required_capability` filter and `AbilitiesRegistry::resolve_required_capability()`; neither has any effect now, and the method returns an empty string. The `capability` and `capabilityRoles` keys of an Abilities screen row are always empty and will be removed in a future version.
 - Switching an ability off no longer unregisters it. Albert's MCP server leaves it out of discovery and refuses to describe or run it, and safe mode refuses to approve a held call for it. An Albert ability that an add-on refuses, such as one that needs a licence, is still unregistered.
 - `albert/abilities/disabled_list` now also applies to Albert's own abilities.
 - An Abilities screen row's `operation` is now `undeclared` (it was `write`) for an ability whose annotations set neither `readonly` nor `destructive`.
