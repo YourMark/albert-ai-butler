@@ -30,7 +30,7 @@ class Delete extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/delete-page';
 		$this->label       = __( 'Delete Page', 'albert-ai-butler' );
-		$this->description = __( 'Delete a WordPress page permanently or move it to trash.', 'albert-ai-butler' );
+		$this->description = __( 'Move a WordPress page to the trash, or delete it permanently with "force".', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
@@ -42,10 +42,12 @@ class Delete extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::delete(
-				'This is not reversible through Albert. Confirm which page you have, with `albert/view-page` '
-				. 'on the id, before calling it, and check nothing links to it: deleting a page that is in '
-				. 'a navigation menu leaves the menu pointing at nothing.'
+				'Without `force` the page goes to the trash, where a person can restore it in wp-admin; '
+				. '`force: true` deletes it permanently and waits for approval when safe mode is on. Confirm '
+				. 'which page you have, with `albert/view-page` on the id, before calling it, and check '
+				. 'nothing links to it: a page in a navigation menu leaves the menu pointing at nothing.'
 			),
+			'safe_mode'   => [ 'permanent_flag' => 'force' ],
 		];
 
 		parent::__construct();
@@ -67,7 +69,7 @@ class Delete extends BaseAbility {
 				],
 				'force' => [
 					'type'        => 'boolean',
-					'description' => 'Whether to bypass trash and force deletion',
+					'description' => 'Delete the page permanently instead of moving it to the trash. Default false.',
 					'default'     => false,
 				],
 			],
@@ -86,7 +88,14 @@ class Delete extends BaseAbility {
 			'type'       => 'object',
 			'properties' => [
 				'id'      => [ 'type' => 'integer' ],
-				'deleted' => [ 'type' => 'boolean' ],
+				'deleted' => [
+					'type'        => 'boolean',
+					'description' => 'True only when the page was deleted permanently.',
+				],
+				'trashed' => [
+					'type'        => 'boolean',
+					'description' => 'True when the page was moved to the trash.',
+				],
 				'status'  => [ 'type' => 'string' ],
 			],
 			'required'   => [ 'id', 'deleted' ],
@@ -130,7 +139,7 @@ class Delete extends BaseAbility {
 			);
 		}
 
-		$force = ! empty( $args['force'] );
+		$force = isset( $args['force'] ) && ( is_bool( $args['force'] ) || is_string( $args['force'] ) ) && rest_sanitize_boolean( $args['force'] );
 
 		// Create REST request.
 		$request = new WP_REST_Request( 'DELETE', '/wp/v2/pages/' . $page_id );
@@ -157,7 +166,8 @@ class Delete extends BaseAbility {
 		// Return deletion result.
 		return [
 			'id'      => $page_id,
-			'deleted' => true,
+			'deleted' => $force,
+			'trashed' => ! $force,
 			'status'  => $force ? 'deleted' : 'trashed',
 		];
 	}

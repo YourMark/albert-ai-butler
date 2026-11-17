@@ -58,8 +58,10 @@ class DeletePattern extends BaseAbility {
 			'mcp'         => [ 'public' => true ],
 			'annotations' => Annotations::delete(
 				'A registered pattern cannot be deleted and returns a read-only error. Without "force" the pattern '
-				. 'is trashed where the site allows it.'
+				. 'goes to the trash, where a person can restore it; "force": true deletes it permanently and waits '
+				. 'for approval when safe mode is on.'
 			),
+			'safe_mode'   => [ 'permanent_flag' => 'force' ],
 		];
 
 		parent::__construct();
@@ -101,7 +103,14 @@ class DeletePattern extends BaseAbility {
 			'properties' => [
 				'id'      => [ 'type' => 'integer' ],
 				'name'    => [ 'type' => 'string' ],
-				'deleted' => [ 'type' => 'boolean' ],
+				'deleted' => [
+					'type'        => 'boolean',
+					'description' => 'True only when the pattern was deleted permanently.',
+				],
+				'trashed' => [
+					'type'        => 'boolean',
+					'description' => 'True when the pattern was moved to the trash.',
+				],
 				'status'  => [ 'type' => 'string' ],
 			],
 			'required'   => [ 'id', 'deleted', 'status' ],
@@ -159,7 +168,7 @@ class DeletePattern extends BaseAbility {
 		}
 
 		$id      = (int) $pattern['id'];
-		$force   = ! empty( $args['force'] );
+		$force   = isset( $args['force'] ) && ( is_bool( $args['force'] ) || is_string( $args['force'] ) ) && rest_sanitize_boolean( $args['force'] );
 		$request = new WP_REST_Request( 'DELETE', '/wp/v2/blocks/' . $id );
 		$request->set_param( 'force', $force );
 
@@ -181,7 +190,8 @@ class DeletePattern extends BaseAbility {
 		return [
 			'id'      => $id,
 			'name'    => $name,
-			'deleted' => true,
+			'deleted' => $force,
+			'trashed' => ! $force,
 			'status'  => $force ? 'deleted' : 'trashed',
 		];
 	}

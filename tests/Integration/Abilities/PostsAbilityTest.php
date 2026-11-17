@@ -404,8 +404,29 @@ class PostsAbilityTest extends TestCase {
 
 		$this->assertIsArray( $result );
 		$this->assertTrue( $result['deleted'] );
+		$this->assertFalse( $result['trashed'] );
 		$this->assertSame( 'deleted', $result['status'] );
 		$this->assertNull( get_post( $post_id ) );
+	}
+
+	/**
+	 * A string "false" trashes, as core reads it, rather than deleting permanently.
+	 *
+	 * @return void
+	 */
+	public function test_delete_post_string_false_trashes(): void {
+		$post_id = self::factory()->post->create();
+
+		$result = ( new DeletePost() )->execute(
+			[
+				'id'    => $post_id,
+				'force' => 'false',
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertTrue( $result['trashed'] );
+		$this->assertSame( 'trash', get_post_status( $post_id ) );
 	}
 
 	/**
@@ -419,7 +440,8 @@ class PostsAbilityTest extends TestCase {
 		$result = ( new DeletePost() )->execute( [ 'id' => $post_id ] );
 
 		$this->assertIsArray( $result );
-		$this->assertTrue( $result['deleted'] );
+		$this->assertFalse( $result['deleted'] );
+		$this->assertTrue( $result['trashed'] );
 		$this->assertSame( 'trashed', $result['status'] );
 		$this->assertSame( 'trash', get_post_status( $post_id ) );
 	}
