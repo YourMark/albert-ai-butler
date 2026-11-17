@@ -36,7 +36,7 @@ use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
 use Albert\Abilities\WordPress\Posts\FindPosts;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
-use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
+use Albert\Abilities\WordPress\SiteHealth\GetSiteHealth;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
@@ -487,7 +487,7 @@ class ExecuteSchemaTest extends TestCase {
 	}
 
 	/**
-	 * ViewSiteHealth returns results matching the output schema.
+	 * GetSiteHealth returns results matching the output schema.
 	 *
 	 * Limited to one cheap core test, so the suite makes no HTTP requests.
 	 *
@@ -507,7 +507,7 @@ class ExecuteSchemaTest extends TestCase {
 		};
 		add_filter( 'site_status_tests', $only_timezone, 999 );
 
-		$this->assert_execute_matches_schema( new ViewSiteHealth(), [], 'ViewSiteHealth' );
+		$this->assert_execute_matches_schema( new GetSiteHealth(), [], 'GetSiteHealth' );
 
 		remove_filter( 'site_status_tests', $only_timezone, 999 );
 	}

@@ -90,7 +90,7 @@ class RequiredCapabilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_site_health_requires_view_site_health_checks(): void {
-		$ability = new WP_Ability( 'albert/view-site-health', [ 'annotations' => [ 'readonly' => true ] ] );
+		$ability = new WP_Ability( 'albert/get-site-health', [ 'annotations' => [ 'readonly' => true ] ] );
 
 		$this->assertSame( 'view_site_health_checks', AbilitiesRegistry::resolve_required_capability( $ability ) );
 	}

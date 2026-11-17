@@ -1,6 +1,6 @@
 <?php
 /**
- * Integration tests for the view-site-health ability.
+ * Integration tests for the get-site-health ability.
  *
  * Core's Site Health class with a controlled set of tests, so the suite makes no HTTP requests.
  *
@@ -9,7 +9,7 @@
 
 namespace Albert\Tests\Integration\Abilities;
 
-use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
+use Albert\Abilities\WordPress\SiteHealth\GetSiteHealth;
 use Albert\SafeMode\Gate;
 use Albert\Tests\TestCase;
 use WP_Error;
@@ -96,7 +96,7 @@ class SiteHealthAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_runs_direct_tests_and_lists_async_ones(): void {
-		$result = ( new ViewSiteHealth() )->execute( [] );
+		$result = ( new GetSiteHealth() )->execute( [] );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 2, $result['results'], 'A test that cannot run is skipped, not invented.' );
@@ -142,7 +142,7 @@ class SiteHealthAbilityTest extends TestCase {
 		};
 		add_filter( 'site_status_test_result', $downgrade );
 
-		$result = ( new ViewSiteHealth() )->execute( [] );
+		$result = ( new GetSiteHealth() )->execute( [] );
 
 		remove_filter( 'site_status_test_result', $downgrade );
 
@@ -157,7 +157,7 @@ class SiteHealthAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_include_passed_false_returns_only_issues(): void {
-		$result = ( new ViewSiteHealth() )->execute( [ 'include_passed' => false ] );
+		$result = ( new GetSiteHealth() )->execute( [ 'include_passed' => false ] );
 
 		$this->assertIsArray( $result );
 		$this->assertNotContains( 'good', array_column( $result['results'], 'status' ) );
@@ -172,7 +172,7 @@ class SiteHealthAbilityTest extends TestCase {
 	public function test_does_not_store_results(): void {
 		delete_transient( 'health-check-site-status-result' );
 
-		( new ViewSiteHealth() )->execute( [] );
+		( new GetSiteHealth() )->execute( [] );
 
 		$this->assertFalse( get_transient( 'health-check-site-status-result' ) );
 	}
@@ -185,7 +185,7 @@ class SiteHealthAbilityTest extends TestCase {
 	public function test_editors_are_refused(): void {
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'editor' ] ) );
 
-		$result = ( new ViewSiteHealth() )->check_permission();
+		$result = ( new GetSiteHealth() )->check_permission();
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'ability_permission_denied', $result->get_error_code() );
@@ -197,7 +197,7 @@ class SiteHealthAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_safe_mode_passes_it(): void {
-		$ability = wp_get_ability( 'albert/view-site-health' );
+		$ability = wp_get_ability( 'albert/get-site-health' );
 
 		$this->assertNotNull( $ability );
 		$this->assertFalse( ( new Gate() )->must_gate( $ability, [] ) );

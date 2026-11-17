@@ -1,6 +1,6 @@
 <?php
 /**
- * View Site Health Ability
+ * Get Site Health Ability
  *
  * @package Albert
  * @subpackage Abilities\WordPress\SiteHealth
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.6.0
  */
-class ViewSiteHealth extends BaseAbility {
+class GetSiteHealth extends BaseAbility {
 
 	/**
 	 * Order the screen groups results in.
@@ -40,9 +40,9 @@ class ViewSiteHealth extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/view-site-health';
-		$this->label       = __( 'View Site Health', 'albert-ai-butler' );
-		$this->description = __( 'Run WordPress\'s Site Health checks and report each result as the Site Health screen shows it: status (critical, recommended or good), label, category and explanation. Checks that need a background request or the browser\'s login are listed as not run.', 'albert-ai-butler' );
+		$this->id          = 'albert/get-site-health';
+		$this->label       = __( 'Get Site Health', 'albert-ai-butler' );
+		$this->description = __( 'Report the site\'s Site Health results; use it when the person asks what on the site needs attention.', 'albert-ai-butler' );
 		$this->category    = 'maintenance';
 		$this->group       = 'site-health';
 
@@ -54,7 +54,7 @@ class ViewSiteHealth extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::read(
-				'Report the checks listed in not_run as not checked; never guess their result. The owner can run them on the Site Health screen (site_health_url).'
+				'Each result has a status (critical, recommended or good), a label, a category and an explanation, as the Site Health screen shows it. Checks that need a background request or the browser\'s login cannot run here and are listed in not_run: report them as not checked and never guess their result. The owner can run them on the Site Health screen (site_health_url).'
 			),
 		];
 
