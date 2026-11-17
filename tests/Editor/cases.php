@@ -452,6 +452,20 @@ $cases = [
 	],
 ];
 
+// A page read as `blocks` and written back: leaves carry their saved `html`.
+$page = '<!-- wp:group {"tagName":"section","layout":{"type":"constrained","justifyContent":"center"}} -->' . "\n"
+	. '<section class="wp-block-group"><!-- wp:image {"width":"120px","sizeSlug":"full","align":"center"} -->' . "\n"
+	. '<figure class="wp-block-image aligncenter size-full is-resized"><img src="https://example.com/logo.png" alt="Logo" style="width:120px;height:auto"/></figure>' . "\n"
+	. '<!-- /wp:image -->' . "\n\n"
+	. '<!-- wp:heading {"textAlign":"center","level":1,"style":{"typography":{"fontSize":"3rem"}}} -->' . "\n"
+	. '<h1 class="wp-block-heading has-text-align-center" style="font-size:3rem">Welcome</h1>' . "\n"
+	. '<!-- /wp:heading --></section>' . "\n"
+	. '<!-- /wp:group -->' . "\n\n"
+	. '<!-- wp:paragraph -->' . "\n" . '<p>Text with <strong>bold</strong> and <a href="https://example.com/">a link</a>.</p>' . "\n" . '<!-- /wp:paragraph -->' . "\n\n"
+	. '<!-- wp:verse -->' . "\n" . '<pre class="wp-block-verse">Roses are red</pre>' . "\n" . '<!-- /wp:verse -->';
+
+$cases['page read as blocks and written back'] = ( new Albert\Blocks\BlockReader() )->read( $page );
+
 $serializer = new BlockSerializer();
 $out        = [];
 
