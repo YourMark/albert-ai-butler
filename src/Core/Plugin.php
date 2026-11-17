@@ -20,6 +20,8 @@ use Albert\Abilities\WordPress\Posts\EditBlock as EditPostBlock;
 use Albert\Abilities\WordPress\Posts\AddBlock as AddPostBlock;
 use Albert\Abilities\WordPress\Posts\RemoveBlock as RemovePostBlock;
 use Albert\Abilities\WordPress\Posts\MoveBlock as MovePostBlock;
+use Albert\Abilities\WordPress\Posts\AddTerms as AddPostTerms;
+use Albert\Abilities\WordPress\Posts\RemoveTerms as RemovePostTerms;
 use Albert\Abilities\WordPress\Pages\FindPages;
 use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Pages\Create as CreatePage;
@@ -405,6 +407,8 @@ class Plugin {
 		$this->abilities_manager->add_ability( new AddPostBlock() );
 		$this->abilities_manager->add_ability( new RemovePostBlock() );
 		$this->abilities_manager->add_ability( new MovePostBlock() );
+		$this->abilities_manager->add_ability( new AddPostTerms() );
+		$this->abilities_manager->add_ability( new RemovePostTerms() );
 
 		// Pages abilities.
 		$this->abilities_manager->add_ability( new FindPages() );

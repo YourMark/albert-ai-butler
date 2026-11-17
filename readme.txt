@@ -250,6 +250,8 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 * When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
 * When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
+* Your assistant can now see which categories and tags a post has, and add or remove one without touching the others.
+* When your assistant reads a post or page, it now sees the author's name, the parent page's title and the featured image's address and alt text, not only their ID numbers.
 
 **Fixes**
 
@@ -258,6 +260,8 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
 * Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 * A group block sent with its contents written out was saved empty. It now keeps them.
+* Asking your assistant to remove categories or tags from a post did nothing, while it was told the change had worked. It can now remove them.
+* A category or tag your assistant put on a post could be left off without a word, for example a category that no longer exists or a tag whose name is part of another tag's name. Albert now picks the right tag, and refuses the change with the reason when a category or tag cannot be used.
 
 **Security**
 
@@ -283,6 +287,15 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 * Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 * `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
+* New abilities: `albert/add-post-terms` and `albert/remove-post-terms`. Both take `post_id`, `taxonomy` (`category` or `post_tag`) and up to 50 `terms`, and return the post's terms afterwards. `albert/remove-post-terms` returns `default_category_applied` when removing the last category put the default category back.
+* `albert/view-post` and `albert/view-page` return `categories` and `tags` as `{ id, name }` lists, left out when the post type does not use that taxonomy, `author` as `{ id, name }` and `featured_image_details` as `{ id, url, alt }`. `albert/view-page` also returns `parent` as `{ id, name }`. `author_id`, `parent_id` and `featured_image` are unchanged.
+* `albert/view-post` and `albert/view-page` error codes changed: `post_not_found` and `page_not_found` are now `albert_post_not_found` and `albert_page_not_found` (404), and `forbidden` is now `albert_post_permission_denied` or `albert_page_permission_denied` (403).
+* Deprecated: the `categories` and `tags` inputs of `albert/update-post`. Use `albert/add-post-terms` or `albert/remove-post-terms`. An empty list still changes nothing.
+* `albert/create-post` and `albert/update-post` return `albert_category_not_found` for a category ID that does not exist, and `albert_invalid_tags` or `albert_tag_permission_denied` for a tag WordPress refuses to create, and save nothing, instead of leaving it off.
+
+**Credits**
+
+* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting that categories and tags could not be read or removed.
 
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.

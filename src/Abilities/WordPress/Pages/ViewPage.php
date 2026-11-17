@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+use Albert\Abilities\WordPress\Shared\PostReferences;
+use Albert\Abilities\WordPress\Shared\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
@@ -31,7 +33,7 @@ class ViewPage extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/view-page';
 		$this->label       = __( 'View Page', 'albert-ai-butler' );
-		$this->description = __( 'Retrieve a single WordPress page by ID.', 'albert-ai-butler' );
+		$this->description = __( 'Read one page by its ID. Use it before editing a page, to get its block paths and parent; find the ID with albert/find-pages.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
@@ -101,37 +103,37 @@ class ViewPage extends BaseAbility {
 					'type'        => 'object',
 					'description' => 'The requested page object.',
 					'properties'  => [
-						'content'    => [
+						'content'                => [
 							'type'        => 'string',
 							'description' => 'The stored page content: raw block markup (<!-- wp:... --> comment-delimited) for block-editor pages, plain HTML for classic-editor pages (see "has_blocks" / "editor"). When a block window is applied (see "_meta"), this is the re-serialised window, not a verbatim excerpt of the stored markup. Included when "content" is requested (default).',
 						],
-						'blocks'     => [
+						'blocks'                 => [
 							'type'        => 'array',
 							'description' => 'The page content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path }; innerBlocks is the same shape recursively. "path" (e.g. [2], [2,0]) is the block\'s address: pass it to the edit/add/remove/move-page-block abilities. Included when "blocks" is requested (default).',
 							'items'       => [ 'type' => 'object' ],
 						],
-						'plaintext'  => [
+						'plaintext'              => [
 							'type'        => 'string',
 							'description' => 'Human-readable plain text of the whole page content. Included when "plaintext" is requested (default).',
 						],
-						'html'       => [
+						'html'                   => [
 							'type'        => 'string',
 							'description' => 'Rendered HTML produced by do_blocks(), so it reflects dynamic/server-rendered block output. Only included when "html" is requested.',
 						],
-						'markdown'   => [
+						'markdown'               => [
 							'type'        => 'string',
 							'description' => 'Markdown rendering of the page content. Only included when "markdown" is requested.',
 						],
-						'editor'     => [
+						'editor'                 => [
 							'type'        => 'string',
 							'enum'        => [ 'block', 'classic' ],
 							'description' => 'Which editor this page uses. "block" means send structured "blocks" when writing; "classic" means send plain HTML in "content" instead.',
 						],
-						'has_blocks' => [
+						'has_blocks'             => [
 							'type'        => 'boolean',
 							'description' => 'Whether the stored content actually contains block markup. May differ from "editor" (e.g. classic content saved on a block-editor type).',
 						],
-						'_meta'      => [
+						'_meta'                  => [
 							'type'        => 'object',
 							'description' => 'Block-window pagination metadata. The returned content/blocks/plaintext/html/markdown reflect only the requested window of top-level blocks. When "truncated" is true, fetch the rest by re-requesting with the suggested "next_offset".',
 							'properties'  => [
@@ -165,6 +167,10 @@ class ViewPage extends BaseAbility {
 								],
 							],
 						],
+						'author'                 => PostReferences::reference_schema( 'Who wrote it, or null when that user no longer exists.' ),
+						'parent'                 => PostReferences::reference_schema( 'The parent page, or null for a top-level page.' ),
+						'featured_image_details' => PostReferences::featured_image_schema(),
+						...PostTerms::schema(),
 					],
 				],
 			],
@@ -189,23 +195,28 @@ class ViewPage extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$page_id = absint( $args['id'] );
+		$page_id = (int) $args['id'];
 		$page    = get_post( $page_id );
 
 		if ( ! $page || $page->post_type !== 'page' ) {
 			return new WP_Error(
-				'page_not_found',
+				'albert_page_not_found',
 				sprintf(
 					/* translators: %d: Page ID */
-					__( 'Page with ID %d not found.', 'albert-ai-butler' ),
+					__( 'No page exists with ID %d. Find the page with albert/find-pages.', 'albert-ai-butler' ),
 					$page_id
-				)
+				),
+				[ 'status' => 404 ]
 			);
 		}
 
 		// Check if user can read this specific page.
 		if ( ! current_user_can( 'read_post', $page_id ) ) {
-			return new WP_Error( 'forbidden', __( 'You do not have permission to view this page.', 'albert-ai-butler' ) );
+			return new WP_Error(
+				'albert_page_permission_denied',
+				__( 'You do not have permission to view this page. Ask the site owner for access.', 'albert-ai-butler' ),
+				[ 'status' => 403 ]
+			);
 		}
 
 		$format  = isset( $args['format'] ) && is_array( $args['format'] ) ? $args['format'] : [];
@@ -227,19 +238,23 @@ class ViewPage extends BaseAbility {
 				$content,
 				EditorMode::signal( $page ),
 				[
-					'excerpt'        => $page->post_excerpt,
-					'status'         => $page->post_status,
-					'author_id'      => (int) $page->post_author,
-					'date'           => $page->post_date,
-					'modified'       => $page->post_modified,
-					'slug'           => $page->post_name,
-					'permalink'      => get_permalink( $page ),
-					'parent_id'      => (int) $page->post_parent,
-					'menu_order'     => (int) $page->menu_order,
-					'template'       => get_page_template_slug( $page ),
-					'comment_status' => $page->comment_status,
-					'featured_image' => get_post_thumbnail_id( $page ) ? get_post_thumbnail_id( $page ) : null,
-				]
+					'excerpt'                => $page->post_excerpt,
+					'status'                 => $page->post_status,
+					'author_id'              => (int) $page->post_author,
+					'author'                 => PostReferences::author( $page ),
+					'date'                   => $page->post_date,
+					'modified'               => $page->post_modified,
+					'slug'                   => $page->post_name,
+					'permalink'              => get_permalink( $page ),
+					'parent_id'              => (int) $page->post_parent,
+					'parent'                 => PostReferences::parent( $page ),
+					'menu_order'             => (int) $page->menu_order,
+					'template'               => get_page_template_slug( $page ),
+					'comment_status'         => $page->comment_status,
+					'featured_image'         => get_post_thumbnail_id( $page ) ? get_post_thumbnail_id( $page ) : null,
+					'featured_image_details' => PostReferences::featured_image( $page ),
+				],
+				PostTerms::for_post( $page )
 			),
 		];
 	}
