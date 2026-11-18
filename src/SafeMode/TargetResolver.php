@@ -93,7 +93,7 @@ class TargetResolver {
 	 * @since 1.5.0
 	 */
 	private function target_id( array $input ): int {
-		foreach ( [ 'id', 'post_id', 'term_id', 'user_id', 'attachment_id' ] as $key ) {
+		foreach ( [ 'id', 'post_id', 'page_id', 'term_id', 'user_id', 'attachment_id' ] as $key ) {
 			if ( isset( $input[ $key ] ) && is_numeric( $input[ $key ] ) ) {
 				return (int) $input[ $key ];
 			}
