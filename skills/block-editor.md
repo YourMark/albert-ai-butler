@@ -246,6 +246,13 @@ saves a revision, and a site that keeps only a few loses its history fast. The e
 apply in order and save once; each path points into the tree as the earlier edits left
 it. If one edit fails, nothing is saved and the error names it as `edits[index]`.
 
+**Changing only text:** to fix a word, a name, a price or a link, use
+`albert/replace-post-text` (or `albert/replace-page-text`) with the exact `search` text
+and its `replace`ment. Copy `search` from a `"format": ["content"]` read: it must match
+the stored markup, where `&` is often `&amp;`. It must occur exactly `expected_count`
+times (default 1), and the call is refused when the change would alter a block rather
+than its text. It also works on the title and excerpt (`field`), and on classic posts.
+
 **When to use which:** prefer granular ops for large posts or single-block changes;
 use whole-content `update-*` when you are rewriting most of the body. Granular block
 edits apply to block-editor targets only. On a classic post they return
