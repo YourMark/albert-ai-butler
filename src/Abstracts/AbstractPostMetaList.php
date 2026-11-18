@@ -18,7 +18,7 @@ use WP_REST_Request;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Changes the values of a multi-value registered custom field on any post type.
+ * Changes the values of a multi-value registered custom field on a post.
  *
  * The new list is built in PHP and saved in one REST write, so a call with several
  * values is one change. `update-post`'s `meta` refuses these fields because core
@@ -67,12 +67,12 @@ abstract class AbstractPostMetaList extends BaseAbility {
 				'post_id' => [
 					'type'        => 'integer',
 					'minimum'     => 1,
-					'description' => 'ID of the post, page or other content item. Find it with albert/find-posts or albert/find-pages.',
+					'description' => 'ID of the post. Find it with albert/find-posts.',
 				],
 				'key'     => [
 					'type'        => 'string',
 					'minLength'   => 1,
-					'description' => 'Name of a custom field that holds a list, as it appears in the "meta" object of albert/view-post or albert/view-page.',
+					'description' => 'Name of a custom field that holds a list, as it appears in the "meta" object of albert/view-post.',
 				],
 				'values'  => [
 					'type'        => 'array',
@@ -98,7 +98,7 @@ abstract class AbstractPostMetaList extends BaseAbility {
 			'properties' => [
 				'post'   => [
 					'type'        => 'object',
-					'description' => 'The item that was changed, as { id, name }.',
+					'description' => 'The post that was changed, as { id, name }.',
 					'properties'  => [
 						'id'   => [ 'type' => 'integer' ],
 						'name' => [ 'type' => 'string' ],
@@ -130,7 +130,7 @@ abstract class AbstractPostMetaList extends BaseAbility {
 		$allowed = $this->require_capability( 'edit_posts' );
 		$post    = is_array( $input ) && is_int( $input['post_id'] ?? null ) ? get_post( $input['post_id'] ) : null;
 
-		if ( $allowed !== true || ! $post instanceof WP_Post ) {
+		if ( $allowed !== true || ! $post instanceof WP_Post || $post->post_type !== 'post' ) {
 			return $allowed;
 		}
 
@@ -149,7 +149,7 @@ abstract class AbstractPostMetaList extends BaseAbility {
 
 		return new WP_Error(
 			'albert_post_permission_denied',
-			is_wp_error( $check ) ? $check->get_error_message() : __( 'You are not allowed to edit this item.', 'albert-ai-butler' ),
+			is_wp_error( $check ) ? $check->get_error_message() : __( 'You are not allowed to edit this post.', 'albert-ai-butler' ),
 			[ 'status' => 403 ]
 		);
 	}
@@ -165,22 +165,13 @@ abstract class AbstractPostMetaList extends BaseAbility {
 		$post_id = is_int( $args['post_id'] ?? null ) ? $args['post_id'] : 0;
 		$post    = $post_id > 0 ? get_post( $post_id ) : null;
 
-		if ( ! $post instanceof WP_Post ) {
+		// Posts only until 1.7.0's content abilities, so switching off a page ability keeps pages closed.
+		if ( ! $post instanceof WP_Post || $post->post_type !== 'post' ) {
 			return new WP_Error(
 				'albert_post_not_found',
 				/* translators: %d: post ID */
-				sprintf( __( 'No item with ID %d. Find it with albert/find-posts or albert/find-pages.', 'albert-ai-butler' ), $post_id ),
+				sprintf( __( 'No post with ID %d. Find it with albert/find-posts.', 'albert-ai-butler' ), $post_id ),
 				[ 'status' => 404 ]
-			);
-		}
-
-		$route = rest_get_route_for_post( $post );
-		if ( $route === '' ) {
-			return new WP_Error(
-				'albert_invalid_post_id',
-				/* translators: %d: post ID */
-				sprintf( __( 'Item %d is of a type that has no custom fields available to assistants.', 'albert-ai-butler' ), $post_id ),
-				[ 'status' => 400 ]
 			);
 		}
 
@@ -197,7 +188,7 @@ abstract class AbstractPostMetaList extends BaseAbility {
 			return $this->result( $post, $name, $current );
 		}
 
-		$request = new WP_REST_Request( 'POST', $route );
+		$request = new WP_REST_Request( 'POST', rest_get_route_for_post( $post ) );
 		$request->set_param( 'meta', [ $name => $list ] );
 
 		$response = rest_do_request( $request );

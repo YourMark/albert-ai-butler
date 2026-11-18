@@ -322,11 +322,11 @@ class PostMetaListAbilityTest extends TestCase {
 	}
 
 	/**
-	 * The same abilities change a page's own list fields.
+	 * A page is not a post, so its list fields stay closed until the content abilities.
 	 *
 	 * @return void
 	 */
-	public function test_works_on_a_page(): void {
+	public function test_a_page_is_not_found(): void {
 		$page_id = self::factory()->post->create( [ 'post_type' => 'page' ] );
 
 		$result = ( new AddMeta() )->execute(
@@ -337,8 +337,9 @@ class PostMetaListAbilityTest extends TestCase {
 			]
 		);
 
-		$this->assertIsArray( $result );
-		$this->assertSame( [ 'x' ], get_post_meta( $page_id, 'page_tags' ) );
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertSame( [], get_post_meta( $page_id, 'page_tags' ) );
 	}
 
 	/**

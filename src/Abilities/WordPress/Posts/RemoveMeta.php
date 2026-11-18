@@ -15,7 +15,7 @@ use Albert\Core\Annotations;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Removes values from a multi-value custom field on any post type.
+ * Removes values from a multi-value custom field on a post.
  *
  * Destructive: core keeps no revision of custom fields, so a removed value is gone.
  *
@@ -31,7 +31,7 @@ class RemoveMeta extends AbstractPostMetaList {
 	public function __construct() {
 		$this->id          = 'albert/remove-post-meta';
 		$this->label       = __( 'Remove Post Meta', 'albert-ai-butler' );
-		$this->description = __( 'Remove values from a custom field that holds a list on a content item you can edit. Read the item first with albert/view-post (albert/view-page for a page) to see the current values. Use albert/add-post-meta to add values.', 'albert-ai-butler' );
+		$this->description = __( 'Remove values from a custom field that holds a list on a post you can edit. Read the post first with albert/view-post to see the current values. Use albert/add-post-meta to add values.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 

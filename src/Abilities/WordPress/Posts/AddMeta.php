@@ -15,7 +15,7 @@ use Albert\Core\Annotations;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Adds values to a multi-value custom field on any post type.
+ * Adds values to a multi-value custom field on a post.
  *
  * @since 1.6.0
  */
@@ -29,7 +29,7 @@ class AddMeta extends AbstractPostMetaList {
 	public function __construct() {
 		$this->id          = 'albert/add-post-meta';
 		$this->label       = __( 'Add Post Meta', 'albert-ai-butler' );
-		$this->description = __( 'Add values to a custom field that holds a list on a content item you can edit. Read the item first with albert/view-post (albert/view-page for a page) to see its fields. Use albert/remove-post-meta to take values out; set a single-value field through "meta" on albert/update-post (albert/update-page for a page).', 'albert-ai-butler' );
+		$this->description = __( 'Add values to a custom field that holds a list on a post you can edit. Read the post first with albert/view-post to see its fields. Use albert/remove-post-meta to take values out; set a single-value field through "meta" on albert/update-post.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
