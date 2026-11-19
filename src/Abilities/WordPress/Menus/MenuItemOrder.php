@@ -10,7 +10,6 @@
 namespace Albert\Abilities\WordPress\Menus;
 
 use WP_Error;
-use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -31,7 +30,7 @@ class MenuItemOrder {
 	 *
 	 * @param int $menu_id  Menu term id.
 	 * @param int $item_id  Item to move.
-	 * @param int $parent_id   New parent item id, 0 for the top level.
+	 * @param int $parent_id New parent item id, 0 for the top level.
 	 * @param int $position 1-based position among the new parent's children; 0 for last.
 	 *
 	 * @return true|WP_Error True once placed.
@@ -52,16 +51,19 @@ class MenuItemOrder {
 			return new WP_Error( 'albert_invalid_parent_item_id', __( 'The "parent_item_id" must be an item in the same menu, or 0 for the top level.', 'albert-ai-butler' ), [ 'status' => 400 ] );
 		}
 
-		$children = [];
+		// A parent outside the menu is the top level, which is where the walker shows the item.
+		$parent_of = [];
+		$children  = [];
 		foreach ( $items as $item ) {
-			$id = (int) $item->ID;
-			if ( $id === $item_id ) {
-				continue;
+			$id               = (int) $item->ID;
+			$stored           = (int) ( $item->menu_item_parent ?? 0 );
+			$parent_of[ $id ] = isset( $by_id[ $stored ] ) ? $stored : 0;
+			if ( $id !== $item_id ) {
+				$children[ $parent_of[ $id ] ][] = $id;
 			}
-			$children[ self::parent_of( $item, $by_id ) ][] = $id;
 		}
 
-		if ( $parent_id === $item_id || in_array( $parent_id, self::descendants( $children, $item_id ), true ) ) {
+		if ( $parent_id === $item_id || in_array( $parent_id, self::flatten( $children, $item_id ), true ) ) {
 			return new WP_Error( 'albert_invalid_parent_item_id', __( 'An item cannot move under itself or one of its own sub-items. Choose another "parent_item_id".', 'albert-ai-butler' ), [ 'status' => 400 ] );
 		}
 
@@ -70,17 +72,14 @@ class MenuItemOrder {
 		array_splice( $siblings, $index, 0, [ $item_id ] );
 		$children[ $parent_id ] = $siblings;
 
-		$order = [];
-		self::flatten( $children, 0, $order );
-
-		foreach ( $order as $i => $id ) {
+		foreach ( self::flatten( $children, 0 ) as $i => $id ) {
 			$params = [];
 
 			if ( (int) $by_id[ $id ]->menu_order !== $i + 1 ) {
 				$params['menu_order'] = $i + 1;
 			}
 
-			if ( $id === $item_id && self::parent_of( $by_id[ $id ], $by_id ) !== $parent_id ) {
+			if ( $id === $item_id && $parent_of[ $id ] !== $parent_id ) {
 				$params['parent'] = $parent_id;
 			}
 
@@ -98,62 +97,23 @@ class MenuItemOrder {
 	}
 
 	/**
-	 * An item's parent as the walker sees it: one not in the menu is the top level.
+	 * Every item below one, in tree order.
 	 *
-	 * @param WP_Post             $item  The item.
-	 * @param array<int, WP_Post> $by_id The menu's items.
+	 * Each item has one parent and the moved item is in no child list, so no loop is reachable.
 	 *
-	 * @return int
-	 * @since 1.6.0
-	 */
-	private static function parent_of( WP_Post $item, array $by_id ): int {
-		$parent_id = (int) ( $item->menu_item_parent ?? 0 );
-
-		return isset( $by_id[ $parent_id ] ) ? $parent_id : 0;
-	}
-
-	/**
-	 * Every item below one.
-	 *
-	 * @param array<int, list<int>> $children Child ids keyed by parent.
-	 * @param int                   $id       Item id.
+	 * @param array<int, list<int>> $children  Child ids keyed by parent.
+	 * @param int                   $parent_id Where to start.
 	 *
 	 * @return list<int>
 	 * @since 1.6.0
 	 */
-	private static function descendants( array $children, int $id ): array {
-		$found = [];
-		$queue = $children[ $id ] ?? [];
+	private static function flatten( array $children, int $parent_id ): array {
+		$order = [];
 
-		while ( $queue !== [] ) {
-			$next = (int) array_shift( $queue );
-			if ( in_array( $next, $found, true ) ) {
-				continue;
-			}
-			$found[] = $next;
-			$queue   = array_merge( $queue, $children[ $next ] ?? [] );
-		}
-
-		return $found;
-	}
-
-	/**
-	 * Item ids in tree order.
-	 *
-	 * @param array<int, list<int>> $children Child ids keyed by parent.
-	 * @param int                   $parent_id   Where to start.
-	 * @param list<int>             $order    Collected so far.
-	 *
-	 * @return void
-	 * @since 1.6.0
-	 */
-	private static function flatten( array $children, int $parent_id, array &$order ): void {
 		foreach ( $children[ $parent_id ] ?? [] as $id ) {
-			if ( in_array( $id, $order, true ) ) {
-				continue;
-			}
-			$order[] = $id;
-			self::flatten( $children, $id, $order );
+			$order = array_merge( $order, [ $id ], self::flatten( $children, $id ) );
 		}
+
+		return $order;
 	}
 }

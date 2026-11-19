@@ -42,7 +42,7 @@ class GetMenu extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::read(
-				'Pass menu_id and menu_type from albert/find-menus: a classic menu and a block theme navigation menu can share an ID. Item IDs in the result are what the menu item abilities take as menu_item_id.'
+				'Pass menu_id and menu_type from albert/find-menus: a classic menu and a navigation menu can share an ID. Item IDs in the result are what the menu item abilities take as menu_item_id.'
 			),
 		];
 
@@ -67,10 +67,10 @@ class GetMenu extends BaseAbility {
 				'menu_type' => [
 					'type'        => 'string',
 					'enum'        => [ 'classic', 'block' ],
-					'description' => '"classic" for a classic menu, "block" for a block theme navigation menu. Optional when only one kind has this ID.',
+					'description' => '"classic" for a menu from "classic_menus" in albert/find-menus, "block" for one from "navigation_menus".',
 				],
 			],
-			'required'   => [ 'menu_id' ],
+			'required'   => [ 'menu_id', 'menu_type' ],
 		];
 	}
 
@@ -122,25 +122,9 @@ class GetMenu extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$id   = (int) ( $args['menu_id'] ?? 0 );
-		$type = is_string( $args['menu_type'] ?? null ) ? $args['menu_type'] : '';
+		$id = (int) ( $args['menu_id'] ?? 0 );
 
-		if ( $type === '' ) {
-			$classic = MenuSupport::classic_menu( $id );
-			$block   = MenuSupport::navigation_menu( $id );
-
-			if ( ! is_wp_error( $classic ) && ! is_wp_error( $block ) ) {
-				return new WP_Error(
-					'albert_missing_menu_type',
-					__( 'A classic menu and a navigation menu both have this ID. Send "menu_type": "classic" or "block".', 'albert-ai-butler' ),
-					[ 'status' => 400 ]
-				);
-			}
-
-			$type = is_wp_error( $block ) ? 'classic' : 'block';
-		}
-
-		return $type === 'block' ? $this->view_navigation( $id ) : $this->view_classic( $id );
+		return ( $args['menu_type'] ?? '' ) === 'block' ? $this->view_navigation( $id ) : $this->view_classic( $id );
 	}
 
 	/**
@@ -200,8 +184,8 @@ class GetMenu extends BaseAbility {
 	/**
 	 * Navigation blocks as menu items, with the block path a later edit can target.
 	 *
-	 * @param array<mixed> $blocks Parsed blocks.
-	 * @param list<int>    $path   Path of the parent.
+	 * @param array<array<string, mixed>> $blocks Parsed blocks.
+	 * @param list<int>                   $path   Path of the parent.
 	 *
 	 * @return list<array<string, mixed>>
 	 * @since 1.6.0
@@ -211,14 +195,14 @@ class GetMenu extends BaseAbility {
 		$index = 0;
 
 		foreach ( $blocks as $block ) {
-			if ( ! is_array( $block ) || ! is_string( $block['blockName'] ?? null ) ) {
+			// Whitespace between blocks parses as a block with no name.
+			if ( $block['blockName'] === null ) {
 				continue;
 			}
 
-			$name  = $block['blockName'];
-			$attrs = is_array( $block['attrs'] ?? null ) ? $block['attrs'] : [];
+			$name  = (string) $block['blockName'];
+			$attrs = $block['attrs'];
 			$here  = array_merge( $path, [ $index++ ] );
-			$inner = is_array( $block['innerBlocks'] ?? null ) ? $block['innerBlocks'] : [];
 
 			$item = [
 				'path'  => $here,
@@ -240,7 +224,7 @@ class GetMenu extends BaseAbility {
 				$item['label'] = __( 'All published pages, listed automatically', 'albert-ai-butler' );
 			}
 
-			$item['children'] = $this->navigation_tree( $inner, $here );
+			$item['children'] = $this->navigation_tree( $block['innerBlocks'], $here );
 			$items[]          = $item;
 		}
 

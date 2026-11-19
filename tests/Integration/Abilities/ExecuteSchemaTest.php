@@ -508,7 +508,14 @@ class ExecuteSchemaTest extends TestCase {
 		$this->assert_execute_matches_schema( new FindMenus(), [], 'FindMenus' );
 
 		$menu = $this->assert_execute_matches_schema( new CreateMenu(), [ 'name' => 'Schema menu' ], 'CreateMenu' );
-		$this->assert_execute_matches_schema( new GetMenu(), [ 'menu_id' => $menu['id'] ], 'GetMenu' );
+		$this->assert_execute_matches_schema(
+			new GetMenu(),
+			[
+				'menu_id'   => $menu['id'],
+				'menu_type' => 'classic',
+			],
+			'GetMenu'
+		);
 
 		$first  = $this->assert_execute_matches_schema(
 			new AddMenuItem(),

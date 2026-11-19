@@ -134,6 +134,7 @@ class RemoveMenuItem extends BaseAbility {
 			$moved[] = (int) $child->ID;
 		}
 
+		// No rollback, as in add-menu-item: the sub-items have moved up, so a retry only deletes.
 		$data = MenuSupport::rest( 'DELETE', '/wp/v2/menu-items/' . $id, [ 'force' => true ], __( 'The menu item could not be removed.', 'albert-ai-butler' ) );
 		if ( is_wp_error( $data ) ) {
 			return $data;

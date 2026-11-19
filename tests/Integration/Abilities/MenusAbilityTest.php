@@ -185,6 +185,22 @@ class MenusAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A classic menu read through get-menu.
+	 *
+	 * @param int $menu_id Menu.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function view( int $menu_id ): array {
+		return ( new GetMenu() )->execute(
+			[
+				'menu_id'   => $menu_id,
+				'menu_type' => 'classic',
+			]
+		);
+	}
+
+	/**
 	 * Top-level titles, with children as "Parent > Child".
 	 *
 	 * @param list<array<string, mixed>> $items Tree.
@@ -287,7 +303,7 @@ class MenusAbilityTest extends TestCase {
 
 		$result = ( new FindMenus() )->execute( [] );
 		$this->assertFalse( $result['classic_menus'][0]['visible'] );
-		$this->assertStringContainsString( 'classic menus are not shown', $result['summary'] );
+		$this->assertStringContainsString( 'Classic menus are not shown', $result['summary'] );
 
 		$added = ( new AddMenuItem() )->execute(
 			[
@@ -303,70 +319,18 @@ class MenusAbilityTest extends TestCase {
 	}
 
 	/**
-	 * With no navigation menu yet, core would copy the classic menu into one.
+	 * With no navigation menu yet, the header reports the fallback core will make.
 	 *
 	 * @return void
 	 */
-	public function test_block_theme_without_navigation_reports_the_classic_copy(): void {
+	public function test_block_theme_without_navigation_reports_the_fallback(): void {
 		$this->use_block_theme();
-		$menu = $this->classic_menu( 'Legacy' );
-		$this->link( $menu, 'Home' );
 
 		$header = ( new FindMenus() )->execute( [] )['header'];
 
-		$this->assertSame( 'classic_copy', $header['type'] );
-		$this->assertSame( $menu, $header['id'] );
-	}
-
-	/**
-	 * Core does not copy an empty classic menu; it lists the pages instead.
-	 *
-	 * @return void
-	 */
-	public function test_an_empty_classic_menu_is_not_copied(): void {
-		$this->use_block_theme();
-		$this->classic_menu( 'Empty' );
-
-		$this->assertSame( 'page_list', ( new FindMenus() )->execute( [] )['header']['type'] );
-	}
-
-	/**
-	 * With several header parts in use, the header is the one the front page shows.
-	 *
-	 * @return void
-	 */
-	public function test_the_front_page_header_wins_over_another_header_part(): void {
-		$this->use_block_theme();
-		$nav = $this->navigation( 'Main' );
-
-		// A second header part, saved in the Site Editor and used only by the single template.
-		$part = self::factory()->post->create(
-			[
-				'post_type'    => 'wp_template_part',
-				'post_name'    => 'header-single',
-				'post_title'   => 'Single header',
-				'post_status'  => 'publish',
-				'post_content' => '<!-- wp:navigation {"ref":' . $nav . '} /-->',
-			]
-		);
-		wp_set_post_terms( $part, 'albert-block-test', 'wp_theme' );
-		wp_set_post_terms( $part, 'header', 'wp_template_part_area' );
-
-		$template = self::factory()->post->create(
-			[
-				'post_type'    => 'wp_template',
-				'post_name'    => 'single',
-				'post_title'   => 'Single',
-				'post_status'  => 'publish',
-				'post_content' => '<!-- wp:template-part {"slug":"header-single"} /-->',
-			]
-		);
-		wp_set_post_terms( $template, 'albert-block-test', 'wp_theme' );
-
-		$header = ( new FindMenus() )->execute( [] )['header'];
-
-		$this->assertSame( 'header', $header['source'] );
+		$this->assertSame( 'none', $header['type'] );
 		$this->assertTrue( $header['fallback'] );
+		$this->assertSame( 'header', $header['source'] );
 	}
 
 	/**
@@ -410,7 +374,12 @@ class MenusAbilityTest extends TestCase {
 		$this->use_block_theme();
 		$nav = $this->navigation( 'Main' );
 
-		$result = ( new GetMenu() )->execute( [ 'menu_id' => $nav ] );
+		$result = ( new GetMenu() )->execute(
+			[
+				'menu_id'   => $nav,
+				'menu_type' => 'block',
+			]
+		);
 
 		$this->assertSame( 'block', $result['type'] );
 		$this->assertTrue( $result['visible'] );
@@ -420,7 +389,7 @@ class MenusAbilityTest extends TestCase {
 	}
 
 	/**
-	 * On a classic theme the menu in a location is visible; the header is the primary one.
+	 * On a classic theme the menu in a location is visible; the header is not guessed.
 	 *
 	 * @return void
 	 */
@@ -433,8 +402,7 @@ class MenusAbilityTest extends TestCase {
 		$result = ( new FindMenus() )->execute( [] );
 
 		$this->assertFalse( $result['theme']['block_theme'] );
-		$this->assertSame( 'classic', $result['header']['type'] );
-		$this->assertSame( $main, $result['header']['id'] );
+		$this->assertSame( 'none', $result['header']['type'] );
 
 		$by_id = array_column( $result['classic_menus'], null, 'id' );
 		$this->assertTrue( $by_id[ $main ]['visible'] );
@@ -451,12 +419,7 @@ class MenusAbilityTest extends TestCase {
 		);
 		$this->assertNull( $locations['footer'] );
 
-		$view = ( new GetMenu() )->execute(
-			[
-				'menu_id'   => $spare,
-				'menu_type' => 'classic',
-			]
-		);
+		$view = $this->view( $spare );
 		$this->assertStringContainsString( 'not assigned to a menu location', $view['notice'] );
 	}
 
@@ -514,7 +477,7 @@ class MenusAbilityTest extends TestCase {
 		);
 		$this->assertIsArray( $team );
 
-		$view = ( new GetMenu() )->execute( [ 'menu_id' => $menu_id ] );
+		$view = $this->view( $menu_id );
 		$this->assertSame( [ 'Home', 'About us', 'About us > Team' ], $this->titles( $view['items'] ) );
 
 		$renamed = ( new UpdateMenuItem() )->execute(
@@ -552,7 +515,7 @@ class MenusAbilityTest extends TestCase {
 
 		$removed = ( new RemoveMenuItem() )->execute( [ 'menu_item_id' => $about['id'] ] );
 		$this->assertSame( [ $team['id'] ], $removed['moved_up'] );
-		$view = ( new GetMenu() )->execute( [ 'menu_id' => $menu_id ] );
+		$view = $this->view( $menu_id );
 		$this->assertSame( [ 'Team', 'Start' ], $this->titles( $view['items'] ) );
 		$this->assertNotNull( get_post( $page ), 'The linked page is untouched.' );
 
@@ -663,7 +626,15 @@ class MenusAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_missing_menus_and_items_are_not_found(): void {
-		$this->assertSame( 'albert_menu_not_found', ( new GetMenu() )->execute( [ 'menu_id' => 999999 ] )->get_error_code() );
+		$this->assertSame(
+			'albert_menu_not_found',
+			( new GetMenu() )->execute(
+				[
+					'menu_id'   => 999999,
+					'menu_type' => 'classic',
+				]
+			)->get_error_code()
+		);
 		$this->assertSame( 'albert_menu_item_not_found', ( new RemoveMenuItem() )->execute( [ 'menu_item_id' => 999999 ] )->get_error_code() );
 	}
 
@@ -709,52 +680,18 @@ class MenusAbilityTest extends TestCase {
 	}
 
 	/**
-	 * Two menus sharing an ID need a menu_type.
+	 * A new item that cannot be placed stays at the end, and the error says so; core's 403 logs as blocked.
 	 *
 	 * @return void
 	 */
-	public function test_get_menu_asks_for_the_type_when_ids_collide(): void {
-		$this->use_block_theme();
-		$classic = $this->classic_menu( 'Old' );
-		$nav     = (int) self::factory()->post->create(
-			[
-				'import_id'   => $classic,
-				'post_type'   => 'wp_navigation',
-				'post_title'  => 'Main',
-				'post_status' => 'publish',
-			]
-		);
-		if ( $nav !== $classic ) {
-			$this->markTestSkipped( 'A post already has the classic menu\'s ID.' );
-		}
-
-		$result = ( new GetMenu() )->execute( [ 'menu_id' => $nav ] );
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_missing_menu_type', $result->get_error_code() );
-		$this->assertSame(
-			'block',
-			( new GetMenu() )->execute(
-				[
-					'menu_id'   => $nav,
-					'menu_type' => 'block',
-				]
-			)['type']
-		);
-	}
-
-	/**
-	 * A new item that cannot be placed is removed again, so a retry does not add it twice.
-	 *
-	 * @return void
-	 */
-	public function test_add_item_rolls_back_when_placing_fails(): void {
+	public function test_add_item_that_cannot_be_placed_stays_at_the_end(): void {
 		$this->use_classic_theme();
-		$menu = $this->classic_menu( 'Rollback' );
+		$menu = $this->classic_menu( 'Unplaced' );
 		$this->link( $menu, 'First', 0, 1 );
 
 		$refuse = static function ( $result, $server, $request ) {
 			if ( $request->get_method() === 'POST' && preg_match( '#^/wp/v2/menu-items/\d+$#', $request->get_route() ) ) {
-				return new WP_Error( 'test_refused', 'Refused.', [ 'status' => 500 ] );
+				return new WP_Error( 'rest_cannot_edit', 'Refused.', [ 'status' => 403 ] );
 			}
 			return $result;
 		};
@@ -772,7 +709,9 @@ class MenusAbilityTest extends TestCase {
 		remove_filter( 'rest_pre_dispatch', $refuse, 10 );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( [ 'First' ], $this->titles( ( new GetMenu() )->execute( [ 'menu_id' => $menu ] )['items'] ) );
+		$this->assertSame( 'albert_menu_permission_denied', $result->get_error_code() );
+		$this->assertStringContainsString( 'albert/move-menu-item', $result->get_error_message() );
+		$this->assertSame( [ 'First', 'Second' ], $this->titles( $this->view( $menu )['items'] ) );
 	}
 
 	/**
@@ -846,6 +785,7 @@ class MenusAbilityTest extends TestCase {
 			'A page link needs object_id.'
 		);
 
+		$this->assertFalse( $valid( 'albert/get-menu', [ 'menu_id' => 1 ] ), 'A menu ID alone can name two menus.' );
 		$this->assertFalse( $valid( 'albert/move-menu-item', [ 'menu_item_id' => 1 ] ) );
 		$this->assertTrue(
 			$valid(

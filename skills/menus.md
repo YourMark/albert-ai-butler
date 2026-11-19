@@ -19,18 +19,20 @@ report a menu change as done until you know visitors see that menu.
 
 Always start with `albert/find-menus`. Read:
 
-- **`summary`** and **`header`**: what the header shows. `header.type` is `block` (a navigation
-  menu), `classic` (a classic menu), `classic_copy` (a classic menu WordPress will copy into a
-  new navigation menu the first time the header is shown), `inline` (links kept in the template
-  part itself), `page_list` (the published pages, listed automatically) or `none`.
-- **`visible`** and **`shown_in`** on every menu: whether visitors see it, and where.
+- **`summary`** and, on a block theme, **`header`**: what the header shows. `header.type` is
+  `block` (a navigation menu), `inline` (links kept in the template part itself) or `none`.
+- **`visible`** and **`shown_in`** on every menu: whether visitors see it, and where. On a classic
+  theme that is its menu locations and widgets; which location sits in the header is up to the
+  theme, so `header` is always `none` there.
 - **`theme.block_theme`**: which kind of site this is.
 
-When `header.fallback` is true, the navigation block names no menu and WordPress shows the most
-recently published navigation menu. Publishing a new navigation menu would change the header.
+When `header.fallback` is true, the navigation block names no menu. With `type` `block` it shows
+the most recently published navigation menu, so publishing a new one would change the header. With
+`type` `none` no navigation menu exists yet, and WordPress makes one the first time the header is
+shown.
 
-Then call `albert/get-menu` with the menu's `id` as `menu_id` (and `menu_type`: `classic` or `block`)
-to see its items.
+Then call `albert/get-menu` with the menu's `id` as `menu_id` and `menu_type`: `classic` for one
+from `classic_menus`, `block` for one from `navigation_menus`.
 
 ## Classic menus
 

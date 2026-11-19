@@ -245,10 +245,14 @@ class AddMenuItem extends BaseAbility {
 
 		if ( isset( $args['position'] ) ) {
 			$placed = MenuItemOrder::place( $menu_id, $id, $parent, (int) $args['position'] );
+			// No rollback, as in remove-menu-item: say what was saved so a retry does not add it twice.
 			if ( is_wp_error( $placed ) ) {
-				// The item already exists; remove it so a retry does not add it twice.
-				MenuSupport::rest( 'DELETE', '/wp/v2/menu-items/' . $id, [ 'force' => true ], '' );
-				return $placed;
+				return new WP_Error(
+					$placed->get_error_code(),
+					/* translators: 1: why placing failed, 2: menu item ID */
+					sprintf( __( '%1$s The item was added at the end of the menu (ID %2$d): move it with albert/move-menu-item, do not add it again.', 'albert-ai-butler' ), $placed->get_error_message(), $id ),
+					$placed->get_error_data()
+				);
 			}
 		}
 

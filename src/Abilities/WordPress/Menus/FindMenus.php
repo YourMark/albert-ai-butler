@@ -12,8 +12,6 @@ namespace Albert\Abilities\WordPress\Menus;
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
-use WP_Post;
-use WP_Term;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -120,20 +118,19 @@ class FindMenus extends BaseAbility {
 				],
 				'header'                     => [
 					'type'        => 'object',
-					'description' => 'What the header shows. "type": "block" is a navigation menu, "classic" a classic menu, "classic_copy" a classic menu core will copy into a navigation menu, "inline" links kept in the template part itself, "page_list" the published pages, "none" nothing found.',
+					'description' => 'What a block theme\'s header shows. "type": "block" is a navigation menu, "inline" links kept in the template part itself, "none" nothing found. "fallback" true means the navigation block names no menu: it shows the newest published navigation menu, or with "none" WordPress makes one the first time the header is shown. Always "none" on a classic theme; see "locations".',
 					'properties'  => [
-						'type'        => [
+						'type'     => [
 							'type' => 'string',
-							'enum' => [ 'block', 'classic', 'classic_copy', 'inline', 'page_list', 'none' ],
+							'enum' => [ 'block', 'inline', 'none' ],
 						],
-						'id'          => [ 'type' => 'integer' ],
-						'name'        => [ 'type' => 'string' ],
-						'source'      => [
+						'id'       => [ 'type' => 'integer' ],
+						'name'     => [ 'type' => 'string' ],
+						'source'   => [
 							'type'        => 'string',
-							'description' => 'The template part slug on a block theme, the menu location on a classic theme.',
+							'description' => 'The template part slug.',
 						],
-						'fallback'    => [ 'type' => 'boolean' ],
-						'description' => [ 'type' => 'string' ],
+						'fallback' => [ 'type' => 'boolean' ],
 					],
 				],
 				'classic_menus'              => [
@@ -230,12 +227,7 @@ class FindMenus extends BaseAbility {
 		}
 
 		$classic = [];
-		$menus   = wp_get_nav_menus();
-		foreach ( is_array( $menus ) ? $menus : [] as $menu ) {
-			if ( ! $menu instanceof WP_Term ) {
-				continue;
-			}
-
+		foreach ( wp_get_nav_menus() as $menu ) {
 			$id        = (int) $menu->term_id;
 			$shown_in  = $locator->classic_menu_shown_in( $id );
 			$classic[] = [
@@ -243,7 +235,7 @@ class FindMenus extends BaseAbility {
 				'name'      => $menu->name,
 				'slug'      => $menu->slug,
 				'items'     => (int) $menu->count,
-				'locations' => array_values( array_map( 'strval', array_keys( array_filter( $assigned, static fn( $assigned_id ): bool => (int) $assigned_id === $id ) ) ) ),
+				'locations' => MenuSupport::locations_of( $assigned, $id ),
 				'visible'   => $shown_in !== [],
 				'shown_in'  => $shown_in,
 			];
@@ -262,10 +254,6 @@ class FindMenus extends BaseAbility {
 		);
 		$truncated = count( $posts ) > self::NAVIGATION_LIMIT;
 		foreach ( array_slice( $posts, 0, self::NAVIGATION_LIMIT ) as $post ) {
-			if ( ! $post instanceof WP_Post ) {
-				continue;
-			}
-
 			$id           = (int) $post->ID;
 			$shown_in     = $locator->navigation_shown_in( $id );
 			$navigation[] = [
@@ -280,52 +268,21 @@ class FindMenus extends BaseAbility {
 		}
 
 		$block_theme = $locator->is_block_theme();
-		$header      = $locator->header();
 
 		return [
-			'summary'                    => $this->summary( $block_theme, $header['description'], $classic ),
+			'summary'                    => $block_theme
+				? __( 'Block theme: its header is a navigation block, shown in "header". Classic menus are not shown to visitors; do not edit them to change the site\'s navigation.', 'albert-ai-butler' )
+				: __( 'Classic theme: visitors see the classic menus assigned to its menu locations or used in widgets, as "visible" says. Which location is in the header is up to the theme.', 'albert-ai-butler' ),
 			'theme'                      => [
 				'name'        => (string) $theme->get( 'Name' ),
 				'stylesheet'  => $theme->get_stylesheet(),
 				'block_theme' => $block_theme,
 			],
-			'header'                     => $header,
+			'header'                     => $locator->header(),
 			'classic_menus'              => $classic,
 			'navigation_menus'           => $navigation,
 			'navigation_menus_truncated' => $truncated,
 			'locations'                  => $locations,
 		];
-	}
-
-	/**
-	 * Which menu to change, in plain words.
-	 *
-	 * @param bool                       $block_theme Whether the theme is a block theme.
-	 * @param string                     $header      What the header shows.
-	 * @param list<array<string, mixed>> $classic     The classic menus.
-	 *
-	 * @return string
-	 * @since 1.6.0
-	 */
-	private function summary( bool $block_theme, string $header, array $classic ): string {
-		if ( ! $block_theme ) {
-			return sprintf(
-				/* translators: %s: what the header shows */
-				__( 'This is a classic theme: visitors see the classic menus assigned to its menu locations. %s', 'albert-ai-butler' ),
-				$header
-			);
-		}
-
-		$summary = sprintf(
-			/* translators: %s: what the header shows */
-			__( 'This is a block theme: its header is a navigation block. %s', 'albert-ai-butler' ),
-			$header
-		);
-
-		if ( $classic !== [] && ! in_array( true, array_column( $classic, 'visible' ), true ) ) {
-			$summary .= ' ' . __( 'Its classic menus are not shown to visitors; do not edit them to change the site\'s navigation.', 'albert-ai-butler' );
-		}
-
-		return $summary;
 	}
 }

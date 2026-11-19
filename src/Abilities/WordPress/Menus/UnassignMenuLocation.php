@@ -134,11 +134,6 @@ class UnassignMenuLocation extends BaseAbility {
 			return $data;
 		}
 
-		$saved = MenuSupport::location_saved( $location, 0 );
-		if ( $saved instanceof WP_Error ) {
-			return $saved;
-		}
-
 		return [
 			'location'      => $location,
 			'previous_menu' => $previous,

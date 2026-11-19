@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Menus;
 
+use Albert\Abstracts\BaseAbility;
 use WP_Error;
 use WP_Post;
 use WP_REST_Request;
@@ -207,29 +208,6 @@ class MenuSupport {
 	}
 
 	/**
-	 * Confirm a location holds the menu just written.
-	 *
-	 * Core compares stored ids strictly, so a location saved as a string can survive the write.
-	 *
-	 * @param string $location Location slug.
-	 * @param int    $menu_id  Expected menu term id, 0 for empty.
-	 *
-	 * @return WP_Error|null Null when it does.
-	 * @since 1.6.0
-	 */
-	public static function location_saved( string $location, int $menu_id ): ?WP_Error {
-		if ( (int) ( get_nav_menu_locations()[ $location ] ?? 0 ) === $menu_id ) {
-			return null;
-		}
-
-		return new WP_Error(
-			'albert_menu_location_data_unavailable',
-			__( 'WordPress did not save the menu location. Call albert/find-menus to check it, then try again.', 'albert-ai-butler' ),
-			[ 'status' => 500 ]
-		);
-	}
-
-	/**
 	 * Run one request against core's REST API, so core's own checks and hooks apply.
 	 *
 	 * @param string               $method  HTTP method.
@@ -251,16 +229,10 @@ class MenuSupport {
 		$data     = rest_get_server()->response_to_data( $response, false );
 
 		if ( $response->is_error() ) {
-			$data = is_array( $data ) ? $data : [];
-
-			return new WP_Error(
-				is_string( $data['code'] ?? null ) ? $data['code'] : 'rest_error',
-				is_string( $data['message'] ?? null ) ? $data['message'] : $failure,
-				[ 'status' => $response->get_status() ]
-			);
+			return BaseAbility::rest_failure( $data, $response->get_status(), $failure, 'albert_menu_permission_denied' );
 		}
 
-		return is_array( $data ) ? $data : [];
+		return (array) $data;
 	}
 
 	/**
@@ -280,11 +252,7 @@ class MenuSupport {
 			]
 		);
 
-		if ( ! is_array( $items ) ) {
-			return [];
-		}
-
-		return array_values( array_filter( $items, static fn( $item ): bool => $item instanceof WP_Post ) );
+		return $items === false ? [] : array_values( $items );
 	}
 
 	/**
@@ -311,7 +279,8 @@ class MenuSupport {
 			$children[ $parent ][] = $item;
 		}
 
-		return self::branch( $children, 0, 0 );
+		// Items whose parents form a loop never reach the top level, so the recursion ends.
+		return self::branch( $children, 0 );
 	}
 
 	/**
@@ -319,20 +288,15 @@ class MenuSupport {
 	 *
 	 * @param array<int, list<WP_Post>> $children Items keyed by parent id.
 	 * @param int                       $parent_id Parent item id.
-	 * @param int                       $depth    Guard against a parent loop.
 	 *
 	 * @return list<array<string, mixed>>
 	 * @since 1.6.0
 	 */
-	private static function branch( array $children, int $parent_id, int $depth ): array {
-		if ( $depth > 20 || empty( $children[ $parent_id ] ) ) {
-			return [];
-		}
-
+	private static function branch( array $children, int $parent_id ): array {
 		$branch   = [];
 		$position = 0;
 
-		foreach ( $children[ $parent_id ] as $item ) {
+		foreach ( $children[ $parent_id ] ?? [] as $item ) {
 			$id       = (int) $item->ID;
 			$branch[] = [
 				'id'               => $id,
@@ -345,7 +309,7 @@ class MenuSupport {
 				'position'         => ++$position,
 				'open_in_new_tab'  => ( $item->target ?? '' ) === '_blank',
 				'missing_original' => ! empty( $item->_invalid ),
-				'children'         => self::branch( $children, $id, $depth + 1 ),
+				'children'         => self::branch( $children, $id ),
 			];
 		}
 

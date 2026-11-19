@@ -139,11 +139,6 @@ class AssignMenuLocation extends BaseAbility {
 			return $data;
 		}
 
-		$saved = MenuSupport::location_saved( $location, $menu_id );
-		if ( $saved instanceof WP_Error ) {
-			return $saved;
-		}
-
 		return [
 			'location'      => $location,
 			'menu'          => MenuSupport::menu_reference( $menu_id ),
