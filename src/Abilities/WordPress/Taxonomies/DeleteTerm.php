@@ -32,7 +32,7 @@ class DeleteTerm extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/delete-term';
 		$this->label       = __( 'Delete Term', 'albert-ai-butler' );
-		$this->description = __( 'Delete a term from a taxonomy (category, tag, etc).', 'albert-ai-butler' );
+		$this->description = __( 'Permanently delete a term, such as a category or tag, from its taxonomy; terms have no trash, so check the term with albert/view-term first.', 'albert-ai-butler' );
 		$this->category    = 'taxonomy';
 		$this->group       = 'terms';
 
@@ -70,7 +70,7 @@ class DeleteTerm extends BaseAbility {
 				],
 				'force'    => [
 					'type'        => 'boolean',
-					'description' => 'Whether to bypass trash and force deletion',
+					'description' => 'Ignored: terms have no trash, so a term is always deleted permanently.',
 					'default'     => false,
 				],
 			],
@@ -120,7 +120,7 @@ class DeleteTerm extends BaseAbility {
 	 *
 	 *     @type string $taxonomy Taxonomy slug.
 	 *     @type int    $id       Term ID.
-	 *     @type bool   $force    Force deletion.
+	 *     @type bool   $force    Ignored; terms are always deleted permanently.
 	 * }
 	 * @return array<string, mixed>|WP_Error Result data on success, WP_Error on failure.
 	 * @since 1.0.0
@@ -138,10 +138,8 @@ class DeleteTerm extends BaseAbility {
 		// Create REST request.
 		$request = new WP_REST_Request( 'DELETE', $route . '/' . $term_id );
 
-		// Set force parameter if provided.
-		if ( ! empty( $args['force'] ) ) {
-			$request->set_param( 'force', true );
-		}
+		// Terms have no trash: without force core refuses with a 501.
+		$request->set_param( 'force', true );
 
 		// Execute the request.
 		$response = rest_do_request( $request );

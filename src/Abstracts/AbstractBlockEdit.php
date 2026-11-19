@@ -496,7 +496,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 				],
 				'blocks'       => [
 					'type'        => 'array',
-					'description' => 'The refreshed block tree after the edit. Each node has { name, attributes, innerBlocks, plaintext, path }. Paths may have shifted from your prior read, so use THESE paths for the next edit.',
+					'description' => 'The refreshed block tree after the edit. Each node has { name, attributes, innerBlocks, plaintext, path, html }. Paths may have shifted from your prior read, so use THESE paths for the next edit.',
 					'items'       => [ 'type' => 'object' ],
 				],
 				'_meta'        => [

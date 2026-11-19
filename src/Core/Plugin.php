@@ -17,6 +17,7 @@ use Albert\Abilities\WordPress\Posts\Create as CreatePost;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
 use Albert\Abilities\WordPress\Posts\EditBlock as EditPostBlock;
+use Albert\Abilities\WordPress\Posts\ReplaceText as ReplacePostText;
 use Albert\Abilities\WordPress\Posts\AddBlock as AddPostBlock;
 use Albert\Abilities\WordPress\Posts\RemoveBlock as RemovePostBlock;
 use Albert\Abilities\WordPress\Posts\MoveBlock as MovePostBlock;
@@ -26,6 +27,7 @@ use Albert\Abilities\WordPress\Pages\Create as CreatePage;
 use Albert\Abilities\WordPress\Pages\Update as UpdatePage;
 use Albert\Abilities\WordPress\Pages\Delete as DeletePage;
 use Albert\Abilities\WordPress\Pages\EditBlock as EditPageBlock;
+use Albert\Abilities\WordPress\Pages\ReplaceText as ReplacePageText;
 use Albert\Abilities\WordPress\Pages\AddBlock as AddPageBlock;
 use Albert\Abilities\WordPress\Pages\RemoveBlock as RemovePageBlock;
 use Albert\Abilities\WordPress\Pages\MoveBlock as MovePageBlock;
@@ -405,6 +407,7 @@ class Plugin {
 		$this->abilities_manager->add_ability( new AddPostBlock() );
 		$this->abilities_manager->add_ability( new RemovePostBlock() );
 		$this->abilities_manager->add_ability( new MovePostBlock() );
+		$this->abilities_manager->add_ability( new ReplacePostText() );
 
 		// Pages abilities.
 		$this->abilities_manager->add_ability( new FindPages() );
@@ -418,6 +421,7 @@ class Plugin {
 		$this->abilities_manager->add_ability( new AddPageBlock() );
 		$this->abilities_manager->add_ability( new RemovePageBlock() );
 		$this->abilities_manager->add_ability( new MovePageBlock() );
+		$this->abilities_manager->add_ability( new ReplacePageText() );
 
 		// Users abilities.
 		$this->abilities_manager->add_ability( new FindUsers() );
