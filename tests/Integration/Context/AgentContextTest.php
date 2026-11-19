@@ -149,8 +149,9 @@ class AgentContextTest extends TestCase {
 
 		$this->assertSame( ALBERT_VERSION, $environment['albert'] );
 		$this->assertSame( \WP\MCP\Core\McpAdapter::VERSION, $environment['mcp_adapter']['version'] );
-		// Albert's copy, or WooCommerce's when a Woo run loads it first.
-		$this->assertContains( $environment['mcp_adapter']['loaded_from'], [ 'albert', 'woocommerce' ] );
+		// Albert's copy, or WooCommerce's when a Woo run loads it first. Absent when
+		// the plugin under test lives outside the test site's plugins folder.
+		$this->assertContains( $environment['mcp_adapter']['loaded_from'] ?? 'albert', [ 'albert', 'woocommerce' ] );
 	}
 
 	/**

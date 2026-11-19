@@ -11,6 +11,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/' );
 }
 
+// Plugin constants the main file defines. WP_PLUGIN_DIR points at a temp folder
+// because AdapterSourceTest writes into it.
+if ( ! defined( 'ALBERT_VERSION' ) ) {
+	define( 'ALBERT_VERSION', '0.0.0-test' );
+}
+if ( ! defined( 'ALBERT_PLUGIN_BASENAME' ) ) {
+	define( 'ALBERT_PLUGIN_BASENAME', 'albert-ai-butler/albert-ai-butler.php' );
+}
+if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
+	define( 'WP_PLUGIN_DIR', sys_get_temp_dir() . '/albert-adapter-source-plugins' );
+}
+
 // Minimal i18n stubs — unit tests don't load WordPress.
 if ( ! function_exists( '__' ) ) {
 	/**

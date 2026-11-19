@@ -117,12 +117,23 @@ class AdapterStatus {
 	 * @since 1.4.0
 	 */
 	public static function adapter_path(): ?string {
-		$file = self::loaded_file();
-		if ( $file === null ) {
+		if ( ! class_exists( McpAdapter::class ) ) {
 			return null;
 		}
 
-		return str_replace( self::plugins_dir(), '', $file );
+		try {
+			$file = ( new \ReflectionClass( McpAdapter::class ) )->getFileName();
+		} catch ( \ReflectionException $e ) {
+			return null;
+		}
+
+		if ( ! is_string( $file ) ) {
+			return null;
+		}
+
+		$plugins = wp_normalize_path( trailingslashit( WP_PLUGIN_DIR ) );
+
+		return str_replace( $plugins, '', wp_normalize_path( $file ) );
 	}
 
 	/**
@@ -135,65 +146,5 @@ class AdapterStatus {
 		$constant = McpAdapter::class . '::VERSION';
 
 		return class_exists( McpAdapter::class ) && defined( $constant ) ? (string) constant( $constant ) : null;
-	}
-
-	/**
-	 * Which plugin supplied the resolved adapter copy.
-	 *
-	 * @return string|null `albert` for Albert's bundled copy, another plugin's folder name, or null when
-	 *                     nothing is loaded or it lives outside the plugins folder (a path we would rather not send).
-	 * @since 1.6.0
-	 */
-	public static function adapter_source(): ?string {
-		$file = self::loaded_file();
-		if ( $file === null ) {
-			return null;
-		}
-
-		if ( str_starts_with( $file, str_replace( '\\', '/', dirname( __DIR__, 2 ) ) . '/' . AdapterSource::FALLBACK_DIR . '/' ) ) {
-			return 'albert';
-		}
-
-		$plugins = self::plugins_dir();
-		if ( ! str_starts_with( $file, $plugins ) ) {
-			return null;
-		}
-
-		$folder = strstr( substr( $file, strlen( $plugins ) ), '/', true );
-
-		return is_string( $folder ) && $folder !== '' ? $folder : null;
-	}
-
-	/**
-	 * The file the resolved adapter class was loaded from, with forward slashes.
-	 *
-	 * Normalised by hand, not with wp_normalize_path(): the site context reads
-	 * this, and its unit tests run without WordPress.
-	 *
-	 * @return string|null Path, or null when nothing is loaded.
-	 * @since 1.6.0
-	 */
-	private static function loaded_file(): ?string {
-		if ( ! class_exists( McpAdapter::class ) ) {
-			return null;
-		}
-
-		try {
-			$file = ( new \ReflectionClass( McpAdapter::class ) )->getFileName();
-		} catch ( \ReflectionException $e ) {
-			return null;
-		}
-
-		return is_string( $file ) ? str_replace( '\\', '/', $file ) : null;
-	}
-
-	/**
-	 * The plugins folder with forward slashes and a trailing slash.
-	 *
-	 * @return string
-	 * @since 1.6.0
-	 */
-	private static function plugins_dir(): string {
-		return str_replace( '\\', '/', rtrim( WP_PLUGIN_DIR, '/\\' ) ) . '/';
 	}
 }

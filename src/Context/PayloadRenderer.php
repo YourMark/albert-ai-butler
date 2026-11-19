@@ -322,7 +322,7 @@ class PayloadRenderer {
 		if ( ! empty( $environment['albert'] ) ) {
 			$plugin[] = 'Albert ' . $this->flatten( $environment['albert'] );
 		}
-		$adapter = isset( $environment['mcp_adapter'] ) && is_array( $environment['mcp_adapter'] ) ? $environment['mcp_adapter'] : [];
+		$adapter = $environment['mcp_adapter'] ?? [];
 		if ( ! empty( $adapter['version'] ) ) {
 			$label = 'MCP Adapter ' . $this->flatten( $adapter['version'] );
 

@@ -278,3 +278,29 @@ if ( ! class_exists( 'Albert_Test_Theme' ) ) {
 		}
 	}
 }
+
+if ( ! function_exists( 'wp_normalize_path' ) ) {
+	/**
+	 * Stub wp_normalize_path.
+	 *
+	 * @param string $path Path.
+	 *
+	 * @return string
+	 */
+	function wp_normalize_path( string $path ): string {
+		return str_replace( '\\', '/', $path );
+	}
+}
+
+if ( ! function_exists( 'trailingslashit' ) ) {
+	/**
+	 * Stub trailingslashit.
+	 *
+	 * @param string $value Path.
+	 *
+	 * @return string
+	 */
+	function trailingslashit( string $value ): string {
+		return rtrim( $value, '/\\' ) . '/';
+	}
+}

@@ -11,10 +11,6 @@ require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 require_once dirname( __DIR__ ) . '/stubs/wordpress-site.php';
 require_once dirname( __DIR__, 2 ) . '/wp-function-stubs.php';
 
-if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
-	define( 'WP_PLUGIN_DIR', sys_get_temp_dir() . '/albert-adapter-source-plugins' );
-}
-
 use Albert\MCP\AdapterSource;
 use PHPUnit\Framework\TestCase;
 

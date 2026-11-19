@@ -74,17 +74,16 @@ class Environment {
 		}
 
 		// Versions are what a bug report needs first, and an assistant cannot find them on its own.
-		if ( defined( 'ALBERT_VERSION' ) ) {
-			$environment['albert'] = (string) ALBERT_VERSION;
-		}
+		$environment['albert'] = ALBERT_VERSION;
 
 		$adapter_version = AdapterStatus::adapter_version();
 		if ( $adapter_version !== null ) {
 			$environment['mcp_adapter'] = [ 'version' => $adapter_version ];
 
-			$source = AdapterStatus::adapter_source();
-			if ( $source !== null ) {
-				$environment['mcp_adapter']['loaded_from'] = $source;
+			// The plugin folder the copy lives in; a path outside the plugins folder yields none.
+			$folder = strstr( (string) AdapterStatus::adapter_path(), '/', true );
+			if ( $folder ) {
+				$environment['mcp_adapter']['loaded_from'] = $folder === dirname( ALBERT_PLUGIN_BASENAME ) ? 'albert' : $folder;
 			}
 		}
 
