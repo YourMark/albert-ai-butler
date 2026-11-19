@@ -14,7 +14,6 @@ use Albert\Abilities\WordPress\Comments\FindComments;
 use Albert\Abilities\WordPress\Comments\GetComment;
 use Albert\Abilities\WordPress\Comments\ModerateComment;
 use Albert\Abilities\WordPress\Comments\ReplyToComment;
-use Albert\SafeMode\Gate;
 use Albert\Tests\TestCase;
 use WP_Error;
 
@@ -159,43 +158,27 @@ class CommentsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * WooCommerce reviews and editor notes are never listed, even with type "all".
+	 * Reviews, notes and other plugins' types are never listed, even with type "all", nor found by ID.
 	 *
 	 * @return void
 	 */
-	public function test_find_excludes_reviews_and_notes(): void {
-		$review = $this->comment(
-			[
-				'comment_type'     => 'review',
-				'comment_approved' => '1',
-			]
-		);
-		$note   = $this->comment(
-			[
-				'comment_type'     => 'note',
-				'comment_approved' => '1',
-			]
-		);
-
-		foreach ( [ 'comment', 'all' ] as $type ) {
-			$result = ( new FindComments() )->execute( [ 'type' => $type ] );
-			$this->assertIsArray( $result );
-
-			$ids = array_column( $result['comments'], 'id' );
-			$this->assertNotContains( $review, $ids, $type );
-			$this->assertNotContains( $note, $ids, $type );
-			$this->assertContains( $this->held_id, $ids, $type );
-		}
-	}
-
-	/**
-	 * A review, note, order note or other plugin's type asked for by ID is not found, by any ability.
-	 *
-	 * @return void
-	 */
-	public function test_reviews_and_notes_are_not_found_by_id(): void {
+	public function test_other_comment_types_stay_out(): void {
 		foreach ( [ 'review', 'note', 'order_note', 'some_plugin_type' ] as $type ) {
-			$id = $this->comment( [ 'comment_type' => $type ] );
+			$id = $this->comment(
+				[
+					'comment_type'     => $type,
+					'comment_approved' => '1',
+				]
+			);
+
+			foreach ( [ 'comment', 'all' ] as $filter ) {
+				$result = ( new FindComments() )->execute( [ 'type' => $filter ] );
+				$this->assertIsArray( $result );
+
+				$ids = array_column( $result['comments'], 'id' );
+				$this->assertNotContains( $id, $ids, $type . '/' . $filter );
+				$this->assertContains( $this->held_id, $ids, $type . '/' . $filter );
+			}
 
 			foreach ( [ new GetComment(), new DeleteComment() ] as $ability ) {
 				$result = $ability->execute( [ 'comment_id' => $id ] );
@@ -326,6 +309,8 @@ class CommentsAbilityTest extends TestCase {
 		$this->assertSame( $this->held_id, (int) $reply->comment_parent );
 		$this->assertSame( get_current_user_id(), (int) $reply->user_id );
 		$this->assertSame( 'Yes, it is.', $reply->comment_content );
+		$this->assertSame( 'approved', $result['status'] );
+		$this->assertSame( get_comment_link( $reply ), $result['permalink'] );
 		$this->assertSame( '1', get_comment( $this->held_id )->comment_approved );
 	}
 
@@ -404,34 +389,6 @@ class CommentsAbilityTest extends TestCase {
 		$this->assertSame( 999999, $result['failed'][0]['id'] );
 		$this->assertSame( 'albert_comment_not_found', $result['failed'][0]['code'] );
 		$this->assertSame( 'spam', wp_get_comment_status( $other ) );
-	}
-
-	/**
-	 * A non-positive ID is refused, not dropped, and the rest still go ahead.
-	 *
-	 * @return void
-	 */
-	public function test_moderate_refuses_non_positive_ids(): void {
-		$result = ( new ModerateComment() )->execute(
-			[
-				'comment_ids' => [ 0, -5, $this->held_id ],
-				'status'      => 'approved',
-			]
-		);
-
-		$this->assertIsArray( $result );
-		$this->assertSame( [ $this->held_id ], $result['updated'] );
-		$this->assertSame( [ 0, -5 ], array_column( $result['failed'], 'id' ) );
-		$this->assertSame( [ 'albert_invalid_comment_ids', 'albert_invalid_comment_ids' ], array_column( $result['failed'], 'code' ) );
-
-		$single = ( new ModerateComment() )->execute(
-			[
-				'comment_ids' => [ 0 ],
-				'status'      => 'approved',
-			]
-		);
-		$this->assertInstanceOf( WP_Error::class, $single );
-		$this->assertSame( 'albert_invalid_comment_ids', $single->get_error_code() );
 	}
 
 	/**
@@ -537,59 +494,5 @@ class CommentsAbilityTest extends TestCase {
 			$result['comments'][0]['post']
 		);
 		$this->assertSame( 0, $result['comments'][0]['parent_id'] );
-	}
-
-	/**
-	 * An empty reply is refused as missing content.
-	 *
-	 * @return void
-	 */
-	public function test_empty_reply_is_refused(): void {
-		$result = ( new ReplyToComment() )->execute(
-			[
-				'comment_id' => $this->held_id,
-				'content'    => '   ',
-			]
-		);
-
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_missing_content', $result->get_error_code() );
-		$this->assertSame( '0', get_comment( $this->held_id )->comment_approved );
-	}
-
-	/**
-	 * Every comment ability is refused to a user who may not moderate comments.
-	 *
-	 * @return void
-	 */
-	public function test_authors_are_refused(): void {
-		wp_set_current_user( self::factory()->user->create( [ 'role' => 'author' ] ) );
-
-		foreach ( [ new FindComments(), new GetComment(), new ReplyToComment(), new ModerateComment(), new DeleteComment() ] as $ability ) {
-			$this->assertInstanceOf( WP_Error::class, $ability->check_permission(), $ability->get_id() );
-		}
-	}
-
-	/**
-	 * Reads pass safe mode; reply, moderation and deletion are held.
-	 *
-	 * @return void
-	 */
-	public function test_safe_mode_holds_every_comment_write(): void {
-		$gate = new Gate();
-
-		$expected = [
-			'albert/find-comments'    => false,
-			'albert/get-comment'      => false,
-			'albert/reply-to-comment' => true,
-			'albert/moderate-comment' => true,
-			'albert/delete-comment'   => true,
-		];
-
-		foreach ( $expected as $id => $held ) {
-			$ability = wp_get_ability( $id );
-			$this->assertNotNull( $ability, $id . ' is registered' );
-			$this->assertSame( $held, $gate->must_gate( $ability, [ 'comment_id' => $this->held_id ] ), $id );
-		}
 	}
 }

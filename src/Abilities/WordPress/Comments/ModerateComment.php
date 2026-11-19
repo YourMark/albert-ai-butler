@@ -146,8 +146,8 @@ class ModerateComment extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$status = (string) ( $args['status'] ?? '' );
-		$ids    = isset( $args['comment_ids'] ) && is_array( $args['comment_ids'] ) ? array_values( array_unique( $args['comment_ids'], SORT_REGULAR ) ) : [];
+		$status = (string) $args['status'];
+		$ids    = array_values( array_unique( array_map( 'intval', (array) $args['comment_ids'] ) ) );
 
 		$updated = [];
 		$failed  = [];
@@ -181,20 +181,12 @@ class ModerateComment extends BaseAbility {
 	/**
 	 * Set one comment's status.
 	 *
-	 * @param mixed  $id     Comment ID, refused unless a positive integer.
+	 * @param int    $id     Comment ID.
 	 * @param string $status REST status.
 	 * @return bool|WP_Error
 	 * @since 1.6.0
 	 */
-	private function moderate( $id, string $status ): bool|WP_Error {
-		if ( ! is_int( $id ) || $id < 1 ) {
-			return new WP_Error(
-				'albert_invalid_comment_ids',
-				__( 'Every entry in "comment_ids" must be a positive comment ID. Find comments with albert/find-comments.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
+	private function moderate( int $id, string $status ): bool|WP_Error {
 		$comment = CommentPresenter::find( $id );
 		if ( is_wp_error( $comment ) ) {
 			return $comment;
@@ -205,6 +197,21 @@ class ModerateComment extends BaseAbility {
 			return true;
 		}
 
+		return self::set_status( $id, $status, __( 'The comment could not be moderated.', 'albert-ai-butler' ) );
+	}
+
+	/**
+	 * Set a comment's status through core's endpoint, so its checks and hooks run.
+	 *
+	 * Shared with {@see ReplyToComment}, which approves the comment it answers.
+	 *
+	 * @param int    $id       Comment ID.
+	 * @param string $status   REST status.
+	 * @param string $fallback Error message when core gives none.
+	 * @return bool|WP_Error
+	 * @since 1.6.0
+	 */
+	public static function set_status( int $id, string $status, string $fallback ): bool|WP_Error {
 		$request = new WP_REST_Request( 'POST', '/wp/v2/comments/' . $id );
 		$request->set_param( 'status', $status );
 
@@ -214,7 +221,7 @@ class ModerateComment extends BaseAbility {
 			return self::rest_failure(
 				rest_get_server()->response_to_data( $response, false ),
 				$response->get_status(),
-				__( 'The comment could not be moderated.', 'albert-ai-butler' ),
+				$fallback,
 				CommentPresenter::PERMISSION_DENIED
 			);
 		}

@@ -11,7 +11,6 @@ namespace Albert\Abilities\WordPress\Comments;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use WP_Comment;
 use WP_Error;
 use WP_REST_Request;
 
@@ -130,7 +129,7 @@ class DeleteComment extends BaseAbility {
 			return $comment;
 		}
 
-		$force           = array_key_exists( 'force', $args ) && $args['force'] !== null ? (bool) $args['force'] : false;
+		$force           = ! empty( $args['force'] );
 		$id              = (int) $comment->comment_ID;
 		$previous_status = CommentPresenter::status( $comment );
 
@@ -148,13 +147,10 @@ class DeleteComment extends BaseAbility {
 			);
 		}
 
-		// Read back, so the output says what happened rather than what was asked.
-		$after = get_comment( $id );
-
 		return [
 			'id'              => $id,
-			'trashed'         => $after instanceof WP_Comment && CommentPresenter::status( $after ) === 'trash',
-			'deleted'         => ! $after instanceof WP_Comment,
+			'trashed'         => ! $force,
+			'deleted'         => $force,
 			'previous_status' => $previous_status,
 		];
 	}

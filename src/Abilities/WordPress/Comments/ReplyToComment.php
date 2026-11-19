@@ -11,7 +11,6 @@ namespace Albert\Abilities\WordPress\Comments;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use WP_Comment;
 use WP_Error;
 use WP_REST_Request;
 
@@ -134,11 +133,6 @@ class ReplyToComment extends BaseAbility {
 			return $parent;
 		}
 
-		$content = trim( (string) ( $args['content'] ?? '' ) );
-		if ( $content === '' ) {
-			return new WP_Error( 'albert_missing_content', __( 'The reply is empty. Send the reply text in "content".', 'albert-ai-butler' ), [ 'status' => 400 ] );
-		}
-
 		$status = CommentPresenter::status( $parent );
 		if ( $status === 'spam' || $status === 'trash' ) {
 			return new WP_Error(
@@ -155,14 +149,10 @@ class ReplyToComment extends BaseAbility {
 		$request = new WP_REST_Request( 'POST', '/wp/v2/comments' );
 		$request->set_param( 'post', (int) $parent->comment_post_ID );
 		$request->set_param( 'parent', (int) $parent->comment_ID );
-		$request->set_param( 'content', $content );
+		$request->set_param( 'content', (string) $args['content'] );
 
 		$response = rest_do_request( $request );
 		$data     = rest_get_server()->response_to_data( $response, false );
-
-		if ( is_wp_error( $data ) ) {
-			return $data;
-		}
 
 		if ( $response->is_error() ) {
 			return self::rest_failure( $data, $response->get_status(), __( 'The reply could not be saved.', 'albert-ai-butler' ), CommentPresenter::PERMISSION_DENIED );
@@ -172,45 +162,22 @@ class ReplyToComment extends BaseAbility {
 		// same, or the reply would be public under an invisible comment. After the
 		// reply, as wp-admin does, so a refused reply leaves the comment untouched.
 		if ( $status === 'hold' ) {
-			$approved = $this->approve( $parent );
+			$approved = ModerateComment::set_status(
+				(int) $parent->comment_ID,
+				'approved',
+				__( 'The reply was saved, but the comment it answers could not be approved.', 'albert-ai-butler' )
+			);
 			if ( is_wp_error( $approved ) ) {
 				return $approved;
 			}
 		}
 
-		$reply = get_comment( (int) ( $data['id'] ?? 0 ) );
-
 		return [
-			'id'        => (int) ( $data['id'] ?? 0 ),
+			'id'        => (int) $data['id'],
 			'parent_id' => (int) $parent->comment_ID,
 			'post'      => CommentPresenter::post_reference( (int) $parent->comment_post_ID ),
-			'status'    => $reply instanceof WP_Comment ? CommentPresenter::status( $reply ) : (string) ( $data['status'] ?? '' ),
-			'permalink' => $reply instanceof WP_Comment ? (string) get_comment_link( $reply ) : '',
+			'status'    => (string) $data['status'],
+			'permalink' => (string) $data['link'],
 		];
-	}
-
-	/**
-	 * Approve the comment being replied to, through core's endpoint.
-	 *
-	 * @param WP_Comment $comment The held comment.
-	 * @return true|WP_Error
-	 * @since 1.6.0
-	 */
-	private function approve( WP_Comment $comment ): bool|WP_Error {
-		$request = new WP_REST_Request( 'POST', '/wp/v2/comments/' . (int) $comment->comment_ID );
-		$request->set_param( 'status', 'approved' );
-
-		$response = rest_do_request( $request );
-
-		if ( $response->is_error() ) {
-			return self::rest_failure(
-				rest_get_server()->response_to_data( $response, false ),
-				$response->get_status(),
-				__( 'The reply was saved, but the comment it answers could not be approved.', 'albert-ai-butler' ),
-				CommentPresenter::PERMISSION_DENIED
-			);
-		}
-
-		return true;
 	}
 }
