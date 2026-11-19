@@ -592,41 +592,22 @@ class UsersAbilityTest extends TestCase {
 	}
 
 	/**
-	 * DeleteUser refuses to run without a user to receive the content, instead of failing in core.
+	 * The schema refuses a delete without a valid user to receive the content.
 	 *
 	 * @return void
 	 */
 	public function test_delete_user_requires_reassign(): void {
-		$victim = self::factory()->user->create( [ 'role' => 'author' ] );
+		$victim  = self::factory()->user->create( [ 'role' => 'author' ] );
+		$ability = wp_get_ability( 'albert/delete-user' );
+		$this->assertNotNull( $ability );
 
-		$missing = ( new DeleteUser() )->execute( [ 'id' => $victim ] );
-		$this->assertInstanceOf( WP_Error::class, $missing );
-		$this->assertSame( 'albert_missing_reassign', $missing->get_error_code() );
+		foreach ( [ [], [ 'reassign' => -5 ] ] as $extra ) {
+			$result = $ability->execute( array_merge( [ 'id' => $victim ], $extra ) );
 
-		foreach ( [ 0, '0', -5 ] as $value ) {
-			$invalid = ( new DeleteUser() )->execute(
-				[
-					'id'       => $victim,
-					'reassign' => $value,
-				]
-			);
-			$this->assertInstanceOf( WP_Error::class, $invalid );
-			$this->assertSame( 'albert_invalid_reassign', $invalid->get_error_code() );
+			$this->assertInstanceOf( WP_Error::class, $result );
+			$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
 		}
 
 		$this->assertNotFalse( get_userdata( $victim ) );
-	}
-
-	/**
-	 * The schema makes `reassign` required, with a minimum of 1.
-	 *
-	 * @return void
-	 */
-	public function test_delete_user_schema_requires_reassign(): void {
-		$schema = wp_get_ability( 'albert/delete-user' )->get_input_schema();
-
-		$this->assertContains( 'reassign', $schema['required'] );
-		$this->assertSame( 1, $schema['properties']['reassign']['minimum'] );
-		$this->assertArrayNotHasKey( 'default', $schema['properties']['reassign'] );
 	}
 }

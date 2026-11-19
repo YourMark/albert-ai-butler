@@ -119,24 +119,6 @@ class Delete extends BaseAbility {
 	public function execute( array $args ): array|WP_Error {
 		$user_id = absint( $args['id'] );
 
-		// Core requires a reassign target; never absint() it, or -5 hands the content to user 5.
-		if ( ! isset( $args['reassign'] ) ) {
-			return new WP_Error(
-				'albert_missing_reassign',
-				__( 'The "reassign" parameter is required: the ID of the user who receives the deleted user\'s content. Find one with albert/find-users.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
-		$reassign = is_int( $args['reassign'] ) || ( is_string( $args['reassign'] ) && ctype_digit( $args['reassign'] ) ) ? (int) $args['reassign'] : 0;
-		if ( $reassign < 1 ) {
-			return new WP_Error(
-				'albert_invalid_reassign',
-				__( 'The "reassign" parameter must be the ID of an existing user, 1 or more.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		// Check if user exists.
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
@@ -150,8 +132,7 @@ class Delete extends BaseAbility {
 		// Create REST request.
 		$request = new WP_REST_Request( 'DELETE', '/wp/v2/users/' . $user_id );
 		$request->set_param( 'force', true );
-
-		$request->set_param( 'reassign', $reassign );
+		$request->set_param( 'reassign', $args['reassign'] );
 
 		// Execute the request.
 		$response = rest_do_request( $request );
