@@ -42,12 +42,10 @@ class Delete extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::delete(
-				'Without `force` the post goes to the trash, where a person can restore it in wp-admin; '
-				. '`force: true` deletes it permanently and waits for approval when safe mode is on. Confirm '
-				. 'which post you have, with `albert/view-post` on the id, before calling it, because an id '
-				. 'from a stale list may now be a different post.'
+				'Without `force` the post goes to the trash; `force: true` deletes it permanently. Confirm which '
+				. 'post you have, with `albert/view-post` on the id, before calling it, because an id from a '
+				. 'stale list may now be a different post.'
 			),
-			'safe_mode'   => [ 'permanent_flag' => 'force' ],
 		];
 
 		parent::__construct();
@@ -92,10 +90,6 @@ class Delete extends BaseAbility {
 					'type'        => 'boolean',
 					'description' => 'True only when the post was deleted permanently.',
 				],
-				'trashed' => [
-					'type'        => 'boolean',
-					'description' => 'True when the post was moved to the trash.',
-				],
 				'status'  => [ 'type' => 'string' ],
 			],
 			'required'   => [ 'id', 'deleted' ],
@@ -139,7 +133,7 @@ class Delete extends BaseAbility {
 			);
 		}
 
-		$force = isset( $args['force'] ) && ( is_bool( $args['force'] ) || is_string( $args['force'] ) ) && rest_sanitize_boolean( $args['force'] );
+		$force = ! empty( $args['force'] );
 
 		// Create REST request.
 		$request = new WP_REST_Request( 'DELETE', '/wp/v2/posts/' . $post_id );
@@ -167,7 +161,6 @@ class Delete extends BaseAbility {
 		return [
 			'id'      => $post_id,
 			'deleted' => $force,
-			'trashed' => ! $force,
 			'status'  => $force ? 'deleted' : 'trashed',
 		];
 	}

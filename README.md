@@ -227,8 +227,7 @@ Website: https://yourmark.nl
 - New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 - Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 - `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
-- `albert/delete-post`, `albert/delete-page` and `albert/delete-pattern` return `trashed: true` and `deleted: false` when they move the item to the trash; `deleted` is `true` only for a permanent delete. A `force` of `"false"` now means false.
-- An `albert/` ability can declare `meta.safe_mode.permanent_flag` (the name of a boolean input). Safe mode then does not hold it on its annotation when that input is absent or `false`; `albert/delete-post`, `albert/delete-page` and `albert/delete-pattern` declare `force`. The risk list and `albert/safe_mode/should_hold` still apply.
+- `albert/delete-post`, `albert/delete-page` and `albert/delete-pattern` return `deleted: false` when they move the item to the trash; `deleted` is `true` only for a permanent delete.
 
 ### 1.5.0
 

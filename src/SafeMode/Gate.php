@@ -51,12 +51,14 @@ class Gate {
 	public const DEFAULT_VALUE = 'on';
 
 	/**
-	 * Ability namespace whose trash declaration the gate trusts.
+	 * Abilities whose call without `force` only moves the item to the trash.
+	 *
+	 * Each refuses, through core's REST delete, rather than purges when the site has no trash.
 	 *
 	 * @since 1.6.0
-	 * @var string
+	 * @var string[]
 	 */
-	private const TRUSTED_NAMESPACE = 'albert/';
+	private const TRASH_ABILITIES = [ 'albert/delete-post', 'albert/delete-page', 'albert/delete-pattern' ];
 
 	/**
 	 * Classifies a call's risk beyond its annotation.
@@ -165,7 +167,7 @@ class Gate {
 	 * @return bool
 	 * @since 1.5.0
 	 * @since 1.6.0 Add-ons can hold a call through `albert/safe_mode/should_hold`.
-	 * @since 1.6.0 A declared trash call is not held ({@see self::is_trash_only()}).
+	 * @since 1.6.0 A trash-only call is not held ({@see self::is_trash_only()}).
 	 */
 	public function must_gate( WP_Ability $ability, array $input = [] ): bool {
 		if ( ! $this->is_enabled() ) {
@@ -271,14 +273,10 @@ class Gate {
 	}
 
 	/**
-	 * Whether this call only moves something to the trash, by the ability's own declaration.
+	 * Whether this call only moves a post, page or pattern to the trash.
 	 *
-	 * Trash is core's own undo, so only the permanent call needs a person. The release is
-	 * narrow so it can only fail towards holding: the ability is in Albert's namespace,
-	 * names in `meta.safe_mode.permanent_flag` a boolean input that makes the call
-	 * permanent, and that input is absent or exactly `false`. Anything else is held, a
-	 * string `"false"` included. A declaring ability must refuse, not purge, when the
-	 * site has no trash; core's REST delete does.
+	 * Trash is core's own undo, so only the permanent call needs a person. Anything but
+	 * an absent or exactly `false` `force` is held, a string `"false"` included.
 	 *
 	 * @param WP_Ability           $ability The ability about to execute.
 	 * @param array<string, mixed> $input   Its captured input.
@@ -287,22 +285,7 @@ class Gate {
 	 * @since 1.6.0
 	 */
 	public function is_trash_only( WP_Ability $ability, array $input ): bool {
-		if ( ! str_starts_with( $ability->get_name(), self::TRUSTED_NAMESPACE ) ) {
-			return false;
-		}
-
-		$declared = $ability->get_meta_item( 'safe_mode', [] );
-		$flag     = is_array( $declared ) ? ( $declared['permanent_flag'] ?? null ) : null;
-
-		if ( ! is_string( $flag ) || $flag === '' ) {
-			return false;
-		}
-
-		$schema = $ability->get_input_schema();
-		if ( ( $schema['properties'][ $flag ]['type'] ?? null ) !== 'boolean' ) {
-			return false;
-		}
-
-		return ! array_key_exists( $flag, $input ) || $input[ $flag ] === false;
+		return in_array( $ability->get_name(), self::TRASH_ABILITIES, true )
+			&& ( ! array_key_exists( 'force', $input ) || $input['force'] === false );
 	}
 }

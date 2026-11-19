@@ -101,7 +101,6 @@ class TrashHoldTest extends TestCase {
 				'permission_callback' => '__return_true',
 				'meta'                => [
 					'annotations' => [ 'destructive' => true ],
-					'safe_mode'   => [ 'permanent_flag' => 'force' ],
 				],
 			]
 		);
