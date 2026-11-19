@@ -266,6 +266,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * The Documentation link on the Dashboard opened a different plugin's page on WordPress.org. It now opens Albert's own page.
 * The translation template included with Albert was named for an old text domain and dated from its first release, so it listed almost none of the current text. It is now named `albert-ai-butler.pot` and covers everything Albert shows, so translation tools can offer the whole plugin.
 * Send setup link only offered Copy link once someone's invitation had expired, exactly when emailing them again matters most. It now offers to email anyone on the list who has an email address, and emailing an expired invitation renews it, with the new expiry date in the email.
+* Searching WooCommerce orders between two dates did not return the orders in that period. Your assistant now gets the orders from the first date up to and including the last.
 
 **Security**
 
