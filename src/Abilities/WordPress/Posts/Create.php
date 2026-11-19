@@ -33,7 +33,7 @@ class Create extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/create-post';
 		$this->label       = __( 'Create Post', 'albert-ai-butler' );
-		$this->description = __( 'Create a new blog post, saved as a draft unless you set a status. To change an existing post use albert/update-post; for a static page use albert/create-page.', 'albert-ai-butler' );
+		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
@@ -68,40 +68,40 @@ class Create extends BaseAbility {
 		$properties = [
 			'title'      => [
 				'type'        => 'string',
-				'description' => 'The post title, as plain text.',
+				'description' => 'The post title',
 			],
 			'content'    => [
 				'type'        => 'string',
-				'description' => 'The post body as block markup (<!-- wp:... -->), stored as sent, or HTML, converted to blocks. Use it only for a classic-editor post or markup you already have; otherwise send "blocks", which wins when both are sent. Markdown is refused.',
+				'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). Markdown is refused. For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
 				'default'     => '',
 			],
 			'blocks'     => [
 				'type'        => 'array',
-				'description' => 'The post body as structured block specs. Preferred over "content", which is ignored when this is sent. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
 				'items'       => BlockSpecSchema::spec(),
 				'default'     => [],
 			],
 			'status'     => [
 				'type'        => 'string',
 				'enum'        => $post_statuses,
-				'description' => 'Publication status: "draft" (the default) saves without publishing, "pending" waits for review, "private" is visible only to editors and administrators, "publish" makes it public. To schedule, send "publish" with a future "date".',
+				'description' => 'Post status',
 				'default'     => 'draft',
 			],
 			'excerpt'    => [
 				'type'        => 'string',
-				'description' => 'Short plain-text summary shown in archives and search results instead of the start of the post.',
+				'description' => 'Optional post excerpt',
 				'default'     => '',
 			],
 			'categories' => [
 				'type'        => 'array',
 				'items'       => [ 'type' => 'integer' ],
-				'description' => 'IDs of the categories to file the post under. Find them with albert/find-terms.',
+				'description' => 'Array of category IDs',
 				'default'     => [],
 			],
 			'tags'       => [
 				'type'        => 'array',
 				'items'       => [ 'type' => 'string' ],
-				'description' => 'Tag names to add to the post. A tag that does not exist yet is created.',
+				'description' => 'Array of tag names',
 				'default'     => [],
 			],
 		];
@@ -240,7 +240,11 @@ class Create extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return self::rest_failure( $data, $response->get_status(), __( 'The post could not be created.', 'albert-ai-butler' ), 'albert_post_permission_denied' );
+			return new WP_Error(
+				$data['code'] ?? 'rest_error',
+				self::rest_error_message( $data ) ?? __( 'An error occurred while creating the post.', 'albert-ai-butler' ),
+				[ 'status' => $response->get_status() ]
+			);
 		}
 
 		// Return formatted post data.

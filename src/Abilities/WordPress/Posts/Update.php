@@ -78,11 +78,11 @@ class Update extends BaseAbility {
 			],
 			'content'    => [
 				'type'        => 'string',
-				'description' => 'Replaces the whole post body with block markup (<!-- wp:... -->), stored as sent, or HTML, converted to blocks. Use it only for a classic-editor post or markup you already have; otherwise send "blocks", which wins when both are sent. Markdown is refused. To change one block, use albert/edit-post-block instead.',
+				'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). Markdown is refused. For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire post body when set.',
 			],
 			'blocks'     => [
 				'type'        => 'array',
-				'description' => 'Replaces the whole post body with structured block specs. Preferred over "content", which is ignored when this is sent. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'description' => 'Structured block specs (preferred over "content"). Replaces the entire post body. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
 				'items'       => BlockSpecSchema::spec(),
 			],
 			'status'     => [
