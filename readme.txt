@@ -262,6 +262,8 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 * A group block sent with its contents written out was saved empty. It now keeps them.
 * Copying a page or post block by block lost its bold text, links and images, and centred headings opened in the editor as broken, while the assistant was told it had worked. Each block now comes with its saved markup when your assistant reads it, so it is written back exactly as it was.
+* The Documentation link on the Dashboard opened a different plugin's page on WordPress.org. It now opens Albert's own page.
+* The translation template included with Albert was named for an old text domain and dated from its first release, so it listed almost none of the current text. It is now named `albert-ai-butler.pot` and covers everything Albert shows, so translation tools can offer the whole plugin.
 
 **Security**
 
@@ -442,7 +444,7 @@ Uninstalling Albert removes its tables and settings. On a multisite network this
 
 Developed by Mark Jansen, Your Mark Media
 Website: https://yourmark.nl
-Plugin URL: https://wordpress.org/plugins/albert/
+Plugin URL: https://wordpress.org/plugins/albert-ai-butler/
 
 Built with:
 * league/oauth2-server for OAuth 2.0 implementation
