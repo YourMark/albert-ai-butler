@@ -9,6 +9,8 @@ paths:
 
 # Abilities
 
+Design an ability (scope, name, description, inputs, output, annotations, errors) by `agent-rules/abilities.md`. This file covers how it is built.
+
 Every ability extends `Albert\Abstracts\BaseAbility` and is added in `Plugin::build_abilities()` (add-ons: the `albert/abilities/register` action). Copy a sibling, such as `Posts/ViewPost.php`, rather than starting blank.
 
 - Always set `meta.annotations` with `Core\Annotations::read|create|update|delete|destructive|action()`. Safe mode always holds an ability without `destructive => false`.

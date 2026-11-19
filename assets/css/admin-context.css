@@ -25,6 +25,11 @@
  * controls plus a payload preview is what narrow is for.
  */
 
+/* When a saved change takes effect, under the description. */
+.albert-context__reach-note {
+	margin-block-start: var(--albert-space-200);
+}
+
 /* The master switch and the save state, on the header's right. */
 .albert-context__master {
 	display: flex;
