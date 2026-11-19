@@ -297,16 +297,13 @@ class AllowedUsers {
 	 * Add a user to the allowed list, if they are not already on it.
 	 *
 	 * `expires_at` is computed now and stored: it does not move if the window
-	 * changes later (see the class docblock). Fires `albert/allowed_users/added`
-	 * on a new entry. Callers are the Connections screen, `wp albert
-	 * allowed-users add` and add-ons; Albert never adds anyone on its own.
+	 * changes later (see the class docblock).
 	 *
 	 * @param int      $user_id     The user id.
-	 * @param int|null $expiry_days Days until a never-used invitation lapses, for
-	 *                              this person only. Null uses the site's window;
-	 *                              0 means it never lapses.
+	 * @param int|null $expiry_days Days a never-used invitation stays open, for this
+	 *                              person only. Null uses the site's window; 0 never lapses.
 	 *
-	 * @return bool True if the user was newly added, false if already on the list.
+	 * @return bool True if newly added, false if already on the list.
 	 * @since 1.4.0
 	 * @since 1.6.0 Takes `$expiry_days` and fires `albert/allowed_users/added`.
 	 */
@@ -318,9 +315,11 @@ class AllowedUsers {
 		}
 
 		$now        = time();
-		$expires_at = $expiry_days === null
-			? self::compute_expiry( $now )
-			: ( $expiry_days > 0 ? $now + ( $expiry_days * DAY_IN_SECONDS ) : null );
+		$expires_at = self::compute_expiry( $now );
+
+		if ( $expiry_days !== null ) {
+			$expires_at = $expiry_days > 0 ? $now + ( $expiry_days * DAY_IN_SECONDS ) : null;
+		}
 
 		$all[ $user_id ] = [
 			'added_at'      => $now,
@@ -346,17 +345,14 @@ class AllowedUsers {
 	/**
 	 * Remove a user from the allowed list.
 	 *
-	 * Fires `albert/allowed_users/removed` when they were on it, including when
-	 * the expiry sweep removes a lapsed invitation. Does not touch their tokens:
-	 * callers that mean "and disconnect them" (the Connections screen, `wp albert
-	 * allowed-users remove`) revoke separately via
-	 * {@see \Albert\Admin\Settings::revoke_user_tokens()}, after this returns.
+	 * Does not touch their tokens: callers that mean "and disconnect them" revoke
+	 * afterwards via {@see \Albert\Admin\Settings::revoke_user_tokens()}.
 	 *
 	 * @param int $user_id The user id.
 	 *
 	 * @return void
 	 * @since 1.4.0
-	 * @since 1.6.0 Fires `albert/allowed_users/removed`.
+	 * @since 1.6.0 Fires `albert/allowed_users/removed` when they were on it.
 	 */
 	public static function remove( int $user_id ): void {
 		$all = self::all();

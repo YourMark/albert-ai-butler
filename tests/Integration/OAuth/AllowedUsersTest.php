@@ -358,4 +358,58 @@ class AllowedUsersTest extends TestCase {
 		$this->assertNull( AllowedUsers::expires_at( $forever ) );
 		$this->assertFalse( AllowedUsers::renew_invitation( self::factory()->user->create() ) );
 	}
+
+	/**
+	 * A per-person window overrides the site's; 0 never lapses. Each new entry fires `added` once.
+	 *
+	 * @return void
+	 */
+	public function test_add_with_expiry_days_fires_added(): void {
+		$fired = [];
+		add_action(
+			'albert/allowed_users/added',
+			static function ( int $user_id, ?int $expires_at ) use ( &$fired ): void {
+				$fired[] = [ $user_id, $expires_at ];
+			},
+			10,
+			2
+		);
+
+		$week  = self::factory()->user->create();
+		$never = self::factory()->user->create();
+
+		AllowedUsers::add( $week, 7 );
+		AllowedUsers::add( $never, 0 );
+		AllowedUsers::add( $never, 3 );
+
+		$this->assertEqualsWithDelta( time() + 7 * DAY_IN_SECONDS, AllowedUsers::expires_at( $week ), 5 );
+		$this->assertNull( AllowedUsers::expires_at( $never ) );
+		$this->assertTrue( AllowedUsers::is_allowed( $never ) );
+		$this->assertSame( [ [ $week, AllowedUsers::expires_at( $week ) ], [ $never, null ] ], $fired );
+	}
+
+	/**
+	 * `removed` fires only for someone who was on the list.
+	 *
+	 * @return void
+	 */
+	public function test_remove_fires_removed_only_when_listed(): void {
+		$fired = [];
+		add_action(
+			'albert/allowed_users/removed',
+			static function ( int $user_id ) use ( &$fired ): void {
+				$fired[] = $user_id;
+			}
+		);
+
+		$listed   = self::factory()->user->create();
+		$unlisted = self::factory()->user->create();
+		AllowedUsers::add( $listed );
+
+		AllowedUsers::remove( $listed );
+		AllowedUsers::remove( $unlisted );
+
+		$this->assertFalse( AllowedUsers::is_allowed( $listed ) );
+		$this->assertSame( [ $listed ], $fired );
+	}
 }

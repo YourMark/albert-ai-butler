@@ -1,64 +1,33 @@
 <?php
 /**
- * Stubs for the WP-CLI API Albert's commands call.
- *
- * WP-CLI is not a dependency, so only the signatures used are declared.
+ * Stubs for the WP-CLI API Albert's commands call. WP-CLI is not a dependency.
  *
  * @package Albert
  */
 
 namespace {
-	/**
-	 * WP-CLI's static API.
-	 */
 	class WP_CLI {
-
 		/**
-		 * Register a command.
-		 *
-		 * @param string               $name     The command name.
-		 * @param callable|string      $callable A class name, object or callable.
-		 * @param array<string, mixed> $args     Registration arguments.
-		 *
-		 * @return bool
+		 * @param string               $name
+		 * @param class-string|callable $callable
+		 * @param array<string, mixed> $args
 		 */
-		public static function add_command( $name, $callable, $args = [] ) {
+		public static function add_command( $name, $callable, $args = [] ): bool {
 			return true;
 		}
 
-		/**
-		 * Print a line.
-		 *
-		 * @param string $message The message.
-		 *
-		 * @return void
-		 */
-		public static function log( $message ) {}
+		/** @param string $message */
+		public static function log( $message ): void {}
+
+		/** @param string $message */
+		public static function success( $message ): void {}
+
+		/** @param string $message */
+		public static function warning( $message ): void {}
 
 		/**
-		 * Print a success message.
-		 *
-		 * @param string $message The message.
-		 *
-		 * @return void
-		 */
-		public static function success( $message ) {}
-
-		/**
-		 * Print a warning.
-		 *
-		 * @param string $message The message.
-		 *
-		 * @return void
-		 */
-		public static function warning( $message ) {}
-
-		/**
-		 * Print an error and exit.
-		 *
-		 * @param string   $message The message.
-		 * @param bool|int $exit    Exit code, or false to continue.
-		 *
+		 * @param string   $message
+		 * @param bool|int $exit
 		 * @return never
 		 */
 		public static function error( $message, $exit = true ) {
@@ -67,15 +36,31 @@ namespace {
 	}
 }
 
-namespace WP_CLI\Utils {
-	/**
-	 * Render a list of items in a format.
-	 *
-	 * @param string                               $format The format.
-	 * @param array<int, array<string, int|string>> $items  The rows.
-	 * @param array<int, string>|string            $fields The columns.
-	 *
-	 * @return void
-	 */
-	function format_items( $format, $items, $fields ) {}
+namespace WP_CLI {
+	class Formatter {
+		/**
+		 * @param array<string, mixed>      $assoc_args
+		 * @param array<int, string>|null   $fields
+		 * @param string|false              $prefix
+		 */
+		public function __construct( &$assoc_args, $fields = null, $prefix = false ) {}
+
+		/**
+		 * @param iterable<mixed> $items
+		 * @param bool|array<int, string> $ascii_pre_colorized
+		 */
+		public function display_items( $items, $ascii_pre_colorized = false ): void {}
+	}
+}
+
+namespace WP_CLI\Fetchers {
+	class User {
+		/**
+		 * @param array<int, string> $args
+		 * @return array<int, \WP_User>
+		 */
+		public function get_many( $args ) {
+			return [];
+		}
+	}
 }

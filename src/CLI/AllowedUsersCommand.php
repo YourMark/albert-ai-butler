@@ -14,12 +14,11 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Admin\Settings;
 use Albert\OAuth\AllowedUsers;
 use WP_CLI;
+use WP_CLI\Fetchers\User as UserFetcher;
+use WP_CLI\Formatter;
 
 /**
- * Manage who may connect an AI assistant to this site.
- *
- * The same list as the Connections screen. Removing someone signs out every
- * assistant they connected, as it does there.
+ * Manage who may connect an AI assistant to this site: the Connections screen's list.
  *
  * ## EXAMPLES
  *
@@ -32,33 +31,23 @@ use WP_CLI;
 class AllowedUsersCommand {
 
 	/**
-	 * Columns `list` shows by default.
-	 *
-	 * @since 1.6.0
-	 * @var array<int, string>
-	 */
-	private const FIELDS = [ 'ID', 'user_login', 'user_email', 'status', 'added', 'expires' ];
-
-	/**
 	 * Register the command. Only under WP-CLI.
 	 *
 	 * @return void
 	 * @since 1.6.0
 	 */
 	public static function register(): void {
-		if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
-			return;
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			WP_CLI::add_command( 'albert allowed-users', self::class );
 		}
-
-		WP_CLI::add_command( 'albert allowed-users', self::class );
 	}
 
 	/**
 	 * List the people who may connect an assistant.
 	 *
-	 * Status is `authorised` (has connected at least once, never lapses),
-	 * `invited` (not connected yet) or `expired` (the invitation lapsed unused;
-	 * sending a setup link from the Connections screen restarts it).
+	 * Status is `authorised` (has connected, never lapses), `invited` (not
+	 * connected yet) or `expired` (the invitation lapsed unused; sending a setup
+	 * link from the Connections screen restarts it).
 	 *
 	 * ## OPTIONS
 	 *
@@ -78,43 +67,49 @@ class AllowedUsersCommand {
 	 *   - count
 	 * ---
 	 *
-	 * ## EXAMPLES
-	 *
-	 *     wp albert allowed-users list
-	 *     wp albert allowed-users list --format=json
-	 *     wp albert allowed-users list --fields=user_login,status
-	 *
 	 * @subcommand list
 	 *
-	 * @param array<int, string>    $args       Positional arguments (none).
+	 * @param array<int, string>    $args       Unused.
 	 * @param array<string, string> $assoc_args Associative arguments.
 	 *
 	 * @return void
 	 * @since 1.6.0
 	 */
 	public function list_( array $args, array $assoc_args ): void {
-		$format = $assoc_args['format'] ?? 'table';
-		$rows   = $this->rows();
+		$rows = [];
 
-		if ( $format === 'ids' ) {
-			WP_CLI::log( implode( ' ', array_column( $rows, 'ID' ) ) );
-			return;
+		foreach ( AllowedUsers::all() as $user_id => $entry ) {
+			$user = get_user_by( 'id', $user_id );
+
+			if ( $entry['authorised_at'] !== null ) {
+				$status = 'authorised';
+			} elseif ( AllowedUsers::has_expired_invitation( $user_id ) ) {
+				$status = 'expired';
+			} else {
+				$status = 'invited';
+			}
+
+			$rows[] = [
+				'ID'         => $user_id,
+				'user_login' => $user instanceof \WP_User ? $user->user_login : '',
+				'user_email' => $user instanceof \WP_User ? $user->user_email : '',
+				'status'     => $status,
+				'added'      => $entry['added_at'] !== null ? (string) wp_date( 'Y-m-d H:i', $entry['added_at'] ) : '',
+				// An authorised invitation never lapses, whatever expires_at says.
+				'expires'    => $entry['authorised_at'] === null && $entry['expires_at'] !== null
+					? (string) wp_date( 'Y-m-d H:i', $entry['expires_at'] )
+					: 'never',
+			];
 		}
 
-		if ( $format === 'count' ) {
-			WP_CLI::log( (string) count( $rows ) );
-			return;
-		}
+		$formatter = new Formatter( $assoc_args, [ 'ID', 'user_login', 'user_email', 'status', 'added', 'expires' ] );
 
-		$fields = isset( $assoc_args['fields'] ) ? array_map( 'trim', explode( ',', $assoc_args['fields'] ) ) : self::FIELDS;
-
-		WP_CLI\Utils\format_items( $format, $rows, $fields );
+		// Formatter's `ids` prints the items themselves, so it needs bare IDs.
+		$formatter->display_items( ( $assoc_args['format'] ?? '' ) === 'ids' ? array_column( $rows, 'ID' ) : $rows );
 	}
 
 	/**
-	 * Allow one or more people to connect an assistant.
-	 *
-	 * Nobody is emailed. Send their setup link from the Connections screen.
+	 * Allow one or more people to connect an assistant. Nobody is emailed.
 	 *
 	 * ## OPTIONS
 	 *
@@ -125,12 +120,7 @@ class AllowedUsersCommand {
 	 * : Days the invitation stays open if they do not connect, up to 3650. 0
 	 * means it never lapses. Defaults to the site's setting.
 	 *
-	 * ## EXAMPLES
-	 *
-	 *     wp albert allowed-users add 12
-	 *     wp albert allowed-users add jan maria@example.com --expires=7
-	 *
-	 * @param array<int, string>    $args       User ids, logins or emails.
+	 * @param array<int, string>    $args       Users.
 	 * @param array<string, string> $assoc_args Associative arguments.
 	 *
 	 * @return void
@@ -150,7 +140,7 @@ class AllowedUsersCommand {
 			$expiry_days = (int) $expires;
 		}
 
-		$users = $this->resolve( $args );
+		$users = $this->users( $args );
 		$added = 0;
 
 		foreach ( $users as $user ) {
@@ -158,7 +148,7 @@ class AllowedUsersCommand {
 				++$added;
 				WP_CLI::log( sprintf( 'Added %s (ID %d).', $user->user_login, $user->ID ) );
 			} else {
-				WP_CLI::warning( sprintf( '%s (ID %d) is already on the list. Nothing changed.', $user->user_login, $user->ID ) );
+				WP_CLI::warning( sprintf( '%s (ID %d) is already on the list.', $user->user_login, $user->ID ) );
 			}
 		}
 
@@ -173,144 +163,45 @@ class AllowedUsersCommand {
 	 * <user>...
 	 * : User ID, login or email address.
 	 *
-	 * ## EXAMPLES
-	 *
-	 *     wp albert allowed-users remove 12
-	 *     wp albert allowed-users remove jan@example.com
-	 *
-	 * @param array<int, string> $args User ids, logins or emails.
+	 * @param array<int, string> $args Users.
 	 *
 	 * @return void
 	 * @since 1.6.0
 	 */
 	public function remove( array $args ): void {
-		$users   = $this->resolve( $args );
-		$removed = 0;
+		$users = $this->users( $args );
 
 		foreach ( $users as $user ) {
-			$was_listed = in_array( $user->ID, AllowedUsers::ids(), true );
-
 			AllowedUsers::remove( $user->ID );
-
-			// Also when they were not listed: a token issued before an earlier
-			// removal must not outlive this command.
 			Settings::revoke_user_tokens( $user->ID );
-
-			if ( $was_listed ) {
-				++$removed;
-				WP_CLI::log( sprintf( 'Removed %s (ID %d) and signed out their assistants.', $user->user_login, $user->ID ) );
-			} else {
-				WP_CLI::warning( sprintf( '%s (ID %d) was not on the list. Their tokens were revoked anyway.', $user->user_login, $user->ID ) );
-			}
+			WP_CLI::log( sprintf( 'Removed %s (ID %d) and signed out their assistants.', $user->user_login, $user->ID ) );
 		}
 
-		WP_CLI::success( sprintf( 'Removed %d of %d.', $removed, count( $users ) ) );
+		WP_CLI::success( sprintf( 'Removed %d.', count( $users ) ) );
 	}
 
 	/**
-	 * Find every user named, or stop before changing anything.
+	 * The users named, once each; stops before any change if one is not found.
 	 *
-	 * @param array<int, string> $identifiers User ids, logins or emails.
+	 * @param array<int, string> $args User IDs, logins or emails.
 	 *
 	 * @return array<int, \WP_User>
 	 * @since 1.6.0
 	 */
-	private function resolve( array $identifiers ): array {
-		$users   = [];
-		$missing = [];
+	private function users( array $args ): array {
+		$found = ( new UserFetcher() )->get_many( $args );
 
-		foreach ( $identifiers as $identifier ) {
-			$user = $this->find_user( (string) $identifier );
+		// get_many() warns about each one it could not find and skips it.
+		if ( count( $found ) !== count( $args ) ) {
+			WP_CLI::error( 'Not every user was found. Nothing changed.' );
+		}
 
-			if ( $user === null ) {
-				$missing[] = $identifier;
-				continue;
-			}
+		$users = [];
 
+		foreach ( $found as $user ) {
 			$users[ $user->ID ] = $user;
 		}
 
-		if ( $missing !== [] ) {
-			WP_CLI::error( sprintf( 'No user found for: %s. Nothing changed.', implode( ', ', $missing ) ) );
-		}
-
 		return array_values( $users );
-	}
-
-	/**
-	 * A user by id, login or email, in that order.
-	 *
-	 * @param string $identifier The id, login or email.
-	 *
-	 * @return \WP_User|null
-	 * @since 1.6.0
-	 */
-	private function find_user( string $identifier ): ?\WP_User {
-		if ( ctype_digit( $identifier ) ) {
-			$user = get_user_by( 'id', (int) $identifier );
-
-			if ( $user instanceof \WP_User ) {
-				return $user;
-			}
-		}
-
-		$user = get_user_by( 'login', $identifier );
-
-		if ( ! $user instanceof \WP_User && is_email( $identifier ) ) {
-			$user = get_user_by( 'email', $identifier );
-		}
-
-		return $user instanceof \WP_User ? $user : null;
-	}
-
-	/**
-	 * One row per person on the list.
-	 *
-	 * @return array<int, array<string, int|string>>
-	 * @since 1.6.0
-	 */
-	private function rows(): array {
-		$rows = [];
-
-		foreach ( AllowedUsers::all() as $user_id => $entry ) {
-			$user = get_user_by( 'id', $user_id );
-
-			if ( $entry['authorised_at'] !== null ) {
-				$status = 'authorised';
-			} elseif ( AllowedUsers::has_expired_invitation( $user_id ) ) {
-				$status = 'expired';
-			} else {
-				$status = 'invited';
-			}
-
-			$rows[] = [
-				'ID'         => $user_id,
-				'user_login' => $user instanceof \WP_User ? $user->user_login : '',
-				'user_email' => $user instanceof \WP_User ? $user->user_email : '',
-				'status'     => $status,
-				'added'      => $this->date( $entry['added_at'] ),
-				// An authorised invitation never lapses, whatever expires_at says.
-				'expires'    => $entry['authorised_at'] !== null ? 'never' : $this->date( $entry['expires_at'], 'never' ),
-			];
-		}
-
-		return $rows;
-	}
-
-	/**
-	 * A timestamp in the site's timezone.
-	 *
-	 * @param int|null $timestamp Unix timestamp.
-	 * @param string   $fallback  What to show for null.
-	 *
-	 * @return string
-	 * @since 1.6.0
-	 */
-	private function date( ?int $timestamp, string $fallback = '' ): string {
-		if ( $timestamp === null ) {
-			return $fallback;
-		}
-
-		return (string) wp_date( 'Y-m-d H:i', $timestamp );
 	}
 }
