@@ -29,6 +29,7 @@ Shared (submodule, `git@github.com:YourMark/albert-agent-rules`):
 - [Git Workflow](agent-rules/git-workflow.md) - branches, commits, PRs, commit/push/merge gates
 - [Code Style](agent-rules/code-style.md) - PHP / JS / CSS / security / accessibility
 - [Development Methodology](agent-rules/development-methodology.md) - DDD, naming, TDD scope
+- [Ability Design](agent-rules/abilities.md) - designing an ability: one question or one transition, names, descriptions, annotations, errors
 - [Testing](agent-rules/testing.md) - test structure and conventions
 - [Changelog](agent-rules/changelog.md) - changelog & readme.txt conventions
 
