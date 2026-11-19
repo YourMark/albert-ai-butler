@@ -212,16 +212,13 @@ class WriteContentResolver {
 	 * Whether the content, or text between its blocks, is Markdown.
 	 *
 	 * Text outside any block is converted like a plain string, so it is checked the same way.
+	 * Content without blocks parses as one freeform block, so one loop covers both cases.
 	 *
 	 * @param string $content The `content` input.
 	 * @return bool
 	 * @since 1.6.0
 	 */
 	private static function is_markdown( string $content ): bool {
-		if ( ! has_blocks( $content ) ) {
-			return MarkdownDetector::looks_like_markdown( $content );
-		}
-
 		foreach ( parse_blocks( $content ) as $block ) {
 			if ( $block['blockName'] === null && MarkdownDetector::looks_like_markdown( (string) $block['innerHTML'] ) ) {
 				return true;
