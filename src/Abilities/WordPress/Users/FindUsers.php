@@ -166,15 +166,7 @@ class FindUsers extends BaseAbility {
 
 		// The collection with `include`, not /users/{id}: that route returns one object, not a list.
 		if ( isset( $args['id'] ) ) {
-			$user_id = is_int( $args['id'] ) || ( is_string( $args['id'] ) && ctype_digit( $args['id'] ) ) ? (int) $args['id'] : 0;
-			if ( $user_id < 1 ) {
-				return new WP_Error(
-					'albert_invalid_id',
-					__( 'The "id" parameter must be a user ID of 1 or more.', 'albert-ai-butler' ),
-					[ 'status' => 400 ]
-				);
-			}
-			$request->set_param( 'include', [ $user_id ] );
+			$request->set_param( 'include', [ (int) $args['id'] ] );
 		}
 
 		// Email, roles and the login are only in the edit context, which core allows with list_users.

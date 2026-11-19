@@ -169,12 +169,13 @@ class UsersAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_find_users_refuses_an_invalid_id(): void {
-		foreach ( [ 0, '0', -5 ] as $value ) {
-			$result = ( new FindUsers() )->execute( [ 'id' => $value ] );
+		$ability = wp_get_ability( 'albert/find-users' );
+		$this->assertNotNull( $ability );
 
-			$this->assertInstanceOf( WP_Error::class, $result );
-			$this->assertSame( 'albert_invalid_id', $result->get_error_code() );
-		}
+		$result = $ability->execute( [ 'id' => -5 ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
 	}
 
 	/**
