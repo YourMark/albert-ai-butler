@@ -30,7 +30,7 @@ class Delete extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/delete-user';
 		$this->label       = __( 'Delete User', 'albert-ai-butler' );
-		$this->description = __( 'Delete a WordPress user and optionally reassign their content.', 'albert-ai-butler' );
+		$this->description = __( 'Permanently delete a WordPress user, handing everything they wrote to the user in "reassign"; find that user with albert/find-users first.', 'albert-ai-butler' );
 		$this->category    = 'user';
 		$this->group       = 'users';
 
@@ -42,9 +42,9 @@ class Delete extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::delete(
-				'This is not reversible, and it decides what happens to everything the user wrote. Pass '
-				. '`reassign` with another user\'s id to keep their posts; without it their content goes '
-				. 'too. Check what they own with `albert/find-posts` for that author before calling it.'
+				'This is not reversible. Everything the user wrote, such as their posts and pages, moves to '
+				. 'the user in `reassign`, so ask the person who should receive it. `albert/find-posts` for '
+				. 'that author shows what moves. The connected user cannot delete themselves.'
 			),
 		];
 
@@ -67,11 +67,11 @@ class Delete extends BaseAbility {
 				],
 				'reassign' => [
 					'type'        => 'integer',
-					'description' => 'Reassign posts and links to this user ID',
-					'default'     => 0,
+					'description' => 'The ID of the user who receives the deleted user\'s posts, pages and links. Must be a different, existing user.',
+					'minimum'     => 1,
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'   => [ 'id', 'reassign' ],
 		];
 	}
 
@@ -111,7 +111,7 @@ class Delete extends BaseAbility {
 	 *     Input parameters.
 	 *
 	 *     @type int $id       User ID (required).
-	 *     @type int $reassign Reassign posts to this user ID.
+	 *     @type int $reassign User ID that receives the deleted user's content (required).
 	 * }
 	 * @return array<string, mixed>|WP_Error Deletion result on success, WP_Error on failure.
 	 * @since 1.0.0
@@ -129,14 +129,19 @@ class Delete extends BaseAbility {
 			);
 		}
 
+		// Core's REST route allows deleting yourself; only the wp-admin screen refuses it.
+		if ( get_current_user_id() === $user_id ) {
+			return new WP_Error(
+				'cannot_delete_self',
+				__( 'You cannot delete the user you are connected as.', 'albert-ai-butler' ),
+				[ 'status' => 403 ]
+			);
+		}
+
 		// Create REST request.
 		$request = new WP_REST_Request( 'DELETE', '/wp/v2/users/' . $user_id );
 		$request->set_param( 'force', true );
-
-		// Set reassign parameter if provided.
-		if ( ! empty( $args['reassign'] ) ) {
-			$request->set_param( 'reassign', absint( $args['reassign'] ) );
-		}
+		$request->set_param( 'reassign', $args['reassign'] );
 
 		// Execute the request.
 		$response = rest_do_request( $request );
