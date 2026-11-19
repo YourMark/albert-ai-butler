@@ -9,7 +9,6 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
-use Albert\Abilities\WordPress\RegisteredMeta;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
@@ -108,7 +107,7 @@ class ViewPost extends BaseAbility {
 						],
 						'blocks'     => [
 							'type'        => 'array',
-							'description' => 'The post content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path }; innerBlocks is the same shape recursively. "path" (e.g. [2], [2,0]) is the block\'s address: pass it to the edit/add/remove/move-post-block abilities. Included when "blocks" is requested (default).',
+							'description' => 'The post content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path, html }; innerBlocks is the same shape recursively. "path" (e.g. [2], [2,0]) is the block\'s address: pass it to the edit/add/remove/move-post-block abilities. "html" is the saved markup of a block without inner blocks; send it back unchanged to keep the block exactly. Included when "blocks" is requested (default).',
 							'items'       => [ 'type' => 'object' ],
 						],
 						'plaintext'  => [
@@ -131,10 +130,6 @@ class ViewPost extends BaseAbility {
 						'has_blocks' => [
 							'type'        => 'boolean',
 							'description' => 'Whether the stored content actually contains block markup. May differ from "editor" (e.g. classic content saved on a block-editor type).',
-						],
-						'meta'       => [
-							'type'        => 'object',
-							'description' => 'Custom fields registered for the REST API, as { "key": value }; a field that holds several values is a list. Set a single value with albert/update-post "meta"; change a list with albert/add-post-meta and albert/remove-post-meta. Other custom fields are not shown.',
 						],
 						'_meta'      => [
 							'type'        => 'object',
@@ -245,7 +240,6 @@ class ViewPost extends BaseAbility {
 					'sticky'         => is_sticky( $post->ID ),
 					'format'         => $post_format ? $post_format : 'standard',
 					'featured_image' => get_post_thumbnail_id( $post ) ? get_post_thumbnail_id( $post ) : null,
-					'meta'           => RegisteredMeta::read( $post->ID, 'post' ),
 				]
 			),
 		];

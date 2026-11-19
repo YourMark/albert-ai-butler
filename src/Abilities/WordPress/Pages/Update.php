@@ -10,7 +10,6 @@
 namespace Albert\Abilities\WordPress\Pages;
 
 use Albert\Abilities\WordPress\PostFields;
-use Albert\Abilities\WordPress\RegisteredMeta;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
@@ -99,7 +98,7 @@ class Update extends BaseAbility {
 
 		return [
 			'type'          => 'object',
-			'properties'    => array_merge( $properties, PostFields::input_schema( PostFields::PAGE ) ) + RegisteredMeta::input_schema(),
+			'properties'    => array_merge( $properties, PostFields::input_schema( PostFields::PAGE ) ),
 			'required'      => [ 'id' ],
 			// Every property besides `id` is a change, so this means at least one change.
 			'minProperties' => 2,
@@ -121,10 +120,6 @@ class Update extends BaseAbility {
 				'status'       => [ 'type' => 'string' ],
 				'permalink'    => [ 'type' => 'string' ],
 				'edit_url'     => [ 'type' => 'string' ],
-				'meta'         => [
-					'type'        => 'object',
-					'description' => 'The custom fields that were sent, as saved. Present only when "meta" was sent.',
-				],
 				'slug'         => [
 					'type'        => 'string',
 					'description' => 'The slug that was saved, which may carry a number WordPress added to keep it unique.',
@@ -228,17 +223,6 @@ class Update extends BaseAbility {
 			$request_data['excerpt'] = sanitize_textarea_field( $args['excerpt'] );
 		}
 
-		if ( isset( $args['meta'] ) ) {
-			$meta = RegisteredMeta::check_write( $args['meta'], $page_id, 'page' );
-			if ( is_wp_error( $meta ) ) {
-				return $meta;
-			}
-
-			if ( $meta !== [] ) {
-				$request_data['meta'] = $meta;
-			}
-		}
-
 		// Create REST request.
 		$request = new WP_REST_Request( 'POST', '/wp/v2/pages/' . $page_id );
 		foreach ( $request_data as $key => $value ) {
@@ -271,10 +255,6 @@ class Update extends BaseAbility {
 			'slug'      => $data['slug'] ?? '',
 			'date'      => $data['date'] ?? '',
 		];
-
-		if ( isset( $request_data['meta'] ) && is_array( $data['meta'] ?? null ) ) {
-			$result['meta'] = array_intersect_key( $data['meta'], $request_data['meta'] );
-		}
 
 		if ( ! empty( $block_issues ) ) {
 			$result['block_issues'] = $block_issues;
