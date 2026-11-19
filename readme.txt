@@ -259,7 +259,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 * A group block sent with its contents written out was saved empty. It now keeps them.
 * Deleting a category or tag through your assistant always failed. Terms have no trash in WordPress, so Albert now deletes them permanently, and the assistant is told so before it asks.
-* Deleting a user through your assistant always failed unless it named someone to take over their posts, while it was told their content would be deleted with them. It must now name the user who receives everything the deleted user wrote.
+* Deleting a user through your assistant always failed unless it named someone to take over their posts, while it was told their content would be deleted with them. It must now name the user who receives everything the deleted user wrote, and it can no longer delete the user it is connected as.
 
 **Security**
 

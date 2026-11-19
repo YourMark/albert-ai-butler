@@ -610,4 +610,25 @@ class UsersAbilityTest extends TestCase {
 
 		$this->assertNotFalse( get_userdata( $victim ) );
 	}
+
+	/**
+	 * DeleteUser refuses to delete the current user, which core's REST route would allow.
+	 *
+	 * @return void
+	 */
+	public function test_delete_user_refuses_self(): void {
+		$self      = get_current_user_id();
+		$inheritor = self::factory()->user->create( [ 'role' => 'administrator' ] );
+
+		$result = ( new DeleteUser() )->execute(
+			[
+				'id'       => $self,
+				'reassign' => $inheritor,
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'cannot_delete_self', $result->get_error_code() );
+		$this->assertNotFalse( get_userdata( $self ) );
+	}
 }

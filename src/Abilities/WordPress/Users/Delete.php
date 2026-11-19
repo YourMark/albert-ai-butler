@@ -44,7 +44,7 @@ class Delete extends BaseAbility {
 			'annotations' => Annotations::delete(
 				'This is not reversible. Everything the user wrote, such as their posts and pages, moves to '
 				. 'the user in `reassign`, so ask the person who should receive it. `albert/find-posts` for '
-				. 'that author shows what moves.'
+				. 'that author shows what moves. The connected user cannot delete themselves.'
 			),
 		];
 
@@ -126,6 +126,15 @@ class Delete extends BaseAbility {
 				'user_not_found',
 				__( 'User not found.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
+			);
+		}
+
+		// Core's REST route allows deleting yourself; only the wp-admin screen refuses it.
+		if ( get_current_user_id() === $user_id ) {
+			return new WP_Error(
+				'cannot_delete_self',
+				__( 'You cannot delete the user you are connected as.', 'albert-ai-butler' ),
+				[ 'status' => 403 ]
 			);
 		}
 
