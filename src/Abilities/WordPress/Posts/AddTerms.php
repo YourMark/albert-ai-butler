@@ -9,10 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
-use Albert\Abilities\WordPress\Shared\PostTerms;
 use Albert\Abstracts\AbstractPostTerms;
 use Albert\Core\Annotations;
-use WP_Error;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -63,16 +61,5 @@ class AddTerms extends AbstractPostTerms {
 	 */
 	protected function apply( array $current, array $sent ): array {
 		return array_merge( $current, $sent );
-	}
-
-	/**
-	 * Tag IDs for the names, creating the tags that do not exist yet.
-	 *
-	 * @param array<int, string> $names Tag names.
-	 * @return array<int, int>|WP_Error
-	 * @since 1.6.0
-	 */
-	protected function resolve_tags( array $names ): array|WP_Error {
-		return PostTerms::tag_ids( $names, 'terms' );
 	}
 }

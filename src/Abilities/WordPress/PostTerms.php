@@ -3,11 +3,11 @@
  * Categories and tags of a post: read for the view abilities, resolved for the write abilities.
  *
  * @package Albert
- * @subpackage Abilities\WordPress\Shared
+ * @subpackage Abilities\WordPress
  * @since      1.6.0
  */
 
-namespace Albert\Abilities\WordPress\Shared;
+namespace Albert\Abilities\WordPress;
 
 use WP_Error;
 use WP_Post;
@@ -152,22 +152,28 @@ class PostTerms {
 	}
 
 	/**
-	 * Tag IDs for the given names, creating the tags that do not exist yet.
+	 * Tag IDs for the given names, creating the tags that do not exist yet when `$create` is true.
 	 *
 	 * New tags go through the REST endpoint, so the user needs core's right to add them.
+	 * Without `$create`, unknown names are skipped.
 	 *
-	 * @param array<int, string> $names Tag names.
-	 * @param string             $field Input field the names came from, for the error code.
+	 * @param array<int, string> $names  Tag names.
+	 * @param bool               $create Whether to create missing tags.
+	 * @param string             $field  Input field the names came from, for the error code.
 	 * @return array<int, int>|WP_Error WP_Error naming the first tag that could not be created.
 	 * @since 1.6.0
 	 */
-	public static function tag_ids( array $names, string $field = 'tags' ): array|WP_Error {
+	public static function tag_ids( array $names, bool $create = true, string $field = 'tags' ): array|WP_Error {
 		$ids = [];
 
 		foreach ( $names as $name ) {
 			$tag = get_term_by( 'name', $name, 'post_tag' );
 			if ( $tag instanceof WP_Term ) {
 				$ids[] = (int) $tag->term_id;
+				continue;
+			}
+
+			if ( ! $create ) {
 				continue;
 			}
 
@@ -199,26 +205,6 @@ class PostTerms {
 				),
 				[ 'status' => $status ]
 			);
-		}
-
-		return array_values( array_unique( $ids ) );
-	}
-
-	/**
-	 * IDs of the tags that exist under the given names; unknown names are skipped.
-	 *
-	 * @param array<int, string> $names Tag names.
-	 * @return array<int, int>
-	 * @since 1.6.0
-	 */
-	public static function existing_tag_ids( array $names ): array {
-		$ids = [];
-
-		foreach ( $names as $name ) {
-			$tag = get_term_by( 'name', $name, 'post_tag' );
-			if ( $tag instanceof WP_Term ) {
-				$ids[] = (int) $tag->term_id;
-			}
 		}
 
 		return array_values( array_unique( $ids ) );

@@ -9,7 +9,7 @@
 
 namespace Albert\Abstracts;
 
-use Albert\Abilities\WordPress\Shared\PostTerms;
+use Albert\Abilities\WordPress\PostTerms;
 use WP_Error;
 use WP_Post;
 use WP_REST_Request;
@@ -35,6 +35,14 @@ abstract class AbstractPostTerms extends BaseAbility {
 	protected const MAX_TERMS = 50;
 
 	/**
+	 * Whether tag names that do not exist yet are created.
+	 *
+	 * @var bool
+	 * @since 1.6.0
+	 */
+	protected const CREATE_TAGS = true;
+
+	/**
 	 * The new term IDs, from the current IDs and the resolved IDs sent.
 	 *
 	 * @param array<int, int> $current IDs on the post now.
@@ -43,15 +51,6 @@ abstract class AbstractPostTerms extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	abstract protected function apply( array $current, array $sent ): array;
-
-	/**
-	 * Tag IDs for the names sent.
-	 *
-	 * @param array<int, string> $names Tag names.
-	 * @return array<int, int>|WP_Error
-	 * @since 1.6.0
-	 */
-	abstract protected function resolve_tags( array $names ): array|WP_Error;
 
 	/**
 	 * Input schema shared by add and remove.
@@ -220,7 +219,7 @@ abstract class AbstractPostTerms extends BaseAbility {
 			}
 		}
 
-		return $this->resolve_tags( $terms );
+		return PostTerms::tag_ids( $terms, static::CREATE_TAGS, 'terms' );
 	}
 
 	/**

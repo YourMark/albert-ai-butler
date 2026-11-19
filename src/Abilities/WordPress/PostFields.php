@@ -3,11 +3,11 @@
  * Post fields beyond title and content
  *
  * @package Albert
- * @subpackage Abilities\WordPress\Shared
+ * @subpackage Abilities\WordPress
  * @since      1.6.0
  */
 
-namespace Albert\Abilities\WordPress\Shared;
+namespace Albert\Abilities\WordPress;
 
 use WP_Error;
 

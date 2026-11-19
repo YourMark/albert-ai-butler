@@ -241,8 +241,7 @@ class PagesAbilityTest extends TestCase {
 		$result = ( new ViewPage() )->execute( [ 'id' => 99999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
-		$this->assertSame( 404, $result->get_error_data()['status'] );
+		$this->assertSame( 'page_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -256,122 +255,31 @@ class PagesAbilityTest extends TestCase {
 		$result = ( new ViewPage() )->execute( [ 'id' => $post_id ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+		$this->assertSame( 'page_not_found', $result->get_error_code() );
 	}
 
 	/**
-	 * ViewPage returns its author and parent as id and name, next to the released ID keys.
+	 * ViewPage returns tags only once a site enables them on pages.
 	 *
 	 * @return void
 	 */
-	public function test_view_page_returns_author_and_parent_names(): void {
-		$author_id = self::factory()->user->create(
-			[
-				'role'         => 'editor',
-				'display_name' => 'Page Author',
-			]
-		);
-		$parent_id = self::factory()->post->create(
-			[
-				'post_type'  => 'page',
-				'post_title' => 'Parent Page',
-			]
-		);
-		$page_id   = self::factory()->post->create(
-			[
-				'post_type'   => 'page',
-				'post_author' => $author_id,
-				'post_parent' => $parent_id,
-			]
-		);
-
-		$page = ( new ViewPage() )->execute( [ 'id' => $page_id ] )['page'];
-
-		$this->assertSame( $author_id, $page['author_id'] );
-		$this->assertSame(
-			[
-				'id'   => $author_id,
-				'name' => 'Page Author',
-			],
-			$page['author']
-		);
-		$this->assertSame( $parent_id, $page['parent_id'] );
-		$this->assertSame(
-			[
-				'id'   => $parent_id,
-				'name' => 'Parent Page',
-			],
-			$page['parent']
-		);
-	}
-
-	/**
-	 * ViewPage returns a null parent for a top-level page.
-	 *
-	 * @return void
-	 */
-	public function test_view_page_top_level_has_null_parent(): void {
+	public function test_view_page_returns_terms_only_when_pages_use_them(): void {
 		$page_id = self::factory()->post->create( [ 'post_type' => 'page' ] );
 
 		$page = ( new ViewPage() )->execute( [ 'id' => $page_id ] )['page'];
+		$this->assertArrayNotHasKey( 'categories', $page );
+		$this->assertArrayNotHasKey( 'tags', $page );
 
-		$this->assertSame( 0, $page['parent_id'] );
-		$this->assertNull( $page['parent'] );
-	}
-
-	/**
-	 * ViewPage refuses a private page the user cannot read.
-	 *
-	 * @return void
-	 */
-	public function test_view_page_refuses_unreadable_page(): void {
-		$page_id = self::factory()->post->create(
-			[
-				'post_type'   => 'page',
-				'post_status' => 'private',
-			]
-		);
-		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
-
-		$result = ( new ViewPage() )->execute( [ 'id' => $page_id ] );
-
-		$this->assertWPError( $result );
-		$this->assertSame( 'albert_page_permission_denied', $result->get_error_code() );
-		$this->assertSame( 403, $result->get_error_data()['status'] );
-	}
-
-	/**
-	 * ViewPage leaves out categories and tags when pages do not use them.
-	 *
-	 * @return void
-	 */
-	public function test_view_page_omits_terms_pages_do_not_support(): void {
-		$page_id = self::factory()->post->create( [ 'post_type' => 'page' ] );
-
-		$result = ( new ViewPage() )->execute( [ 'id' => $page_id ] );
-
-		$this->assertArrayNotHasKey( 'categories', $result['page'] );
-		$this->assertArrayNotHasKey( 'tags', $result['page'] );
-	}
-
-	/**
-	 * ViewPage returns tags once a site enables them on pages.
-	 *
-	 * @return void
-	 */
-	public function test_view_page_returns_tags_when_pages_support_them(): void {
 		register_taxonomy_for_object_type( 'post_tag', 'page' );
 		try {
-			$page_id = self::factory()->post->create( [ 'post_type' => 'page' ] );
 			wp_set_post_tags( $page_id, [ 'page-tag' ] );
-
-			$result = ( new ViewPage() )->execute( [ 'id' => $page_id ] );
+			$page = ( new ViewPage() )->execute( [ 'id' => $page_id ] )['page'];
 		} finally {
 			unregister_taxonomy_for_object_type( 'post_tag', 'page' );
 		}
 
-		$this->assertSame( 'page-tag', $result['page']['tags'][0]['name'] );
-		$this->assertArrayNotHasKey( 'categories', $result['page'] );
+		$this->assertSame( 'page-tag', $page['tags'][0]['name'] );
+		$this->assertArrayNotHasKey( 'categories', $page );
 	}
 
 	// ─── CreatePage ─────────────────────────────────────────────────

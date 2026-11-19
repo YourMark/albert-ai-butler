@@ -9,8 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
-use Albert\Abilities\WordPress\Shared\PostFields;
-use Albert\Abilities\WordPress\Shared\PostTerms;
+use Albert\Abilities\WordPress\PostFields;
+use Albert\Abilities\WordPress\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;

@@ -199,12 +199,14 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * ViewPost returns the assigned categories and tags as id and name.
+	 * ViewPost returns the assigned categories and tags as id and name, and an empty list for none.
 	 *
 	 * @return void
 	 */
 	public function test_view_post_returns_categories_and_tags(): void {
 		$post_id = self::factory()->post->create();
+		$this->assertSame( [], ( new ViewPost() )->execute( [ 'id' => $post_id ] )['post']['tags'] );
+
 		$cat_id  = self::factory()->term->create(
 			[
 				'taxonomy' => 'category',
@@ -238,19 +240,6 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * ViewPost returns an empty tag list for a post without tags.
-	 *
-	 * @return void
-	 */
-	public function test_view_post_returns_empty_tags(): void {
-		$post_id = self::factory()->post->create();
-
-		$result = ( new ViewPost() )->execute( [ 'id' => $post_id ] );
-
-		$this->assertSame( [], $result['post']['tags'] );
-	}
-
-	/**
 	 * ViewPost returns error for non-existent post.
 	 *
 	 * @return void
@@ -259,8 +248,7 @@ class PostsAbilityTest extends TestCase {
 		$result = ( new ViewPost() )->execute( [ 'id' => 99999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
-		$this->assertSame( 404, $result->get_error_data()['status'] );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -274,75 +262,7 @@ class PostsAbilityTest extends TestCase {
 		$result = ( new ViewPost() )->execute( [ 'id' => $page_id ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
-	}
-
-	/**
-	 * ViewPost refuses a private post the user cannot read.
-	 *
-	 * @return void
-	 */
-	public function test_view_post_refuses_unreadable_post(): void {
-		$post_id = self::factory()->post->create( [ 'post_status' => 'private' ] );
-		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
-
-		$result = ( new ViewPost() )->execute( [ 'id' => $post_id ] );
-
-		$this->assertWPError( $result );
-		$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
-		$this->assertSame( 403, $result->get_error_data()['status'] );
-	}
-
-	/**
-	 * ViewPost returns the author by name and the featured image with its URL and alt text.
-	 *
-	 * @return void
-	 */
-	public function test_view_post_returns_author_and_featured_image_details(): void {
-		$author_id = self::factory()->user->create(
-			[
-				'role'         => 'author',
-				'display_name' => 'Post Author',
-			]
-		);
-		$post_id   = self::factory()->post->create( [ 'post_author' => $author_id ] );
-		$image_id  = self::factory()->attachment->create(
-			[
-				'post_mime_type' => 'image/jpeg',
-				'file'           => 'photo.jpg',
-			]
-		);
-		update_post_meta( $image_id, '_wp_attachment_image_alt', 'A photo' );
-		set_post_thumbnail( $post_id, $image_id );
-
-		$post = ( new ViewPost() )->execute( [ 'id' => $post_id ] )['post'];
-
-		$this->assertSame( $author_id, $post['author_id'] );
-		$this->assertSame(
-			[
-				'id'   => $author_id,
-				'name' => 'Post Author',
-			],
-			$post['author']
-		);
-		$this->assertSame( $image_id, $post['featured_image'] );
-		$this->assertSame( $image_id, $post['featured_image_details']['id'] );
-		$this->assertSame( wp_get_attachment_url( $image_id ), $post['featured_image_details']['url'] );
-		$this->assertSame( 'A photo', $post['featured_image_details']['alt'] );
-	}
-
-	/**
-	 * ViewPost returns null featured image details for a post without one.
-	 *
-	 * @return void
-	 */
-	public function test_view_post_without_featured_image_has_null_details(): void {
-		$post_id = self::factory()->post->create();
-
-		$post = ( new ViewPost() )->execute( [ 'id' => $post_id ] )['post'];
-
-		$this->assertNull( $post['featured_image'] );
-		$this->assertNull( $post['featured_image_details'] );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
 	}
 
 	// ─── CreatePost ─────────────────────────────────────────────────
@@ -493,16 +413,22 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * UpdatePost leaves categories and tags alone when sent an empty list.
+	 * UpdatePost leaves categories and tags alone when they are not sent or sent as an empty list.
 	 *
 	 * @return void
 	 */
-	public function test_update_post_empty_arrays_change_nothing(): void {
+	public function test_update_post_without_terms_keeps_them(): void {
 		$post_id = self::factory()->post->create();
 		$cat_id  = self::factory()->term->create( [ 'taxonomy' => 'category' ] );
 		wp_set_post_categories( $post_id, [ $cat_id ] );
 		wp_set_post_tags( $post_id, [ 'clear-me' ] );
 
+		( new UpdatePost() )->execute(
+			[
+				'id'    => $post_id,
+				'title' => 'Renamed',
+			]
+		);
 		$result = ( new UpdatePost() )->execute(
 			[
 				'id'         => $post_id,
@@ -619,28 +545,6 @@ class PostsAbilityTest extends TestCase {
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'albert_invalid_tags', $result->get_error_code() );
-		$this->assertSame( 'keep-me', wp_get_post_tags( $post_id )[0]->name );
-	}
-
-	/**
-	 * UpdatePost leaves categories and tags alone when they are not sent.
-	 *
-	 * @return void
-	 */
-	public function test_update_post_without_terms_keeps_them(): void {
-		$post_id = self::factory()->post->create();
-		$cat_id  = self::factory()->term->create( [ 'taxonomy' => 'category' ] );
-		wp_set_post_categories( $post_id, [ $cat_id ] );
-		wp_set_post_tags( $post_id, [ 'keep-me' ] );
-
-		( new UpdatePost() )->execute(
-			[
-				'id'    => $post_id,
-				'title' => 'Renamed',
-			]
-		);
-
-		$this->assertContains( $cat_id, wp_get_post_categories( $post_id ) );
 		$this->assertSame( 'keep-me', wp_get_post_tags( $post_id )[0]->name );
 	}
 

@@ -128,7 +128,7 @@ class OutcomeTest extends TestCase {
 			'switched off'        => [ 'ability_disabled' ],
 			'upload link revoked' => [ 'capability_revoked' ],
 			'core rest'           => [ 'rest_forbidden' ],
-			'per-object'          => [ 'forbidden' ],
+			'albert per-object'   => [ 'forbidden' ],
 		];
 	}
 

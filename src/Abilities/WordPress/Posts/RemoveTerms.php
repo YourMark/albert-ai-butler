@@ -9,10 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
-use Albert\Abilities\WordPress\Shared\PostTerms;
 use Albert\Abstracts\AbstractPostTerms;
 use Albert\Core\Annotations;
-use WP_Error;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -22,6 +20,14 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.6.0
  */
 class RemoveTerms extends AbstractPostTerms {
+
+	/**
+	 * Removing a tag never creates one; an unknown name is skipped.
+	 *
+	 * @var bool
+	 * @since 1.6.0
+	 */
+	protected const CREATE_TAGS = false;
 
 	/**
 	 * Constructor.
@@ -68,17 +74,6 @@ class RemoveTerms extends AbstractPostTerms {
 	 */
 	protected function apply( array $current, array $sent ): array {
 		return array_values( array_diff( $current, $sent ) );
-	}
-
-	/**
-	 * IDs of the tags that exist; removing a tag never creates one.
-	 *
-	 * @param array<int, string> $names Tag names.
-	 * @return array<int, int>
-	 * @since 1.6.0
-	 */
-	protected function resolve_tags( array $names ): array|WP_Error {
-		return PostTerms::existing_tag_ids( $names );
 	}
 
 	/**

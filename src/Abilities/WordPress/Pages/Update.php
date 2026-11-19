@@ -9,7 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
-use Albert\Abilities\WordPress\Shared\PostFields;
+use Albert\Abilities\WordPress\PostFields;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
@@ -128,7 +128,7 @@ class Update extends BaseAbility {
 				],
 				'block_issues' => [
 					'type'        => 'array',
-					'description' => 'Optional, non-fatal block validation warnings (the page was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the page is not updated.',
+					'description' => 'Optional, non-fatal block validation warnings (the page was still saved). Each is an actionable message such as "content[0].attributes.level must be between 1 and 6 (got 9). Defaulting to 2.". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the page is not updated.',
 					'items'       => [ 'type' => 'string' ],
 				],
 			],
