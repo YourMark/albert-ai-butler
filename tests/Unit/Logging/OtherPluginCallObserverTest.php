@@ -15,7 +15,6 @@ use Albert\Logging\OtherPluginCallObserver;
 use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\Unit\StubAbility;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use WP_Error;
 
 /**
@@ -33,6 +32,11 @@ class OtherPluginCallObserverTest extends TestCase {
 	private OtherPluginCallObserver $observer;
 
 	/**
+	 * Another plugin's ability.
+	 */
+	private const ABILITY = 'koko-analytics/get-top-pages';
+
+	/**
 	 * Reset hooks, marker and connection before each test.
 	 *
 	 * @return void
@@ -43,6 +47,7 @@ class OtherPluginCallObserverTest extends TestCase {
 		$GLOBALS['albert_test_user_id'] = 42;
 		ExecutionLogMarker::reset();
 		ConnectionContext::set( 'client-1' );
+		( new \ReflectionProperty( OtherPluginCallObserver::class, 'observed' ) )->setValue( null, [] );
 		$this->observer = new OtherPluginCallObserver();
 	}
 
@@ -57,17 +62,17 @@ class OtherPluginCallObserverTest extends TestCase {
 	}
 
 	/**
-	 * Wrap a callback the way registration would and return the wrapped one.
+	 * Register an ability the way core would, so the observer can claim it.
 	 *
-	 * @param callable $callback Original execute_callback.
-	 * @param string   $name     Ability name.
+	 * @param string $name     Ability name.
+	 * @param mixed  $callback The execute_callback.
 	 *
-	 * @return callable
+	 * @return void
 	 */
-	private function wrap( callable $callback, string $name = 'koko-analytics/get-top-pages' ): callable {
-		$args = $this->observer->wrap_execute_callback( [ 'execute_callback' => $callback ], $name );
+	private function register( string $name = self::ABILITY, $callback = null ): void {
+		$args = [ 'execute_callback' => $callback ?? static fn() => [] ];
 
-		return $args['execute_callback'];
+		$this->assertSame( $args, $this->observer->note_ability( $args, $name ) );
 	}
 
 	/**
@@ -85,94 +90,59 @@ class OtherPluginCallObserverTest extends TestCase {
 	}
 
 	/**
-	 * A success is logged once core accepted the output, not from the callback.
+	 * A success is logged with the user who made it.
 	 *
 	 * @return void
 	 */
-	public function test_logs_a_successful_call_after_core_accepts_it(): void {
-		$wrapped = $this->wrap( static fn( $input ) => [ 'pages' => [ '/' ] ] );
+	public function test_logs_a_successful_call(): void {
+		$this->register();
 
-		$result = $wrapped( [ 'limit' => 5 ] );
-
-		$this->assertSame( [ 'pages' => [ '/' ] ], $result );
-		$this->assertSame( [], $this->after_execute_calls(), 'Output validation has not run yet.' );
-
-		$this->observer->record_success( 'koko-analytics/get-top-pages', [ 'limit' => 5 ], $result );
+		$this->observer->record_success( self::ABILITY, [ 'limit' => 5 ], [ 'pages' => [ '/' ] ] );
 
 		$calls = $this->after_execute_calls();
 		$this->assertCount( 1, $calls );
-		$this->assertSame( [ 'koko-analytics/get-top-pages', [ 'limit' => 5 ], [ 'pages' => [ '/' ] ], 42 ], $calls[0]['args'] );
+		$this->assertSame( [ self::ABILITY, [ 'limit' => 5 ], [ 'pages' => [ '/' ] ], 42 ], $calls[0]['args'] );
 	}
 
 	/**
-	 * A WP_Error from the callback is logged as is.
+	 * A WP_Error result is logged and passed through unchanged.
 	 *
 	 * @return void
 	 */
 	public function test_logs_a_failed_call(): void {
-		$error   = new WP_Error( 'koko_unavailable', 'No data.' );
-		$wrapped = $this->wrap( static fn( $input ) => $error );
+		$this->register();
+		$error = new WP_Error( 'koko_unavailable', 'No data.' );
 
-		$this->assertSame( $error, $wrapped( [] ) );
+		$this->assertSame( $error, $this->observer->record_failure( $error, self::ABILITY, [] ) );
 		$this->assertSame( $error, $this->after_execute_calls()[0]['args'][2] );
 	}
 
 	/**
-	 * A throwing callback is logged and the exception still reaches core.
+	 * A thrown exception arrives as core's WP_Error and is logged like any failure.
 	 *
 	 * @return void
 	 */
-	public function test_logs_and_rethrows_an_exception(): void {
-		$wrapped = $this->wrap(
-			static function (): void {
-				throw new RuntimeException( 'boom' );
-			}
-		);
+	public function test_logs_an_exception_core_turned_into_an_error(): void {
+		$this->register();
+		$error = new WP_Error( 'ability_callback_exception', 'boom' );
 
-		try {
-			$wrapped();
-			$this->fail( 'Expected the exception to be rethrown.' );
-		} catch ( RuntimeException $e ) {
-			$this->assertSame( 'boom', $e->getMessage() );
-		}
-
-		$logged = $this->after_execute_calls()[0]['args'][2];
-		$this->assertInstanceOf( WP_Error::class, $logged );
-		$this->assertSame( 'ability_callback_exception', $logged->get_error_code() );
-	}
-
-	/**
-	 * Scalars are wrapped so the hook still receives arrays.
-	 *
-	 * @return void
-	 */
-	public function test_wraps_scalar_input_and_result(): void {
-		$this->wrap( static fn( $input ) => 7 );
-
-		$this->observer->record_success( 'koko-analytics/get-top-pages', 'abc', 7 );
+		$this->observer->record_failure( $error, self::ABILITY, null );
 
 		$args = $this->after_execute_calls()[0]['args'];
-		$this->assertSame( [ 'input' => 'abc' ], $args[1] );
-		$this->assertSame( [ 'result' => 7 ], $args[2] );
+		$this->assertSame( [], $args[1] );
+		$this->assertSame( 'ability_callback_exception', $args[2]->get_error_code() );
 	}
 
 	/**
-	 * Without input schema core passes no argument; the callback gets none either.
+	 * A successful result is left for wp_after_execute_ability, after output validation.
 	 *
 	 * @return void
 	 */
-	public function test_passes_no_argument_when_core_passes_none(): void {
-		$received = null;
-		$wrapped  = $this->wrap(
-			static function ( ...$args ) use ( &$received ): array {
-				$received = $args;
-				return [];
-			}
-		);
+	public function test_does_not_log_a_success_from_the_result_filter(): void {
+		$this->register();
 
-		$wrapped();
-
-		$this->assertSame( [], $received );
+		$this->assertSame( [ 'ok' => true ], $this->observer->record_failure( [ 'ok' => true ], self::ABILITY, [] ) );
+		$this->assertSame( [], $this->after_execute_calls() );
 	}
 
 	/**
@@ -182,9 +152,10 @@ class OtherPluginCallObserverTest extends TestCase {
 	 */
 	public function test_ignores_calls_outside_a_connection(): void {
 		ConnectionContext::reset();
-		$this->wrap( static fn( $input ) => [] );
+		$this->register();
 
-		$this->observer->record_success( 'koko-analytics/get-top-pages', [], [] );
+		$this->observer->record_success( self::ABILITY, [], [] );
+		$this->observer->record_failure( new WP_Error( 'x', 'y' ), self::ABILITY, [] );
 
 		$this->assertSame( [], $this->after_execute_calls() );
 	}
@@ -195,48 +166,39 @@ class OtherPluginCallObserverTest extends TestCase {
 	 * @return void
 	 */
 	public function test_skips_a_call_already_logged(): void {
-		ExecutionLogMarker::mark( 'koko-analytics/get-top-pages' );
-		$this->wrap( static fn( $input ) => [] );
+		ExecutionLogMarker::mark( self::ABILITY );
+		$this->register();
 
-		$this->observer->record_success( 'koko-analytics/get-top-pages', [], [] );
-
-		$this->assertSame( [], $this->after_execute_calls() );
-	}
-
-	/**
-	 * A success for an ability this observer did not wrap is not its to log.
-	 *
-	 * @return void
-	 */
-	public function test_ignores_success_of_an_unwrapped_ability(): void {
-		$this->observer->record_success( 'albert/never-wrapped', [], [] );
+		$this->observer->record_success( self::ABILITY, [], [] );
 
 		$this->assertSame( [], $this->after_execute_calls() );
 	}
 
 	/**
-	 * Albert's own abilities are left alone: they fire the hooks themselves.
+	 * Albert's own abilities fire the hooks themselves, so they are skipped even
+	 * when the marker is unset (Free's logging off, or an early return).
 	 *
 	 * @return void
 	 */
-	public function test_leaves_albert_abilities_unwrapped(): void {
-		$callback = [ new StubAbility( 'albert/find-posts', [] ), 'guarded_execute' ];
+	public function test_leaves_albert_abilities_alone(): void {
+		$this->register( 'albert/find-posts', [ new StubAbility( 'albert/find-posts', [] ), 'guarded_execute' ] );
 
-		$args = $this->observer->wrap_execute_callback( [ 'execute_callback' => $callback ], 'albert/find-posts' );
+		$this->observer->record_success( 'albert/find-posts', [], [] );
+		$this->observer->record_failure( new WP_Error( 'x', 'y' ), 'albert/find-posts', [] );
 
-		$this->assertSame( $callback, $args['execute_callback'] );
+		$this->assertSame( [], $this->after_execute_calls() );
 	}
 
 	/**
-	 * The adapter's meta-tools are left alone: they only proxy an ability.
+	 * The adapter's meta-tools only proxy an ability, which is logged itself.
 	 *
 	 * @return void
 	 */
-	public function test_leaves_transport_abilities_unwrapped(): void {
-		$callback = static fn() => [];
+	public function test_leaves_transport_abilities_alone(): void {
+		$this->register( 'mcp-adapter/execute-ability' );
 
-		$args = $this->observer->wrap_execute_callback( [ 'execute_callback' => $callback ], 'mcp-adapter/execute-ability' );
+		$this->observer->record_success( 'mcp-adapter/execute-ability', [], [] );
 
-		$this->assertSame( $callback, $args['execute_callback'] );
+		$this->assertSame( [], $this->after_execute_calls() );
 	}
 }
