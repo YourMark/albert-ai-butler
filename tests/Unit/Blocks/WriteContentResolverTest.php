@@ -130,14 +130,17 @@ class WriteContentResolverTest extends TestCase {
 	}
 
 	public function test_block_surfaces_warning_issues_while_still_saving(): void {
-		// core/image with no url is a recoverable degradation: a warning rides
+		// A clamped heading level is a recoverable degradation: a warning rides
 		// along in block_issues but the markup is still produced.
 		$result = ( new WriteContentResolver() )->resolve(
 			[
 				'blocks' => [
 					[
-						'name'       => 'core/image',
-						'attributes' => [ 'alt' => 'Missing url' ],
+						'name'       => 'core/heading',
+						'attributes' => [
+							'level'   => 9,
+							'content' => 'Too deep',
+						],
 					],
 				],
 			],
@@ -145,9 +148,9 @@ class WriteContentResolverTest extends TestCase {
 		);
 
 		$this->assertIsArray( $result );
-		$this->assertStringContainsString( '<!-- wp:image', $result['content'] );
+		$this->assertStringContainsString( '<!-- wp:heading', $result['content'] );
 		$this->assertNotSame( [], $result['block_issues'] );
-		$this->assertStringContainsString( 'url is required', implode( ' ', $result['block_issues'] ) );
+		$this->assertStringContainsString( 'Defaulting to 2', implode( ' ', $result['block_issues'] ) );
 	}
 
 	public function test_block_with_disallowed_block_returns_validation_error(): void {

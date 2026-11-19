@@ -18,13 +18,13 @@ You already ask ChatGPT or Claude to plan posts, rewrite copy and answer questio
 
 Albert removes that step. Connect your AI assistant to your site once, and it writes, edits and files your content directly, in real WordPress blocks, inside limits you set. No copy and paste, no plugin-specific chat window, no code.
 
-**The easiest and safest way to use the WordPress MCP Adapter.** The MCP Adapter is WordPress's own way for AI assistants to reach a site, and on its own it leaves setup, sign-in and permissions to you. Albert adds them: a guided setup, a proper sign-in, a list of who may connect, and nothing destructive without your approval.
+**The easiest and safest way to use the WordPress MCP Adapter.** The MCP Adapter is WordPress's own way for AI assistants to reach a site, and on its own it leaves setup, sign-in and permissions to you. Albert adds them: a guided setup, a proper sign-in, a list of who may connect, and your approval before anything is deleted.
 
-* **Nothing destructive without you.** Safe mode is on from the start. Deleting content, changing someone's role or rewriting a key setting waits for your approval, and the assistant cannot approve its own request.
+* **Deletions wait for you.** Safe mode is on from the start. Deleting content, creating or changing a user account, or changing a key site setting waits for your approval, and the assistant cannot approve its own request. Ordinary edits to posts and pages go ahead without approval.
 * **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 * **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 * **No tracking.** Albert sends nothing about your site or your usage anywhere.
-* **Personal data hidden by default.** Names, email addresses, phone numbers and postal addresses are masked before an assistant sees them. New sites start on Strict.
+* **Personal data hidden by default.** When an assistant looks up users, customers or orders, names, email addresses, phone numbers and postal addresses are masked. New sites start on Strict.
 
 ---
 
@@ -42,7 +42,7 @@ Most AI plugins hand WordPress a wall of HTML and leave you to clean it up. Albe
 
 * **Real blocks, not raw HTML.** Headings, lists, quotes, images, buttons, columns and groups come back as proper blocks you can edit like anything else.
 * **One block at a time.** Change, add, move or remove a single paragraph without your assistant rewriting the whole page.
-* **No "this block contains unexpected content".** Albert checks blocks as they are written and corrects the assistant before the content reaches your post.
+* **Built to avoid "this block contains unexpected content".** For WordPress's own common blocks (paragraphs, headings, lists, quotes, images, buttons, columns, groups and a few more), Albert writes the markup the editor expects and corrects the assistant before anything is saved. Blocks from other plugins can still need a look in the editor.
 * **Classic editor too.** On a classic site, content is read and saved as HTML instead. Both work.
 
 ---
@@ -51,10 +51,10 @@ Most AI plugins hand WordPress a wall of HTML and leave you to clean it up. Albe
 
 An assistant that does not know your site invents things: brand colours you never chose, a tone that is not yours, categories that do not exist.
 
-* **Write your instructions once.** Your tone, your vocabulary, anything it must never touch. Albert sends them with every conversation.
-* **Your site describes itself.** Language, timezone, theme colours and fonts, post types, taxonomies and shop settings go along too, but only when your theme genuinely declares them.
+* **Write your instructions once.** Your tone, your vocabulary, what to leave alone. Albert gives them to your assistant whenever it asks what your site can do, as guidance, not as rules Albert enforces. To stop it touching something, switch that action off.
+* **Your site describes itself.** Language, timezone, post types, taxonomies and, with WooCommerce, shop settings go along too, plus theme colours and fonts, but only when your theme genuinely declares them.
 * **See exactly what is sent**, and switch off any part an assistant does not need.
-* **Your text is information, never orders.** Content from your site can shape subject matter and tone. It can never change what an assistant is allowed to do.
+* **Text never changes what it may do.** Albert tells your assistant that your instructions and your site's content are information, not orders. Whatever any text says, your switches, your WordPress roles and safe mode still decide what it can do.
 
 ---
 
@@ -65,19 +65,19 @@ Not every guest needs a key to every room.
 * **Every action listed and labelled** Read, Write or Delete, with its own switch. Changes save instantly.
 * **Write and delete start switched off.** You turn on exactly what you want, and nothing else.
 * **Your WordPress roles still apply.** An assistant can never do more than the person who approved it.
-* **New actions arrive switched off**, so a plugin update never quietly widens what an assistant can reach.
+* **New actions arrive switched off** once you have saved your choices, so a plugin update never quietly widens what an assistant can reach.
 * **You choose who may connect.** Only the people on your list can approve an assistant. Each gets their own Connect page, and Send setup link emails them a link to the steps.
 * **Revoke any connection at any time.**
 
 ---
 
-### Nothing destructive happens without you
+### Deletions wait for you
 
-Switched on by default. When your assistant asks to delete a post, change someone's role, or rewrite a foundational setting, the action does not run. It waits for you.
+Switched on by default. When your assistant asks to delete a post, create or change a user account, or rewrite a foundational setting, the action does not run. It waits for you. Ordinary edits to posts and pages go ahead without approval.
 
 * **Held, not logged after the fact.** The request is stopped before it happens, not reported once it has.
 * **You see what it would actually change**, resolved as it is now: "Delete the post 'Pricing' (published)", not a line of code. If the page changed since the request, you are told before you approve.
-* **Approve what you could do yourself.** Editors approve their own requests; administrators approve anyone's. Nobody gains reach they did not already have.
+* **Approve what you could do yourself.** Each person approves their own requests, as long as they may still do what was asked; administrators approve anyone's. Nobody gains reach they did not already have.
 * **The assistant cannot approve its own work**, cannot switch safe mode off, and cannot touch the settings that control it.
 * **Requests expire** if nobody decides, so an old intent cannot be approved against today's site.
 
@@ -85,15 +85,15 @@ Switched on by default. When your assistant asks to delete a post, change someon
 
 ### Personal data stays private
 
-Albert hides your visitors' and customers' details, names, email addresses, phone numbers and postal addresses, before anything reaches an assistant.
+When your assistant looks up users, customers or orders, Albert hides their names, email addresses, phone numbers and postal addresses before the answer leaves your site. What other plugins' actions return is up to those plugins.
 
-Choose **Strict**, **Balanced** or **Off**. New sites start on Strict. Reveal the real details only when you ask, and only if your own account is allowed to see them.
+Choose **Strict**, **Balanced** or **Off**. New sites start on Strict. On Balanced, the real details are shown only when you ask, and only if your own account is allowed to see them.
 
 ---
 
-### See everything that happened
+### See what happened
 
-* **Every call is recorded**: which action, which assistant, which user, how long it took.
+* **Recent activity on the dashboard**: which action ran, who ran it, when, and how it ended. The Abilities screen shows when each action last ran. Albert Premium keeps a full log.
 * **Blocked is not Failed.** A request your own rules refused reads differently from one that broke.
 * **Needs your attention** surfaces standing problems on the dashboard, and stays quiet when there are none.
 
@@ -175,19 +175,19 @@ No. Copy a URL, paste it into your assistant, approve the request. There are no 
 
 = Can my AI assistant break my site? =
 
-It can only do what you switched on. Write and delete actions start off, new actions added by an update also start off, and every action still obeys your WordPress roles, so an assistant can never do more than the person who approved it. You can revoke a connection at any time, and the activity log shows everything that was done.
+It can only do what you switched on. Write and delete actions start off, new actions added by an update also start off once you have saved your choices, and every action still obeys your WordPress roles, so an assistant can never do more than the person who approved it. You can revoke a connection at any time, and the dashboard shows recent activity.
 
 = Will the content look right in the block editor? =
 
-Yes. Albert writes real WordPress blocks, headings, lists, images, columns and the rest, not a wall of HTML pasted into one paragraph. It validates blocks as they are written, so you do not get the "this block contains unexpected content" warning. Classic editor sites are supported too.
+Yes. Albert writes real WordPress blocks, headings, lists, images, columns and the rest, not a wall of HTML pasted into one paragraph. For WordPress's own common blocks it writes the markup the editor expects, so you do not get the "this block contains unexpected content" warning. Blocks from other plugins can still need a look. Classic editor sites are supported too.
 
 = Does my AI assistant see my visitors' and customers' personal data? =
 
-Not by default. Albert hides names, email addresses, phone numbers and postal addresses before anything is sent. Choose Strict, Balanced or Off, and reveal the real details only when you ask.
+Not by default. When it looks up users, customers or orders, Albert hides names, email addresses, phone numbers and postal addresses before anything is sent. Choose Strict, Balanced or Off; on Balanced you can reveal the real details when you ask.
 
 = How does Albert know anything about my site? =
 
-You write instructions once, and Albert sends them with every conversation along with your language, timezone, theme colours and fonts, content types and shop settings. You can preview exactly what is sent and switch off any part of it.
+You write instructions once, and Albert gives them to your assistant whenever it asks what your site can do, along with your language, timezone, theme colours and fonts, content types and shop settings. They guide the assistant; they are not rules Albert enforces. You can preview exactly what is sent and switch off any part of it.
 
 = Is my AI assistant connection secure? =
 
@@ -238,10 +238,12 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * **Abilities that stay on for your staging site.** A setting in your site's code can switch abilities on for assistants on a staging, development or local copy of your site, without changing the switches on the Abilities screen. Copying your live site over a staging copy no longer turns everything back off. You choose to switch on every ability, or every ability that is not marked Destructive; your live site keeps using its own switches. Safe mode still holds what it would hold, and the Abilities screen says when such a setting is in use.
 * **Schedule posts and set their details.** Your assistant can now schedule a post or page to publish later, and set its address (slug), author, parent page, page order, template, whether comments are open, whether a post stays at the top of the blog, and its post format. If a request would not work, such as an author who cannot edit that content or a template your theme does not offer, Albert refuses it and says what to send instead.
 * **Fill in missing alt text.** Your assistant can now find the images in your media library that have no alt text, and write the alt text, title, caption and description of any media file. It can also delete a media file; deleting is permanent, so safe mode holds it for your approval. Both new tools are off until you switch them on, and the Dashboard then suggests asking which images are missing alt text.
+* **Change a word without rewriting the page.** Your assistant can now replace a piece of text in a post or page, such as a price, a name or a link, without sending the whole page back. It must say how often the text occurs, so a replacement never lands in more places than intended, and it is refused when it would change a block's layout or settings instead of its text. It works on titles, excerpts and classic posts too. Like other new writing tools, it is off until you switch it on.
 
 **Improvements**
 
 * The Abilities screen now labels an ability from another plugin that doesn't say whether it only reads or can change something as Not declared, instead of guessing Write, and explains what that means. Albert still treats it as one that can make changes, so safe mode holds it.
+* The Abilities screen no longer shows a "Required capability" for each ability. It was a guess from the ability's name and was wrong in places. Without Albert Premium's advanced permissions, the ability's own permission check decides, as it always did.
 * When your assistant edits a single block and the new text would lose a tag the block had, such as a ThirstyAffiliates link, Albert refuses the edit and tells the assistant to ask you first. Nothing is saved until you agree.
 * Albert is about 2 MB smaller: the Abilities and Skills screens now share one copy of their table instead of each carrying its own.
 * Ordinary page views on your site no longer load Albert's abilities, so the pages your visitors see do a little less work.
@@ -250,6 +252,8 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 * When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
 * When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
+* Albert no longer saves a block it can only guess, such as an image without an address, a cover or a block from another plugin without its markup, or blocks nested where the editor would drop them. Your assistant gets a message saying what to send instead, and nothing is saved.
+* The Context screen now says when a saved change takes effect: the next time an assistant asks what your site can do. A conversation that is already open keeps what it started with, so start a new one to use your changes.
 
 **Fixes**
 
@@ -258,6 +262,9 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
 * Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 * A group block sent with its contents written out was saved empty. It now keeps them.
+* Copying a page or post block by block lost its bold text, links and images, and centred headings opened in the editor as broken, while the assistant was told it had worked. Each block now comes with its saved markup when your assistant reads it, so it is written back exactly as it was.
+* The Documentation link on the Dashboard opened a different plugin's page on WordPress.org. It now opens Albert's own page.
+* The translation template included with Albert was named for an old text domain and dated from its first release, so it listed almost none of the current text. It is now named `albert-ai-butler.pot` and covers everything Albert shows, so translation tools can offer the whole plugin.
 * Send setup link only offered Copy link once someone's invitation had expired, exactly when emailing them again matters most. It now offers to email anyone on the list who has an email address, and emailing an expired invitation renews it, with the new expiry date in the email.
 
 **Security**
@@ -269,6 +276,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 **Developer**
 
+* Deprecated the `albert/abilities/required_capability` filter and `AbilitiesRegistry::resolve_required_capability()`; neither has any effect now, and the method returns an empty string. The `capability` and `capabilityRoles` keys of an Abilities screen row are always empty and will be removed in a future version.
 * Switching an ability off no longer unregisters it. Albert's MCP server leaves it out of discovery and refuses to describe or run it, and safe mode refuses to approve a held call for it. An Albert ability that an add-on refuses, such as one that needs a licence, is still unregistered.
 * `albert/abilities/disabled_list` now also applies to Albert's own abilities.
 * An Abilities screen row's `operation` is now `undeclared` (it was `write`) for an ability whose annotations set neither `readonly` nor `destructive`.
@@ -284,6 +292,8 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 * Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 * `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
+* The `blocks` tree from `albert/view-post`, `albert/view-page`, `albert/find-posts`, `albert/find-pages` and the block-edit abilities gives each block without inner blocks its saved markup in `html`. A block spec whose markup-sourced attribute (such as `content` or `url`) differs from the `html` sent with it is refused, as are an image without `url`, children under a block that cannot nest them, and a registered block Albert has no template for unless it comes with `html`; these were warnings in `block_issues`.
+* New abilities `albert/replace-post-text` and `albert/replace-page-text`: `post_id` or `page_id`, `search`, `replace`, `field` (`content`, `title` or `excerpt`), `expected_count` (default 1) and `remove_tags`. Errors: `albert_invalid_search` (text not found), `albert_invalid_expected_count` (with `count`), `albert_invalid_replace` (the change alters blocks), `albert_invalid_field` (the post type has no such field), `albert_post_not_found` or `albert_page_not_found`, `albert_post_permission_denied` or `albert_page_permission_denied`, and `tags_removed`. A `notice` in the result says when WordPress stored something other than what was sent.
 
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
@@ -421,7 +431,7 @@ Initial release. Connect Claude Desktop, ChatGPT, and other MCP-compatible AI as
 
 Albert runs entirely on your own site. It has no servers of its own and sends no data about your site or your usage anywhere. The only request it makes is Site Health checking your site's own sign-in address.
 
-**What reaches your assistant.** Only the site context you choose to send, and the results of the actions you have switched on, for the person who approved the connection, within their WordPress permissions. Before a result leaves your site, Albert masks visitors' and customers' personal details according to your privacy mode: Strict, Balanced or Off. New sites start on Strict. What your assistant's provider then does with that text is covered by their own privacy policy.
+**What reaches your assistant.** Only the site context you choose to send, and the results of the actions you have switched on, for the person who approved the connection, within their WordPress permissions. Before a user, customer or order result from Albert's own actions leaves your site, Albert masks personal details according to your privacy mode: Strict, Balanced or Off. Other plugins' actions are not masked by Albert. New sites start on Strict. What your assistant's provider then does with that text is covered by their own privacy policy.
 
 **What Albert keeps, in your own database:**
 
@@ -436,7 +446,7 @@ Uninstalling Albert removes its tables and settings. On a multisite network this
 
 Developed by Mark Jansen, Your Mark Media
 Website: https://yourmark.nl
-Plugin URL: https://wordpress.org/plugins/albert/
+Plugin URL: https://wordpress.org/plugins/albert-ai-butler/
 
 Built with:
 * league/oauth2-server for OAuth 2.0 implementation
