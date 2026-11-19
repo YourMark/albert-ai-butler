@@ -38,10 +38,9 @@ trait MediaFileAccess {
 	 */
 	private function check_media_permission( mixed $input, string $capability, string $refusal ): bool|WP_Error {
 		$allowed  = $this->require_capability( 'upload_files' );
-		$media_id = is_array( $input ) ? self::positive_id( $input, 'id' ) : null;
+		$media_id = is_array( $input ) ? absint( $input['id'] ?? 0 ) : 0;
 
-		// An invalid ID is refused by execute(), with the reason.
-		if ( $allowed !== true || ! is_int( $media_id ) || self::media_not_found( $media_id ) !== null ) {
+		if ( $allowed !== true || $media_id === 0 || self::media_not_found( $media_id ) !== null ) {
 			return $allowed;
 		}
 

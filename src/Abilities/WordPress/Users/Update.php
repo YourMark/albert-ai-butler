@@ -172,10 +172,7 @@ class Update extends BaseAbility {
 			);
 		}
 
-		$user_id = self::positive_id( $args, 'id' );
-		if ( $user_id instanceof WP_Error ) {
-			return $user_id;
-		}
+		$user_id = absint( $args['id'] );
 
 		// Check if user exists.
 		if ( ! get_userdata( $user_id ) ) {

@@ -119,10 +119,7 @@ class Delete extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post_id = self::positive_id( $args, 'id' );
-		if ( $post_id instanceof WP_Error ) {
-			return $post_id;
-		}
+		$post_id = absint( $args['id'] );
 
 		// Check if post exists.
 		$post = get_post( $post_id );

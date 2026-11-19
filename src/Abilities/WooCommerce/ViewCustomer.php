@@ -110,10 +110,7 @@ class ViewCustomer extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$customer_id = self::positive_id( $args, 'id' );
-		if ( $customer_id instanceof WP_Error ) {
-			return $customer_id;
-		}
+		$customer_id = absint( $args['id'] );
 
 		try {
 			$customer = new WC_Customer( $customer_id );

@@ -189,11 +189,8 @@ class ViewPost extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post_id = self::positive_id( $args, 'id' );
-		if ( $post_id instanceof WP_Error ) {
-			return $post_id;
-		}
-		$post = get_post( $post_id );
+		$post_id = absint( $args['id'] );
+		$post    = get_post( $post_id );
 
 		if ( ! $post || $post->post_type !== 'post' ) {
 			return new WP_Error(

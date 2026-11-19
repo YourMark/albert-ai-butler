@@ -111,11 +111,8 @@ class ViewOrder extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$order_id = self::positive_id( $args, 'id' );
-		if ( $order_id instanceof WP_Error ) {
-			return $order_id;
-		}
-		$order = wc_get_order( $order_id );
+		$order_id = absint( $args['id'] );
+		$order    = wc_get_order( $order_id );
 
 		if ( ! $order instanceof WC_Order ) {
 			return new WP_Error(

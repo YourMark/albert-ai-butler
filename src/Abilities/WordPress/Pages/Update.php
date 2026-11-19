@@ -167,10 +167,7 @@ class Update extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$page_id = self::positive_id( $args, 'id' );
-		if ( $page_id instanceof WP_Error ) {
-			return $page_id;
-		}
+		$page_id = absint( $args['id'] );
 
 		// Check if page exists using REST API.
 		$check_request  = new WP_REST_Request( 'GET', '/wp/v2/pages/' . $page_id );

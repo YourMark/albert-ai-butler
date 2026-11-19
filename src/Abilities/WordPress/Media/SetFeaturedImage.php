@@ -119,14 +119,8 @@ class SetFeaturedImage extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$post_id = self::positive_id( $args, 'post_id' );
-		if ( $post_id instanceof WP_Error ) {
-			return $post_id;
-		}
-		$attachment_id = self::positive_id( $args, 'attachment_id' );
-		if ( $attachment_id instanceof WP_Error ) {
-			return $attachment_id;
-		}
+		$post_id       = absint( $args['post_id'] );
+		$attachment_id = absint( $args['attachment_id'] );
 
 		// Verify the post exists using REST API.
 		$post_request  = new WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );

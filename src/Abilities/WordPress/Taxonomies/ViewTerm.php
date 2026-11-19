@@ -106,10 +106,7 @@ class ViewTerm extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$term_id = self::positive_id( $args, 'id' );
-		if ( $term_id instanceof WP_Error ) {
-			return $term_id;
-		}
+		$term_id  = absint( $args['id'] );
 		$taxonomy = sanitize_key( $args['taxonomy'] );
 
 		if ( ! taxonomy_exists( $taxonomy ) ) {

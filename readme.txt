@@ -284,7 +284,6 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 * Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 * `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
-* Every ID input that picks the item to read, change or delete (`id` on posts, pages, blocks, media, users, terms and WooCommerce views; `post_id` and `attachment_id` on `albert/set-featured-image`) declares `minimum: 1`. Called directly, an ability refuses an ID below 1 with `albert_invalid_{field}` and a missing one with `albert_missing_{field}`.
 
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.

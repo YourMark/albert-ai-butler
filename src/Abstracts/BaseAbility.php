@@ -469,43 +469,6 @@ abstract class BaseAbility implements Ability {
 	}
 
 	/**
-	 * Read an ID input as a positive integer, refusing anything else.
-	 *
-	 * Never `absint()`: it turns `-5` into `5` and acts on another object. A digit
-	 * string is accepted because core's schema check lets `"5"` through as a string.
-	 *
-	 * @param array<string, mixed> $args  Ability input.
-	 * @param string               $field Input name, also used in the error code.
-	 * @return int|WP_Error The ID, or `albert_missing_{field}` / `albert_invalid_{field}`.
-	 * @since 1.6.0
-	 */
-	protected static function positive_id( array $args, string $field ): int|WP_Error {
-		$value = $args[ $field ] ?? null;
-
-		if ( $value === null ) {
-			return new WP_Error(
-				'albert_missing_' . $field,
-				/* translators: %s: input name. */
-				sprintf( __( 'The "%s" parameter is required.', 'albert-ai-butler' ), $field ),
-				[ 'status' => 400 ]
-			);
-		}
-
-		$id = is_int( $value ) ? $value : ( is_string( $value ) && ctype_digit( $value ) ? (int) $value : 0 );
-
-		if ( $id < 1 ) {
-			return new WP_Error(
-				'albert_invalid_' . $field,
-				/* translators: %s: input name. */
-				sprintf( __( 'The "%s" parameter must be a whole number of 1 or more.', 'albert-ai-butler' ), $field ),
-				[ 'status' => 400 ]
-			);
-		}
-
-		return $id;
-	}
-
-	/**
 	 * Require that the current user has a specific capability.
 	 *
 	 * Returns true on success or a descriptive WP_Error on failure,
