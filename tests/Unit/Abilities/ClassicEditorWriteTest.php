@@ -161,11 +161,6 @@ class ClassicEditorWriteTest extends TestCase {
 	}
 
 	public function test_update_post_classic_with_blocks_returns_error_and_does_not_save(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 7 ],
-		];
-
 		$result = ( new UpdatePost() )->execute(
 			[
 				'id'     => 7,
@@ -184,11 +179,6 @@ class ClassicEditorWriteTest extends TestCase {
 	}
 
 	public function test_update_page_classic_with_blocks_returns_error_and_does_not_save(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 9 ],
-		];
-
 		$result = ( new UpdatePage() )->execute(
 			[
 				'id'     => 9,
@@ -261,10 +251,6 @@ class ClassicEditorWriteTest extends TestCase {
 	}
 
 	public function test_update_post_classic_with_content_saves_raw_html(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 7 ],
-		];
 		$this->queue_write_success(
 			[
 				'id'     => 7,
@@ -288,10 +274,6 @@ class ClassicEditorWriteTest extends TestCase {
 	}
 
 	public function test_update_page_classic_with_content_saves_raw_html(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 9 ],
-		];
 		$this->queue_write_success(
 			[
 				'id'     => 9,

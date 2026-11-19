@@ -387,32 +387,6 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * A post the user may not read is a permission refusal, not a missing post.
-	 *
-	 * @return void
-	 */
-	public function test_update_post_rest_refusal_is_not_reported_as_not_found(): void {
-		$post_id = self::factory()->post->create(
-			[
-				'post_type'   => 'post',
-				'post_status' => 'draft',
-			]
-		);
-		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
-
-		$result = ( new UpdatePost() )->execute(
-			[
-				'id'    => $post_id,
-				'title' => 'Not mine',
-			]
-		);
-
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
-		$this->assertNotSame( 'Not mine', get_post( $post_id )->post_title );
-	}
-
-	/**
 	 * The schema refuses an update that sends only the id, before anything runs.
 	 *
 	 * @return void

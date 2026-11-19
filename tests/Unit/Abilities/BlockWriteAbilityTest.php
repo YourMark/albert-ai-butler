@@ -130,12 +130,6 @@ class BlockWriteAbilityTest extends TestCase {
 	}
 
 	public function test_update_post_with_block_error_returns_wp_error_and_does_not_save(): void {
-		// The existence check (GET) succeeds; the update (POST) must not run.
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 7 ],
-		];
-
 		$ability = new UpdatePost();
 
 		$result = $ability->execute(
@@ -151,11 +145,6 @@ class BlockWriteAbilityTest extends TestCase {
 	}
 
 	public function test_update_page_with_block_error_returns_wp_error_and_does_not_save(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 9 ],
-		];
-
 		$ability = new UpdatePage();
 
 		$result = $ability->execute(
@@ -243,10 +232,6 @@ class BlockWriteAbilityTest extends TestCase {
 	}
 
 	public function test_update_page_with_warning_only_saves_and_returns_block_issues(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 55 ],
-		];
 		$this->queue_write_success(
 			[
 				'id'     => 55,

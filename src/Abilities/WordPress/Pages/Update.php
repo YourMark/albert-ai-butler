@@ -170,22 +170,6 @@ class Update extends BaseAbility {
 	public function execute( array $args ): array|WP_Error {
 		$page_id = absint( $args['id'] );
 
-		$check_request  = new WP_REST_Request( 'GET', '/wp/v2/pages/' . $page_id );
-		$check_response = rest_do_request( $check_request );
-
-		if ( $check_response->get_status() === 404 ) {
-			return new WP_Error(
-				'albert_page_not_found',
-				/* translators: %d: page ID */
-				sprintf( __( 'No page with ID %d. Find it with albert/find-pages.', 'albert-ai-butler' ), $page_id ),
-				[ 'status' => 404 ]
-			);
-		}
-
-		if ( $check_response->is_error() ) {
-			return self::rest_failure( rest_get_server()->response_to_data( $check_response, false ), $check_response->get_status(), __( 'The page could not be read.', 'albert-ai-butler' ), 'albert_page_permission_denied' );
-		}
-
 		$request_data = PostFields::to_rest( $args, PostFields::PAGE, 'page', $page_id );
 		if ( is_wp_error( $request_data ) ) {
 			return $request_data;
@@ -240,6 +224,15 @@ class Update extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
+			if ( is_array( $data ) && ( $data['code'] ?? '' ) === 'rest_post_invalid_id' ) {
+				return new WP_Error(
+					'albert_page_not_found',
+					/* translators: %d: page ID */
+					sprintf( __( 'No page with ID %d. Find it with albert/find-pages.', 'albert-ai-butler' ), $page_id ),
+					[ 'status' => 404 ]
+				);
+			}
+
 			return self::rest_failure( $data, $response->get_status(), __( 'The page could not be updated.', 'albert-ai-butler' ), 'albert_page_permission_denied' );
 		}
 

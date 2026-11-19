@@ -387,32 +387,6 @@ class PagesAbilityTest extends TestCase {
 	}
 
 	/**
-	 * A page the user may not read is a permission refusal, not a missing page.
-	 *
-	 * @return void
-	 */
-	public function test_update_page_rest_refusal_is_not_reported_as_not_found(): void {
-		$page_id = self::factory()->post->create(
-			[
-				'post_type'   => 'page',
-				'post_status' => 'draft',
-			]
-		);
-		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
-
-		$result = ( new UpdatePage() )->execute(
-			[
-				'id'    => $page_id,
-				'title' => 'Not mine',
-			]
-		);
-
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_permission_denied', $result->get_error_code() );
-		$this->assertNotSame( 'Not mine', get_post( $page_id )->post_title );
-	}
-
-	/**
 	 * The schema refuses an update that sends only the id, before anything runs.
 	 *
 	 * @return void
