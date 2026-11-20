@@ -71,6 +71,7 @@ class Update extends BaseAbility {
 			'id'         => [
 				'type'        => 'integer',
 				'description' => 'The post ID to update',
+				'minimum'     => 1,
 			],
 			'title'      => [
 				'type'        => 'string',

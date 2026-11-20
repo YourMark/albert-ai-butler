@@ -270,6 +270,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Send setup link only offered Copy link once someone's invitation had expired, exactly when emailing them again matters most. It now offers to email anyone on the list who has an email address, and emailing an expired invitation renews it, with the new expiry date in the email.
 * Searching WooCommerce orders between two dates did not return the orders in that period. Your assistant now gets the orders from the first date up to and including the last.
 * When your assistant wrote a post, page or pattern in Markdown (headings marked with `#`, bold text with `**`), it was saved as one paragraph with those marks left in, and the assistant was told it had worked. Albert now refuses it and asks the assistant to send proper blocks, so nothing broken is saved.
+* An assistant that sent a negative ID, such as -5, could change or delete the item with ID 5 instead. Albert now refuses any ID below 1 and says what it expects.
 
 **Security**
 
