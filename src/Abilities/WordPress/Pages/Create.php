@@ -33,7 +33,7 @@ class Create extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/create-page';
 		$this->label       = __( 'Create Page', 'albert-ai-butler' );
-		$this->description = __( 'Create a new static page, saved as a draft unless you set a status. To change an existing page use albert/update-page; for a blog post use albert/create-post.', 'albert-ai-butler' );
+		$this->description = __( 'Create a new page (standalone content such as About or Contact, not a dated blog post), saved as a draft unless you set a status. To change an existing page use albert/update-page; for a blog post use albert/create-post.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
