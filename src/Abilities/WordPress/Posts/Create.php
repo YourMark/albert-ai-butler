@@ -33,7 +33,7 @@ class Create extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/create-post';
 		$this->label       = __( 'Create Post', 'albert-ai-butler' );
-		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', 'albert-ai-butler' );
+		$this->description = __( 'Create a new blog post, saved as a draft unless you set a status. To change an existing post use albert/update-post; for a page use albert/create-page.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
@@ -68,7 +68,7 @@ class Create extends BaseAbility {
 		$properties = [
 			'title'      => [
 				'type'        => 'string',
-				'description' => 'The post title',
+				'description' => 'The post title, as plain text.',
 			],
 			'content'    => [
 				'type'        => 'string',
@@ -84,24 +84,24 @@ class Create extends BaseAbility {
 			'status'     => [
 				'type'        => 'string',
 				'enum'        => $post_statuses,
-				'description' => 'Post status',
+				'description' => 'Publication status: "draft" (the default) saves without publishing, "pending" waits for review, "private" is visible only to editors and administrators, "publish" makes it public. To schedule, send "publish" with a future "date".',
 				'default'     => 'draft',
 			],
 			'excerpt'    => [
 				'type'        => 'string',
-				'description' => 'Optional post excerpt',
+				'description' => 'Short plain-text summary shown in archives and search results instead of the start of the post.',
 				'default'     => '',
 			],
 			'categories' => [
 				'type'        => 'array',
 				'items'       => [ 'type' => 'integer' ],
-				'description' => 'Array of category IDs',
+				'description' => 'IDs of the categories to file the post under. Find them with albert/find-terms.',
 				'default'     => [],
 			],
 			'tags'       => [
 				'type'        => 'array',
 				'items'       => [ 'type' => 'string' ],
-				'description' => 'Array of tag names',
+				'description' => 'Tag names to add to the post. A tag that does not exist yet is created.',
 				'default'     => [],
 			],
 		];
