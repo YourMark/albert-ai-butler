@@ -30,6 +30,10 @@ use WP_Filter_Sentinel;
  * Calls without a connection (WP-CLI, REST, the plugin itself) are not observed
  * and keep logging through {@see Logger} as before.
  *
+ * Not logged: the two exits core takes before any filter (input for an ability
+ * without an input schema, an invalid permission callback), and the outer call
+ * when an ability calls itself, since calls are keyed by name.
+ *
  * Mirrors Premium's `LifecycleObserver`, which writes its own rows; Free's
  * writes stand down for it through `albert/logging/enabled`.
  *
@@ -255,9 +259,7 @@ class ExecutionObserver implements Hookable {
 	 * Close the call and hand its outcome to the Logger.
 	 *
 	 * Closed before writing, so the Logger does not stand down for its own row.
-	 * {@see ExecutionLogMarker} is not read: nothing logs an open call before
-	 * this, and checking it would drop a second call to the same ability in one
-	 * request.
+	 * {@see ExecutionLogMarker} is not read: it would drop a repeat call in one request.
 	 *
 	 * @param string $ability_name The ability identifier.
 	 * @param mixed  $result       The outcome: a WP_Error, or the successful result.

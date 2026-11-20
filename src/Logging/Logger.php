@@ -19,8 +19,9 @@ use WP_Error;
  *
  * Logs ability executions, including failures. Only writes to the DB when
  * the `albert/logging/enabled` filter returns true (default). This filter
- * means "Free's writers are active" — returning false suppresses Free's DB writes so Premium can take over logging
- * on the shared table without double-writes. The `albert/logging/ability_failed`
+ * means "Free's writers are active" — returning false suppresses Free's DB
+ * writes so Premium can take over logging on the shared table without
+ * double-writes. The `albert/logging/ability_failed`
  * notification hook fires regardless of the storage gate so Premium always
  * receives failure signals even if it hooks in via a different mechanism.
  *
