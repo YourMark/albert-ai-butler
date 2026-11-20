@@ -211,6 +211,7 @@ Website: https://yourmark.nl
 - The translation template included with Albert was named for an old text domain and dated from its first release, so it listed almost none of the current text. It is now named `albert-ai-butler.pot` and covers everything Albert shows, so translation tools can offer the whole plugin.
 - Send setup link only offered Copy link once someone's invitation had expired, exactly when emailing them again matters most. It now offers to email anyone on the list who has an email address, and emailing an expired invitation renews it, with the new expiry date in the email.
 - Searching WooCommerce orders between two dates did not return the orders in that period. Your assistant now gets the orders from the first date up to and including the last.
+- When your assistant wrote a post, page or pattern in Markdown (headings marked with `#`, bold text with `**`), it was saved as one paragraph with those marks left in, and the assistant was told it had worked. Albert now refuses it and asks the assistant to send proper blocks, so nothing broken is saved.
 
 **Security**
 
@@ -240,6 +241,11 @@ Website: https://yourmark.nl
 - `albert/delete-term` always deletes permanently; its `force` input is still accepted and ignored. `albert/delete-user` requires `reassign`.
 - The `blocks` tree from `albert/view-post`, `albert/view-page`, `albert/find-posts`, `albert/find-pages` and the block-edit abilities gives each block without inner blocks its saved markup in `html`. A block spec whose markup-sourced attribute (such as `content` or `url`) differs from the `html` sent with it is refused, as are an image without `url`, children under a block that cannot nest them, and a registered block Albert has no template for unless it comes with `html`; these were warnings in `block_issues`.
 - New abilities `albert/replace-post-text` and `albert/replace-page-text`: `post_id` or `page_id`, `search`, `replace`, `field` (`content`, `title` or `excerpt`), `expected_count` (default 1) and `remove_tags`. Errors: `albert_invalid_search` (text not found), `albert_invalid_expected_count` (with `count`), `albert_invalid_replace` (the change alters blocks), `albert_invalid_field` (the post type has no such field), `albert_post_not_found` or `albert_page_not_found`, `albert_post_permission_denied` or `albert_page_permission_denied`, and `tags_removed`. A `notice` in the result says when WordPress stored something other than what was sent.
+- The post, page and pattern create and update abilities now return an `albert_invalid_content` error when `content` is Markdown, instead of saving it as one paragraph. Send `blocks` instead.
+
+**Credits**
+
+- [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting Markdown saved as one paragraph.
 
 ### 1.5.0
 

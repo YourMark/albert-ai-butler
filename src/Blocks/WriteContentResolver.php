@@ -156,7 +156,7 @@ class WriteContentResolver {
 	 *
 	 * Structured `blocks` take precedence over the `content` string; both routes
 	 * go through {@see BlockSerializer::serialize_with_issues()} (specs → markup;
-	 * block markup kept as sent; HTML/Markdown through BlockConverter).
+	 * block markup kept as sent; HTML through BlockConverter; Markdown refused).
 	 * Allowed-block enforcement runs on submitted specs and on block markup,
 	 * exempting block names already present in the post on Update. Enforcement
 	 * and serializer errors both abort the save; only warnings ride along.
@@ -177,7 +177,15 @@ class WriteContentResolver {
 			$policy_issues = $this->policy->enforce( $args['blocks'], $post_type, $post_id, $exempt );
 			$serialized    = $this->serializer->serialize_with_issues( $args['blocks'] );
 		} else {
-			$content    = (string) ( $args['content'] ?? '' );
+			$content = (string) ( $args['content'] ?? '' );
+			// The converter does not read Markdown: it would store the whole text as one paragraph.
+			if ( self::is_markdown( $content ) ) {
+				return new WP_Error(
+					'albert_invalid_content',
+					__( "This looks like Markdown, which isn't converted. Send it as `blocks` instead.", 'albert-ai-butler' ),
+					[ 'status' => 400 ]
+				);
+			}
 			$serialized = $this->serializer->serialize_with_issues( $content );
 
 			// Block markup is enforced like `blocks`; plain HTML is not.
@@ -198,5 +206,25 @@ class WriteContentResolver {
 			'content'      => $serialized['markup'],
 			'block_issues' => BlockIssues::warning_messages( $serialized['issues'] ),
 		];
+	}
+
+	/**
+	 * Whether the content, or text between its blocks, is Markdown.
+	 *
+	 * Text outside any block is converted like a plain string, so it is checked the same way.
+	 * Content without blocks parses as one freeform block, so one loop covers both cases.
+	 *
+	 * @param string $content The `content` input.
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	private static function is_markdown( string $content ): bool {
+		foreach ( parse_blocks( $content ) as $block ) {
+			if ( $block['blockName'] === null && MarkdownDetector::looks_like_markdown( (string) $block['innerHTML'] ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
