@@ -202,11 +202,7 @@ class Create extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return new WP_Error(
-				$data['code'] ?? 'rest_error',
-				self::rest_error_message( $data ) ?? __( 'An error occurred while creating the page.', 'albert-ai-butler' ),
-				[ 'status' => $response->get_status() ]
-			);
+			return self::rest_failure( $data, $response->get_status(), __( 'The page could not be created.', 'albert-ai-butler' ), 'albert_page_permission_denied' );
 		}
 
 		// Return formatted page data.
