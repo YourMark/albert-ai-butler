@@ -300,4 +300,46 @@ class BlockRoundTripTest extends TestCase {
 		$this->assertNotSame( [], $serialized['issues'] );
 		$this->assertStringContainsString( 'name is required', $serialized['issues'][0]['message'] );
 	}
+
+	/**
+	 * A post read as `blocks` and written back is unchanged.
+	 *
+	 * Text formatting, links and image sources live only in the saved HTML, so
+	 * this holds because the reader returns each leaf block's `html`.
+	 *
+	 * @return void
+	 */
+	public function test_a_post_read_as_blocks_writes_back_unchanged(): void {
+		$original = '<!-- wp:paragraph --><p>Text with <strong>bold</strong> and <a href="/x">a link</a>.</p><!-- /wp:paragraph -->'
+			. '<!-- wp:group {"layout":{"type":"constrained","justifyContent":"center"}} --><div class="wp-block-group">'
+			. '<!-- wp:image {"width":"120px","align":"center"} --><figure class="wp-block-image aligncenter is-resized"><img src="https://example.com/logo.png" alt="Logo" style="width:120px"/></figure><!-- /wp:image -->'
+			. '<!-- wp:heading {"textAlign":"center","level":1} --><h1 class="wp-block-heading has-text-align-center">Welcome</h1><!-- /wp:heading -->'
+			. '</div><!-- /wp:group -->';
+
+		$serialized = $this->serializer->serialize_with_issues( $this->reader->read( $original ) );
+
+		$this->assertSame( [], $serialized['issues'] );
+		$this->assertSame( $this->leaves( parse_blocks( $original ) ), $this->leaves( parse_blocks( $serialized['markup'] ) ) );
+	}
+
+	/**
+	 * Flatten a parsed tree to name, attributes and trimmed markup per leaf.
+	 *
+	 * @param array<int, array<string, mixed>> $blocks Parsed blocks.
+	 * @return array<int, array<int, mixed>> One entry per block, depth first.
+	 */
+	private function leaves( array $blocks ): array {
+		$out = [];
+
+		foreach ( $blocks as $block ) {
+			if ( $block['blockName'] === null ) {
+				continue;
+			}
+
+			$out[] = [ $block['blockName'], $block['attrs'], $block['innerBlocks'] === [] ? trim( $block['innerHTML'] ) : null ];
+			$out   = array_merge( $out, $this->leaves( $block['innerBlocks'] ) );
+		}
+
+		return $out;
+	}
 }

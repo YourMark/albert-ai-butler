@@ -72,7 +72,7 @@ class Create extends BaseAbility {
 			],
 			'content' => [
 				'type'        => 'string',
-				'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
+				'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
 				'default'     => '',
 			],
 			'blocks'  => [
@@ -126,7 +126,7 @@ class Create extends BaseAbility {
 				],
 				'block_issues' => [
 					'type'        => 'array',
-					'description' => 'Optional, non-fatal block validation warnings (the page was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the page is not created.',
+					'description' => 'Optional, non-fatal block validation warnings (the page was still saved). Each is an actionable message such as "content[0].attributes.level must be between 1 and 6 (got 9). Defaulting to 2.". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the page is not created.',
 					'items'       => [ 'type' => 'string' ],
 				],
 			],
