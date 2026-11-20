@@ -278,6 +278,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Someone could fill the limit on connected apps with sign-ups they never finished, so a real assistant was refused for a day. Albert now makes room by removing the oldest sign-up that never connected. Apps that have connected are never removed.
 * Every app now has to use the sign-in protection that ties an approval to the app that asked for it, as the MCP standard requires. Apps that registered with a secret could skip it before.
 * Changing or resetting a person's password now disconnects every assistant connected as them. An assistant also stops working as soon as its person is no longer on the list of people who may connect one, however they were taken off it.
+* Anyone allowed to connect an assistant, even a subscriber, could read the full details of a WooCommerce product, including drafts and private products. Reading a product now needs the right to edit products, the same as searching them.
 
 **Developer**
 
@@ -301,6 +302,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * The `blocks` tree from `albert/view-post`, `albert/view-page`, `albert/find-posts`, `albert/find-pages` and the block-edit abilities gives each block without inner blocks its saved markup in `html`. A block spec whose markup-sourced attribute (such as `content` or `url`) differs from the `html` sent with it is refused, as are an image without `url`, children under a block that cannot nest them, and a registered block Albert has no template for unless it comes with `html`; these were warnings in `block_issues`.
 * New abilities `albert/replace-post-text` and `albert/replace-page-text`: `post_id` or `page_id`, `search`, `replace`, `field` (`content`, `title` or `excerpt`), `expected_count` (default 1) and `remove_tags`. Errors: `albert_invalid_search` (text not found), `albert_invalid_expected_count` (with `count`), `albert_invalid_replace` (the change alters blocks), `albert_invalid_field` (the post type has no such field), `albert_post_not_found` or `albert_page_not_found`, `albert_post_permission_denied` or `albert_page_permission_denied`, and `tags_removed`. A `notice` in the result says when WordPress stored something other than what was sent.
 * The post, page and pattern create and update abilities now return an `albert_invalid_content` error when `content` is Markdown, instead of saving it as one paragraph. Send `blocks` instead.
+* `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
 
 **Credits**
 
