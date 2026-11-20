@@ -15,6 +15,7 @@
 // Class stubs live in their own files so this file can stay
 // functions-only (keeps PHPCS's OO/function separation rule happy).
 require_once __DIR__ . '/WP_Error.php';
+require_once __DIR__ . '/WP_Filter_Sentinel.php';
 require_once __DIR__ . '/WP_REST_Request.php';
 require_once __DIR__ . '/WP_REST_Response.php';
 require_once __DIR__ . '/WP.php';

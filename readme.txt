@@ -271,6 +271,8 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Searching WooCommerce orders between two dates did not return the orders in that period. Your assistant now gets the orders from the first date up to and including the last.
 * When your assistant wrote a post, page or pattern in Markdown (headings marked with `#`, bold text with `**`), it was saved as one paragraph with those marks left in, and the assistant was told it had worked. Albert now refuses it and asks the assistant to send proper blocks, so nothing broken is saved.
 * An assistant that sent a negative ID, such as -5, could change or delete the item with ID 5 instead. Albert now refuses any ID below 1 and says what it expects.
+* When your assistant used an action from another plugin, it did not show in Recent activity, and the Abilities screen said it was never used. These calls are now recorded like Albert's own.
+* When an action's answer did not have the shape it promises, your assistant got an error but Recent activity said it succeeded. It now shows as failed.
 
 **Security**
 

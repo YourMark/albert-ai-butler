@@ -13,7 +13,9 @@ namespace Albert\Tests\Unit\Logging;
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 require_once dirname( __DIR__ ) . '/stubs/StubAbility.php';
 
+use Albert\Logging\ExecutionObserver;
 use Albert\Logging\Logger;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Logging\Repository;
 use PHPUnit\Framework\TestCase;
 use WP_Error;
@@ -99,6 +101,28 @@ class LoggerTest extends TestCase {
 		$this->assertSame( 'success', $this->inserts[0]['status'] );
 		$this->assertNull( $this->inserts[0]['error_code'] );
 		$this->assertSame( 42, $this->inserts[0]['user_id'] );
+	}
+
+	/**
+	 * A call the observer holds is left for it to log once the outcome is final.
+	 *
+	 * @return void
+	 */
+	public function test_stands_down_for_an_observed_call(): void {
+		ConnectionContext::set( 'client-1' );
+		$observer = new ExecutionObserver( $this->logger );
+		$observer->open( 'core/posts/list' );
+
+		try {
+			$this->logger->log_execution( 'core/posts/list', [], [ 'posts' => [] ], 42 );
+			$this->assertSame( [], $this->inserts );
+
+			$observer->on_after_execute( 'core/posts/list', [], [ 'posts' => [] ] );
+			$this->assertCount( 1, $this->inserts );
+		} finally {
+			ExecutionObserver::reset();
+			ConnectionContext::reset();
+		}
 	}
 
 	// ─── Error path ──────────────────────────────────────────────────
