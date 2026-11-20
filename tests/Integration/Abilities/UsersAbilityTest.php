@@ -580,9 +580,55 @@ class UsersAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_delete_user_not_found(): void {
-		$result = ( new DeleteUser() )->execute( [ 'id' => 99999 ] );
+		$result = ( new DeleteUser() )->execute(
+			[
+				'id'       => 99999,
+				'reassign' => get_current_user_id(),
+			]
+		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'user_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * The schema refuses a delete without a valid user to receive the content.
+	 *
+	 * @return void
+	 */
+	public function test_delete_user_requires_reassign(): void {
+		$victim  = self::factory()->user->create( [ 'role' => 'author' ] );
+		$ability = wp_get_ability( 'albert/delete-user' );
+		$this->assertNotNull( $ability );
+
+		foreach ( [ [], [ 'reassign' => -5 ] ] as $extra ) {
+			$result = $ability->execute( array_merge( [ 'id' => $victim ], $extra ) );
+
+			$this->assertInstanceOf( WP_Error::class, $result );
+			$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+		}
+
+		$this->assertNotFalse( get_userdata( $victim ) );
+	}
+
+	/**
+	 * DeleteUser refuses to delete the current user, which core's REST route would allow.
+	 *
+	 * @return void
+	 */
+	public function test_delete_user_refuses_self(): void {
+		$self      = get_current_user_id();
+		$inheritor = self::factory()->user->create( [ 'role' => 'administrator' ] );
+
+		$result = ( new DeleteUser() )->execute(
+			[
+				'id'       => $self,
+				'reassign' => $inheritor,
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'cannot_delete_self', $result->get_error_code() );
+		$this->assertNotFalse( get_userdata( $self ) );
 	}
 }
