@@ -24,6 +24,7 @@ use WPDieException;
  * @covers \Albert\Admin\ConnectPage::handle_revoke
  * @covers \Albert\Admin\Connections::handle_renew_setup_link
  * @covers \Albert\Admin\Connections::handle_email_setup_link
+ * @covers \Albert\Admin\Connections::render_allowed_user_row
  */
 class ConnectHandlersTest extends TestCase {
 
@@ -196,6 +197,50 @@ class ConnectHandlersTest extends TestCase {
 
 		$this->assertFalse( $result['success'] );
 		$this->assertFalse( AllowedUsers::is_allowed( $stranger ) );
+	}
+
+	/**
+	 * Someone whose invitation expired is still offered the email.
+	 *
+	 * @return void
+	 */
+	public function test_an_expired_invitation_offers_email(): void {
+		wp_set_current_user( $this->admin );
+		$connections = new Connections();
+		$row         = new \ReflectionMethod( $connections, 'render_allowed_user_row' );
+
+		ob_start();
+		$row->invoke( $connections, $this->editor, AllowedUsers::all()[ $this->editor ] );
+		$html = (string) ob_get_clean();
+
+		$this->assertTrue( AllowedUsers::has_expired_invitation( $this->editor ) );
+		$this->assertStringContainsString( 'data-albert-setup-email', $html );
+	}
+
+	/**
+	 * Emailing an expired invitation restarts it, then sends.
+	 *
+	 * @return void
+	 */
+	public function test_emailing_an_expired_invitation_renews_then_sends(): void {
+		reset_phpmailer_instance();
+		wp_set_current_user( $this->admin );
+		$_SERVER['HTTP_X_REQUESTED_WITH'] = 'XMLHttpRequest';
+
+		$result = $this->call(
+			[ new Connections(), 'handle_email_setup_link' ],
+			[
+				'user_id'  => $this->editor,
+				'_wpnonce' => wp_create_nonce( Connections::EMAIL_SETUP_ACTION . '_' . $this->editor ),
+			]
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertNotSame( '', $result['data']['expiry'] );
+		$this->assertTrue( AllowedUsers::is_allowed( $this->editor ) );
+
+		$mail = tests_retrieve_phpmailer_instance()->get_sent();
+		$this->assertSame( get_userdata( $this->editor )->user_email, $mail->to[0][0] );
 	}
 
 	/**
