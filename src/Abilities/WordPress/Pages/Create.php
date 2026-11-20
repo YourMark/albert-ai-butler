@@ -33,7 +33,7 @@ class Create extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/create-page';
 		$this->label       = __( 'Create Page', 'albert-ai-butler' );
-		$this->description = __( 'Create a new WordPress page with specified title and content.', 'albert-ai-butler' );
+		$this->description = __( 'Create a new page (standalone content such as About or Contact, not a dated blog post), saved as a draft unless you set a status. To change an existing page use albert/update-page; for a blog post use albert/create-post.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
@@ -68,11 +68,11 @@ class Create extends BaseAbility {
 		$properties = [
 			'title'   => [
 				'type'        => 'string',
-				'description' => 'The page title',
+				'description' => 'The page title, as plain text.',
 			],
 			'content' => [
 				'type'        => 'string',
-				'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
+				'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
 				'default'     => '',
 			],
 			'blocks'  => [
@@ -84,12 +84,12 @@ class Create extends BaseAbility {
 			'status'  => [
 				'type'        => 'string',
 				'enum'        => $post_statuses,
-				'description' => 'Page status',
+				'description' => 'Publication status: "draft" (the default) saves without publishing, "pending" waits for review, "private" is visible only to editors and administrators, "publish" makes it public. To schedule, send "publish" with a future "date".',
 				'default'     => 'draft',
 			],
 			'excerpt' => [
 				'type'        => 'string',
-				'description' => 'Optional page excerpt',
+				'description' => 'Short plain-text summary shown in archives and search results instead of the start of the page.',
 				'default'     => '',
 			],
 		];

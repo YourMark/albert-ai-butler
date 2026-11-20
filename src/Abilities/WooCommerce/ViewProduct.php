@@ -91,7 +91,7 @@ class ViewProduct extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'read' );
+		return $this->require_capability( 'edit_products' );
 	}
 
 	/**

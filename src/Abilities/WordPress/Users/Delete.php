@@ -64,6 +64,7 @@ class Delete extends BaseAbility {
 				'id'       => [
 					'type'        => 'integer',
 					'description' => 'The user ID to delete',
+					'minimum'     => 1,
 				],
 				'reassign' => [
 					'type'        => 'integer',

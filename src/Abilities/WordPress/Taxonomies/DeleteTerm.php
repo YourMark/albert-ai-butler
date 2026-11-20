@@ -67,6 +67,7 @@ class DeleteTerm extends BaseAbility {
 				'id'       => [
 					'type'        => 'integer',
 					'description' => 'The term ID to delete (required)',
+					'minimum'     => 1,
 				],
 				'force'    => [
 					'type'        => 'boolean',
