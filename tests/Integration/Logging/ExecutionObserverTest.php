@@ -1,6 +1,6 @@
 <?php
 /**
- * Integration tests for OtherPluginCallObserver against core's execute flow.
+ * Integration tests for ExecutionObserver against core's execute flow.
  *
  * @package Albert
  */
@@ -8,17 +8,20 @@
 namespace Albert\Tests\Integration\Logging;
 
 use Albert\Logging\ExecutionLogMarker;
+use Albert\Logging\ExecutionObserver;
+use Albert\Logging\Installer;
+use Albert\Logging\Repository;
 use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
 use RuntimeException;
 use WP_Error;
 
 /**
- * OtherPluginCallObserver integration tests.
+ * ExecutionObserver integration tests.
  *
- * @covers \Albert\Logging\OtherPluginCallObserver
+ * @covers \Albert\Logging\ExecutionObserver
  */
-class OtherPluginCallObserverTest extends TestCase {
+class ExecutionObserverTest extends TestCase {
 
 	/**
 	 * Test-only ability category.
@@ -28,6 +31,13 @@ class OtherPluginCallObserverTest extends TestCase {
 	private const TEST_CATEGORY = 'albert-test';
 
 	/**
+	 * Another plugin's ability.
+	 *
+	 * @var string
+	 */
+	private const ABILITY = 'other-plugin/report';
+
+	/**
 	 * Ability ids to unregister afterwards.
 	 *
 	 * @var array<int, string>
@@ -35,14 +45,14 @@ class OtherPluginCallObserverTest extends TestCase {
 	private array $registered_ids = [];
 
 	/**
-	 * Ability name and result of each albert/abilities/after_execute call.
+	 * The log.
 	 *
-	 * @var array<int, array{0: string, 1: mixed}>
+	 * @var Repository
 	 */
-	private array $logged = [];
+	private Repository $repository;
 
 	/**
-	 * Register the category, listen for log calls and open a connection.
+	 * Empty the log, open a connection and register the category.
 	 *
 	 * @return void
 	 */
@@ -53,20 +63,15 @@ class OtherPluginCallObserverTest extends TestCase {
 			$this->markTestSkipped( 'The Abilities API is not available.' );
 		}
 
+		Installer::install();
+		$this->repository = new Repository();
+		$this->repository->truncate();
+
 		$this->registered_ids = [];
-		$this->logged         = [];
 		ExecutionLogMarker::reset();
+		ExecutionObserver::reset();
 		ConnectionContext::set( 'client-1' );
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'administrator' ] ) );
-
-		add_action(
-			'albert/abilities/after_execute',
-			function ( string $name, $input, $result ): void {
-				$this->logged[] = [ $name, $result ];
-			},
-			10,
-			3
-		);
 
 		if ( ! wp_has_ability_category( self::TEST_CATEGORY ) ) {
 			$this->during(
@@ -95,6 +100,7 @@ class OtherPluginCallObserverTest extends TestCase {
 		}
 
 		ConnectionContext::reset();
+		ExecutionObserver::reset();
 		parent::tear_down();
 	}
 
@@ -121,19 +127,18 @@ class OtherPluginCallObserverTest extends TestCase {
 	/**
 	 * Register another plugin's read-only ability and run it.
 	 *
-	 * @param callable $callback The execute_callback.
+	 * @param callable             $callback   The execute_callback.
+	 * @param array<string, mixed> $extra_args Further registration arguments.
 	 *
 	 * @return mixed What core returned.
 	 */
-	private function run_ability( callable $callback ) {
-		$name = 'other-plugin/report';
-
+	private function run_ability( callable $callback, array $extra_args = [] ) {
 		$this->during(
 			'wp_abilities_api_init',
-			static function () use ( $name, $callback ): void {
+			static function () use ( $callback, $extra_args ): void {
 				wp_register_ability(
-					$name,
-					[
+					self::ABILITY,
+					$extra_args + [
 						'label'               => 'Report',
 						'description'         => 'Another plugin\'s ability.',
 						'category'            => self::TEST_CATEGORY,
@@ -149,32 +154,52 @@ class OtherPluginCallObserverTest extends TestCase {
 				);
 			}
 		);
-		$this->registered_ids[] = $name;
+		$this->registered_ids[] = self::ABILITY;
 
-		return wp_get_ability( $name )->execute();
+		return wp_get_ability( self::ABILITY )->execute();
 	}
 
 	/**
-	 * A success is logged once.
+	 * The log rows for an ability, oldest first.
+	 *
+	 * @param string $ability_name Ability identifier.
+	 *
+	 * @return array<int, object>
+	 */
+	private function rows( string $ability_name = self::ABILITY ): array {
+		return array_values(
+			array_filter(
+				array_reverse( $this->repository->recent( 50 ) ),
+				static fn( object $row ): bool => $row->ability_name === $ability_name
+			)
+		);
+	}
+
+	/**
+	 * A success writes one success row.
 	 *
 	 * @return void
 	 */
 	public function test_logs_a_success(): void {
 		$this->run_ability( static fn(): array => [ 'ok' => true ] );
 
-		$this->assertSame( [ [ 'other-plugin/report', [ 'ok' => true ] ] ], $this->logged );
+		$rows = $this->rows();
+		$this->assertCount( 1, $rows );
+		$this->assertSame( 'success', $rows[0]->status );
 	}
 
 	/**
-	 * A WP_Error from the callback is logged once.
+	 * A WP_Error from the callback writes one error row with its code.
 	 *
 	 * @return void
 	 */
 	public function test_logs_a_wp_error(): void {
 		$this->run_ability( static fn() => new WP_Error( 'report_unavailable', 'No data.' ) );
 
-		$this->assertCount( 1, $this->logged );
-		$this->assertSame( 'report_unavailable', $this->logged[0][1]->get_error_code() );
+		$rows = $this->rows();
+		$this->assertCount( 1, $rows );
+		$this->assertSame( 'error', $rows[0]->status );
+		$this->assertSame( 'report_unavailable', $rows[0]->error_code );
 	}
 
 	/**
@@ -190,12 +215,51 @@ class OtherPluginCallObserverTest extends TestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertCount( 1, $this->logged );
-		$this->assertSame( 'ability_callback_exception', $this->logged[0][1]->get_error_code() );
+		$this->assertSame( 'ability_callback_exception', $this->rows()[0]->error_code );
 	}
 
 	/**
-	 * Without an Albert connection nothing is logged.
+	 * Output that fails validation is logged as an error, not a success.
+	 *
+	 * @return void
+	 */
+	public function test_logs_invalid_output_as_an_error(): void {
+		$this->run_ability(
+			static fn(): array => [ 'count' => 'many' ],
+			[
+				'output_schema' => [
+					'type'       => 'object',
+					'properties' => [ 'count' => [ 'type' => 'integer' ] ],
+				],
+			]
+		);
+
+		$rows = $this->rows();
+		$this->assertCount( 1, $rows );
+		$this->assertSame( 'ability_invalid_output', $rows[0]->error_code );
+	}
+
+	/**
+	 * A denied call is logged as a warning with the callback's own reason.
+	 *
+	 * @return void
+	 */
+	public function test_logs_a_denial_with_its_reason(): void {
+		// Core reports a denial's reason through _doing_it_wrong(), then hides it.
+		$this->setExpectedIncorrectUsage( 'WP_Ability::execute' );
+
+		$this->run_ability(
+			static fn(): array => [ 'ok' => true ],
+			[ 'permission_callback' => static fn() => new WP_Error( 'report_forbidden', 'No.' ) ]
+		);
+
+		$rows = $this->rows();
+		$this->assertCount( 1, $rows );
+		$this->assertSame( 'report_forbidden', $rows[0]->error_code );
+	}
+
+	/**
+	 * Without an Albert connection another plugin's call is not logged.
 	 *
 	 * @return void
 	 */
@@ -204,25 +268,22 @@ class OtherPluginCallObserverTest extends TestCase {
 
 		$this->run_ability( static fn(): array => [ 'ok' => true ] );
 
-		$this->assertSame( [], $this->logged );
+		$this->assertSame( [], $this->rows() );
 	}
 
 	/**
-	 * Albert's own ability is logged once, by itself, even with Free's writer off
-	 * so the marker stays unset.
+	 * Albert's own ability writes one row, from the observer, not two.
 	 *
 	 * @return void
 	 */
-	public function test_leaves_albert_abilities_to_log_themselves(): void {
+	public function test_logs_albert_abilities_once(): void {
 		$ability = wp_get_ability( 'albert/find-users' );
 		if ( $ability === null ) {
 			$this->markTestSkipped( 'albert/find-users is not registered.' );
 		}
 
-		add_filter( 'albert/logging/enabled', '__return_false' );
 		$ability->execute( [] );
 
-		$this->assertCount( 1, $this->logged );
-		$this->assertSame( 'albert/find-users', $this->logged[0][0] );
+		$this->assertCount( 1, $this->rows( 'albert/find-users' ) );
 	}
 }

@@ -11,8 +11,9 @@ paths:
 Free writes a short log to `{prefix}albert_ability_log` (schema in `Logging\Installer`). Premium takes over the same table with more columns and time-based retention.
 
 ## Who writes
-- `Logger` listens on `albert/abilities/after_execute`. `ObservabilityHandler` records MCP-level failures that never reach an ability. `ToolCallObserver` (on `mcp_adapter_tool_call_result`) catches input the Abilities API rejected before the callback, rewrites the error into one the model can act on, and fires `after_execute` so it logs normally. `OtherPluginCallObserver` fires `after_execute` for other plugins' abilities called over an Albert connection, from core's `wp_ability_execute_result` (failures) and `wp_after_execute_ability` (successes); without it they never reach the log.
-- `ExecutionLogMarker` stops one call logging twice. Any new observer must check it.
+- `ExecutionObserver` writes the row for every ability call over an Albert connection, any plugin's. It opens on `wp_ability_invoked` and ends on the first of core's stage filters that holds an error (short-circuit, normalise, input, permission, execute, output) or on `wp_after_execute_ability`, so a success is only logged after output validation. Core has no single "finally" hook; these filters are the only places every exit still shows its `WP_Error`. Input rejections (`VALIDATION_REJECTION_CODES`) close without a row.
+- `Logger` also listens on `albert/abilities/after_execute` and stands down while the observer has that call open. What is left to it: Albert's abilities called without a connection, and failures Albert fires the hook for before an ability runs (`ToolCallObserver`, `DisabledAbilities`, upload links). `ObservabilityHandler` records MCP-level failures that never reach an ability.
+- `ExecutionLogMarker` stops one call logging twice. Writers outside an ability call must check it; `ExecutionObserver` does not read it, since it owns the call.
 - `albert/logging/enabled` false means "Free does not write"; Premium sets it to write itself. It does not turn logging off.
 - `albert/logging/ability_failed` fires whatever that filter says, and only for an `error`.
 - Free keeps 2 rows per `(ability_name, status)`, pruned on insert, only while Free is the writer.

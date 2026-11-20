@@ -83,7 +83,7 @@ use Albert\Cron\PendingActionSweep;
 use Albert\Cron\TokenCleanup;
 use Albert\Database\Installer as DatabaseInstaller;
 use Albert\Logging\Logger;
-use Albert\Logging\OtherPluginCallObserver;
+use Albert\Logging\ExecutionObserver;
 use Albert\Logging\Repository as LoggingRepository;
 use Albert\MCP\AdapterHealth as McpAdapterHealth;
 use Albert\MCP\Server as McpServer;
@@ -206,9 +206,9 @@ class Plugin {
 		$logger             = new Logger( $logging_repository );
 		$logger->register_hooks();
 
-		// Other plugins' abilities do not run through BaseAbility, so they need
-		// their own trigger to reach the log.
-		( new OtherPluginCallObserver() )->register_hooks();
+		// Logs every call over a connection once core has decided its outcome,
+		// whichever plugin owns the ability.
+		( new ExecutionObserver( $logger ) )->register_hooks();
 
 		// Relay WP 7.1's wp_ability_invoked onto albert/abilities/invoked. No
 		// consumers in Free; this is the seam Premium's activity log binds to.
