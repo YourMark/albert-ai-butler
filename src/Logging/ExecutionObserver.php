@@ -30,9 +30,19 @@ use WP_Filter_Sentinel;
  * Calls without a connection (WP-CLI, REST, the plugin itself) are not observed
  * and keep logging through {@see Logger} as before.
  *
- * Not logged: the two exits core takes before any filter (input for an ability
- * without an input schema, an invalid permission callback), and the outer call
- * when an ability calls itself, since calls are keyed by name.
+ * The input stage (normalise, validate) closes without a row: nothing ran and
+ * no rule of the site was applied, and the assistant gets the reason and retries.
+ * Every later exit is logged, with its stage, so a denial reads as a warning
+ * whatever code the permission callback chose.
+ *
+ * Over MCP a denial never reaches `execute()`: the adapter runs
+ * `execute-ability`'s permission check first, which checks the inner ability.
+ * That denial is logged from the inner check once the meta-tool's own result
+ * confirms it ended the call.
+ *
+ * Not logged either: the two exits core takes before any filter (input for an
+ * ability without an input schema, an invalid permission callback), and the
+ * outer call when an ability calls itself, since calls are keyed by name.
  *
  * Mirrors Premium's `LifecycleObserver`, which writes its own rows; Free's
  * writes stand down for it through `albert/logging/enabled`.
@@ -40,6 +50,13 @@ use WP_Filter_Sentinel;
  * @since 1.6.0
  */
 class ExecutionObserver implements Hookable {
+
+	/**
+	 * The adapter's meta-tool that runs an ability for an MCP client.
+	 *
+	 * @since 1.6.0
+	 */
+	private const EXECUTE_TOOL = 'mcp-adapter/execute-ability';
 
 	/**
 	 * Calls opened and not yet ended, keyed by ability name.
@@ -50,6 +67,15 @@ class ExecutionObserver implements Hookable {
 	 * @var array<string, array{input: mixed}>
 	 */
 	private static array $open = [];
+
+	/**
+	 * The last denial seen outside an open call, until `execute-ability`'s
+	 * permission result says whether it ended a call.
+	 *
+	 * @since 1.6.0
+	 * @var array{ability: string, error: WP_Error}|null
+	 */
+	private ?array $denied = null;
 
 	/**
 	 * Constructor.
@@ -74,7 +100,7 @@ class ExecutionObserver implements Hookable {
 		add_filter( 'wp_pre_execute_ability', [ $this, 'on_pre_execute' ], PHP_INT_MAX, 2 );
 		add_filter( 'wp_ability_normalize_input', [ $this, 'on_normalize_input' ], PHP_INT_MAX, 2 );
 		add_filter( 'wp_ability_validate_input', [ $this, 'on_validate_input' ], PHP_INT_MAX, 3 );
-		add_filter( 'wp_ability_permission_result', [ $this, 'on_permission_result' ], PHP_INT_MAX, 2 );
+		add_filter( 'wp_ability_permission_result', [ $this, 'on_permission_result' ], PHP_INT_MAX, 3 );
 		add_filter( 'wp_ability_execute_result', [ $this, 'on_execute_result' ], PHP_INT_MAX, 2 );
 		add_filter( 'wp_ability_validate_output', [ $this, 'on_validate_output' ], PHP_INT_MAX, 3 );
 		add_action( 'wp_after_execute_ability', [ $this, 'on_after_execute' ], PHP_INT_MAX, 3 );
@@ -132,14 +158,14 @@ class ExecutionObserver implements Hookable {
 	 */
 	public function on_pre_execute( mixed $pre, string $ability_name ): mixed {
 		if ( ! $pre instanceof WP_Filter_Sentinel ) {
-			$this->end( $ability_name, $pre );
+			$this->end( $ability_name, $pre, 'short_circuit' );
 		}
 
 		return $pre;
 	}
 
 	/**
-	 * End a call whose input could not be normalised.
+	 * Close a call whose input could not be normalised, without a row.
 	 *
 	 * @param mixed  $input        The normalised input, or the error core returns.
 	 * @param string $ability_name The ability being invoked.
@@ -149,16 +175,17 @@ class ExecutionObserver implements Hookable {
 	 */
 	public function on_normalize_input( mixed $input, string $ability_name ): mixed {
 		if ( is_wp_error( $input ) ) {
-			$this->end( $ability_name, $input );
+			unset( self::$open[ $ability_name ] );
 		}
 
 		return $input;
 	}
 
 	/**
-	 * End a call rejected by input validation.
+	 * Close a call rejected by input validation, without a row.
 	 *
-	 * Not logged: the assistant gets the reason and retries, so a row is noise.
+	 * Whatever the code: a plugin's own validation filter is still input the
+	 * assistant can correct.
 	 *
 	 * @param mixed  $validity     The validation result core acts on.
 	 * @param mixed  $input        The input being validated.
@@ -168,11 +195,8 @@ class ExecutionObserver implements Hookable {
 	 * @since 1.6.0
 	 */
 	public function on_validate_input( mixed $validity, mixed $input, string $ability_name ): mixed { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Hook signature.
-		$error = self::validation_error( $validity, 'ability_invalid_input' );
-
-		if ( $error !== null ) {
-			$rejected = in_array( (string) $error->get_error_code(), ObservabilityHandler::VALIDATION_REJECTION_CODES, true );
-			$this->end( $ability_name, $error, ! $rejected );
+		if ( self::validation_error( $validity, 'ability_invalid_input' ) !== null ) {
+			unset( self::$open[ $ability_name ] );
 		}
 
 		return $validity;
@@ -185,21 +209,27 @@ class ExecutionObserver implements Hookable {
 	 * this filter is the last place the real one exists.
 	 *
 	 * @param mixed  $permission   The permission result core acts on.
-	 * @param string $ability_name The ability being invoked.
+	 * @param string $ability_name The ability whose permission was checked.
+	 * @param mixed  $input        The input it was checked against.
 	 *
 	 * @return mixed The value unchanged.
 	 * @since 1.6.0
 	 */
-	public function on_permission_result( mixed $permission, string $ability_name ): mixed {
-		if ( $permission === true ) {
-			return $permission;
+	public function on_permission_result( mixed $permission, string $ability_name, mixed $input = null ): mixed {
+		$error = self::denial( $permission );
+
+		if ( isset( self::$open[ $ability_name ] ) ) {
+			if ( $error !== null ) {
+				$this->end( $ability_name, $error, 'permission' );
+			}
+		} elseif ( $ability_name === self::EXECUTE_TOOL ) {
+			$this->log_proxied_denial( $error, $input );
+		} else {
+			$this->denied = $error !== null ? [
+				'ability' => $ability_name,
+				'error'   => $error,
+			] : null;
 		}
-
-		$error = is_wp_error( $permission ) && $permission->has_errors()
-			? $permission
-			: new WP_Error( 'ability_invalid_permissions', __( 'The permission check denied this call without giving a reason.', 'albert-ai-butler' ) );
-
-		$this->end( $ability_name, $error );
 
 		return $permission;
 	}
@@ -215,7 +245,7 @@ class ExecutionObserver implements Hookable {
 	 */
 	public function on_execute_result( mixed $result, string $ability_name ): mixed {
 		if ( is_wp_error( $result ) ) {
-			$this->end( $ability_name, $result );
+			$this->end( $ability_name, $result, 'execute' );
 		}
 
 		return $result;
@@ -235,7 +265,7 @@ class ExecutionObserver implements Hookable {
 		$error = self::validation_error( $validity, 'ability_invalid_output' );
 
 		if ( $error !== null ) {
-			$this->end( $ability_name, $error );
+			$this->end( $ability_name, $error, 'output' );
 		}
 
 		return $validity;
@@ -259,16 +289,15 @@ class ExecutionObserver implements Hookable {
 	 * Close the call and hand its outcome to the Logger.
 	 *
 	 * Closed before writing, so the Logger does not stand down for its own row.
-	 * {@see ExecutionLogMarker} is not read: it would drop a repeat call in one request.
 	 *
-	 * @param string $ability_name The ability identifier.
-	 * @param mixed  $result       The outcome: a WP_Error, or the successful result.
-	 * @param bool   $log          False to close without writing a row.
+	 * @param string      $ability_name The ability identifier.
+	 * @param mixed       $result       The outcome: a WP_Error, or the successful result.
+	 * @param string|null $stage        Where a failed call stopped; see `Repository::insert()`.
 	 *
 	 * @return void
 	 * @since 1.6.0
 	 */
-	private function end( string $ability_name, mixed $result, bool $log = true ): void {
+	private function end( string $ability_name, mixed $result, ?string $stage = null ): void {
 		if ( ! isset( self::$open[ $ability_name ] ) ) {
 			return;
 		}
@@ -276,17 +305,62 @@ class ExecutionObserver implements Hookable {
 		$input = self::$open[ $ability_name ]['input'];
 		unset( self::$open[ $ability_name ] );
 
-		if ( ! $log ) {
-			return;
-		}
-
 		// The Logger stores only the outcome, so a scalar result needs no shape.
 		$this->logger->record(
 			$ability_name,
 			$input,
 			$result instanceof WP_Error ? $result : (array) $result,
-			get_current_user_id()
+			get_current_user_id(),
+			$stage
 		);
+	}
+
+	/**
+	 * Log the inner ability's denial when `execute-ability` was refused for it.
+	 *
+	 * The meta-tool's check can also fail on its own grounds (no login, an
+	 * unknown ability); only a refusal by the inner ability's check is its call.
+	 *
+	 * @param WP_Error|null $error The meta-tool's denial, or null when it allowed the call.
+	 * @param mixed         $input The meta-tool's input: `ability_name` and `parameters`.
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	private function log_proxied_denial( ?WP_Error $error, mixed $input ): void {
+		$denied       = $this->denied;
+		$this->denied = null;
+
+		if ( $error === null || $denied === null || ConnectionContext::client_id() === null ) {
+			return;
+		}
+
+		$input = is_array( $input ) ? $input : [];
+		if ( ( $input['ability_name'] ?? null ) !== $denied['ability'] ) {
+			return;
+		}
+
+		$this->logger->record( $denied['ability'], $input['parameters'] ?? null, $denied['error'], get_current_user_id(), 'permission' );
+	}
+
+	/**
+	 * The error a permission result means, or null when it allowed the call.
+	 *
+	 * Mirrors core: anything but `true` denies, and a bare denial gets a reason.
+	 *
+	 * @param mixed $permission The filtered permission result.
+	 *
+	 * @return WP_Error|null
+	 * @since 1.6.0
+	 */
+	private static function denial( mixed $permission ): ?WP_Error {
+		if ( $permission === true ) {
+			return null;
+		}
+
+		return is_wp_error( $permission ) && $permission->has_errors()
+			? $permission
+			: new WP_Error( 'ability_invalid_permissions', __( 'The permission check denied this call without giving a reason.', 'albert-ai-butler' ) );
 	}
 
 	/**

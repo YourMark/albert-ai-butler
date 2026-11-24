@@ -96,14 +96,15 @@ class Logger implements Hookable {
 	 * @param mixed                          $input        The input arguments.
 	 * @param array<string, mixed>|\WP_Error $result       The execution result.
 	 * @param int                            $user_id      The user ID who executed the ability.
+	 * @param string|null                    $stage        Where a failed call stopped, when the caller saw it. Default null.
 	 *
 	 * @return void
 	 * @since 1.6.0
 	 */
-	public function record( string $ability_name, mixed $input, array|WP_Error $result, int $user_id ): void {
+	public function record( string $ability_name, mixed $input, array|WP_Error $result, int $user_id, ?string $stage = null ): void {
 		try {
 			$is_error      = is_wp_error( $result );
-			$status        = Outcome::classify( $result, $ability_name );
+			$status        = $is_error ? Outcome::for_error( $result, $ability_name, $stage ) : Outcome::SUCCESS;
 			$error_code    = $is_error ? (string) $result->get_error_code() : null;
 			$error_message = $is_error ? (string) $result->get_error_message() : null;
 
@@ -164,8 +165,10 @@ class Logger implements Hookable {
 			}
 
 			$context = $error_message !== null ? [ 'error_message' => $error_message ] : [];
+			if ( $is_error && $stage !== null ) {
+				$context['failure_stage'] = $stage;
+			}
 			$this->repository->insert( $ability_name, $user_id, $status, $error_code, $context );
-			ExecutionLogMarker::mark( $ability_name );
 		} catch ( \Throwable $e ) {
 			// Never rethrow — logging must not break ability execution.
 			// Silently fail. In debug mode, WordPress will log the error.

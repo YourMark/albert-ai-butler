@@ -88,7 +88,7 @@ class ExecutionObserverTest extends TestCase {
 		$this->observer->open( self::ABILITY, [ 'limit' => 5 ] );
 		$this->observer->on_after_execute( self::ABILITY, [ 'limit' => 5 ], [ 'pages' => [ '/' ] ] );
 
-		$this->assertSame( [ [ self::ABILITY, [ 'limit' => 5 ], [ 'pages' => [ '/' ] ], 42 ] ], $this->records );
+		$this->assertSame( [ [ self::ABILITY, [ 'limit' => 5 ], [ 'pages' => [ '/' ] ], 42, null ] ], $this->records );
 		$this->assertFalse( ExecutionObserver::is_observing( self::ABILITY ) );
 	}
 
@@ -104,6 +104,7 @@ class ExecutionObserverTest extends TestCase {
 		$this->assertSame( $error, $this->observer->on_execute_result( $error, self::ABILITY ) );
 
 		$this->assertSame( $error, $this->records[0][2] );
+		$this->assertSame( 'execute', $this->records[0][4] );
 	}
 
 	/**
@@ -131,6 +132,7 @@ class ExecutionObserverTest extends TestCase {
 
 		$this->assertCount( 1, $this->records );
 		$this->assertSame( 'ability_invalid_output', $this->records[0][2]->get_error_code() );
+		$this->assertSame( 'output', $this->records[0][4] );
 	}
 
 	/**
@@ -143,6 +145,7 @@ class ExecutionObserverTest extends TestCase {
 		$this->observer->on_permission_result( new WP_Error( 'albert_permission_denied', 'No.' ), self::ABILITY );
 
 		$this->assertSame( 'albert_permission_denied', $this->records[0][2]->get_error_code() );
+		$this->assertSame( 'permission', $this->records[0][4] );
 	}
 
 	/**
@@ -169,6 +172,7 @@ class ExecutionObserverTest extends TestCase {
 		$this->assertSame( $held, $this->observer->on_pre_execute( $held, self::ABILITY ) );
 
 		$this->assertSame( $held, $this->records[0][2] );
+		$this->assertSame( 'short_circuit', $this->records[0][4] );
 	}
 
 	/**
@@ -184,15 +188,16 @@ class ExecutionObserverTest extends TestCase {
 	}
 
 	/**
-	 * Failed normalisation is recorded with the raw input.
+	 * Failed normalisation is input the assistant can correct: no row.
 	 *
 	 * @return void
 	 */
-	public function test_records_failed_normalisation(): void {
+	public function test_closes_failed_normalisation_without_a_row(): void {
 		$this->observer->open( self::ABILITY, 'raw' );
 		$this->observer->on_normalize_input( new WP_Error( 'bad_input', 'Bad.' ), self::ABILITY );
 
-		$this->assertSame( 'raw', $this->records[0][1] );
+		$this->assertSame( [], $this->records );
+		$this->assertFalse( ExecutionObserver::is_observing( self::ABILITY ) );
 	}
 
 	/**
@@ -209,15 +214,84 @@ class ExecutionObserverTest extends TestCase {
 	}
 
 	/**
-	 * Another code from an input validation filter is recorded.
+	 * A plugin's own input check is input too: no row.
 	 *
 	 * @return void
 	 */
-	public function test_records_another_input_error(): void {
+	public function test_closes_another_input_error_without_a_row(): void {
 		$this->observer->open( self::ABILITY );
 		$this->observer->on_validate_input( new WP_Error( 'koko_bad_range', 'Bad.' ), [], self::ABILITY );
 
-		$this->assertCount( 1, $this->records );
+		$this->assertSame( [], $this->records );
+		$this->assertFalse( ExecutionObserver::is_observing( self::ABILITY ) );
+	}
+
+	/**
+	 * Execute-ability refused for the inner ability's own denial logs that
+	 * denial, with its stage and the parameters.
+	 *
+	 * @return void
+	 */
+	public function test_records_a_denial_through_execute_ability(): void {
+		$denial = new WP_Error( 'koko_forbidden', 'No.' );
+
+		$this->observer->on_permission_result( $denial, self::ABILITY, [] );
+		$this->observer->on_permission_result(
+			$denial,
+			'mcp-adapter/execute-ability',
+			[
+				'ability_name' => self::ABILITY,
+				'parameters'   => [ 'limit' => 5 ],
+			]
+		);
+
+		$this->assertSame( [ [ self::ABILITY, [ 'limit' => 5 ], $denial, 42, 'permission' ] ], $this->records );
+	}
+
+	/**
+	 * Execute-ability refused on its own grounds (no login, unknown ability)
+	 * is not the inner ability's call.
+	 *
+	 * @return void
+	 */
+	public function test_ignores_execute_ability_refused_on_its_own_grounds(): void {
+		$this->observer->on_permission_result( true, self::ABILITY, [] );
+		$this->observer->on_permission_result(
+			new WP_Error( 'authentication_required', 'Log in.' ),
+			'mcp-adapter/execute-ability',
+			[ 'ability_name' => self::ABILITY ]
+		);
+
+		$this->assertSame( [], $this->records );
+	}
+
+	/**
+	 * A denial for one ability is not logged against another.
+	 *
+	 * @return void
+	 */
+	public function test_ignores_a_denial_for_another_ability(): void {
+		$denial = new WP_Error( 'koko_forbidden', 'No.' );
+
+		$this->observer->on_permission_result( $denial, 'other/ability', [] );
+		$this->observer->on_permission_result( $denial, 'mcp-adapter/execute-ability', [ 'ability_name' => self::ABILITY ] );
+
+		$this->assertSame( [], $this->records );
+	}
+
+	/**
+	 * Without a connection a denial through execute-ability is left alone.
+	 *
+	 * @return void
+	 */
+	public function test_ignores_a_proxied_denial_without_a_connection(): void {
+		ConnectionContext::reset();
+		$denial = new WP_Error( 'koko_forbidden', 'No.' );
+
+		$this->observer->on_permission_result( $denial, self::ABILITY, [] );
+		$this->observer->on_permission_result( $denial, 'mcp-adapter/execute-ability', [ 'ability_name' => self::ABILITY ] );
+
+		$this->assertSame( [], $this->records );
 	}
 
 	/**

@@ -7,7 +7,6 @@
 
 namespace Albert\Tests\Integration\Logging;
 
-use Albert\Logging\ExecutionLogMarker;
 use Albert\Logging\ExecutionObserver;
 use Albert\Logging\Installer;
 use Albert\Logging\Repository;
@@ -68,7 +67,6 @@ class ExecutionObserverTest extends TestCase {
 		$this->repository->truncate();
 
 		$this->registered_ids = [];
-		ExecutionLogMarker::reset();
 		ExecutionObserver::reset();
 		ConnectionContext::set( 'client-1' );
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'administrator' ] ) );
@@ -133,6 +131,20 @@ class ExecutionObserverTest extends TestCase {
 	 * @return mixed What core returned.
 	 */
 	private function run_ability( callable $callback, array $extra_args = [] ) {
+		$this->register_ability( $callback, $extra_args );
+
+		return wp_get_ability( self::ABILITY )->execute();
+	}
+
+	/**
+	 * Register another plugin's read-only ability, public over MCP.
+	 *
+	 * @param callable             $callback   The execute_callback.
+	 * @param array<string, mixed> $extra_args Further registration arguments.
+	 *
+	 * @return void
+	 */
+	private function register_ability( callable $callback, array $extra_args = [] ): void {
 		$this->during(
 			'wp_abilities_api_init',
 			static function () use ( $callback, $extra_args ): void {
@@ -149,14 +161,13 @@ class ExecutionObserverTest extends TestCase {
 								'readonly'    => true,
 								'destructive' => false,
 							],
+							'mcp'         => [ 'public' => true ],
 						],
 					]
 				);
 			}
 		);
 		$this->registered_ids[] = self::ABILITY;
-
-		return wp_get_ability( self::ABILITY )->execute();
 	}
 
 	/**
@@ -173,6 +184,20 @@ class ExecutionObserverTest extends TestCase {
 				static fn( object $row ): bool => $row->ability_name === $ability_name
 			)
 		);
+	}
+
+	/**
+	 * The stored failure_stage of a row, which recent() does not select.
+	 *
+	 * @param int $id Row ID.
+	 *
+	 * @return string|null
+	 */
+	private function stage_of( int $id ): ?string {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Test assertion.
+		return $wpdb->get_var( $wpdb->prepare( 'SELECT failure_stage FROM %i WHERE id = %d', \Albert\Database\Tables::ability_log(), $id ) );
 	}
 
 	/**
@@ -255,7 +280,95 @@ class ExecutionObserverTest extends TestCase {
 
 		$rows = $this->rows();
 		$this->assertCount( 1, $rows );
+		$this->assertSame( 'warning', $rows[0]->status );
+		$this->assertSame( 'permission', $this->stage_of( (int) $rows[0]->id ) );
 		$this->assertSame( 'report_forbidden', $rows[0]->error_code );
+	}
+
+	/**
+	 * A denial through execute-ability, which stops in the adapter's permission
+	 * check before the ability is invoked, is logged as a warning.
+	 *
+	 * @return void
+	 */
+	public function test_logs_a_denial_through_execute_ability(): void {
+		$meta_tool = wp_has_ability( 'mcp-adapter/execute-ability' ) ? wp_get_ability( 'mcp-adapter/execute-ability' ) : null;
+		if ( $meta_tool === null ) {
+			$this->markTestSkipped( 'The adapter\'s execute-ability is not registered.' );
+		}
+
+		$this->register_ability(
+			static fn(): array => [ 'ok' => true ],
+			[ 'permission_callback' => static fn() => new WP_Error( 'report_forbidden', 'No.' ) ]
+		);
+
+		$this->assertWPError(
+			$meta_tool->check_permissions(
+				[
+					'ability_name' => self::ABILITY,
+					'parameters'   => [],
+				]
+			)
+		);
+
+		$rows = $this->rows();
+		$this->assertCount( 1, $rows );
+		$this->assertSame( 'warning', $rows[0]->status );
+		$this->assertSame( 'report_forbidden', $rows[0]->error_code );
+		$this->assertSame( 'permission', $this->stage_of( (int) $rows[0]->id ) );
+	}
+
+	/**
+	 * A permission check outside execute-ability, such as discovery, is not a call.
+	 *
+	 * @return void
+	 */
+	public function test_ignores_a_denial_outside_a_call(): void {
+		$this->register_ability(
+			static fn(): array => [ 'ok' => true ],
+			[ 'permission_callback' => static fn() => new WP_Error( 'report_forbidden', 'No.' ) ]
+		);
+
+		wp_get_ability( self::ABILITY )->check_permissions();
+
+		$this->assertSame( [], $this->rows() );
+	}
+
+	/**
+	 * Input the schema rejects writes no row.
+	 *
+	 * @return void
+	 */
+	public function test_ignores_rejected_input(): void {
+		$this->during(
+			'wp_abilities_api_init',
+			static function (): void {
+				wp_register_ability(
+					self::ABILITY,
+					[
+						'label'               => 'Report',
+						'description'         => 'Another plugin\'s ability.',
+						'category'            => self::TEST_CATEGORY,
+						'input_schema'        => [
+							'type'       => 'object',
+							'properties' => [ 'limit' => [ 'type' => 'integer' ] ],
+						],
+						'execute_callback'    => static fn(): array => [ 'ok' => true ],
+						'permission_callback' => '__return_true',
+						'meta'                => [
+							'annotations' => [
+								'readonly'    => true,
+								'destructive' => false,
+							],
+						],
+					]
+				);
+			}
+		);
+		$this->registered_ids[] = self::ABILITY;
+
+		$this->assertWPError( wp_get_ability( self::ABILITY )->execute( [ 'limit' => 'many' ] ) );
+		$this->assertSame( [], $this->rows() );
 	}
 
 	/**

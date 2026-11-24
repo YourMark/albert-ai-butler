@@ -273,6 +273,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * An assistant that sent a negative ID, such as -5, could change or delete the item with ID 5 instead. Albert now refuses any ID below 1 and says what it expects.
 * When your assistant used an action from another plugin, it did not show in Recent activity, and the Abilities screen said it was never used. These calls are now recorded like Albert's own.
 * When an action's answer did not have the shape it promises, your assistant got an error but Recent activity said it succeeded. It now shows as failed.
+* When your assistant asked for an action it is not allowed to use, the refusal did not show in Recent activity. It now shows as blocked.
 
 **Security**
 

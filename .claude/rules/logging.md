@@ -10,10 +10,26 @@ paths:
 
 Free writes a short log to `{prefix}albert_ability_log` (schema in `Logging\Installer`). Premium takes over the same table with more columns and time-based retention.
 
+## What gets a row
+Log what the site did or refused, not the assistant working out the input.
+
+| Call | Row | Why |
+|---|---|---|
+| Succeeded | `success` | This is the usage: Recent activity, Last used. |
+| Denied, held for approval, switched off | `warning` | The site's rules did their job; the owner wants to see the attempt. |
+| Callback error, exception, output rejected | `error` | The site or a plugin broke, and only its owner can fix it. |
+| Input rejected (normalise, schema, a plugin's own input check) | none | Nothing ran and no rule of the site applied. The assistant gets the reason and retries, so the follow-up call is the row. A row would push real errors out of Free's 2 per status and fire `ability_failed`. |
+
+A recurring rejection points at a bad schema or description. That is a developer's diagnosis, not usage or an outage, so it belongs in Premium's log if anywhere.
+
 ## Who writes
-- `ExecutionObserver` writes the row for every ability call over an Albert connection, any plugin's. It opens on `wp_ability_invoked` and ends on the first of core's stage filters that holds an error (short-circuit, normalise, input, permission, execute, output) or on `wp_after_execute_ability`, so a success is only logged after output validation. Core has no single "finally" hook; these filters are the only places every exit still shows its `WP_Error`. Input rejections (`VALIDATION_REJECTION_CODES`) close without a row.
-- `Logger` also listens on `albert/abilities/after_execute` and stands down while the observer has that call open. What is left to it: Albert's abilities called without a connection, and failures Albert fires the hook for before an ability runs (`ToolCallObserver`, `DisabledAbilities`, upload links). `ObservabilityHandler` records MCP-level failures that never reach an ability.
-- `ExecutionLogMarker` stops one call logging twice. Writers outside an ability call must check it; `ExecutionObserver` does not read it, since it owns the call.
+One writer per call.
+- `ExecutionObserver` writes the row for every ability call over an Albert connection, any plugin's. It opens on `wp_ability_invoked` and ends on the first of core's stage filters that holds an error (short-circuit, normalise, input, permission, execute, output) or on `wp_after_execute_ability`, so a success is only logged after output validation. Core has no single "finally" hook; these filters are the only places every exit still shows its `WP_Error`. It passes the stage, so a denial is a `warning` whatever code the callback chose. The input stage closes without a row, whatever the code.
+- Over MCP a denial never reaches `execute()`: the adapter runs `execute-ability`'s permission check first, and that checks the inner ability. The observer keeps the inner denial and logs it once `execute-ability`'s own permission result confirms the call was refused for it.
+- `Logger` also listens on `albert/abilities/after_execute` and stands down while the observer has that call open. What is left to it: Albert's abilities called without a connection, and the refusals Albert fires that hook for before an ability is invoked (`DisabledAbilities`, upload links).
+- `ObservabilityHandler` records MCP requests that failed before any ability was involved, such as a call to a tool that does not exist. Calls through the meta-tools are tagged with the meta-tool and skipped.
+- `ToolCallObserver` only rewrites the validation message inside `execute-ability`'s result. Albert's server lists only the three meta-tools.
+- `ExecutionLogMarker` is unused by Free; Premium still uses it.
 - `albert/logging/enabled` false means "Free does not write"; Premium sets it to write itself. It does not turn logging off.
 - `albert/logging/ability_failed` fires whatever that filter says, and only for an `error`.
 - Free keeps 2 rows per `(ability_name, status)`, pruned on insert, only while Free is the writer.
