@@ -69,7 +69,6 @@ class ToolCallObserver {
 	}
 
 	/**
-	/**
 	 * Improve the validation message carried inside a meta-tool result.
 	 *
 	 * `mcp-adapter/execute-ability` reports failure as

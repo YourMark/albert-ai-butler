@@ -112,6 +112,7 @@ class LoggerTest extends TestCase {
 		ConnectionContext::set( 'client-1' );
 		$observer = new ExecutionObserver( $this->logger );
 		$observer->open( 'core/posts/list' );
+		$observer->on_before_execute( 'core/posts/list' );
 
 		try {
 			$this->logger->log_execution( 'core/posts/list', [], [ 'posts' => [] ], 42 );

@@ -114,10 +114,45 @@ class ExecutionObserverTest extends TestCase {
 	 */
 	public function test_waits_past_a_successful_callback(): void {
 		$this->observer->open( self::ABILITY );
+		$this->observer->on_before_execute( self::ABILITY );
 		$this->observer->on_execute_result( [ 'ok' => true ], self::ABILITY );
 
 		$this->assertSame( [], $this->records );
 		$this->assertTrue( ExecutionObserver::is_observing( self::ABILITY ) );
+	}
+
+	/**
+	 * A call that left before its callback, through an exit core takes before
+	 * any filter, never silences the Logger.
+	 *
+	 * @return void
+	 */
+	public function test_a_call_that_never_ran_is_not_observed(): void {
+		$this->observer->open( self::ABILITY );
+
+		$this->assertFalse( ExecutionObserver::is_observing( self::ABILITY ) );
+	}
+
+	/**
+	 * An ability called from inside its own callback ends its own call, and
+	 * the outer call is still logged.
+	 *
+	 * @return void
+	 */
+	public function test_a_nested_call_keeps_the_outer_row(): void {
+		$this->observer->open( self::ABILITY, 'outer' );
+		$this->observer->on_before_execute( self::ABILITY );
+
+		$this->observer->open( self::ABILITY, 'inner' );
+		$this->observer->on_before_execute( self::ABILITY );
+		$this->observer->on_after_execute( self::ABILITY, [], [ 'inner' => true ] );
+
+		$this->assertTrue( ExecutionObserver::is_observing( self::ABILITY ) );
+
+		$this->observer->on_after_execute( self::ABILITY, [], [ 'outer' => true ] );
+
+		$this->assertSame( [ 'inner', 'outer' ], array_column( $this->records, 1 ) );
+		$this->assertFalse( ExecutionObserver::is_observing( self::ABILITY ) );
 	}
 
 	/**

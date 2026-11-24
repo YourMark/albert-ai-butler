@@ -40,12 +40,10 @@ use WP_Filter_Sentinel;
  * That denial is logged from the inner check once the meta-tool's own result
  * confirms it ended the call.
  *
- * Not logged either: the two exits core takes before any filter (input for an
- * ability without an input schema, an invalid permission callback), and the
- * outer call when an ability calls itself, since calls are keyed by name.
- *
- * Mirrors Premium's `LifecycleObserver`, which writes its own rows; Free's
- * writes stand down for it through `albert/logging/enabled`.
+ * Core has two exits before any filter, and neither needs a row: input for an
+ * ability without an input schema is an input rejection, and an invalid
+ * permission callback is refused at registration. Their call is never ended,
+ * but it never started running either, so it cannot silence the Logger.
  *
  * @since 1.6.0
  */
@@ -59,12 +57,13 @@ class ExecutionObserver implements Hookable {
 	private const EXECUTE_TOOL = 'mcp-adapter/execute-ability';
 
 	/**
-	 * Calls opened and not yet ended, keyed by ability name.
+	 * Calls opened and not yet ended: a stack per ability name, so a call to
+	 * an ability from inside its own callback ends its own entry.
 	 *
 	 * Static so {@see Logger} can ask without holding this instance.
 	 *
 	 * @since 1.6.0
-	 * @var array<string, array{input: mixed}>
+	 * @var array<string, list<array{input: mixed, running: bool}>>
 	 */
 	private static array $open = [];
 
@@ -101,13 +100,15 @@ class ExecutionObserver implements Hookable {
 		add_filter( 'wp_ability_normalize_input', [ $this, 'on_normalize_input' ], PHP_INT_MAX, 2 );
 		add_filter( 'wp_ability_validate_input', [ $this, 'on_validate_input' ], PHP_INT_MAX, 3 );
 		add_filter( 'wp_ability_permission_result', [ $this, 'on_permission_result' ], PHP_INT_MAX, 3 );
+		add_action( 'wp_before_execute_ability', [ $this, 'on_before_execute' ], PHP_INT_MAX, 1 );
 		add_filter( 'wp_ability_execute_result', [ $this, 'on_execute_result' ], PHP_INT_MAX, 2 );
 		add_filter( 'wp_ability_validate_output', [ $this, 'on_validate_output' ], PHP_INT_MAX, 3 );
 		add_action( 'wp_after_execute_ability', [ $this, 'on_after_execute' ], PHP_INT_MAX, 3 );
 	}
 
 	/**
-	 * Whether a call to this ability is open, so its row is this class's to write.
+	 * Whether this ability's callback is running inside an open call, so its
+	 * row is this class's to write. The Logger's hook fires only there.
 	 *
 	 * @param string $ability_name Ability identifier.
 	 *
@@ -115,7 +116,9 @@ class ExecutionObserver implements Hookable {
 	 * @since 1.6.0
 	 */
 	public static function is_observing( string $ability_name ): bool {
-		return isset( self::$open[ $ability_name ] );
+		$calls = self::$open[ $ability_name ] ?? [];
+
+		return $calls !== [] && end( $calls )['running'];
 	}
 
 	/**
@@ -144,7 +147,26 @@ class ExecutionObserver implements Hookable {
 			return;
 		}
 
-		self::$open[ $ability_name ] = [ 'input' => $input ];
+		self::$open[ $ability_name ][] = [
+			'input'   => $input,
+			'running' => false,
+		];
+	}
+
+	/**
+	 * Mark the call as running its callback.
+	 *
+	 * @param string $ability_name The ability about to run.
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	public function on_before_execute( string $ability_name ): void {
+		$top = array_key_last( self::$open[ $ability_name ] ?? [] );
+
+		if ( $top !== null ) {
+			self::$open[ $ability_name ][ $top ]['running'] = true;
+		}
 	}
 
 	/**
@@ -175,7 +197,7 @@ class ExecutionObserver implements Hookable {
 	 */
 	public function on_normalize_input( mixed $input, string $ability_name ): mixed {
 		if ( is_wp_error( $input ) ) {
-			unset( self::$open[ $ability_name ] );
+			self::close( $ability_name );
 		}
 
 		return $input;
@@ -196,7 +218,7 @@ class ExecutionObserver implements Hookable {
 	 */
 	public function on_validate_input( mixed $validity, mixed $input, string $ability_name ): mixed { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Hook signature.
 		if ( self::validation_error( $validity, 'ability_invalid_input' ) !== null ) {
-			unset( self::$open[ $ability_name ] );
+			self::close( $ability_name );
 		}
 
 		return $validity;
@@ -218,7 +240,7 @@ class ExecutionObserver implements Hookable {
 	public function on_permission_result( mixed $permission, string $ability_name, mixed $input = null ): mixed {
 		$error = self::denial( $permission );
 
-		if ( isset( self::$open[ $ability_name ] ) ) {
+		if ( ! empty( self::$open[ $ability_name ] ) ) {
 			if ( $error !== null ) {
 				$this->end( $ability_name, $error, 'permission' );
 			}
@@ -298,21 +320,42 @@ class ExecutionObserver implements Hookable {
 	 * @since 1.6.0
 	 */
 	private function end( string $ability_name, mixed $result, ?string $stage = null ): void {
-		if ( ! isset( self::$open[ $ability_name ] ) ) {
+		$call = self::close( $ability_name );
+		if ( $call === null ) {
 			return;
 		}
 
-		$input = self::$open[ $ability_name ]['input'];
-		unset( self::$open[ $ability_name ] );
-
-		// The Logger stores only the outcome, so a scalar result needs no shape.
+		// A success can be any value, `record()` takes an array, and only the
+		// outcome is stored, so casting loses nothing.
 		$this->logger->record(
 			$ability_name,
-			$input,
+			$call['input'],
 			$result instanceof WP_Error ? $result : (array) $result,
 			get_current_user_id(),
 			$stage
 		);
+	}
+
+	/**
+	 * Remove the innermost open call to this ability.
+	 *
+	 * @param string $ability_name The ability identifier.
+	 *
+	 * @return array{input: mixed, running: bool}|null The call, or null when none is open.
+	 * @since 1.6.0
+	 */
+	private static function close( string $ability_name ): ?array {
+		if ( empty( self::$open[ $ability_name ] ) ) {
+			return null;
+		}
+
+		$call = array_pop( self::$open[ $ability_name ] );
+
+		if ( self::$open[ $ability_name ] === [] ) {
+			unset( self::$open[ $ability_name ] );
+		}
+
+		return $call;
 	}
 
 	/**
