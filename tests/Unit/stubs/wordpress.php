@@ -769,11 +769,14 @@ if ( ! function_exists( 'rest_validate_value_from_schema' ) ) {
 				}
 			}
 
+			// An empty `properties` may arrive as a stdClass, as core allows.
+			$properties = (array) ( $args['properties'] ?? [] );
+
 			foreach ( $value as $property => $property_value ) {
-				if ( isset( $args['properties'][ $property ] ) ) {
+				if ( isset( $properties[ $property ] ) ) {
 					$is_valid = rest_validate_value_from_schema(
 						$property_value,
-						$args['properties'][ $property ],
+						$properties[ $property ],
 						$param . '[' . $property . ']'
 					);
 
@@ -793,6 +796,16 @@ if ( ! function_exists( 'rest_validate_value_from_schema' ) ) {
 			}
 
 			return true;
+		}
+
+		if ( $type === 'array' && is_array( $value ) && isset( $args['items'] ) && is_array( $args['items'] ) ) {
+			foreach ( $value as $index => $item ) {
+				$is_valid = rest_validate_value_from_schema( $item, $args['items'], $param . '[' . $index . ']' );
+
+				if ( is_wp_error( $is_valid ) ) {
+					return $is_valid;
+				}
+			}
 		}
 
 		$matches = [
