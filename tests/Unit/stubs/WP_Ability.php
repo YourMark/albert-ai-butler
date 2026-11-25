@@ -2,9 +2,8 @@
 /**
  * Minimal WP_Ability stub for unit tests.
  *
- * Only the accessors Albert reads are implemented: get_name / get_meta for
- * AbilitiesRegistry::resolve_required_capability(), and get_input_schema for
- * MCP\ToolCallObserver.
+ * Only the accessors Albert reads are implemented: get_name, get_meta and
+ * get_input_schema for MCP\ToolCallObserver.
  *
  * @package Albert\Tests
  */

@@ -64,6 +64,7 @@ class Delete extends BaseAbility {
 				'id'    => [
 					'type'        => 'integer',
 					'description' => 'The page ID to delete',
+					'minimum'     => 1,
 				],
 				'force' => [
 					'type'        => 'boolean',

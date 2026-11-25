@@ -268,6 +268,64 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * CreatePost refuses Markdown content and saves nothing.
+	 *
+	 * @return void
+	 */
+	public function test_create_post_refuses_markdown_content(): void {
+		$before = wp_count_posts()->draft;
+
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'   => 'Markdown Post',
+				'content' => "## Intro\n\nSome **bold** text.\n\n- one\n- two",
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		wp_cache_flush();
+		$this->assertSame( $before, wp_count_posts()->draft );
+	}
+
+	/**
+	 * Markdown between blocks is refused too, since that text is converted like a plain string.
+	 *
+	 * @return void
+	 */
+	public function test_create_post_refuses_markdown_between_blocks(): void {
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'   => 'Mixed Post',
+				'content' => "<!-- wp:paragraph -->\n<p>Intro.</p>\n<!-- /wp:paragraph -->\n\n## Heading\n\n- one\n- two",
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+	}
+
+	/**
+	 * UpdatePost refuses Markdown content and leaves the body untouched.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_refuses_markdown_content(): void {
+		$post_id = self::factory()->post->create( [ 'post_content' => '<p>Original</p>' ] );
+
+		$result = ( new UpdatePost() )->execute(
+			[
+				'id'      => $post_id,
+				'content' => "# Heading\n\nBody.",
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		$this->assertSame( '<p>Original</p>', get_post( $post_id )->post_content );
+	}
+
+	/**
 	 * CreatePost defaults to draft status.
 	 *
 	 * @return void
@@ -295,6 +353,43 @@ class PostsAbilityTest extends TestCase {
 		$this->assertIsArray( $result );
 		$this->assertStringContainsString( 'post.php?post=', $result['edit_url'] );
 		$this->assertNotEmpty( $result['permalink'] );
+	}
+
+	/**
+	 * A REST refusal on create is reported as the post permission code, not a generic error.
+	 *
+	 * @return void
+	 */
+	public function test_create_post_rest_refusal_is_permission_denied(): void {
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
+
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'  => 'Contributor Post',
+				'status' => 'publish',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+	}
+
+	/**
+	 * Any other REST error keeps core's code.
+	 *
+	 * @return void
+	 */
+	public function test_create_post_passes_rest_error_code_through(): void {
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'    => 'Bad Template',
+				'template' => 'no-such-template.php',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rest_invalid_param', $result->get_error_code() );
 	}
 
 	// ─── UpdatePost ─────────────────────────────────────────────────
