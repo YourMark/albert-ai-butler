@@ -406,4 +406,121 @@ class AnonymizerTest extends TestCase {
 		);
 		$this->assertSame( 'J.D.', $out['name'] );
 	}
+
+	/**
+	 * A site record is not a person: its name, tagline and address stay, its admin email is masked.
+	 *
+	 * @return void
+	 */
+	public function test_site_info_keeps_its_name_and_url(): void {
+		$out = Anonymizer::anonymize(
+			[
+				'name'        => 'My Shop',
+				'description' => 'Just another site',
+				'url'         => 'https://shop.example',
+				'admin_email' => 'owner@shop.example',
+			]
+		);
+
+		$this->assertSame( 'My Shop', $out['name'] );
+		$this->assertSame( 'Just another site', $out['description'] );
+		$this->assertSame( 'https://shop.example', $out['url'] );
+		$this->assertSame( 'o***@s***.example', $out['admin_email'] );
+	}
+
+	/**
+	 * A record carrying a person's own key is a person, wherever it sits.
+	 *
+	 * @return void
+	 */
+	public function test_person_record_is_recognised_without_a_context_key(): void {
+		$out = Anonymizer::anonymize(
+			[
+				'members' => [
+					[
+						'id'          => 5,
+						'user_login'  => 'jdoe',
+						'name'        => 'John Doe',
+						'slug'        => 'jdoe',
+						'link'        => 'https://example.com/author/jdoe',
+						'description' => 'My bio',
+						'avatar_urls' => [ '24' => 'https://gravatar.com/avatar/abc' ],
+						'roles'       => [ 'editor' ],
+					],
+				],
+			]
+		);
+
+		$member = $out['members'][0];
+		$this->assertSame( 'Customer #5', $member['name'] );
+		$this->assertSame( 'Customer #5', $member['slug'] );
+		$this->assertSame( '', $member['link'] );
+		$this->assertSame( '[redacted]', $member['description'] );
+		$this->assertArrayNotHasKey( 'avatar_urls', $member );
+		$this->assertSame( [ 'editor' ], $member['roles'] );
+	}
+
+	/**
+	 * Keys match case-insensitively, and by suffix when no category names them.
+	 *
+	 * @return void
+	 */
+	public function test_keys_match_by_case_and_suffix(): void {
+		$out = Anonymizer::anonymize(
+			[
+				'comment_author_IP'  => '203.0.113.9',
+				'last_login_ip'      => '203.0.113.9',
+				'notification_email' => 'jane@example.com',
+				'send_email'         => true,
+				'emergency_phone'    => '0612345678',
+				'User_Email'         => 'jane@example.com',
+			]
+		);
+
+		$this->assertArrayNotHasKey( 'comment_author_IP', $out );
+		$this->assertArrayNotHasKey( 'last_login_ip', $out );
+		$this->assertSame( 'j***@e***.com', $out['notification_email'] );
+		$this->assertTrue( $out['send_email'] );
+		$this->assertSame( '********78', $out['emergency_phone'] );
+		$this->assertSame( 'j***@e***.com', $out['User_Email'] );
+	}
+
+	/**
+	 * A value that is wholly an email address is masked under any key; an image name is not.
+	 *
+	 * @return void
+	 */
+	public function test_email_values_are_masked_under_any_key(): void {
+		$out = Anonymizer::anonymize(
+			[
+				'recipient' => 'jane@example.com',
+				'list'      => [ 'a@b.org', 'kept' ],
+				'retina'    => 'logo@2x.png',
+				'sentence'  => 'Mail jane@example.com today',
+			]
+		);
+
+		$this->assertSame( 'j***@e***.com', $out['recipient'] );
+		$this->assertSame( [ 'a***@b***.org', 'kept' ], $out['list'] );
+		$this->assertSame( 'logo@2x.png', $out['retina'] );
+		$this->assertSame( 'Mail jane@example.com today', $out['sentence'] );
+	}
+
+	/**
+	 * Credentials and session data are removed.
+	 *
+	 * @return void
+	 */
+	public function test_credentials_are_removed(): void {
+		$out = Anonymizer::anonymize(
+			[
+				'user_pass'           => '$P$hash',
+				'user_activation_key' => 'key',
+				'session_tokens'      => [ 'abc' => [] ],
+				'id'                  => 3,
+			]
+		);
+
+		$this->assertSame( [ 'id' => 3 ], $out );
+	}
 }
