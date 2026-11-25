@@ -17,14 +17,12 @@ use WP\MCP\Infrastructure\Observability\McpObservabilityHelperTrait;
 /**
  * ObservabilityHandler class
  *
- * Secondary failure recorder for MCP-level errors that never reach
- * `albert/abilities/after_execute` — primarily permission-denied checks,
- * transport errors, and exceptions thrown before a BaseAbility runs.
+ * Records MCP requests that failed before any ability was involved, such as
+ * a call to a tool that does not exist.
  *
- * Acts only on `mcp.request` events with status=error where the tags carry
- * a real `ability_name` (i.e. not one of the three generic meta-tools). This
- * avoids double-counting inner-ability failures already captured by Logger via
- * the `albert/abilities/after_execute` hook.
+ * Acts only on `mcp.request` errors whose tags name something other than the
+ * three meta-tools. A call through a meta-tool is tagged with the meta-tool,
+ * and the ability it ran is logged by {@see ExecutionObserver}.
  *
  * The Repository is instantiated inside `record_event()` because the adapter
  * resolves handler classes by name with no constructor args (mirrors
@@ -46,12 +44,10 @@ class ObservabilityHandler implements McpObservabilityHandlerInterface {
 	const META_TOOL_PREFIX = 'mcp-adapter/';
 
 	/**
-	 * Validation-rejection error codes that are deliberately not logged.
+	 * Input-rejection codes that are not logged.
 	 *
-	 * A missing/invalid-parameter rejection is self-correcting — the assistant
-	 * gets an actionable message and retries — so it is excluded here as well as
-	 * in {@see \Albert\MCP\ToolCallObserver}. Logging it would only add noise to
-	 * an owner-facing activity log.
+	 * Unused by Free since 1.6.0, where input rejections close inside
+	 * {@see ExecutionObserver}; kept because Premium's handler extends this one.
 	 *
 	 * @since 1.2.0
 	 * @var array<int, string>
@@ -84,10 +80,7 @@ class ObservabilityHandler implements McpObservabilityHandlerInterface {
 				return;
 			}
 
-			// Resolve the ability identifier. Tool-not-found failures (e.g. a
-			// call to a disabled ability) carry only `tool_name` — no
-			// `ability_name` — so fall back to it; a disabled ability's id is
-			// still a real, attributable identifier worth logging.
+			// A tool-not-found failure carries only the `tool_name` the client asked for.
 			$ability_name = $tags['ability_name'] ?? '';
 			if ( ! is_string( $ability_name ) || $ability_name === '' ) {
 				$ability_name = isset( $tags['tool_name'] ) && is_string( $tags['tool_name'] ) ? $tags['tool_name'] : '';
@@ -99,13 +92,6 @@ class ObservabilityHandler implements McpObservabilityHandlerInterface {
 			// Skip the three generic meta-tools — their failures don't map to a
 			// named inner ability and would produce misleading log entries.
 			if ( str_starts_with( $ability_name, self::META_TOOL_PREFIX ) ) {
-				return;
-			}
-
-			// Skip a failure already recorded this request via the
-			// `albert/abilities/after_execute` path (executed abilities and
-			// pre-execute validation failures), so a call never double-logs.
-			if ( ExecutionLogMarker::has( $ability_name ) ) {
 				return;
 			}
 
@@ -124,24 +110,13 @@ class ObservabilityHandler implements McpObservabilityHandlerInterface {
 				return;
 			}
 
-			$error_code = isset( $tags['error_code'] ) ? (string) $tags['error_code'] : null;
-
-			// A self-correcting input rejection is not logged (noise); the
-			// assistant still gets the improved message via ToolCallObserver.
-			if ( $error_code !== null && in_array( $error_code, self::VALIDATION_REJECTION_CODES, true ) ) {
-				return;
-			}
-
+			$error_code    = isset( $tags['error_code'] ) ? (string) $tags['error_code'] : null;
 			$error_message = self::extract_message( $tags );
 			$user_id       = get_current_user_id();
 			$context       = $error_message !== null ? [ 'error_message' => $error_message ] : [];
 
-			// Handed in as `error`; Repository::insert() re-reads it through
-			// Outcome, so an MCP-level `*_not_found` lands as `success` and a
-			// permission refusal as `warning`, exactly as they would on the
-			// after_execute path.
+			// Handed in as `error`; Repository::insert() classifies it through Outcome.
 			( new Repository() )->insert( $ability_name, $user_id, 'error', $error_code, $context );
-			ExecutionLogMarker::mark( $ability_name );
 		} catch ( \Throwable $e ) {
 			// Never rethrow — observability must not break the MCP request cycle.
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {

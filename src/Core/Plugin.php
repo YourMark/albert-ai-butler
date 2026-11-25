@@ -83,6 +83,7 @@ use Albert\Cron\PendingActionSweep;
 use Albert\Cron\TokenCleanup;
 use Albert\Database\Installer as DatabaseInstaller;
 use Albert\Logging\Logger;
+use Albert\Logging\ExecutionObserver;
 use Albert\Logging\Repository as LoggingRepository;
 use Albert\MCP\AdapterHealth as McpAdapterHealth;
 use Albert\MCP\Server as McpServer;
@@ -200,10 +201,14 @@ class Plugin {
 		// One-time cleanup of legacy options on upgrade from pre-1.1.0 installs.
 		$this->maybe_cleanup_legacy_options();
 
-		// Initialize the logging system (hooks wp_after_execute_ability).
+		// Initialize the logging system.
 		$logging_repository = new LoggingRepository();
 		$logger             = new Logger( $logging_repository );
 		$logger->register_hooks();
+
+		// Logs every call over a connection once core has decided its outcome,
+		// whichever plugin owns the ability.
+		( new ExecutionObserver( $logger ) )->register_hooks();
 
 		// Relay WP 7.1's wp_ability_invoked onto albert/abilities/invoked. No
 		// consumers in Free; this is the seam Premium's activity log binds to.

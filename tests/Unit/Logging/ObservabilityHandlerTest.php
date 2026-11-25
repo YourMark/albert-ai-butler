@@ -33,9 +33,6 @@ class ObservabilityHandlerTest extends TestCase {
 		$GLOBALS['albert_test_hooks']          = [];
 		$GLOBALS['albert_test_user_id']        = 7;
 		$GLOBALS['albert_test_filter_returns'] = [];
-
-		// The handler now consults a request-scoped marker; isolate each test.
-		\Albert\Logging\ExecutionLogMarker::reset();
 	}
 
 	// ─── Ignored events ──────────────────────────────────────────────

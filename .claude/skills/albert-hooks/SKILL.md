@@ -47,7 +47,7 @@ add_action( 'albert/abilities/before_execute/albert/create-post', function ( arr
 }, 10, 2 );
 ```
 
-**`albert/abilities/after_execute`** (action): Fires after any ability executes. Receives the result (array or WP_Error).
+**`albert/abilities/after_execute`** (action): Fires after any of Albert's own abilities executes, from inside its callback (before core validates the output). Receives the result (array or WP_Error).
 
 ```php
 add_action( 'albert/abilities/after_execute', function ( string $ability_id, array $args, $result, int $user_id ) {
@@ -99,7 +99,7 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/abilities/required_capability` | filter | Deprecated in 1.6.0, no effect: the Abilities screen no longer shows a capability |
 | `albert/abilities/before_execute` | action | Before any ability runs |
 | `BaseAbility::$sensitive_output_keys` | property | Not a hook, but part of the ability contract (1.4.0). Top-level result keys holding a credential. The caller receives them intact; every `after_execute` observer is handed a copy with them replaced by `[redacted]`. Observers are loggers (Albert's own writes a DB row, Premium captures the whole success payload), so a short-lived secret would otherwise outlive its own expiry in plaintext. Masks rather than drops, so a log still records the field was returned. Top-level keys only |
-| `albert/abilities/after_execute` | action | After any ability runs |
+| `albert/abilities/after_execute` | action | After any Albert ability runs (not other plugins'); the log uses `ExecutionObserver` instead |
 | `albert/abilities/before_execute/{id}` | action | Before a specific ability |
 | `albert/abilities/after_execute/{id}` | action | After a specific ability |
 | `albert/abilities/invoked` | action | Relayed from WP 7.1's `wp_ability_invoked`. Fires for EVERY invocation whatever the outcome (denied, invalid, short-circuited) and for abilities Albert does not own, which is wider than `after_execute` can see. Inert below 7.1; ask `WpCompat::supports_execution_lifecycle()`. Observer Throwables are swallowed |
