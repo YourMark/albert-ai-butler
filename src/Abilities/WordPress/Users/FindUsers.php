@@ -11,7 +11,6 @@ namespace Albert\Abilities\WordPress\Users;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use Albert\Privacy\PiiPolicy;
 use WP_Error;
 use WP_REST_Request;
 
@@ -91,7 +90,7 @@ class FindUsers extends BaseAbility {
 				],
 				'reveal_personal_data' => [
 					'type'        => 'boolean',
-					'description' => "Return real personal data instead of anonymised placeholders. Requires the ability's own capability; ignored unless privacy mode is Balanced.",
+					'description' => 'Return real personal data instead of anonymised placeholders. Needs an administrator, or the capability a site sets for revealing personal data; ignored unless privacy mode is Balanced.',
 					'default'     => false,
 				],
 			],
@@ -221,17 +220,10 @@ class FindUsers extends BaseAbility {
 		$total       = isset( $headers['X-WP-Total'] ) ? (int) $headers['X-WP-Total'] : count( $users );
 		$total_pages = isset( $headers['X-WP-TotalPages'] ) ? (int) $headers['X-WP-TotalPages'] : 1;
 
-		return PiiPolicy::redact(
-			[
-				'users'       => $users,
-				'total'       => $total,
-				'total_pages' => $total_pages,
-			],
-			$args,
-			[
-				'mask_context_names' => true,
-				'reveal_capability'  => 'list_users',
-			]
-		);
+		return [
+			'users'       => $users,
+			'total'       => $total,
+			'total_pages' => $total_pages,
+		];
 	}
 }

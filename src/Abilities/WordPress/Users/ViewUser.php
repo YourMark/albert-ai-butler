@@ -11,7 +11,6 @@ namespace Albert\Abilities\WordPress\Users;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use Albert\Privacy\PiiPolicy;
 use WP_Error;
 
 /**
@@ -64,7 +63,7 @@ class ViewUser extends BaseAbility {
 				],
 				'reveal_personal_data' => [
 					'type'        => 'boolean',
-					'description' => "Return real personal data instead of anonymised placeholders. Requires the ability's own capability; ignored unless privacy mode is Balanced.",
+					'description' => 'Return real personal data instead of anonymised placeholders. Needs an administrator, or the capability a site sets for revealing personal data; ignored unless privacy mode is Balanced.',
 					'default'     => false,
 				],
 			],
@@ -122,26 +121,19 @@ class ViewUser extends BaseAbility {
 			);
 		}
 
-		return PiiPolicy::redact(
-			[
-				'user' => [
-					'id'           => $user->ID,
-					'username'     => $user->user_login,
-					'email'        => $user->user_email,
-					'display_name' => $user->display_name,
-					'first_name'   => $user->first_name,
-					'last_name'    => $user->last_name,
-					'roles'        => $user->roles,
-					'registered'   => $user->user_registered,
-					'url'          => $user->user_url,
-					'description'  => $user->description,
-				],
+		return [
+			'user' => [
+				'id'           => $user->ID,
+				'username'     => $user->user_login,
+				'email'        => $user->user_email,
+				'display_name' => $user->display_name,
+				'first_name'   => $user->first_name,
+				'last_name'    => $user->last_name,
+				'roles'        => $user->roles,
+				'registered'   => $user->user_registered,
+				'url'          => $user->user_url,
+				'description'  => $user->description,
 			],
-			$args,
-			[
-				'mask_context_names' => true,
-				'reveal_capability'  => 'list_users',
-			]
-		);
+		];
 	}
 }

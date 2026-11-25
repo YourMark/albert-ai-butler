@@ -11,7 +11,6 @@ namespace Albert\Abilities\WooCommerce;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use Albert\Privacy\PiiPolicy;
 use WP_Error;
 use WP_User_Query;
 
@@ -89,7 +88,7 @@ class FindCustomers extends BaseAbility {
 				],
 				'reveal_personal_data' => [
 					'type'        => 'boolean',
-					'description' => "Return real customer PII instead of anonymised placeholders. Requires the ability's own capability; ignored unless privacy mode is Balanced.",
+					'description' => 'Return real customer PII instead of anonymised placeholders. Needs an administrator, or the capability a site sets for revealing personal data; ignored unless privacy mode is Balanced.',
 					'default'     => false,
 				],
 			],
@@ -179,17 +178,10 @@ class FindCustomers extends BaseAbility {
 			];
 		}
 
-		return PiiPolicy::redact(
-			[
-				'customers'   => $customers,
-				'total'       => $total,
-				'total_pages' => (int) ceil( $total / $per_page ),
-			],
-			$args,
-			[
-				'mask_context_names' => true,
-				'reveal_capability'  => 'list_users',
-			]
-		);
+		return [
+			'customers'   => $customers,
+			'total'       => $total,
+			'total_pages' => (int) ceil( $total / $per_page ),
+		];
 	}
 }

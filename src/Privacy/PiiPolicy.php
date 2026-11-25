@@ -40,11 +40,8 @@ class PiiPolicy {
 	 *  - authorised reveal (Balanced + opt-in + capability) — same as `Off`.
 	 *  - otherwise  — full anonymisation via {@see Anonymizer::anonymize()}.
 	 *
-	 * This lives inside the ability (where `$args` are the ability's own
-	 * parameters and the payload is the data it produced) rather than in a global
-	 * tool-result filter, because MCP proxies every ability through the
-	 * `mcp-adapter/execute-ability` meta-tool — a tool-name-keyed filter never
-	 * sees the real ability name or its arguments.
+	 * {@see ConnectedResultRedactor} redacts every connected call, so an ability
+	 * no longer needs this; it stays for add-ons that call it.
 	 *
 	 * The top-level keys of an ability payload are always string-keyed, and this
 	 * method never re-indexes that top array, so the return is narrowed to
@@ -82,6 +79,40 @@ class PiiPolicy {
 		 * @var array<string, mixed> $result
 		 */
 		return $result;
+	}
+
+	/**
+	 * Redact personal data in any ability result, whatever its shape.
+	 *
+	 * An object is redacted as the JSON it becomes, and a bare string is masked
+	 * when it is an email address. The reveal is gated by one capability for
+	 * every ability, `albert/privacy/reveal_capability`.
+	 *
+	 * @since 1.6.0
+	 *
+	 * @param mixed                $data The ability's result.
+	 * @param array<string, mixed> $args The ability's input.
+	 *
+	 * @return mixed The redacted result.
+	 */
+	public static function redact_value( mixed $data, array $args = [] ): mixed {
+		if ( is_object( $data ) ) {
+			$decoded = json_decode( (string) wp_json_encode( $data ), true );
+			$data    = is_array( $decoded ) ? $decoded : $data;
+		}
+
+		if ( ! is_array( $data ) && ! is_string( $data ) ) {
+			return $data;
+		}
+
+		$mode   = PrivacyMode::resolve();
+		$reveal = $mode === PrivacyMode::Off || self::allows_reveal( $args, $mode );
+
+		if ( is_string( $data ) ) {
+			return $reveal ? $data : Anonymizer::anonymize( [ $data ] )[0];
+		}
+
+		return $reveal ? Anonymizer::strip_payment_data( $data ) : Anonymizer::anonymize( $data );
 	}
 
 	/**
