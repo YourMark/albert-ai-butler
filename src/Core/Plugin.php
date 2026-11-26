@@ -99,6 +99,7 @@ use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
 use Albert\OAuth\DiscoveryHealth;
 use Albert\OAuth\PasswordChange;
+use Albert\OAuth\UserDeletion;
 use Albert\Privacy\PrivacyMode;
 use Albert\Execution\InterceptorDecision;
 use Albert\SafeMode\Gate as SafeModeGate;
@@ -240,6 +241,7 @@ class Plugin {
 		AllowedUserExpiry::schedule();
 
 		( new PasswordChange() )->register_hooks();
+		( new UserDeletion() )->register_hooks();
 
 		Commands::register();
 

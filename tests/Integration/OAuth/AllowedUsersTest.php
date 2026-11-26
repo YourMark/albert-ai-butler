@@ -433,4 +433,29 @@ class AllowedUsersTest extends TestCase {
 		$this->assertFalse( AllowedUsers::is_allowed( $listed ) );
 		$this->assertSame( [ $listed ], $fired );
 	}
+
+	/**
+	 * Deleting a user takes them off the list and fires `removed`.
+	 *
+	 * @return void
+	 */
+	public function test_deleting_a_user_removes_them(): void {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+
+		$fired = [];
+		add_action(
+			'albert/allowed_users/removed',
+			static function ( int $user_id ) use ( &$fired ): void {
+				$fired[] = $user_id;
+			}
+		);
+
+		$user_id = self::factory()->user->create();
+		AllowedUsers::add( $user_id );
+
+		wp_delete_user( $user_id );
+
+		$this->assertSame( [], AllowedUsers::ids() );
+		$this->assertSame( [ $user_id ], $fired );
+	}
 }

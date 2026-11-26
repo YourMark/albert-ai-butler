@@ -259,6 +259,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 **Fixes**
 
+* Deleting a WordPress user now also takes them off the list of people who may connect an assistant. Before, they stayed on it, hidden from the Connections screen.
 * Switching an ability off on the Abilities screen removed it from your whole site, so other plugins that used it stopped working too. The switch now only decides what assistants connected through Albert can use, and the screen explains this.
 * Text your assistant wrote in paragraphs, headings, lists, buttons and quotes lost tags that other plugins add, such as ThirstyAffiliates links, even for administrators. Text is now saved the way the WordPress editor saves it, with the same rules for who may store what.
 * Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
@@ -315,8 +316,8 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
 * `albert/create-post` and `albert/create-page` return `albert_post_permission_denied` and `albert_page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
 * `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
-* New WP-CLI command `wp albert allowed-users` with `list`, `add` and `remove`. It takes user IDs, logins or email addresses and changes nothing if any of them is not found, or, for `add`, lacks the capability from `albert/connections/allowed_user_capability`.
-* New actions `albert/allowed_users/added` `( $user_id, $expires_at )` and `albert/allowed_users/removed` `( $user_id )`. They fire whenever someone is added or removed, by the Connections screen, the command, an add-on or an invitation lapsing, and only once the change is saved. `AllowedUsers::remove()` now returns whether the person was removed.
+* New WP-CLI command `wp albert allowed-users` with `list`, `add` and `remove`. It takes user IDs, logins or email addresses and changes nothing if any of them is not found, or, for `add`, lacks the capability from `albert/connections/allowed_user_capability`. `remove` also takes the ID of someone on the list whose account no longer exists.
+* New actions `albert/allowed_users/added` `( $user_id, $expires_at )` and `albert/allowed_users/removed` `( $user_id )`. They fire whenever someone is added or removed, by the Connections screen, the command, an add-on, an invitation lapsing or their user being deleted, and only once the change is saved. `AllowedUsers::remove()` now returns whether the person was removed.
 * `albert/connections/allowed_user_capability` now also decides who may be added to the list, on the Connections screen as well as in the picker. Before, it only filtered who the picker offered.
 
 **Credits**

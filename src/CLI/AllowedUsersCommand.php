@@ -174,7 +174,8 @@ class AllowedUsersCommand {
 	 * ## OPTIONS
 	 *
 	 * <user>...
-	 * : User ID, login or email address.
+	 * : User ID, login or email address. The ID of someone on the list whose
+	 * account was deleted works too.
 	 *
 	 * @param array<int, string> $args Users.
 	 *
@@ -182,38 +183,55 @@ class AllowedUsersCommand {
 	 * @since 1.6.0
 	 */
 	public function remove( array $args ): void {
-		$users   = $this->users( $args );
+		$listed  = AllowedUsers::ids();
+		$deleted = [];
+		$named   = [];
+
+		foreach ( $args as $arg ) {
+			if ( is_numeric( $arg ) && in_array( (int) $arg, $listed, true ) && ! get_user_by( 'id', (int) $arg ) ) {
+				$deleted[ (int) $arg ] = 'deleted user';
+			} else {
+				$named[] = $arg;
+			}
+		}
+
+		$targets = $deleted;
+
+		foreach ( $named === [] ? [] : $this->users( $named ) as $user ) {
+			$targets[ $user->ID ] = $user->user_login;
+		}
+
 		$removed = 0;
 		$failed  = 0;
 
-		foreach ( $users as $user ) {
+		foreach ( $targets as $user_id => $label ) {
 			// remove() returns false for both "not listed" and a refused save; tell them apart.
-			$was_listed = in_array( $user->ID, AllowedUsers::ids(), true );
-			$is_removed = $was_listed && AllowedUsers::remove( $user->ID );
+			$was_listed = in_array( $user_id, $listed, true );
+			$is_removed = $was_listed && AllowedUsers::remove( $user_id );
 
 			// Revoke either way, as the screen does: tokens can outlive a list entry.
-			Settings::revoke_user_tokens( $user->ID );
+			Settings::revoke_user_tokens( $user_id );
 
 			if ( ! $was_listed ) {
-				WP_CLI::warning( sprintf( '%s (ID %d) is not on the list. Any assistants they connected were signed out.', $user->user_login, $user->ID ) );
+				WP_CLI::warning( sprintf( '%s (ID %d) is not on the list. Any assistants they connected were signed out.', $label, $user_id ) );
 				continue;
 			}
 
 			if ( ! $is_removed ) {
 				++$failed;
-				WP_CLI::warning( sprintf( '%s (ID %d) could not be removed from the list. Any assistants they connected were signed out.', $user->user_login, $user->ID ) );
+				WP_CLI::warning( sprintf( '%s (ID %d) could not be removed from the list. Any assistants they connected were signed out.', $label, $user_id ) );
 				continue;
 			}
 
 			++$removed;
-			WP_CLI::log( sprintf( 'Removed %s (ID %d) and signed out their assistants.', $user->user_login, $user->ID ) );
+			WP_CLI::log( sprintf( 'Removed %s (ID %d) and signed out their assistants.', $label, $user_id ) );
 		}
 
 		if ( $failed > 0 ) {
-			WP_CLI::error( sprintf( 'Removed %d of %d; %d could not be saved.', $removed, count( $users ), $failed ) );
+			WP_CLI::error( sprintf( 'Removed %d of %d; %d could not be saved.', $removed, count( $targets ), $failed ) );
 		}
 
-		WP_CLI::success( sprintf( 'Removed %d of %d.', $removed, count( $users ) ) );
+		WP_CLI::success( sprintf( 'Removed %d of %d.', $removed, count( $targets ) ) );
 	}
 
 	/**

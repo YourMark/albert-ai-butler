@@ -104,6 +104,23 @@ class AllowedUsersCommandTest extends TestCase {
 	}
 
 	/**
+	 * Remove takes the ID of someone listed whose account is gone, next to a login.
+	 *
+	 * @return void
+	 */
+	public function test_remove_takes_the_id_of_a_deleted_user(): void {
+		$jan  = self::factory()->user->create( [ 'user_login' => 'jan' ] );
+		$gone = $jan + 1000;
+		AllowedUsers::add( $jan );
+		update_option( AllowedUsers::OPTION, get_option( AllowedUsers::OPTION ) + [ $gone => [] ] );
+
+		( new AllowedUsersCommand() )->remove( [ (string) $gone, 'jan' ] );
+
+		$this->assertSame( [], AllowedUsers::ids() );
+		$this->assertSame( [ 'success', 'Removed 2 of 2.' ], end( WP_CLI::$output ) );
+	}
+
+	/**
 	 * A refused save on add or remove errors, so the command exits non-zero.
 	 *
 	 * @return void
