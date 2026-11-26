@@ -402,37 +402,37 @@ class Connections implements Hookable {
 			}
 		}
 
-		$added   = count( $added_ids );
-		$message = sprintf(
-			/* translators: %d: number of users added. */
-			_n( '%d person can now approve an assistant.', '%d people can now approve an assistant.', $added, 'albert-ai-butler' ),
-			$added
-		);
+		$added = count( $added_ids );
+		$parts = [];
 
-		if ( $added === 0 ) {
-			$message = $refused === 0
-				? __( 'Everyone you chose could already approve an assistant, so nothing changed.', 'albert-ai-butler' )
-				: '';
+		if ( $added > 0 ) {
+			$parts[] = sprintf(
+				/* translators: %d: number of users added. */
+				_n( '%d person can now approve an assistant.', '%d people can now approve an assistant.', $added, 'albert-ai-butler' ),
+				$added
+			);
+		} elseif ( $refused === 0 ) {
+			$parts[] = __( 'Everyone you chose could already approve an assistant, so nothing changed.', 'albert-ai-butler' );
 		}
 
 		if ( $refused > 0 ) {
-			$message = trim(
-				$message . ' ' . sprintf(
-					/* translators: %d: number of users not added. */
-					_n(
-						'%d person was not added: they do not have the role needed to approve an assistant.',
-						'%d people were not added: they do not have the role needed to approve an assistant.',
-						$refused,
-						'albert-ai-butler'
-					),
-					$refused
-				)
+			$parts[] = sprintf(
+				/* translators: %d: number of users not added. */
+				_n(
+					'%d person was not added: they do not have the role needed to approve an assistant.',
+					'%d people were not added: they do not have the role needed to approve an assistant.',
+					$refused,
+					'albert-ai-butler'
+				),
+				$refused
 			);
 		}
 
 		if ( $added > 0 && ! empty( $_POST['albert_email_setup'] ) ) {
-			$message .= ' ' . $this->email_setup_links( $added_ids );
+			$parts[] = $this->email_setup_links( $added_ids );
 		}
+
+		$message = implode( ' ', $parts );
 
 		if ( $is_ajax ) {
 			if ( $added === 0 ) {
