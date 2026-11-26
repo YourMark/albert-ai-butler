@@ -58,7 +58,7 @@ class DeletePattern extends BaseAbility {
 			'mcp'         => [ 'public' => true ],
 			'annotations' => Annotations::delete(
 				'A registered pattern cannot be deleted and returns a read-only error. Without "force" the pattern '
-				. 'is trashed where the site allows it.'
+				. 'goes to the trash; "force": true deletes it permanently.'
 			),
 		];
 
@@ -101,7 +101,10 @@ class DeletePattern extends BaseAbility {
 			'properties' => [
 				'id'      => [ 'type' => 'integer' ],
 				'name'    => [ 'type' => 'string' ],
-				'deleted' => [ 'type' => 'boolean' ],
+				'deleted' => [
+					'type'        => 'boolean',
+					'description' => 'True only when the pattern was deleted permanently.',
+				],
 				'status'  => [ 'type' => 'string' ],
 			],
 			'required'   => [ 'id', 'deleted', 'status' ],
@@ -181,7 +184,7 @@ class DeletePattern extends BaseAbility {
 		return [
 			'id'      => $id,
 			'name'    => $name,
-			'deleted' => true,
+			'deleted' => $force,
 			'status'  => $force ? 'deleted' : 'trashed',
 		];
 	}

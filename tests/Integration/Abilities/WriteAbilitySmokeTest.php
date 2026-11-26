@@ -231,7 +231,12 @@ class WriteAbilitySmokeTest extends TestCase {
 	 * @return void
 	 */
 	public function test_delete_user_missing_returns_404(): void {
-		$result = ( new DeleteUser() )->execute( [ 'id' => 99999 ] );
+		$result = ( new DeleteUser() )->execute(
+			[
+				'id'       => 99999,
+				'reassign' => get_current_user_id(),
+			]
+		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'user_not_found', $result->get_error_code() );
