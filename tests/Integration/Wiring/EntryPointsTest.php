@@ -88,11 +88,28 @@ class EntryPointsTest extends TestCase {
 	}
 
 	/**
-	 * Every cron class's event is scheduled once the plugin has loaded.
+	 * The OAuth discovery routes at the issuer's mid-path `.well-known` are registered.
+	 *
+	 * Their route is concatenated, so the scan above skips them, and they are the
+	 * ones managed hosts have broken before.
 	 *
 	 * @return void
 	 */
-	public function test_every_cron_job_is_scheduled(): void {
+	public function test_oauth_well_known_routes_are_registered(): void {
+		$routes = rest_get_server()->get_routes();
+		$prefix = '/' . Plugin::rest_namespace() . '/oauth/\\.well-known/';
+
+		foreach ( [ 'openid-configuration', 'oauth-authorization-server' ] as $suffix ) {
+			$this->assertArrayHasKey( $prefix . $suffix, $routes );
+		}
+	}
+
+	/**
+	 * Every cron class's event is scheduled and has a handler once the plugin has loaded.
+	 *
+	 * @return void
+	 */
+	public function test_every_cron_job_is_scheduled_and_handled(): void {
 		$checked = 0;
 		$missing = [];
 
@@ -103,13 +120,20 @@ class EntryPointsTest extends TestCase {
 
 			++$checked;
 
-			if ( ! wp_next_scheduled( constant( $class . '::HOOK' ) ) ) {
-				$missing[] = $class;
+			$hook = constant( $class . '::HOOK' );
+
+			if ( ! wp_next_scheduled( $hook ) ) {
+				$missing[] = $class . ' (not scheduled)';
+			}
+
+			// A scheduled event with no callback runs and does nothing.
+			if ( ! has_action( $hook ) ) {
+				$missing[] = $class . ' (no handler)';
 			}
 		}
 
 		$this->assertGreaterThan( 0, $checked, 'No cron classes found.' );
-		$this->assertSame( [], $missing, 'Cron events not scheduled.' );
+		$this->assertSame( [], $missing, 'Cron events not wired up.' );
 	}
 
 	/**
