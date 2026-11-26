@@ -255,7 +255,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Safe mode no longer asks you to approve moving a post, page or block pattern to the trash, because you can restore it from the trash yourself. Deleting one permanently still waits for your approval.
 * Albert no longer saves a block it can only guess, such as an image without an address, a cover or a block from another plugin without its markup, or blocks nested where the editor would drop them. Your assistant gets a message saying what to send instead, and nothing is saved.
 * The Context screen now says when a saved change takes effect: the next time an assistant asks what your site can do. A conversation that is already open keeps what it started with, so start a new one to use your changes.
-* Your assistant can now place one of your block patterns into an existing page or post by name. Albert inserts the pattern exactly as your site stores it, so a hero, call to action or footer section arrives intact instead of being copied block by block.
+* Your assistant can now place one of your block patterns into a page or post by name, including a new, empty one, so "make a landing page from this pattern" takes one step. Albert inserts the pattern exactly as your site stores it, patterns inside it included, so a hero, call to action or footer section arrives intact instead of being copied block by block.
 
 **Fixes**
 
@@ -315,7 +315,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
 * `albert/create-post` and `albert/create-page` return `albert_post_permission_denied` and `albert_page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
 * `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
-* `albert/add-post-block` and `albert/add-page-block` accept `pattern`, a pattern name from `albert/find-patterns`, instead of `block`. Its blocks are inserted as stored (a synced user pattern as a `core/block` reference) and checked against the allowed blocks. An unknown name returns `pattern_not_found`.
+* `albert/add-post-block` and `albert/add-page-block` accept `pattern`, a pattern name from `albert/find-patterns`, instead of `block`. Its blocks are inserted as stored, with nested `core/pattern` references expanded (a synced user pattern as a `core/block` reference), and checked against the allowed blocks. An unknown name returns `pattern_not_found`. On a post or page without blocks, `path` and `position` may be left out. The response's `inserted` gives the count and paths of the top-level blocks added.
 
 **Credits**
 

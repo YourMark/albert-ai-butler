@@ -200,7 +200,9 @@ class InsertPatternTest extends TestCase {
 		remove_filter( 'allowed_block_types_all', $only_paragraphs );
 
 		$this->assertSame( 'block_validation_failed', $result->get_error_code() );
-		$this->assertStringContainsString( 'core/group', $result->get_error_message() );
+		$this->assertStringContainsString( "The pattern '" . self::PATTERN . "' can't be used here", $result->get_error_message() );
+		$this->assertStringContainsString( 'core/group, core/heading', $result->get_error_message() );
+		$this->assertStringContainsString( 'albert/view-pattern', $result->get_error_message() );
 	}
 
 	/**
@@ -288,6 +290,233 @@ class InsertPatternTest extends TestCase {
 		$this->assertSame( 'pattern_empty', $empty->get_error_code() );
 		$this->assertSame( 'pattern_not_found', $draft->get_error_code() );
 		$this->assertSame( 'invalid_input', $both->get_error_code() );
+		$this->assertSame( '<!-- wp:paragraph --><p>Intro</p><!-- /wp:paragraph -->', get_post( $this->post_id )->post_content );
+	}
+
+	/**
+	 * Run an add-block ability the way an assistant calls it.
+	 *
+	 * @param array<string, mixed> $input   Ability input.
+	 * @param string               $ability Ability ID.
+	 * @return mixed
+	 */
+	private function call( array $input, string $ability = 'albert/add-post-block' ): mixed {
+		if ( ! function_exists( 'wp_has_ability' ) || ! wp_has_ability( $ability ) ) {
+			$this->markTestSkipped( $ability . ' is not registered.' );
+		}
+
+		return wp_get_ability( $ability )->execute( $input );
+	}
+
+	/**
+	 * A theme pattern that nests another is stored with the nested blocks, not a
+	 * core/pattern reference, as the editor does.
+	 *
+	 * @return void
+	 */
+	public function test_a_nested_pattern_is_inserted_with_its_blocks(): void {
+		register_block_pattern(
+			'albert-test/page',
+			[
+				'title'   => 'Page',
+				'content' => '<!-- wp:group --><div class="wp-block-group"><!-- wp:pattern {"slug":"albert-test/hero"} /--></div><!-- /wp:group -->',
+			]
+		);
+
+		$result = $this->call(
+			[
+				'id'       => $this->post_id,
+				'path'     => [ 0 ],
+				'position' => 'after',
+				'pattern'  => 'albert-test/page',
+			]
+		);
+
+		unregister_block_pattern( 'albert-test/page' );
+
+		$this->assertIsArray( $result );
+		$this->assertSame(
+			'<!-- wp:paragraph --><p>Intro</p><!-- /wp:paragraph -->'
+			. '<!-- wp:group --><div class="wp-block-group">' . self::MARKUP . '</div><!-- /wp:group -->',
+			get_post( $this->post_id )->post_content
+		);
+	}
+
+	/**
+	 * The blocks of a nested pattern are checked against the allowed blocks too.
+	 *
+	 * @return void
+	 */
+	public function test_a_nested_pattern_with_a_disallowed_block_is_refused(): void {
+		register_block_pattern(
+			'albert-test/page',
+			[
+				'title'   => 'Page',
+				'content' => '<!-- wp:pattern {"slug":"albert-test/hero"} /-->',
+			]
+		);
+		$no_headings = static fn (): array => [ 'core/paragraph', 'core/group', 'core/pattern' ];
+		add_filter( 'allowed_block_types_all', $no_headings );
+
+		$result = $this->call(
+			[
+				'id'       => $this->post_id,
+				'path'     => [ 0 ],
+				'position' => 'after',
+				'pattern'  => 'albert-test/page',
+			]
+		);
+
+		remove_filter( 'allowed_block_types_all', $no_headings );
+		unregister_block_pattern( 'albert-test/page' );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'block_validation_failed', $result->get_error_code() );
+		$this->assertSame( [ 'core/heading' ], $result->get_error_data()['disallowed'] );
+		$this->assertSame( '<!-- wp:paragraph --><p>Intro</p><!-- /wp:paragraph -->', get_post( $this->post_id )->post_content );
+	}
+
+	/**
+	 * Sending both block and pattern passes the schema and gets the error that names the fix.
+	 *
+	 * @return void
+	 */
+	public function test_block_and_pattern_together_name_the_fix(): void {
+		$result = $this->call(
+			[
+				'id'       => $this->post_id,
+				'path'     => [ 0 ],
+				'position' => 'after',
+				'pattern'  => self::PATTERN,
+				'block'    => [ 'name' => 'core/paragraph' ],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_input', $result->get_error_code() );
+		$this->assertStringContainsString( 'not both', $result->get_error_message() );
+	}
+
+	/**
+	 * The response says where each top-level block of the pattern landed.
+	 *
+	 * @return void
+	 */
+	public function test_the_response_reports_where_the_pattern_landed(): void {
+		$after = $this->call(
+			[
+				'id'       => $this->post_id,
+				'path'     => [ 0 ],
+				'position' => 'after',
+				'pattern'  => self::PATTERN,
+			]
+		);
+
+		$this->assertSame(
+			[
+				'count' => 2,
+				'paths' => [ [ 1 ], [ 2 ] ],
+			],
+			$after['inserted']
+		);
+
+		$inside = $this->call(
+			[
+				'id'       => $this->post_id,
+				'path'     => [ 1 ],
+				'position' => 'inside_end',
+				'block'    => [
+					'name'       => 'core/paragraph',
+					'attributes' => [ 'content' => 'Last' ],
+				],
+			]
+		);
+
+		$this->assertSame(
+			[
+				'count' => 1,
+				'paths' => [ [ 1, 1 ] ],
+			],
+			$inside['inserted']
+		);
+		$this->assertSame( 'core/paragraph', $inside['blocks'][1]['innerBlocks'][1]['name'] );
+	}
+
+	/**
+	 * "Make a landing page from pattern X": a pattern fills an empty page without a path.
+	 *
+	 * @return void
+	 */
+	public function test_a_pattern_fills_an_empty_page_without_a_path(): void {
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'    => 'page',
+				'post_content' => '',
+			]
+		);
+
+		$result = $this->call(
+			[
+				'id'      => $page_id,
+				'pattern' => self::PATTERN,
+			],
+			'albert/add-page-block'
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertSame( self::MARKUP, get_post( $page_id )->post_content );
+		$this->assertSame(
+			[
+				'count' => 2,
+				'paths' => [ [ 0 ], [ 1 ] ],
+			],
+			$result['inserted']
+		);
+	}
+
+	/**
+	 * A block goes into an empty post with an empty path.
+	 *
+	 * @return void
+	 */
+	public function test_a_block_fills_an_empty_post_with_an_empty_path(): void {
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => '',
+			]
+		);
+
+		$result = $this->call(
+			[
+				'id'    => $this->post_id,
+				'path'  => [],
+				'block' => [
+					'name'       => 'core/paragraph',
+					'attributes' => [ 'content' => 'First' ],
+				],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertSame( '<!-- wp:paragraph -->' . "\n" . '<p>First</p>' . "\n" . '<!-- /wp:paragraph -->', get_post( $this->post_id )->post_content );
+	}
+
+	/**
+	 * A post that has blocks still needs a path.
+	 *
+	 * @return void
+	 */
+	public function test_a_post_with_blocks_needs_a_path(): void {
+		$result = $this->call(
+			[
+				'id'      => $this->post_id,
+				'pattern' => self::PATTERN,
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'block_path_required', $result->get_error_code() );
 		$this->assertSame( '<!-- wp:paragraph --><p>Intro</p><!-- /wp:paragraph -->', get_post( $this->post_id )->post_content );
 	}
 }

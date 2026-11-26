@@ -29,12 +29,12 @@ class AddBlock extends AbstractAddBlock {
 	public function __construct() {
 		$this->id          = 'albert/add-page-block';
 		$this->label       = __( 'Add Page Block', 'albert-ai-butler' );
-		$this->description = __( 'Insert a single block, or a pattern by name, into a page before/after a block at a given position (path), or inside it. Every other block is left untouched. Read the page first to get block paths.', 'albert-ai-butler' );
+		$this->description = __( 'Insert a single block, or a pattern by name, into a page before/after a block at a given position (path), or inside it; into an empty page without a path. Every other block is left untouched. Read the page first to get block paths.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
 		$this->input_schema  = $this->add_input_schema();
-		$this->output_schema = $this->shared_output_schema();
+		$this->output_schema = $this->add_output_schema();
 
 		$this->meta = [
 			'mcp'         => [
@@ -47,7 +47,9 @@ class AddBlock extends AbstractAddBlock {
 				. 'with the last top-level block\'s path. Pass `expect` set to the block name you read at '
 				. 'that path. Every op returns the refreshed tree; later paths shift after an insert, so '
 				. 'take your next path from that response. To place a pattern from `albert/find-patterns`, send '
-				. 'its `name` as `pattern` instead of `block`: the server inserts it exactly as stored.'
+				. 'its `name` as `pattern` instead of `block`: the server inserts it exactly as stored. On a page with '
+				. 'no blocks yet, leave out `path` and `position`. `inserted` in the response gives the paths of the '
+				. 'top-level blocks added.'
 			),
 		];
 
