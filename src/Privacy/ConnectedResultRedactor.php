@@ -72,9 +72,17 @@ class ConnectedResultRedactor implements Hookable {
 	 * @since 1.6.0
 	 */
 	public function enter( string $ability_name ): void {
-		if ( self::applies_to( $ability_name ) ) {
-			++$this->depth;
+		if ( ! self::applies_to( $ability_name ) ) {
+			return;
 		}
+
+		// A new outermost call: drop a result whose validation never ran, as
+		// when a later filter turned it into an error.
+		if ( $this->depth === 0 ) {
+			$this->unredacted = [];
+		}
+
+		++$this->depth;
 	}
 
 	/**

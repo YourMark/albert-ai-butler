@@ -40,8 +40,8 @@ class PiiPolicy {
 	 *  - authorised reveal (Balanced + opt-in + capability) — same as `Off`.
 	 *  - otherwise  — full anonymisation via {@see Anonymizer::anonymize()}.
 	 *
-	 * {@see ConnectedResultRedactor} redacts every connected call, so an ability
-	 * no longer needs this; it stays for add-ons that call it.
+	 * {@see ConnectedResultRedactor} redacts every connected call afterwards,
+	 * so new code should not call this; it stays for add-ons that do.
 	 *
 	 * The top-level keys of an ability payload are always string-keyed, and this
 	 * method never re-indexes that top array, so the return is narrowed to
@@ -84,9 +84,10 @@ class PiiPolicy {
 	/**
 	 * Redact personal data in any ability result, whatever its shape.
 	 *
-	 * An object is redacted as the JSON it becomes, and a bare string is masked
-	 * when it is an email address. The reveal is gated by one capability for
-	 * every ability, `albert/privacy/reveal_capability`.
+	 * Only called once core has let the caller run the ability, so on Balanced
+	 * the opt-in alone reveals: whoever may use an ability may see what it returns.
+	 * An object is redacted as the JSON it becomes, and comes back as itself
+	 * when nothing in it changed. A bare string is masked when it is an email address.
 	 *
 	 * @since 1.6.0
 	 *
@@ -96,23 +97,23 @@ class PiiPolicy {
 	 * @return mixed The redacted result.
 	 */
 	public static function redact_value( mixed $data, array $args = [] ): mixed {
-		if ( is_object( $data ) ) {
-			$decoded = json_decode( (string) wp_json_encode( $data ), true );
-			$data    = is_array( $decoded ) ? $decoded : $data;
-		}
+		$value = is_object( $data ) ? json_decode( (string) wp_json_encode( $data ), true ) : $data;
 
-		if ( ! is_array( $data ) && ! is_string( $data ) ) {
+		if ( ! is_array( $value ) && ! is_string( $value ) ) {
 			return $data;
 		}
 
 		$mode   = PrivacyMode::resolve();
-		$reveal = $mode === PrivacyMode::Off || self::allows_reveal( $args, $mode );
+		$reveal = $mode === PrivacyMode::Off
+			|| ( $mode === PrivacyMode::Balanced && ! empty( $args['reveal_personal_data'] ) );
 
-		if ( is_string( $data ) ) {
-			return $reveal ? $data : Anonymizer::anonymize( [ $data ] )[0];
+		if ( is_string( $value ) ) {
+			return $reveal ? $value : Anonymizer::anonymize( [ $value ] )[0];
 		}
 
-		return $reveal ? Anonymizer::strip_payment_data( $data ) : Anonymizer::anonymize( $data );
+		$redacted = $reveal ? Anonymizer::strip_payment_data( $value ) : Anonymizer::anonymize( $value );
+
+		return $redacted === $value ? $data : $redacted;
 	}
 
 	/**

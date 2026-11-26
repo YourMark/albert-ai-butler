@@ -35,7 +35,7 @@ class ConnectedResultRedactorTest extends TestCase {
 	private ConnectedResultRedactor $redactor;
 
 	/**
-	 * Open a connection on Balanced, with no reveal capability.
+	 * Open a connection on Balanced.
 	 *
 	 * @return void
 	 */
@@ -144,19 +144,48 @@ class ConnectedResultRedactorTest extends TestCase {
 	}
 
 	/**
-	 * Another plugin's ability reveals only for the filtered capability.
+	 * On Balanced, whoever may run the ability reveals by asking.
 	 *
 	 * @return void
 	 */
-	public function test_reveal_needs_the_reveal_capability(): void {
-		$input = [ 'reveal_personal_data' => true ];
+	public function test_balanced_reveals_on_request(): void {
+		$masked   = $this->call( self::ABILITY, $this->members() );
+		$revealed = $this->call( self::ABILITY, $this->members(), [ 'reveal_personal_data' => true ] );
 
-		$denied                      = $this->call( self::ABILITY, $this->members(), $input );
-		$GLOBALS['albert_test_caps'] = [ 'manage_options' ];
-		$allowed                     = $this->call( self::ABILITY, $this->members(), $input );
+		$this->assertSame( 'j***@e***.com', $masked['members'][0]['user_email'] );
+		$this->assertSame( 'jane@example.com', $revealed['members'][0]['user_email'] );
+	}
 
-		$this->assertSame( 'j***@e***.com', $denied['members'][0]['user_email'] );
-		$this->assertSame( 'jane@example.com', $allowed['members'][0]['user_email'] );
+	/**
+	 * A result with nothing personal in it comes back as it was, object or not.
+	 *
+	 * @return void
+	 */
+	public function test_returns_untouched_results_as_they_were(): void {
+		$empty   = new \stdClass();
+		$product = [
+			'name'        => 'Blue mug',
+			'description' => 'A mug.',
+			'url'         => 'https://shop.example/mug',
+			'content'     => '<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->',
+		];
+
+		$this->assertSame( $empty, $this->call( self::ABILITY, $empty ) );
+		$this->assertSame( $product, $this->call( self::ABILITY, $product ) );
+	}
+
+	/**
+	 * A result whose validation never ran does not judge the next call.
+	 *
+	 * @return void
+	 */
+	public function test_stale_result_is_dropped_on_the_next_call(): void {
+		$this->call( 'acme/get-contact', [ 'email' => 'jane@example.com' ] );
+
+		$verdict = new WP_Error( 'ability_invalid_output', 'Real fault.' );
+		$this->call( 'acme/get-contact', [ 'plan' => 'gold' ] );
+
+		$this->assertSame( $verdict, $this->redactor->validate_unredacted( $verdict, [ 'plan' => 'gold' ], 'acme/get-contact' ) );
 	}
 
 	/**
@@ -166,7 +195,6 @@ class ConnectedResultRedactorTest extends TestCase {
 	 */
 	public function test_strict_never_reveals(): void {
 		$GLOBALS['albert_test_options']['albert_privacy_mode'] = 'strict';
-		$GLOBALS['albert_test_caps']                           = [ 'manage_options' ];
 
 		$result = $this->call( self::ABILITY, $this->members(), [ 'reveal_personal_data' => true ] );
 

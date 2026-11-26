@@ -423,8 +423,8 @@ class Anonymizer {
 				'user_activation_key',
 				'session_tokens',
 			],
-			'redact'         => [ 'customer_note', 'date_of_birth', 'birthdate', 'birthday', 'dob', 'national_id', 'ssn', 'tax_id', 'vat_number', 'iban' ],
-			'context_redact' => [ 'description', 'bio', 'biography' ],
+			'redact'         => [ 'customer_note', 'date_of_birth', 'birthdate', 'birthday', 'dob', 'national_id', 'ssn' ],
+			'context_redact' => [ 'description', 'bio', 'biography', 'tax_id', 'vat_number', 'iban' ],
 			'person_markers' => [ 'email', 'user_email', 'user_login', 'username', 'user_nicename', 'first_name', 'last_name', 'nickname' ],
 		];
 	}

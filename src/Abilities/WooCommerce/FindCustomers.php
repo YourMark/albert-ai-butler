@@ -88,7 +88,7 @@ class FindCustomers extends BaseAbility {
 				],
 				'reveal_personal_data' => [
 					'type'        => 'boolean',
-					'description' => 'Return real customer PII instead of anonymised placeholders. Needs an administrator, or the capability a site sets for revealing personal data; ignored unless privacy mode is Balanced.',
+					'description' => 'Return real customer PII instead of anonymised placeholders. Ignored unless privacy mode is Balanced.',
 					'default'     => false,
 				],
 			],

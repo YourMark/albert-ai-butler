@@ -408,7 +408,7 @@ class AnonymizerTest extends TestCase {
 	}
 
 	/**
-	 * A site record is not a person: its name, tagline and address stay, its admin email is masked.
+	 * A site record is not a person: its name, tagline, address and VAT number stay, its admin email is masked.
 	 *
 	 * @return void
 	 */
@@ -419,6 +419,7 @@ class AnonymizerTest extends TestCase {
 				'description' => 'Just another site',
 				'url'         => 'https://shop.example',
 				'admin_email' => 'owner@shop.example',
+				'vat_number'  => 'NL123456789B01',
 			]
 		);
 
@@ -426,6 +427,7 @@ class AnonymizerTest extends TestCase {
 		$this->assertSame( 'Just another site', $out['description'] );
 		$this->assertSame( 'https://shop.example', $out['url'] );
 		$this->assertSame( 'o***@s***.example', $out['admin_email'] );
+		$this->assertSame( 'NL123456789B01', $out['vat_number'] );
 	}
 
 	/**
