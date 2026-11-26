@@ -218,6 +218,7 @@ Website: https://yourmark.nl
 - When your assistant used an action from another plugin, it did not show in Recent activity, and the Abilities screen said it was never used. These calls are now recorded like Albert's own.
 - When an action's answer did not have the shape it promises, your assistant got an error but Recent activity said it succeeded. It now shows as failed.
 - When your assistant asked for an action it is not allowed to use, the refusal did not show in Recent activity. It now shows as blocked.
+- When a plugin on your site blocked the list of users, choosing who may approve an assistant failed with a message to reload the page, which never helped. It now says that something on the site blocks the user list and what to allow.
 - When your assistant searched your users, their email addresses and roles always came back empty, and the username shown was not the name they log in with. Both are now filled in correctly. Privacy mode still hides email addresses and usernames as before.
 - Asking for one user by ID in a user search returned a jumbled result instead of that user. It now returns just that user.
 
