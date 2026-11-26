@@ -73,11 +73,11 @@ class AllowedUsersCommandTest extends TestCase {
 	}
 
 	/**
-	 * Adding someone whose invitation expired names that, rather than "already on the list".
+	 * Adding someone whose invitation expired restarts it, as sending a setup link does.
 	 *
 	 * @return void
 	 */
-	public function test_add_names_an_expired_invitation(): void {
+	public function test_add_restarts_an_expired_invitation(): void {
 		$jan = self::factory()->user->create(
 			[
 				'user_login' => 'jan',
@@ -97,10 +97,10 @@ class AllowedUsersCommandTest extends TestCase {
 
 		( new AllowedUsersCommand() )->add( [ 'jan' ] );
 
-		$warnings = array_column( array_filter( WP_CLI::$output, static fn( $line ) => $line[0] === 'warning' ), 1 );
-		$this->assertCount( 1, $warnings );
-		$this->assertStringContainsString( 'invitation expired', $warnings[ array_key_first( $warnings ) ] );
-		$this->assertSame( [ 'success', 'Added 0 of 1.' ], end( WP_CLI::$output ) );
+		$this->assertTrue( AllowedUsers::is_allowed( $jan ) );
+		$this->assertGreaterThan( time(), AllowedUsers::expires_at( $jan ) );
+		$this->assertSame( [], array_filter( WP_CLI::$output, static fn( $line ) => $line[0] === 'warning' ) );
+		$this->assertSame( [ 'success', 'Added 1 of 1.' ], end( WP_CLI::$output ) );
 	}
 
 	/**

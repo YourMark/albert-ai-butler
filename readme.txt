@@ -255,7 +255,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Safe mode no longer asks you to approve moving a post, page or block pattern to the trash, because you can restore it from the trash yourself. Deleting one permanently still waits for your approval.
 * Albert no longer saves a block it can only guess, such as an image without an address, a cover or a block from another plugin without its markup, or blocks nested where the editor would drop them. Your assistant gets a message saying what to send instead, and nothing is saved.
 * The Context screen now says when a saved change takes effect: the next time an assistant asks what your site can do. A conversation that is already open keeps what it started with, so start a new one to use your changes.
-* You can now manage the list of people who may connect an assistant from the command line, as well as on the Connections screen: see who is on it and whether they have connected yet, add people and remove them. Removing someone signs out every assistant they connected, as it does on the screen.
+* You can now manage the list of people who may connect an assistant from the command line, as well as on the Connections screen: see who is on it and whether they have connected yet, add people and remove them. Adding someone whose invitation expired restarts it, as sending them a setup link does. Removing someone signs out every assistant they connected, as it does on the screen.
 
 **Fixes**
 

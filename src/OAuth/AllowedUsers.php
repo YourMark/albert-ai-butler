@@ -253,6 +253,7 @@ class AllowedUsers {
 	 *
 	 * @return bool Whether the expiry changed.
 	 * @since 1.5.0
+	 * @since 1.6.0 False when the save was refused.
 	 */
 	public static function renew_invitation( int $user_id ): bool {
 		$all   = self::all();
@@ -263,9 +264,8 @@ class AllowedUsers {
 		}
 
 		$all[ $user_id ]['expires_at'] = self::compute_expiry( time() );
-		self::save( $all );
 
-		return true;
+		return self::save( $all );
 	}
 
 	/**

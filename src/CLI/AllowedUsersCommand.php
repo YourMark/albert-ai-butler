@@ -35,8 +35,7 @@ class AllowedUsersCommand {
 	 * List the people who may connect an assistant.
 	 *
 	 * Status is `authorised` (has connected, never lapses), `invited` (not
-	 * connected yet) or `expired` (the invitation lapsed unused; sending a setup
-	 * link from the Connections screen restarts it).
+	 * connected yet) or `expired` (the invitation lapsed unused; `add` restarts it).
 	 *
 	 * ## OPTIONS
 	 *
@@ -106,7 +105,8 @@ class AllowedUsersCommand {
 	 * Allow one or more people to connect an assistant. Nobody is emailed.
 	 *
 	 * The invitation lasts as long as the site's setting, as on the Connections
-	 * screen. Only people the screen's picker would offer can be added.
+	 * screen. Only people the screen's picker would offer can be added. Someone
+	 * whose invitation expired gets it restarted, as sending them a setup link does.
 	 *
 	 * ## OPTIONS
 	 *
@@ -142,7 +142,13 @@ class AllowedUsersCommand {
 			$entry = $entries[ $user->ID ] ?? null;
 
 			if ( $entry !== null && AllowedUsers::is_expired( $entry ) ) {
-				WP_CLI::warning( sprintf( '%s (ID %d) is on the list, but their invitation expired. Send them a setup link from the Connections screen to renew it.', $user->user_login, $user->ID ) );
+				if ( AllowedUsers::renew_invitation( $user->ID ) ) {
+					++$added;
+					WP_CLI::log( sprintf( 'Restarted the expired invitation of %s (ID %d).', $user->user_login, $user->ID ) );
+				} else {
+					++$failed;
+					WP_CLI::warning( sprintf( '%s (ID %d) could not have their invitation restarted.', $user->user_login, $user->ID ) );
+				}
 			} elseif ( $entry !== null ) {
 				WP_CLI::warning( sprintf( '%s (ID %d) is already on the list.', $user->user_login, $user->ID ) );
 			} elseif ( AllowedUsers::add( $user->ID ) ) {
