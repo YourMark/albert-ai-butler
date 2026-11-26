@@ -110,6 +110,53 @@ class InsertPatternTest extends TestCase {
 	}
 
 	/**
+	 * Container positions.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public function inside_positions(): array {
+		return [
+			'inside_start' => [ 'inside_start' ],
+			'inside_end'   => [ 'inside_end' ],
+		];
+	}
+
+	/**
+	 * Every block of a pattern lands at the start or end of a container, in order.
+	 *
+	 * @dataProvider inside_positions
+	 *
+	 * @param string $position Container position.
+	 * @return void
+	 */
+	public function test_a_pattern_is_inserted_inside_a_group_in_order( string $position ): void {
+		$open  = '<!-- wp:group --><div class="wp-block-group">';
+		$child = '<!-- wp:paragraph --><p>Inside</p><!-- /wp:paragraph -->';
+		$close = '</div><!-- /wp:group -->';
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => $open . $child . $close,
+			]
+		);
+
+		$result = ( new AddPostBlock() )->execute(
+			[
+				'id'       => $this->post_id,
+				'path'     => [ 0 ],
+				'position' => $position,
+				'pattern'  => self::PATTERN,
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertSame(
+			$open . ( $position === 'inside_start' ? self::MARKUP . $child : $child . self::MARKUP ) . $close,
+			get_post( $this->post_id )->post_content
+		);
+	}
+
+	/**
 	 * A synced user pattern is inserted by reference.
 	 *
 	 * @return void
