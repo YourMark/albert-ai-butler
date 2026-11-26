@@ -383,9 +383,17 @@ class Connections implements Hookable {
 		}
 
 		$added_ids = [];
+		$refused   = 0;
 
 		foreach ( $ids as $user_id ) {
-			if ( ! get_user_by( 'id', $user_id ) ) {
+			$user = get_user_by( 'id', $user_id );
+
+			if ( ! $user ) {
+				continue;
+			}
+
+			if ( ! self::can_be_allowed( $user ) ) {
+				++$refused;
 				continue;
 			}
 
@@ -395,13 +403,32 @@ class Connections implements Hookable {
 		}
 
 		$added   = count( $added_ids );
-		$message = $added === 0
-			? __( 'Everyone you chose could already approve an assistant, so nothing changed.', 'albert-ai-butler' )
-			: sprintf(
-				/* translators: %d: number of users added. */
-				_n( '%d person can now approve an assistant.', '%d people can now approve an assistant.', $added, 'albert-ai-butler' ),
-				$added
+		$message = sprintf(
+			/* translators: %d: number of users added. */
+			_n( '%d person can now approve an assistant.', '%d people can now approve an assistant.', $added, 'albert-ai-butler' ),
+			$added
+		);
+
+		if ( $added === 0 ) {
+			$message = $refused === 0
+				? __( 'Everyone you chose could already approve an assistant, so nothing changed.', 'albert-ai-butler' )
+				: '';
+		}
+
+		if ( $refused > 0 ) {
+			$message = trim(
+				$message . ' ' . sprintf(
+					/* translators: %d: number of users not added. */
+					_n(
+						'%d person was not added: they do not have the role needed to approve an assistant.',
+						'%d people were not added: they do not have the role needed to approve an assistant.',
+						$refused,
+						'albert-ai-butler'
+					),
+					$refused
+				)
 			);
+		}
 
 		if ( $added > 0 && ! empty( $_POST['albert_email_setup'] ) ) {
 			$message .= ' ' . $this->email_setup_links( $added_ids );
@@ -2270,6 +2297,23 @@ class Connections implements Hookable {
 	 */
 	public static function allowed_user_capability(): string {
 		return UserPickerModal::candidate_capability();
+	}
+
+	/**
+	 * Whether a user may be put on the allowed list.
+	 *
+	 * The screen and `wp albert allowed-users add` both check this, so neither
+	 * allows someone the picker would not offer.
+	 *
+	 * @param \WP_User $user The user.
+	 *
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	public static function can_be_allowed( \WP_User $user ): bool {
+		$capability = self::allowed_user_capability();
+
+		return $capability === '' || user_can( $user, $capability );
 	}
 
 	/**

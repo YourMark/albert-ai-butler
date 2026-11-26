@@ -39,34 +39,54 @@ class AllowedUsersCommandTest extends TestCase {
 	}
 
 	/**
-	 * Add takes several users with --expires; bad input changes nothing; list shows status.
+	 * Add takes several users; an unknown user or one the picker would not offer changes nothing; list shows status.
 	 *
 	 * @return void
 	 */
 	public function test_add_and_list(): void {
 		$command = new AllowedUsersCommand();
-		$jan     = self::factory()->user->create( [ 'user_login' => 'jan' ] );
-		$maria   = self::factory()->user->create( [ 'user_email' => 'maria@example.test' ] );
+		$jan     = self::factory()->user->create(
+			[
+				'user_login' => 'jan',
+				'role'       => 'editor',
+			]
+		);
+		$maria   = self::factory()->user->create(
+			[
+				'user_email' => 'maria@example.test',
+				'role'       => 'author',
+			]
+		);
+		self::factory()->user->create(
+			[
+				'user_login' => 'sub',
+				'role'       => 'subscriber',
+			]
+		);
 
-		foreach ( [ [ [ 'jan', 'nobody' ], [] ], [ [ 'jan' ], [ 'expires' => '3651' ] ], [ [ 'jan' ], [ 'expires' => 'soon' ] ], [ [ 'jan' ], [ 'expires' => true ] ] ] as [ $users, $assoc ] ) {
+		foreach ( [ [ 'jan', 'nobody' ], [ 'jan', 'sub' ] ] as $users ) {
 			try {
-				$command->add( $users, $assoc );
+				$command->add( $users );
 				$this->fail( 'Expected an error.' );
 			} catch ( RuntimeException $e ) {
 				$this->assertSame( [], AllowedUsers::ids() );
 			}
 		}
 
-		$command->add( [ 'jan', 'maria@example.test', (string) $jan ], [ 'expires' => '0' ] );
+		$command->add( [ 'jan', 'maria@example.test', (string) $jan ] );
 		AllowedUsers::mark_authorised( $maria );
 
 		$this->assertSame( [ 'success', 'Added 2 of 2.' ], end( WP_CLI::$output ) );
+
+		$command->add( [ 'jan' ] );
+
+		$this->assertSame( [ 'success', 'Added 0 of 1.' ], end( WP_CLI::$output ) );
 
 		$command->list_( [], [] );
 
 		$rows = array_column( Formatter::$items, null, 'ID' );
 		$this->assertSame( 'invited', $rows[ $jan ]['status'] );
-		$this->assertSame( 'never', $rows[ $jan ]['expires'] );
+		$this->assertSame( (string) wp_date( 'Y-m-d H:i', (int) AllowedUsers::expires_at( $jan ) ), $rows[ $jan ]['expires'] );
 		$this->assertSame( 'authorised', $rows[ $maria ]['status'] );
 	}
 
@@ -80,6 +100,7 @@ class AllowedUsersCommandTest extends TestCase {
 
 		$jan   = self::factory()->user->create( [ 'user_login' => 'jan' ] );
 		$table = Tables::oauth()['access_tokens'];
+		self::factory()->user->create( [ 'user_login' => 'maria' ] );
 		AllowedUsers::add( $jan );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Test fixture.
@@ -96,9 +117,11 @@ class AllowedUsersCommandTest extends TestCase {
 			]
 		);
 
-		( new AllowedUsersCommand() )->remove( [ 'jan' ] );
+		( new AllowedUsersCommand() )->remove( [ 'jan', 'maria' ] );
 
 		$this->assertSame( [], AllowedUsers::ids() );
+		$this->assertContains( [ 'warning', 'maria (ID ' . get_user_by( 'login', 'maria' )->ID . ') is not on the list.' ], WP_CLI::$output );
+		$this->assertSame( [ 'success', 'Removed 1 of 2.' ], end( WP_CLI::$output ) );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test assertion.
 		$live = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE user_id = %d AND revoked = 0', $table, $jan ) );

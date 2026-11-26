@@ -360,11 +360,11 @@ class AllowedUsersTest extends TestCase {
 	}
 
 	/**
-	 * A per-person window overrides the site's; 0 never lapses. Each new entry fires `added` once.
+	 * Each new entry fires `added` once, with its stored expiry.
 	 *
 	 * @return void
 	 */
-	public function test_add_with_expiry_days_fires_added(): void {
+	public function test_add_fires_added(): void {
 		$fired = [];
 		add_action(
 			'albert/allowed_users/added',
@@ -375,17 +375,38 @@ class AllowedUsersTest extends TestCase {
 			2
 		);
 
-		$week  = self::factory()->user->create();
-		$never = self::factory()->user->create();
+		$one = self::factory()->user->create();
 
-		AllowedUsers::add( $week, 7 );
-		AllowedUsers::add( $never, 0 );
-		AllowedUsers::add( $never, 3 );
+		$this->assertTrue( AllowedUsers::add( $one ) );
+		$this->assertFalse( AllowedUsers::add( $one ) );
 
-		$this->assertEqualsWithDelta( time() + 7 * DAY_IN_SECONDS, AllowedUsers::expires_at( $week ), 5 );
-		$this->assertNull( AllowedUsers::expires_at( $never ) );
-		$this->assertTrue( AllowedUsers::is_allowed( $never ) );
-		$this->assertSame( [ [ $week, AllowedUsers::expires_at( $week ) ], [ $never, null ] ], $fired );
+		$this->assertSame( [ [ $one, AllowedUsers::expires_at( $one ) ] ], $fired );
+	}
+
+	/**
+	 * A save that a sanitize filter refuses (as `ConnectionGuard` does) reports false and fires nothing.
+	 *
+	 * @return void
+	 */
+	public function test_a_refused_save_fires_nothing(): void {
+		$listed = self::factory()->user->create();
+		AllowedUsers::add( $listed );
+
+		$fired = 0;
+		$count = static function () use ( &$fired ): void {
+			++$fired;
+		};
+		add_action( 'albert/allowed_users/added', $count );
+		add_action( 'albert/allowed_users/removed', $count );
+		add_filter(
+			'sanitize_option_' . AllowedUsers::OPTION,
+			static fn() => get_option( AllowedUsers::OPTION )
+		);
+
+		$this->assertFalse( AllowedUsers::add( self::factory()->user->create() ) );
+		$this->assertFalse( AllowedUsers::remove( $listed ) );
+		$this->assertSame( [ $listed ], AllowedUsers::ids() );
+		$this->assertSame( 0, $fired );
 	}
 
 	/**
@@ -406,8 +427,8 @@ class AllowedUsersTest extends TestCase {
 		$unlisted = self::factory()->user->create();
 		AllowedUsers::add( $listed );
 
-		AllowedUsers::remove( $listed );
-		AllowedUsers::remove( $unlisted );
+		$this->assertTrue( AllowedUsers::remove( $listed ) );
+		$this->assertFalse( AllowedUsers::remove( $unlisted ) );
 
 		$this->assertFalse( AllowedUsers::is_allowed( $listed ) );
 		$this->assertSame( [ $listed ], $fired );

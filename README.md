@@ -197,7 +197,7 @@ Website: https://yourmark.nl
 - Safe mode no longer asks you to approve moving a post, page or block pattern to the trash, because you can restore it from the trash yourself. Deleting one permanently still waits for your approval.
 - Albert no longer saves a block it can only guess, such as an image without an address, a cover or a block from another plugin without its markup, or blocks nested where the editor would drop them. Your assistant gets a message saying what to send instead, and nothing is saved.
 - The Context screen now says when a saved change takes effect: the next time an assistant asks what your site can do. A conversation that is already open keeps what it started with, so start a new one to use your changes.
-- You can now manage the list of people who may connect an assistant from the command line, as well as on the Connections screen: see who is on it and whether they have connected yet, add people, with their own invitation length if you like, and remove them. Removing someone signs out every assistant they connected, as it does on the screen.
+- You can now manage the list of people who may connect an assistant from the command line, as well as on the Connections screen: see who is on it and whether they have connected yet, add people and remove them. Removing someone signs out every assistant they connected, as it does on the screen.
 
 **Fixes**
 
@@ -256,8 +256,9 @@ Website: https://yourmark.nl
 - `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
 - `albert/create-post` and `albert/create-page` return `albert_post_permission_denied` and `albert_page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
 - `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
-- New WP-CLI command `wp albert allowed-users` with `list`, `add` and `remove`. It takes user IDs, logins or email addresses and changes nothing if any of them is not found. `add --expires=<days>` sets that invitation's length (0 never lapses).
-- New actions `albert/allowed_users/added` `( $user_id, $expires_at )` and `albert/allowed_users/removed` `( $user_id )`. They fire however the list changes: the Connections screen, the command, an add-on or an invitation lapsing.
+- New WP-CLI command `wp albert allowed-users` with `list`, `add` and `remove`. It takes user IDs, logins or email addresses and changes nothing if any of them is not found, or, for `add`, lacks the capability from `albert/connections/allowed_user_capability`.
+- New actions `albert/allowed_users/added` `( $user_id, $expires_at )` and `albert/allowed_users/removed` `( $user_id )`. They fire however the list changes: the Connections screen, the command, an add-on or an invitation lapsing, and only once the change is saved. `AllowedUsers::remove()` now returns whether the person was removed.
+- `albert/connections/allowed_user_capability` now also decides who may be added to the list, on the Connections screen as well as in the picker. Before, it only filtered who the picker offered.
 
 **Credits**
 

@@ -11,6 +11,7 @@ namespace Albert\CLI;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Admin\Connections;
 use Albert\Admin\Settings;
 use Albert\OAuth\AllowedUsers;
 use WP_CLI;
@@ -23,7 +24,7 @@ use WP_CLI\Formatter;
  * ## EXAMPLES
  *
  *     wp albert allowed-users list
- *     wp albert allowed-users add jan@example.com --expires=7
+ *     wp albert allowed-users add jan@example.com
  *     wp albert allowed-users remove jan
  *
  * @since 1.6.0
@@ -76,14 +77,17 @@ class AllowedUsersCommand {
 	 * @since 1.6.0
 	 */
 	public function list_( array $args, array $assoc_args ): void {
-		$rows = [];
+		$rows    = [];
+		$entries = AllowedUsers::all();
 
-		foreach ( AllowedUsers::all() as $user_id => $entry ) {
+		cache_users( array_keys( $entries ) );
+
+		foreach ( $entries as $user_id => $entry ) {
 			$user = get_user_by( 'id', $user_id );
 
 			if ( $entry['authorised_at'] !== null ) {
 				$status = 'authorised';
-			} elseif ( AllowedUsers::has_expired_invitation( $user_id ) ) {
+			} elseif ( AllowedUsers::is_expired( $entry ) ) {
 				$status = 'expired';
 			} else {
 				$status = 'invited';
@@ -111,44 +115,46 @@ class AllowedUsersCommand {
 	/**
 	 * Allow one or more people to connect an assistant. Nobody is emailed.
 	 *
+	 * The invitation lasts as long as the site's setting, as on the Connections
+	 * screen. Only people the screen's picker would offer can be added.
+	 *
 	 * ## OPTIONS
 	 *
 	 * <user>...
 	 * : User ID, login or email address.
 	 *
-	 * [--expires=<days>]
-	 * : Days the invitation stays open if they do not connect, up to 3650. 0
-	 * means it never lapses. Defaults to the site's setting.
-	 *
-	 * @param array<int, string>    $args       Users.
-	 * @param array<string, string> $assoc_args Associative arguments.
+	 * @param array<int, string> $args Users.
 	 *
 	 * @return void
 	 * @since 1.6.0
 	 */
-	public function add( array $args, array $assoc_args ): void {
-		$expiry_days = null;
-
-		if ( isset( $assoc_args['expires'] ) ) {
-			$expires = $assoc_args['expires'];
-
-			// A bare --expires arrives as true. 3650 is the Settings screen's limit; far beyond it the stored date no longer round-trips.
-			if ( ! is_string( $expires ) || ! ctype_digit( $expires ) || (int) $expires > 3650 ) {
-				WP_CLI::error( '--expires takes a whole number of days up to 3650, 0 for never.' );
-			}
-
-			$expiry_days = (int) $expires;
-		}
-
+	public function add( array $args ): void {
 		$users = $this->users( $args );
-		$added = 0;
 
 		foreach ( $users as $user ) {
-			if ( AllowedUsers::add( $user->ID, $expiry_days ) ) {
+			if ( ! Connections::can_be_allowed( $user ) ) {
+				WP_CLI::error(
+					sprintf(
+						'%s (ID %d) lacks the "%s" capability needed to approve an assistant. Nothing changed.',
+						$user->user_login,
+						$user->ID,
+						Connections::allowed_user_capability()
+					)
+				);
+			}
+		}
+
+		$added = 0;
+		$ids   = AllowedUsers::ids();
+
+		foreach ( $users as $user ) {
+			if ( in_array( $user->ID, $ids, true ) ) {
+				WP_CLI::warning( sprintf( '%s (ID %d) is already on the list.', $user->user_login, $user->ID ) );
+			} elseif ( AllowedUsers::add( $user->ID ) ) {
 				++$added;
 				WP_CLI::log( sprintf( 'Added %s (ID %d).', $user->user_login, $user->ID ) );
 			} else {
-				WP_CLI::warning( sprintf( '%s (ID %d) is already on the list.', $user->user_login, $user->ID ) );
+				WP_CLI::warning( sprintf( '%s (ID %d) could not be saved to the list.', $user->user_login, $user->ID ) );
 			}
 		}
 
@@ -169,15 +175,21 @@ class AllowedUsersCommand {
 	 * @since 1.6.0
 	 */
 	public function remove( array $args ): void {
-		$users = $this->users( $args );
+		$users   = $this->users( $args );
+		$removed = 0;
 
 		foreach ( $users as $user ) {
-			AllowedUsers::remove( $user->ID );
+			if ( ! AllowedUsers::remove( $user->ID ) ) {
+				WP_CLI::warning( sprintf( '%s (ID %d) is not on the list.', $user->user_login, $user->ID ) );
+				continue;
+			}
+
 			Settings::revoke_user_tokens( $user->ID );
+			++$removed;
 			WP_CLI::log( sprintf( 'Removed %s (ID %d) and signed out their assistants.', $user->user_login, $user->ID ) );
 		}
 
-		WP_CLI::success( sprintf( 'Removed %d.', count( $users ) ) );
+		WP_CLI::success( sprintf( 'Removed %d of %d.', $removed, count( $users ) ) );
 	}
 
 	/**

@@ -207,8 +207,9 @@ class AllowedUsers {
 	 *
 	 * @return bool
 	 * @since 1.4.0
+	 * @since 1.6.0 Public, so a caller holding entries from {@see self::all()} need not look each one up again.
 	 */
-	private static function is_expired( array $entry ): bool {
+	public static function is_expired( array $entry ): bool {
 		if ( $entry['authorised_at'] !== null || $entry['expires_at'] === null ) {
 			return false;
 		}
@@ -296,18 +297,16 @@ class AllowedUsers {
 	/**
 	 * Add a user to the allowed list, if they are not already on it.
 	 *
-	 * `expires_at` is computed now and stored: it does not move if the window
-	 * changes later (see the class docblock).
+	 * `expires_at` is computed now, from the site's window, and stored: it does
+	 * not move if the window changes later (see the class docblock).
 	 *
-	 * @param int      $user_id     The user id.
-	 * @param int|null $expiry_days Days a never-used invitation stays open, for this
-	 *                              person only. Null uses the site's window; 0 never lapses.
+	 * @param int $user_id The user id.
 	 *
-	 * @return bool True if newly added, false if already on the list.
+	 * @return bool True if newly added; false if already on the list or the save was refused.
 	 * @since 1.4.0
-	 * @since 1.6.0 Takes `$expiry_days` and fires `albert/allowed_users/added`.
+	 * @since 1.6.0 Fires `albert/allowed_users/added`.
 	 */
-	public static function add( int $user_id, ?int $expiry_days = null ): bool {
+	public static function add( int $user_id ): bool {
 		$all = self::all();
 
 		if ( isset( $all[ $user_id ] ) ) {
@@ -317,17 +316,15 @@ class AllowedUsers {
 		$now        = time();
 		$expires_at = self::compute_expiry( $now );
 
-		if ( $expiry_days !== null ) {
-			$expires_at = $expiry_days > 0 ? $now + ( $expiry_days * DAY_IN_SECONDS ) : null;
-		}
-
 		$all[ $user_id ] = [
 			'added_at'      => $now,
 			'authorised_at' => null,
 			'expires_at'    => $expires_at,
 		];
 
-		self::save( $all );
+		if ( ! self::save( $all ) ) {
+			return false;
+		}
 
 		/**
 		 * A person was added to the allowed list.
@@ -350,20 +347,22 @@ class AllowedUsers {
 	 *
 	 * @param int $user_id The user id.
 	 *
-	 * @return void
+	 * @return bool True if removed; false if not on the list or the save was refused.
 	 * @since 1.4.0
-	 * @since 1.6.0 Fires `albert/allowed_users/removed` when they were on it.
+	 * @since 1.6.0 Returns whether they were removed, and fires `albert/allowed_users/removed`.
 	 */
-	public static function remove( int $user_id ): void {
+	public static function remove( int $user_id ): bool {
 		$all = self::all();
 
 		if ( ! isset( $all[ $user_id ] ) ) {
-			return;
+			return false;
 		}
 
 		unset( $all[ $user_id ] );
 
-		self::save( $all );
+		if ( ! self::save( $all ) ) {
+			return false;
+		}
 
 		/**
 		 * A person was removed from the allowed list. Their tokens may not be
@@ -374,6 +373,8 @@ class AllowedUsers {
 		 * @since 1.6.0
 		 */
 		do_action( 'albert/allowed_users/removed', $user_id );
+
+		return true;
 	}
 
 	/**
@@ -464,10 +465,12 @@ class AllowedUsers {
 	 *
 	 * @param array<int, array{added_at: int|null, authorised_at: int|null, expires_at: int|null}> $all Normalised entries.
 	 *
-	 * @return void
+	 * @return bool Whether the option changed. False when a sanitize filter (such as
+	 *              `ConnectionGuard` during an assistant request) kept the stored value.
 	 * @since 1.4.0
+	 * @since 1.6.0 Returns whether it saved.
 	 */
-	private static function save( array $all ): void {
+	private static function save( array $all ): bool {
 		$stored = [];
 
 		foreach ( $all as $id => $entry ) {
@@ -478,7 +481,7 @@ class AllowedUsers {
 			];
 		}
 
-		update_option( self::OPTION, $stored );
+		return update_option( self::OPTION, $stored );
 	}
 
 	/**
