@@ -46,7 +46,8 @@ class EntryPointsTest extends TestCase {
 			++$checked;
 			$id = ( new $class() )->get_id();
 
-			if ( ! wp_get_ability( $id ) ) {
+			// wp_get_ability() raises _doing_it_wrong() on a miss, which fails the test before the list.
+			if ( ! wp_has_ability( $id ) ) {
 				$missing[] = $class . ' (' . $id . ')';
 			}
 		}
