@@ -455,7 +455,7 @@ Initial release. Connect Claude Desktop, ChatGPT, and other MCP-compatible AI as
 
 == Privacy Policy ==
 
-Albert runs entirely on your own site. It has no servers of its own and sends no data about your site or your usage anywhere. The only request it makes is Site Health checking your site's own sign-in address.
+Albert runs entirely on your own site. It has no servers of its own and sends no data about your site or your usage anywhere. Albert's own Site Health check requests your site's sign-in address. When your assistant asks for the full Site Health check, WordPress runs its background checks, as it does weekly, and these contact WordPress.org and your own site.
 
 **What reaches your assistant.** Only the site context you choose to send, and the results of the actions you have switched on, for the person who approved the connection, within their WordPress permissions. Before a user, customer or order result from Albert's own actions leaves your site, Albert masks personal details according to your privacy mode: Strict, Balanced or Off. Other plugins' actions are not masked by Albert. New sites start on Strict. What your assistant's provider then does with that text is covered by their own privacy policy.
 
