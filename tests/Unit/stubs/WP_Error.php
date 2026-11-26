@@ -73,6 +73,15 @@ if ( ! class_exists( 'WP_Error' ) ) {
 		public function get_error_data(): mixed {
 			return $this->data;
 		}
+
+		/**
+		 * Whether the instance holds an error.
+		 *
+		 * @return bool
+		 */
+		public function has_errors(): bool {
+			return $this->code !== '';
+		}
 	}
 }
 

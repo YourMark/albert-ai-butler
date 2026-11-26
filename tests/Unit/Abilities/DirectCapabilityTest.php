@@ -100,7 +100,7 @@ class DirectCapabilityTest extends TestCase {
 
 			// WooCommerce.
 			'woo-find-products'  => [ FindProducts::class, 'edit_products' ],
-			'woo-view-product'   => [ ViewProduct::class, 'read' ],
+			'woo-view-product'   => [ ViewProduct::class, 'edit_products' ],
 			'woo-find-orders'    => [ FindOrders::class, 'edit_shop_orders' ],
 			'woo-view-order'     => [ ViewOrder::class, 'edit_shop_orders' ],
 			'woo-find-customers' => [ FindCustomers::class, 'list_users' ],

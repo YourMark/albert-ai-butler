@@ -51,6 +51,16 @@ class Gate {
 	public const DEFAULT_VALUE = 'on';
 
 	/**
+	 * Abilities whose call without `force` only moves the item to the trash.
+	 *
+	 * Each refuses, through core's REST delete, rather than purges when the site has no trash.
+	 *
+	 * @since 1.6.0
+	 * @var string[]
+	 */
+	private const TRASH_ABILITIES = [ 'albert/delete-post', 'albert/delete-page', 'albert/delete-pattern' ];
+
+	/**
 	 * Classifies a call's risk beyond its annotation.
 	 *
 	 * @since 1.5.0
@@ -157,6 +167,7 @@ class Gate {
 	 * @return bool
 	 * @since 1.5.0
 	 * @since 1.6.0 Add-ons can hold a call through `albert/safe_mode/should_hold`.
+	 * @since 1.6.0 A trash-only call is not held ({@see self::is_trash_only()}).
 	 */
 	public function must_gate( WP_Ability $ability, array $input = [] ): bool {
 		if ( ! $this->is_enabled() ) {
@@ -169,7 +180,8 @@ class Gate {
 			return false;
 		}
 
-		$hold = $this->risk->must_hold( $ability, $input ) || $this->is_gated_ability( $ability );
+		$hold = $this->risk->must_hold( $ability, $input )
+			|| ( $this->is_gated_ability( $ability ) && ! $this->is_trash_only( $ability, $input ) );
 
 		/**
 		 * Filters whether safe mode holds this call for approval.
@@ -258,5 +270,22 @@ class Gate {
 		$destructive = is_array( $annotations ) ? ( $annotations['destructive'] ?? null ) : null;
 
 		return $destructive !== false;
+	}
+
+	/**
+	 * Whether this call only moves a post, page or pattern to the trash.
+	 *
+	 * Trash is core's own undo, so only the permanent call needs a person. Anything but
+	 * an absent or exactly `false` `force` is held, a string `"false"` included.
+	 *
+	 * @param WP_Ability           $ability The ability about to execute.
+	 * @param array<string, mixed> $input   Its captured input.
+	 *
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	public function is_trash_only( WP_Ability $ability, array $input ): bool {
+		return in_array( $ability->get_name(), self::TRASH_ABILITIES, true )
+			&& ( ! array_key_exists( 'force', $input ) || $input['force'] === false );
 	}
 }

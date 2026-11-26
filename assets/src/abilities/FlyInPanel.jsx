@@ -200,65 +200,23 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 		api
 	).slice().sort( ( a, b ) => ( a.priority ?? 10 ) - ( b.priority ?? 10 ) );
 
-	// The required-capability display. Reused by Free's default Permissions
-	// section and — when an add-on takes over — inside its UI (see the seam
-	// below). Kept as one node so the capability is rendered identically either
-	// way.
-	const capabilityContent = (
-		<div className="albert-flyin__card albert-flyin__card--capability">
-			<div className="albert-flyin__card-head">
-				<span className="albert-flyin__card-label">
-					{ __( 'Required capability', 'albert-ai-butler' ) }
-				</span>
-				<InfoPopover
-					inline
-					label={ __(
-						'About required capability',
-						'albert-ai-butler'
-					) }
-				>
-					<p>
-						{ __(
-							'A WordPress capability that gates this ability: it can run only for users whose role grants this capability. This value is best-effort; an ability or add-on can override it.',
-							'albert-ai-butler'
-						) }
-					</p>
-					{ ability.capabilityRoles?.length > 0 ? (
-						<p>
-							<strong>
-								{ __(
-									'Roles with this capability:',
-									'albert-ai-butler'
-								) }
-							</strong>{ ' ' }
-							{ ability.capabilityRoles.join( ', ' ) }
-						</p>
-					) : (
-						<p>
-							{ __(
-								'No roles currently grant this capability.',
-								'albert-ai-butler'
-							) }
-						</p>
-					) }
-				</InfoPopover>
-			</div>
-			<code className="albert-flyin__card-value">
-				{ ability.capability }
-			</code>
-		</div>
-	);
-
 	/**
-	 * [Premium seam] Replace the whole Permissions section. Free's default shows
-	 * the required capability; an add-on (Albert Premium) returns its own UI and
-	 * reuses `api.capabilityContent` inside its "Capability only" tab. Returning
-	 * the unchanged default keeps Free's behaviour when no add-on is present.
+	 * [Premium seam] Replace the whole Permissions section. Returning the
+	 * unchanged default keeps Free's behaviour when no add-on is present.
+	 * `capabilityContent` is deprecated since 1.6.0: only Albert Premium 1.1.0
+	 * and older render it, under their "Capability only" tab.
 	 */
 	const permissionsApi = {
 		ability,
 		roles,
-		capabilityContent,
+		capabilityContent: (
+			<p className="albert-flyin__legacy-default">
+				{ __(
+					'No advanced permissions: the ability decides who may use it.',
+					'albert-ai-butler'
+				) }
+			</p>
+		),
 		registerCloseGuard,
 		setSaveStatus: reportSaveStatus,
 	};
@@ -273,22 +231,14 @@ export default function FlyInPanel( { ability, roles, onClose, onToggle } ) {
 				>
 					<p>
 						{ __(
-							'Controls who can invoke this ability over MCP. By default it follows the required WordPress capability.',
-							'albert-ai-butler'
-						) }
-					</p>
-					<p>
-						{ __(
-							'Albert Premium adds custom per-role and per-user rules that override the capability check.',
+							'Albert Premium adds advanced permissions: rules per role or user that decide who can use this ability over MCP.',
 							'albert-ai-butler'
 						) }
 					</p>
 				</InfoPopover>
 			}
 		>
-			<AdvancedPermissionsUpsell
-				capabilityContent={ capabilityContent }
-			/>
+			<AdvancedPermissionsUpsell />
 		</Section>,
 		permissionsApi
 	);

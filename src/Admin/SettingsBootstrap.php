@@ -60,7 +60,7 @@ class SettingsBootstrap {
 						'options'           => [
 							'on'  => [
 								'label'       => __( 'On', 'albert-ai-butler' ),
-								'description' => __( 'Deletions and other destructive changes are held on the Approvals screen until you approve them.', 'albert-ai-butler' ),
+								'description' => __( 'Permanent deletions and other destructive changes are held on the Approvals screen until you approve them. Moving a post, page or pattern to the trash is not held.', 'albert-ai-butler' ),
 								'recommended' => true,
 							],
 							'off' => [
