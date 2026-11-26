@@ -141,23 +141,89 @@ class SearchContentAbilityTest extends TestCase {
 	}
 
 	/**
-	 * An unknown post type and an empty search are refused with a reason.
+	 * A public custom post type shown in the REST API is searched too.
 	 *
 	 * @return void
 	 */
-	public function test_bad_input_is_refused(): void {
-		$unknown = ( new SearchContent() )->execute(
+	public function test_searches_custom_post_types_in_rest(): void {
+		register_post_type(
+			'albert_lighthouse',
+			[
+				'public'       => true,
+				'show_in_rest' => true,
+			]
+		);
+		// Core's search handler lists its post types when the REST server starts.
+		$GLOBALS['wp_rest_server'] = null;
+
+		$cpt_id = self::factory()->post->create(
+			[
+				'post_type'  => 'albert_lighthouse',
+				'post_title' => 'Lighthouse keeper',
+			]
+		);
+
+		$result = ( new SearchContent() )->execute( [ 'search' => 'lighthouse' ] );
+
+		unregister_post_type( 'albert_lighthouse' );
+		$GLOBALS['wp_rest_server'] = null;
+
+		$this->assertIsArray( $result );
+		$by_id = array_column( $result['results'], null, 'id' );
+		$this->assertArrayHasKey( $cpt_id, $by_id );
+		$this->assertSame( 'albert_lighthouse', $by_id[ $cpt_id ]['subtype'] );
+	}
+
+	/**
+	 * A logged-in search matches inside a password-protected post, as core's does.
+	 *
+	 * @return void
+	 */
+	public function test_matches_inside_password_protected_posts(): void {
+		$protected_id = self::factory()->post->create(
+			[
+				'post_title'    => 'Members area',
+				'post_content'  => 'The lighthouse key code.',
+				'post_password' => 'secret',
+			]
+		);
+
+		$result = ( new SearchContent() )->execute( [ 'search' => 'lighthouse' ] );
+
+		$this->assertIsArray( $result );
+		$this->assertContains( $protected_id, array_column( $result['results'], 'id' ) );
+	}
+
+	/**
+	 * An unknown post type is refused with core's reason.
+	 *
+	 * @return void
+	 */
+	public function test_unknown_subtype_is_refused(): void {
+		$result = ( new SearchContent() )->execute(
 			[
 				'search'   => 'lighthouse',
 				'subtypes' => [ 'no_such_type' ],
 			]
 		);
-		$this->assertInstanceOf( WP_Error::class, $unknown );
-		$this->assertSame( 'rest_invalid_param', $unknown->get_error_code() );
 
-		$empty = ( new SearchContent() )->execute( [ 'search' => '   ' ] );
-		$this->assertInstanceOf( WP_Error::class, $empty );
-		$this->assertSame( 'search_missing', $empty->get_error_code() );
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rest_invalid_param', $result->get_error_code() );
+	}
+
+	/**
+	 * A search of only spaces is refused by the input schema.
+	 *
+	 * @return void
+	 */
+	public function test_blank_search_is_refused(): void {
+		$ability = wp_get_ability( 'albert/search-content' );
+		$this->assertNotNull( $ability );
+
+		$result = $ability->execute( [ 'search' => '   ' ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
 	}
 
 	/**

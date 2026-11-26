@@ -31,7 +31,7 @@ class SearchContent extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/search-content';
 		$this->label       = __( 'Search Content', 'albert-ai-butler' );
-		$this->description = __( 'Search the site\'s published content across all public post types (posts, pages and custom types) at once, the way the site search does. Can search categories, tags and other terms instead.', 'albert-ai-butler' );
+		$this->description = __( 'Search the site\'s published content in one go, the way the site search does: posts, pages and every other public post type shown in the REST API. Media files are not searched. Can search categories, tags and other terms instead.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'search';
 
@@ -63,11 +63,11 @@ class SearchContent extends BaseAbility {
 				'search'   => [
 					'type'        => 'string',
 					'description' => 'Words to search for.',
-					'minLength'   => 1,
+					'pattern'     => '\\S',
 				],
 				'type'     => [
 					'type'        => 'string',
-					'description' => '"post" searches content of every public post type; "term" searches categories, tags and other terms.',
+					'description' => '"post" searches content of every public post type shown in the REST API, except media; "term" searches categories, tags and other terms.',
 					'enum'        => [ 'post', 'term' ],
 					'default'     => 'post',
 				],
@@ -146,17 +146,8 @@ class SearchContent extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$search = trim( sanitize_text_field( (string) ( $args['search'] ?? '' ) ) );
-		if ( $search === '' ) {
-			return new WP_Error(
-				'search_missing',
-				__( 'Say what to search for.', 'albert-ai-butler' ),
-				[ 'status' => 400 ]
-			);
-		}
-
 		$request = new WP_REST_Request( 'GET', '/wp/v2/search' );
-		$request->set_param( 'search', $search );
+		$request->set_param( 'search', (string) ( $args['search'] ?? '' ) );
 		$type = ( $args['type'] ?? 'post' ) === 'term' ? 'term' : 'post';
 		$request->set_param( 'type', $type );
 		$request->set_param( 'page', max( 1, absint( $args['page'] ?? 1 ) ) );
