@@ -179,4 +179,28 @@ class BlockReaderTest extends TestCase {
 
 		$this->assertCount( 2, $tree );
 	}
+
+	public function test_leaf_blocks_carry_their_saved_markup(): void {
+		$tree = $this->reader->read( '<!-- wp:paragraph --><p>Hello <strong>bold</strong> <a href="/x">link</a></p><!-- /wp:paragraph -->' );
+
+		$this->assertSame( '<p>Hello <strong>bold</strong> <a href="/x">link</a></p>', $tree[0]['html'] );
+	}
+
+	public function test_containers_and_self_closing_blocks_carry_no_markup(): void {
+		$tree = $this->reader->read(
+			'<!-- wp:group --><div class="wp-block-group"><!-- wp:paragraph --><p>Inner</p><!-- /wp:paragraph --></div><!-- /wp:group -->'
+			. '<!-- wp:latest-posts /-->'
+		);
+
+		$this->assertArrayNotHasKey( 'html', $tree[0] );
+		$this->assertSame( '<p>Inner</p>', $tree[0]['innerBlocks'][0]['html'] );
+		$this->assertArrayNotHasKey( 'html', $tree[1] );
+	}
+
+	public function test_classic_content_carries_its_markup(): void {
+		$tree = $this->reader->read( '<p>Classic <em>text</em>.</p>' );
+
+		$this->assertNull( $tree[0]['name'] );
+		$this->assertSame( '<p>Classic <em>text</em>.</p>', $tree[0]['html'] );
+	}
 }

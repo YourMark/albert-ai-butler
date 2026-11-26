@@ -130,14 +130,17 @@ class WriteContentResolverTest extends TestCase {
 	}
 
 	public function test_block_surfaces_warning_issues_while_still_saving(): void {
-		// core/image with no url is a recoverable degradation: a warning rides
+		// A clamped heading level is a recoverable degradation: a warning rides
 		// along in block_issues but the markup is still produced.
 		$result = ( new WriteContentResolver() )->resolve(
 			[
 				'blocks' => [
 					[
-						'name'       => 'core/image',
-						'attributes' => [ 'alt' => 'Missing url' ],
+						'name'       => 'core/heading',
+						'attributes' => [
+							'level'   => 9,
+							'content' => 'Too deep',
+						],
 					],
 				],
 			],
@@ -145,9 +148,9 @@ class WriteContentResolverTest extends TestCase {
 		);
 
 		$this->assertIsArray( $result );
-		$this->assertStringContainsString( '<!-- wp:image', $result['content'] );
+		$this->assertStringContainsString( '<!-- wp:heading', $result['content'] );
 		$this->assertNotSame( [], $result['block_issues'] );
-		$this->assertStringContainsString( 'url is required', implode( ' ', $result['block_issues'] ) );
+		$this->assertStringContainsString( 'Defaulting to 2', implode( ' ', $result['block_issues'] ) );
 	}
 
 	public function test_block_with_disallowed_block_returns_validation_error(): void {
@@ -195,6 +198,38 @@ class WriteContentResolverTest extends TestCase {
 		$this->assertIsArray( $result );
 		$this->assertStringContainsString( '<!-- wp:paragraph', $result['content'] );
 		$this->assertSame( [], $result['block_issues'] );
+	}
+
+	public function test_block_markdown_content_is_refused(): void {
+		$result = ( new WriteContentResolver() )->resolve( [ 'content' => "## Intro\n\n- one\n- two" ], 'post' );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		$this->assertStringContainsString( '`blocks`', $result->get_error_message() );
+	}
+
+	public function test_pattern_markdown_content_is_refused(): void {
+		$result = ( new WriteContentResolver() )->resolve_pattern( [ 'content' => '# Pattern title' ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+	}
+
+	public function test_blocks_input_skips_the_markdown_check(): void {
+		$result = ( new WriteContentResolver() )->resolve(
+			[
+				'content' => '# Ignored',
+				'blocks'  => [
+					[
+						'name'       => 'core/paragraph',
+						'attributes' => [ 'content' => 'From blocks.' ],
+					],
+				],
+			],
+			'post'
+		);
+
+		$this->assertIsArray( $result );
 	}
 
 	// =====================================================================

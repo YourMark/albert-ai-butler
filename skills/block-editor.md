@@ -65,6 +65,16 @@ the editor would flag the block as invalid. To keep a block's markup exactly, se
 `html`: the markup inside the block's delimiters, as the editor stores it. Block markup
 nested in it becomes the block's inner blocks, so do not also send `innerBlocks`.
 
+Blocks read with `"format": ["blocks"]` carry their saved `html` (every block without
+inner blocks). Text, links and image sources live only there, so send each block back
+with its `html` unchanged. To change a block's text, edit it inside `html`; an attribute
+such as `content` that differs from the `html` you send is refused, because the editor
+would ignore it. To change a setting (level, alignment, colour, size), leave `html` out
+and send the attributes: `html` sent unchanged next to a changed setting leaves the block
+invalid. Blocks Albert cannot build from attributes (Cover, Media & Text, File, Verse and
+most plugin blocks) are only accepted with their `html`; to copy one that holds other
+blocks, read the post with `"format": ["content"]` and send that markup as `content`.
+
 Text attributes (`content`, a button's `text`, a quote's `citation`) accept inline HTML
 (`<strong>`, `<em>`, `<a href="…">`, `<code>`). Use it for emphasis and for links inside
 text. WordPress removes any HTML the connected user may not post.
@@ -169,8 +179,12 @@ to `core/button` (its `url` attribute) and to `<a href>` links inside text attri
 2. **Check** which blocks you may use with `albert/list-block-types` before composing
    anything new (use `albert/get-block-type` for a block's attributes).
 3. **Edit** the structured blocks: change attributes, add or remove blocks, reorder them.
+   Keep every block you do not change exactly as read, `html` included.
 4. **Write** with `albert/create-post` (new) or `albert/update-post` (existing), sending
    your block specs in the `blocks` field.
+
+To copy a whole page or post, read it with `"format": ["content"]` and send that string
+as `content`: block markup is stored exactly as sent.
 
 For pages, use the equivalent `albert/*-page` abilities.
 
@@ -188,8 +202,9 @@ pattern's markup is known-valid.
   with `pattern` set to the pattern's `name`. The server inserts the pattern exactly as
   stored, so you never copy its markup and nothing can go wrong in the copy. A synced
   user pattern is inserted as a reference.
-- **Reuse as a copy:** pass the returned `content` as your `content`, or adapt it. The copy is independent; editing it never changes the
-  source. Works for any pattern.
+- **Reuse as a copy:** pass the returned `content` as your `content` (block markup
+  is stored exactly as sent), or adapt it. The copy is independent; editing it never
+  changes the source. Works for any pattern.
 - **Reuse synced (shared):** only user patterns with `syncStatus: "synced"`.
   Insert by reference with `<!-- wp:block {"ref":ID} /-->` using the pattern's
   `id`. There is one source, so editing the pattern updates every place it is
@@ -235,6 +250,13 @@ saves a revision, and a site that keeps only a few loses its history fast. The e
 apply in order and save once; each path points into the tree as the earlier edits left
 it. If one edit fails, nothing is saved and the error names it as `edits[index]`.
 
+**Changing only text:** to fix a word, a name, a price or a link, use
+`albert/replace-post-text` (or `albert/replace-page-text`) with the exact `search` text
+and its `replace`ment. Copy `search` from a `"format": ["content"]` read: it must match
+the stored markup, where `&` is often `&amp;`. It must occur exactly `expected_count`
+times (default 1), and the call is refused when the change would alter a block rather
+than its text. It also works on the title and excerpt (`field`), and on classic posts.
+
 **When to use which:** prefer granular ops for large posts or single-block changes;
 use whole-content `update-*` when you are rewriting most of the body. Granular block
 edits apply to block-editor targets only. On a classic post they return
@@ -272,7 +294,8 @@ or `"format": ["markdown"]`.
 
 Choose the format(s) that fit the task:
 
-- `["blocks"]`: the structured tree. Use this when you intend to edit and write back.
+- `["blocks"]`: the structured tree, with each block's saved `html`. Use this when you
+  intend to edit and write back.
 - `["content"]`: the raw stored block markup (block comments included). Use only when you
   need the exact stored string.
 - `["plaintext"]`: text with all markup stripped. Use for summarizing or analyzing wording.

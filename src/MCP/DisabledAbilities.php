@@ -13,7 +13,6 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\AbilitiesState;
-use Albert\Logging\ExecutionLogMarker;
 use WP_Error;
 
 /**
@@ -84,9 +83,9 @@ class DisabledAbilities implements Hookable {
 
 		$error = AbilitiesState::switched_off_error( $ability_name );
 
-		// A WP_Error here ends the call before `mcp_adapter_tool_call_result`, where
-		// {@see ToolCallObserver} would log it, so a refused execute logs here.
-		if ( self::normalise( $tool_name ) === self::normalise( 'mcp-adapter/execute-ability' ) && ! ExecutionLogMarker::has( $ability_name ) ) {
+		// A WP_Error here ends the call before the ability is invoked, so
+		// ExecutionObserver never sees it; a refused execute logs here.
+		if ( self::normalise( $tool_name ) === self::normalise( 'mcp-adapter/execute-ability' ) ) {
 			$parameters = $args['parameters'] ?? [];
 
 			/** This action is documented in src/Abstracts/BaseAbility.php */
