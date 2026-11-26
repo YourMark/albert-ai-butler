@@ -222,4 +222,82 @@ class GateTest extends TestCase {
 
 		$this->assertFalse( $this->gate->must_gate( $this->ability( [ 'destructive' => false ] ) ) );
 	}
+
+	/**
+	 * A destructive delete ability with a boolean `force`, like Albert's delete-post.
+	 *
+	 * @param string $name Ability id.
+	 * @return WP_Ability
+	 */
+	private function trash_ability( string $name = 'albert/delete-post' ): WP_Ability {
+		return new WP_Ability(
+			$name,
+			[ 'annotations' => [ 'destructive' => true ] ],
+			[ 'properties' => [ 'force' => [ 'type' => 'boolean' ] ] ]
+		);
+	}
+
+	/**
+	 * Moving to the trash is not held: trash is core's own undo.
+	 *
+	 * @return void
+	 */
+	public function test_a_trash_call_is_not_held(): void {
+		$this->assertFalse( $this->gate->must_gate( $this->trash_ability(), [ 'id' => 5 ] ) );
+		$this->assertFalse(
+			$this->gate->must_gate(
+				$this->trash_ability(),
+				[
+					'id'    => 5,
+					'force' => false,
+				]
+			)
+		);
+	}
+
+	/**
+	 * The permanent call is held, and so is any value that is not exactly false.
+	 *
+	 * @return void
+	 */
+	public function test_a_permanent_call_is_held(): void {
+		foreach ( [ true, 'false', 0, null, 'true' ] as $force ) {
+			$this->assertTrue(
+				$this->gate->must_gate(
+					$this->trash_ability(),
+					[
+						'id'    => 5,
+						'force' => $force,
+					]
+				),
+				var_export( $force, true )
+			);
+		}
+	}
+
+	/**
+	 * Any other ability with the same input is still held, Albert's delete-media included.
+	 *
+	 * @return void
+	 */
+	public function test_an_unlisted_ability_with_a_force_input_is_held(): void {
+		$input = [
+			'id'    => 5,
+			'force' => false,
+		];
+
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability( 'vendor/delete-thing' ), $input ) );
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability( 'albert/delete-media' ), $input ) );
+	}
+
+	/**
+	 * The risk list still holds a trash call.
+	 *
+	 * @return void
+	 */
+	public function test_the_risk_list_still_holds_a_trash_call(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/high_risk_abilities'] = [ 'albert/delete-post' ];
+
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability(), [ 'id' => 5 ] ) );
+	}
 }

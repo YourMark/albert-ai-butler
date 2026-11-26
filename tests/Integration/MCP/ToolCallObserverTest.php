@@ -16,7 +16,6 @@ use Albert\MCP\Server;
 use Albert\MCP\ToolCallObserver;
 use Albert\Tests\TestCase;
 use WP\MCP\Core\McpServer;
-use WP_Error;
 
 /**
  * Tool-call guidance, against the validator that produced the rejection.
@@ -62,11 +61,13 @@ class ToolCallObserverTest extends TestCase {
 	}
 
 	/**
-	 * Run a wrongly-named parameter through both paths a client can take.
+	 * The guidance execute-ability reports for a wrongly-named parameter.
 	 *
-	 * @return array{direct: string, proxied: string, core: string}
+	 * @param string|null $error The adapter's error text; core's own when null.
+	 *
+	 * @return string
 	 */
-	private function guidance_for_a_misspelled_parameter(): array {
+	private function guidance_for_a_misspelled_parameter( ?string $error = null ): string {
 		$supplied = [
 			'term_id' => 76,
 			'fields'  => 'all',
@@ -75,12 +76,10 @@ class ToolCallObserverTest extends TestCase {
 		$raw = wp_get_ability( $this->ability() )->execute( $supplied );
 		$this->assertWPError( $raw, 'Expected the Abilities API to reject an undeclared parameter.' );
 
-		$direct = $this->handle( $raw, $supplied, 'albert-view-term' );
-
-		$proxied = $this->handle(
+		$out = $this->handle(
 			[
 				'success' => false,
-				'error'   => $raw->get_error_message(),
+				'error'   => $error ?? $raw->get_error_message(),
 			],
 			[
 				'ability_name' => $this->ability(),
@@ -89,11 +88,7 @@ class ToolCallObserverTest extends TestCase {
 			'mcp-adapter-execute-ability'
 		);
 
-		return [
-			'core'    => $raw->get_error_message(),
-			'direct'  => $direct->get_error_message(),
-			'proxied' => $proxied['error'],
-		];
+		return $out['error'];
 	}
 
 	/**
@@ -104,11 +99,9 @@ class ToolCallObserverTest extends TestCase {
 	public function test_the_wrong_parameter_name_is_named(): void {
 		$guidance = $this->guidance_for_a_misspelled_parameter();
 
-		foreach ( [ 'direct', 'proxied' ] as $path ) {
-			$this->assertStringContainsString( 'Unrecognised parameters: `term_id`, `fields`.', $guidance[ $path ], $path );
-			$this->assertStringContainsString( 'Accepted parameters:', $guidance[ $path ], $path );
-			$this->assertStringContainsString( '`id` (integer', $guidance[ $path ], $path );
-		}
+		$this->assertStringContainsString( 'Unrecognised parameters: `term_id`, `fields`.', $guidance );
+		$this->assertStringContainsString( 'Accepted parameters:', $guidance );
+		$this->assertStringContainsString( '`id` (integer', $guidance );
 	}
 
 	/**
@@ -117,26 +110,16 @@ class ToolCallObserverTest extends TestCase {
 	 * Against real core, real validation and a real registered schema: what the
 	 * message says is read off the schema and the caller's input, never out of
 	 * the text WordPress produced. Core translates that text, which is how the
-	 * execute-ability path came to improve nothing on a non-English site — so
+	 * execute-ability path came to improve nothing on a non-English site, so
 	 * this varies the text directly rather than needing a language pack.
 	 *
 	 * @return void
 	 */
 	public function test_guidance_ignores_the_error_message_text(): void {
-		$real = $this->guidance_for_a_misspelled_parameter();
+		$real     = $this->guidance_for_a_misspelled_parameter();
+		$replaced = $this->guidance_for_a_misspelled_parameter( 'iets heel anders' );
 
-		$supplied = [
-			'term_id' => 76,
-			'fields'  => 'all',
-		];
-
-		$replaced = $this->handle(
-			new WP_Error( 'ability_invalid_input', 'iets heel anders' ),
-			$supplied,
-			'albert-view-term'
-		)->get_error_message();
-
-		$this->assertSame( $real['direct'], $replaced );
+		$this->assertSame( $real, $replaced );
 		$this->assertStringContainsString( '`term_id`', $replaced );
 	}
 
@@ -152,8 +135,8 @@ class ToolCallObserverTest extends TestCase {
 	 * @return void
 	 */
 	public function test_a_non_validation_meta_tool_failure_is_untouched(): void {
-		$schema   = wp_get_ability( $this->ability() )->get_input_schema();
-		$valid    = [
+		$schema = wp_get_ability( $this->ability() )->get_input_schema();
+		$valid  = [
 			'id'       => 1,
 			'taxonomy' => 'category',
 		];
@@ -203,11 +186,10 @@ class ToolCallObserverTest extends TestCase {
 	 * @param mixed  $result    The tool result.
 	 * @param mixed  $args      The tool arguments.
 	 * @param string $tool_name The tool name.
-	 * @param mixed  $mcp_tool  The adapter tool instance, if any.
 	 *
 	 * @return mixed
 	 */
-	private function handle( $result, $args, string $tool_name, $mcp_tool = null ): mixed {
-		return $this->observer->handle( $result, $args, $tool_name, $mcp_tool, $this->server() );
+	private function handle( $result, $args, string $tool_name ): mixed {
+		return $this->observer->handle( $result, $args, $tool_name, null, $this->server() );
 	}
 }
