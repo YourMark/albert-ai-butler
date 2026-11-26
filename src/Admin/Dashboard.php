@@ -1356,7 +1356,7 @@ class Dashboard implements Hookable {
 				<ul class="albert-resources-list">
 					<li>
 						<span class="dashicons dashicons-book" aria-hidden="true"></span>
-						<a href="https://wordpress.org/plugins/albert/" target="_blank" rel="noopener noreferrer">
+						<a href="https://wordpress.org/plugins/albert-ai-butler/" target="_blank" rel="noopener noreferrer">
 							<?php esc_html_e( 'Documentation', 'albert-ai-butler' ); ?>
 							<span class="screen-reader-text"><?php esc_html_e( '(opens in a new tab)', 'albert-ai-butler' ); ?></span>
 						</a>

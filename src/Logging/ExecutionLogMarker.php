@@ -14,16 +14,10 @@ defined( 'ABSPATH' ) || exit;
 /**
  * ExecutionLogMarker class
  *
- * Request-scoped record of which abilities have already had a log row written
- * during the current request. Albert logs ability outcomes from more than one
- * place — the `albert/abilities/after_execute` hook (for executed abilities)
- * and the MCP tool-result observer (for failures that are rejected *before* the
- * ability runs, e.g. input-schema validation). This marker lets each writer
- * skip an ability already recorded so a single call never produces duplicate
- * rows.
+ * Request-scoped record of which abilities already had a log row written, so
+ * an add-on that logs one call from more than one place writes it once.
  *
- * A single PHP request serves a single MCP tool call, but the marker is keyed
- * by ability name to stay correct under any batching.
+ * Free has had one writer per call since 1.6.0 and no longer uses it; Premium does.
  *
  * @since 1.2.0
  */

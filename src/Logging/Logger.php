@@ -17,13 +17,11 @@ use WP_Error;
 /**
  * Logger class
  *
- * Hooks into Albert's own after_execute action to log ability executions,
- * including failures. Only writes to the DB when the `albert/logging/enabled`
- * filter returns true (default). This filter means "Free's writers are active" —
- * returning false suppresses Free's DB writes so Premium can take over logging
- * on the shared table without double-writes. The `albert/logging/ability_failed`
- * notification hook fires regardless of the storage gate so Premium always
- * receives failure signals even if it hooks in via a different mechanism.
+ * Writes an ability outcome to the log, success or failure.
+ *
+ * `albert/logging/enabled` false means another writer owns the table, so
+ * nothing is stored. `albert/logging/ability_failed` fires before that gate,
+ * so a failure is reported whoever stores it.
  *
  * @since 1.1.0
  */
@@ -51,9 +49,10 @@ class Logger implements Hookable {
 	/**
 	 * Register WordPress hooks.
 	 *
-	 * Hooks into Albert's own `albert/abilities/after_execute` action instead of
-	 * the WP core `wp_after_execute_ability` (success-only) so failures are
-	 * also captured.
+	 * Calls over an Albert connection reach {@see self::record()} through
+	 * {@see ExecutionObserver}. This hook covers the rest: Albert's abilities
+	 * called without a connection, and the failures Albert fires the hook for
+	 * itself before an ability runs.
 	 *
 	 * @return void
 	 * @since 1.1.0
@@ -63,15 +62,11 @@ class Logger implements Hookable {
 	}
 
 	/**
-	 * Log an ability execution (success or failure).
+	 * Log an `albert/abilities/after_execute` call, unless the observer owns it.
 	 *
-	 * Called after every ability execution via Albert's own hook — covers
-	 * both WP_Error results and successful ones.  Wrapped in try/catch to
-	 * ensure logging never breaks ability execution.
-	 *
-	 * Must be public so WordPress can invoke it via call_user_func_array
-	 * from the albert/abilities/after_execute action — a protected method
-	 * throws a TypeError when dispatched externally.
+	 * That hook fires inside the ability's callback, before core validates the
+	 * output, so for an observed call the observer writes the row once the
+	 * outcome is final.
 	 *
 	 * @param string                         $ability_name The ability identifier.
 	 * @param mixed                          $input        The input arguments.
@@ -80,11 +75,34 @@ class Logger implements Hookable {
 	 *
 	 * @return void
 	 * @since 1.1.0
+	 * @since 1.6.0 Stands down for a call {@see ExecutionObserver} is observing.
 	 */
 	public function log_execution( string $ability_name, mixed $input, array|WP_Error $result, int $user_id ): void {
+		if ( ExecutionObserver::is_observing( $ability_name ) ) {
+			return;
+		}
+
+		$this->record( $ability_name, $input, $result, $user_id );
+	}
+
+	/**
+	 * Record an ability outcome (success or failure).
+	 *
+	 * Wrapped in try/catch so logging never breaks ability execution.
+	 *
+	 * @param string                         $ability_name The ability identifier.
+	 * @param mixed                          $input        The input arguments.
+	 * @param array<string, mixed>|\WP_Error $result       The execution result.
+	 * @param int                            $user_id      The user ID who executed the ability.
+	 * @param string|null                    $stage        Where a failed call stopped, when the caller saw it. Default null.
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	public function record( string $ability_name, mixed $input, array|WP_Error $result, int $user_id, ?string $stage = null ): void {
 		try {
 			$is_error      = is_wp_error( $result );
-			$status        = Outcome::classify( $result, $ability_name );
+			$status        = $is_error ? Outcome::for_error( $result, $ability_name, $stage ) : Outcome::SUCCESS;
 			$error_code    = $is_error ? (string) $result->get_error_code() : null;
 			$error_message = $is_error ? (string) $result->get_error_message() : null;
 
@@ -145,8 +163,10 @@ class Logger implements Hookable {
 			}
 
 			$context = $error_message !== null ? [ 'error_message' => $error_message ] : [];
+			if ( $is_error && $stage !== null ) {
+				$context['failure_stage'] = $stage;
+			}
 			$this->repository->insert( $ability_name, $user_id, $status, $error_code, $context );
-			ExecutionLogMarker::mark( $ability_name );
 		} catch ( \Throwable $e ) {
 			// Never rethrow — logging must not break ability execution.
 			// Silently fail. In debug mode, WordPress will log the error.
