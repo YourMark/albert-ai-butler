@@ -98,7 +98,7 @@ class MenuSupport {
 		if ( ! $post instanceof WP_Post || $post->post_type !== 'nav_menu_item' ) {
 			return new WP_Error(
 				'albert_menu_item_not_found',
-				__( 'No menu item has that ID. Call albert/get-menu to see a menu\'s items.', 'albert-ai-butler' ),
+				__( 'No menu item has that ID. Call albert/view-menu to see a menu\'s items.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -340,6 +340,91 @@ class MenuSupport {
 	}
 
 	/**
+	 * The visibility fields for a navigation menu.
+	 *
+	 * @param int $post_id `wp_navigation` post id.
+	 *
+	 * @return array{visible: bool, shown_in: list<string>, notice?: string}
+	 * @since 1.6.0
+	 */
+	public static function navigation_visibility_fields( int $post_id ): array {
+		$locator = new MenuLocator();
+		$where   = $locator->navigation_shown_in( $post_id );
+		$fields  = [
+			'visible'  => $where !== [],
+			'shown_in' => $where,
+		];
+		$notice  = $locator->navigation_notice( $post_id, $where );
+
+		if ( $notice !== '' ) {
+			$fields['notice'] = $notice;
+		}
+
+		return $fields;
+	}
+
+	/**
+	 * Input properties that address a navigation menu's items.
+	 *
+	 * @return array<string, array<string, mixed>>
+	 * @since 1.6.0
+	 */
+	public static function navigation_properties(): array {
+		$path = [
+			'type'  => 'array',
+			'items' => [
+				'type'    => 'integer',
+				'minimum' => 0,
+			],
+		];
+
+		return [
+			'menu_type'   => [
+				'type'        => 'string',
+				'enum'        => [ 'classic', 'block' ],
+				'description' => '"classic" for a menu from "classic_menus" in albert/find-menus, "block" for one from "navigation_menus".',
+			],
+			'path'        => $path + [
+				'minItems'    => 1,
+				'description' => 'Navigation menus only: the item\'s "path" from albert/view-menu, such as [1, 0].',
+			],
+			'parent_path' => $path + [
+				'description' => 'Navigation menus only: the "path" of the item to nest it under, [] for the top level.',
+			],
+		];
+	}
+
+	/**
+	 * One `oneOf` branch per kind of menu: only its own properties, so a classic
+	 * field sent with a navigation menu (or the reverse) is refused by name.
+	 *
+	 * @param string                              $title      What the branch is, for core's refusal message.
+	 * @param array<string, array<string, mixed>> $properties Every input property.
+	 * @param list<string>                        $keys       The properties this kind of menu takes.
+	 * @param string|null                         $menu_type  The `menu_type` it requires, null for none.
+	 * @param array<string, mixed>                $schema     More keywords, such as `required` or `anyOf`.
+	 *
+	 * @return array<string, mixed>
+	 * @since 1.6.0
+	 */
+	public static function menu_branch( string $title, array $properties, array $keys, ?string $menu_type, array $schema ): array {
+		$own = array_intersect_key( $properties, array_flip( $keys ) );
+
+		if ( $menu_type !== null ) {
+			$own['menu_type'] = [
+				'type' => 'string',
+				'enum' => [ $menu_type ],
+			];
+		}
+
+		return [
+			'title'                => $title,
+			'properties'           => $own,
+			'additionalProperties' => false,
+		] + $schema;
+	}
+
+	/**
 	 * Output schema properties for {@see self::visibility_fields()}.
 	 *
 	 * @return array<string, array<string, mixed>>
@@ -358,8 +443,42 @@ class MenuSupport {
 			],
 			'notice'   => [
 				'type'        => 'string',
-				'description' => 'Present when visitors do not see this menu. Tell the person.',
+				'description' => 'Present when visitors do not see this menu, or when something about the change needs saying. Tell the person.',
 			],
 		];
+	}
+
+	/**
+	 * Output properties a navigation menu write adds.
+	 *
+	 * @return array<string, array<string, mixed>>
+	 * @since 1.6.0
+	 */
+	public static function navigation_output_schema(): array {
+		return [
+			'path'            => [
+				'type'        => 'array',
+				'items'       => [ 'type' => 'integer' ],
+				'description' => 'Navigation menus: the item\'s path now; for a removal, where it was.',
+			],
+			'open_in_new_tab' => [ 'type' => 'boolean' ],
+			'items'           => [
+				'type'        => 'array',
+				'description' => 'Navigation menus: the menu\'s items after the change, as albert/view-menu returns them. Use these paths for the next change.',
+				'items'       => [ 'type' => 'object' ],
+			],
+		];
+	}
+
+	/**
+	 * A path from the input as a list of indexes.
+	 *
+	 * @param mixed $raw Input value.
+	 *
+	 * @return list<int>
+	 * @since 1.6.0
+	 */
+	public static function path( mixed $raw ): array {
+		return array_values( array_map( 'intval', (array) $raw ) );
 	}
 }

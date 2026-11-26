@@ -12,7 +12,7 @@ use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
 use Albert\Abilities\WordPress\Menus\CreateMenu;
 use Albert\Abilities\WordPress\Menus\DeleteMenu;
 use Albert\Abilities\WordPress\Menus\FindMenus;
-use Albert\Abilities\WordPress\Menus\GetMenu;
+use Albert\Abilities\WordPress\Menus\ViewMenu;
 use Albert\Abilities\WordPress\Menus\MoveMenuItem;
 use Albert\Abilities\WordPress\Menus\RemoveMenuItem;
 use Albert\Abilities\WordPress\Menus\UnassignMenuLocation;
@@ -185,14 +185,14 @@ class MenusAbilityTest extends TestCase {
 	}
 
 	/**
-	 * A classic menu read through get-menu.
+	 * A classic menu read through view-menu.
 	 *
 	 * @param int $menu_id Menu.
 	 *
 	 * @return array<string, mixed>
 	 */
 	private function view( int $menu_id ): array {
-		return ( new GetMenu() )->execute(
+		return ( new ViewMenu() )->execute(
 			[
 				'menu_id'   => $menu_id,
 				'menu_type' => 'classic',
@@ -509,7 +509,7 @@ class MenusAbilityTest extends TestCase {
 		$this->use_block_theme();
 		$nav = $this->navigation( 'Main' );
 
-		$result = ( new GetMenu() )->execute(
+		$result = ( new ViewMenu() )->execute(
 			[
 				'menu_id'   => $nav,
 				'menu_type' => 'block',
@@ -815,7 +815,7 @@ class MenusAbilityTest extends TestCase {
 	public function test_missing_menus_and_items_are_not_found(): void {
 		$this->assertSame(
 			'albert_menu_not_found',
-			( new GetMenu() )->execute(
+			( new ViewMenu() )->execute(
 				[
 					'menu_id'   => 999999,
 					'menu_type' => 'classic',
@@ -833,7 +833,7 @@ class MenusAbilityTest extends TestCase {
 	public function test_editors_are_refused(): void {
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'editor' ] ) );
 
-		foreach ( [ new FindMenus(), new GetMenu(), new CreateMenu(), new AddMenuItem(), new RemoveMenuItem(), new DeleteMenu(), new UnassignMenuLocation() ] as $ability ) {
+		foreach ( [ new FindMenus(), new ViewMenu(), new CreateMenu(), new AddMenuItem(), new RemoveMenuItem(), new DeleteMenu(), new UnassignMenuLocation() ] as $ability ) {
 			$this->assertInstanceOf( WP_Error::class, $ability->check_permission(), $ability->get_id() );
 		}
 	}
@@ -848,7 +848,7 @@ class MenusAbilityTest extends TestCase {
 
 		$expected = [
 			'albert/find-menus'             => false,
-			'albert/get-menu'               => false,
+			'albert/view-menu'              => false,
 			'albert/create-menu'            => false,
 			'albert/add-menu-item'          => false,
 			'albert/update-menu-item'       => false,
@@ -914,9 +914,10 @@ class MenusAbilityTest extends TestCase {
 			$valid(
 				'albert/add-menu-item',
 				[
-					'menu_id' => 1,
-					'title'   => 'A',
-					'url'     => 'https://example.com',
+					'menu_type' => 'classic',
+					'menu_id'   => 1,
+					'title'     => 'A',
+					'url'       => 'https://example.com',
 				]
 			)
 		);
@@ -924,6 +925,7 @@ class MenusAbilityTest extends TestCase {
 			$valid(
 				'albert/add-menu-item',
 				[
+					'menu_type' => 'classic',
 					'menu_id'   => 1,
 					'item_type' => 'post_type',
 					'object_id' => 2,
@@ -934,6 +936,7 @@ class MenusAbilityTest extends TestCase {
 			$valid(
 				'albert/add-menu-item',
 				[
+					'menu_type'   => 'classic',
 					'menu_id'     => 1,
 					'item_type'   => 'post_type_archive',
 					'object_type' => 'post',
@@ -944,8 +947,9 @@ class MenusAbilityTest extends TestCase {
 			$valid(
 				'albert/add-menu-item',
 				[
-					'menu_id' => 1,
-					'title'   => 'A',
+					'menu_type' => 'classic',
+					'menu_id'   => 1,
+					'title'     => 'A',
 				]
 			),
 			'A custom link needs a url.'
@@ -954,6 +958,7 @@ class MenusAbilityTest extends TestCase {
 			$valid(
 				'albert/add-menu-item',
 				[
+					'menu_type' => 'classic',
 					'menu_id'   => 1,
 					'item_type' => 'custom',
 					'url'       => 'https://example.com',
@@ -965,6 +970,7 @@ class MenusAbilityTest extends TestCase {
 			$valid(
 				'albert/add-menu-item',
 				[
+					'menu_type' => 'classic',
 					'menu_id'   => 1,
 					'item_type' => 'post_type',
 				]
@@ -972,7 +978,7 @@ class MenusAbilityTest extends TestCase {
 			'A page link needs object_id.'
 		);
 
-		$this->assertFalse( $valid( 'albert/get-menu', [ 'menu_id' => 1 ] ), 'A menu ID alone can name two menus.' );
+		$this->assertFalse( $valid( 'albert/view-menu', [ 'menu_id' => 1 ] ), 'A menu ID alone can name two menus.' );
 		$this->assertFalse( $valid( 'albert/move-menu-item', [ 'menu_item_id' => 1 ] ) );
 		$this->assertTrue(
 			$valid(

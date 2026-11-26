@@ -237,10 +237,71 @@ class MenuLocator {
 	 */
 	public function classic_menu_hidden_notice(): string {
 		if ( $this->is_block_theme() ) {
-			return __( 'Visitors do not see this classic menu: this site uses a block theme, whose header is a navigation block. Albert cannot edit navigation menus yet; the person can change it in Appearance > Editor > Navigation. Call albert/find-menus to see which menu the header shows.', 'albert-ai-butler' );
+			return __( 'Visitors do not see this classic menu: this site uses a block theme, whose header is a navigation block. Call albert/find-menus to see which navigation menu the header shows, and change that one with menu_type "block".', 'albert-ai-butler' );
 		}
 
 		return __( 'Visitors do not see this menu: it is not assigned to a menu location or used in a widget. Assign it with albert/assign-menu-location, or change the menu that is assigned instead.', 'albert-ai-butler' );
+	}
+
+	/**
+	 * What to tell the person about where a navigation menu shows, or '' when nothing needs saying.
+	 *
+	 * @param int          $post_id  `wp_navigation` post id.
+	 * @param list<string> $shown_in Where it shows, from {@see self::navigation_shown_in()}.
+	 *
+	 * @return string
+	 * @since 1.6.0
+	 */
+	public function navigation_notice( int $post_id, array $shown_in ): string {
+		if ( $shown_in === [] ) {
+			$notice = __( 'Visitors do not see this navigation menu: no navigation block in a template the theme uses shows it. Call albert/find-menus to see which menu the header shows.', 'albert-ai-butler' );
+
+			if ( $this->header()['type'] === 'inline' ) {
+				$notice .= ' ' . __( 'The header keeps its links inside its template part instead of a navigation menu; Albert cannot change those; the person can edit the header in Appearance > Editor.', 'albert-ai-butler' );
+			}
+
+			return $notice;
+		}
+
+		foreach ( $this->navigation_used_in( $post_id ) as $used ) {
+			if ( $used['in_use'] && $used['fallback'] ) {
+				return __( 'The site shows this menu only because its navigation block names no menu and this is the newest published navigation menu. Publishing another navigation menu would take its place.', 'albert-ai-butler' );
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * The classic menu WordPress copies into the first navigation menu, as core's fallback picks it.
+	 *
+	 * Only meaningful while no navigation menu is published: the primary
+	 * location's menu, else one with the slug "primary", else the newest.
+	 *
+	 * @return array{id: int, name: string}|null
+	 * @since 1.6.0
+	 */
+	public function classic_fallback_source(): ?array {
+		$menus = wp_get_nav_menus();
+		if ( $menus === [] ) {
+			return null;
+		}
+
+		$primary = (int) ( get_nav_menu_locations()['primary'] ?? 0 );
+		$pick    = $primary > 0 ? MenuSupport::menu_reference( $primary ) : null;
+
+		foreach ( $menus as $menu ) {
+			if ( $pick === null && $menu->slug === 'primary' ) {
+				$pick = MenuSupport::menu_reference( (int) $menu->term_id );
+			}
+		}
+
+		if ( $pick === null ) {
+			usort( $menus, static fn( $a, $b ): int => (int) $b->term_id - (int) $a->term_id );
+			$pick = MenuSupport::menu_reference( (int) $menus[0]->term_id );
+		}
+
+		return $pick;
 	}
 
 	/**

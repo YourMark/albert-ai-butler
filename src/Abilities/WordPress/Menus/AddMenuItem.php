@@ -17,7 +17,7 @@ use WP_Post;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Adds a link, page, post, category or archive to a classic menu.
+ * Adds a link, page, post, category or archive to a classic or navigation menu.
  *
  * @since 1.6.0
  */
@@ -31,7 +31,7 @@ class AddMenuItem extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/add-menu-item';
 		$this->label       = __( 'Add Menu Item', 'albert-ai-butler' );
-		$this->description = __( 'Add one link to a classic menu, pointing at content on the site or at any URL; read the menu with albert/get-menu first.', 'albert-ai-butler' );
+		$this->description = __( 'Add one link to a classic or navigation menu, pointing at content on the site or at any URL; read the menu with albert/view-menu first.', 'albert-ai-butler' );
 		$this->category    = 'menus';
 		$this->group       = 'menus';
 
@@ -43,7 +43,7 @@ class AddMenuItem extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::create(
-				MenuSupport::CHECK_FIRST . ' For a page or post send "item_type": "post_type" with its "object_id"; a custom link needs "title" and "url".'
+				MenuSupport::CHECK_FIRST . ' For a page or post send "item_type": "post_type" with its "object_id"; a custom link needs "title" and "url". Nest it with "parent_item_id" in a classic menu, "parent_path" in a navigation menu.'
 			),
 		];
 
@@ -57,57 +57,62 @@ class AddMenuItem extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	private function get_input_schema(): array {
+		$properties = [
+			'menu_id'         => [
+				'type'        => 'integer',
+				'description' => 'The menu ID from albert/find-menus.',
+				'minimum'     => 1,
+			],
+			'menu_type'       => MenuSupport::navigation_properties()['menu_type'],
+			'item_type'       => [
+				'type'        => 'string',
+				'enum'        => [ 'custom', 'post_type', 'taxonomy', 'post_type_archive' ],
+				'description' => '"post_type" links a page or post, "taxonomy" a category or other term, "post_type_archive" a post type\'s archive, "custom" any URL. Default "custom".',
+				'default'     => 'custom',
+			],
+			'object_id'       => [
+				'type'        => 'integer',
+				'description' => 'The page, post or term ID, for "post_type" and "taxonomy".',
+				'minimum'     => 1,
+			],
+			'object_type'     => [
+				'type'        => 'string',
+				'description' => 'The post type or taxonomy slug, such as "page" or "category". Worked out from object_id when left out; required for "post_type_archive".',
+				'minLength'   => 1,
+			],
+			'title'           => [
+				'type'        => 'string',
+				'description' => 'The label. Required for a custom link; leave it out to use the linked item\'s own title.',
+				'minLength'   => 1,
+			],
+			'url'             => [
+				'type'        => 'string',
+				'description' => 'The address, for a custom link.',
+				'minLength'   => 1,
+			],
+			'parent_item_id'  => [
+				'type'        => 'integer',
+				'description' => 'Classic menus only: the menu item to nest this under, from albert/view-menu. Leave it out for the top level.',
+				'minimum'     => 1,
+			],
+			'parent_path'     => MenuSupport::navigation_properties()['parent_path'],
+			'position'        => [
+				'type'        => 'integer',
+				'description' => '1-based position among the parent\'s items. Default: last.',
+				'minimum'     => 1,
+			],
+			'open_in_new_tab' => [
+				'type'        => 'boolean',
+				'description' => 'Open the link in a new tab. Default false.',
+			],
+		];
+		$shared     = [ 'menu_id', 'menu_type', 'item_type', 'object_id', 'object_type', 'title', 'url', 'position', 'open_in_new_tab' ];
+
 		return [
 			'type'        => 'object',
 			'description' => 'A custom link needs "title" and "url"; a page, post or term needs "object_id"; a post type archive needs "object_type".',
-			'properties'  => [
-				'menu_id'         => [
-					'type'        => 'integer',
-					'description' => 'The classic menu ID from albert/find-menus.',
-					'minimum'     => 1,
-				],
-				'item_type'       => [
-					'type'        => 'string',
-					'enum'        => [ 'custom', 'post_type', 'taxonomy', 'post_type_archive' ],
-					'description' => '"post_type" links a page or post, "taxonomy" a category or other term, "post_type_archive" a post type\'s archive, "custom" any URL. Default "custom".',
-					'default'     => 'custom',
-				],
-				'object_id'       => [
-					'type'        => 'integer',
-					'description' => 'The page, post or term ID, for "post_type" and "taxonomy".',
-					'minimum'     => 1,
-				],
-				'object_type'     => [
-					'type'        => 'string',
-					'description' => 'The post type or taxonomy slug, such as "page" or "category". Worked out from object_id when left out; required for "post_type_archive".',
-					'minLength'   => 1,
-				],
-				'title'           => [
-					'type'        => 'string',
-					'description' => 'The label. Required for a custom link; leave it out to use the linked item\'s own title.',
-					'minLength'   => 1,
-				],
-				'url'             => [
-					'type'        => 'string',
-					'description' => 'The address, for a custom link.',
-					'minLength'   => 1,
-				],
-				'parent_item_id'  => [
-					'type'        => 'integer',
-					'description' => 'The menu item to nest this under, from albert/get-menu. Leave it out for the top level.',
-					'minimum'     => 1,
-				],
-				'position'        => [
-					'type'        => 'integer',
-					'description' => '1-based position among the parent\'s items. Default: last.',
-					'minimum'     => 1,
-				],
-				'open_in_new_tab' => [
-					'type'        => 'boolean',
-					'description' => 'Open the link in a new tab. Default false.',
-				],
-			],
-			'required'    => [ 'menu_id' ],
+			'properties'  => $properties,
+			'required'    => [ 'menu_id', 'menu_type' ],
 			// Core's validator has no if/then, so each item type is one branch. Each lists
 			// its properties so a refusal names the field missing for the type that was sent.
 			'anyOf'       => [
@@ -146,6 +151,10 @@ class AddMenuItem extends BaseAbility {
 					'required'   => [ 'item_type', 'object_type' ],
 				],
 			],
+			'oneOf'       => [
+				MenuSupport::menu_branch( 'classic menu, nested with "parent_item_id"', $properties, array_merge( $shared, [ 'parent_item_id' ] ), 'classic', [] ),
+				MenuSupport::menu_branch( 'navigation menu, nested with "parent_path"', $properties, array_merge( $shared, [ 'parent_path' ] ), 'block', [] ),
+			],
 		];
 	}
 
@@ -159,16 +168,23 @@ class AddMenuItem extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'             => [ 'type' => 'integer' ],
+				'id'             => [
+					'type'        => 'integer',
+					'description' => 'Classic menus: the new item\'s ID.',
+				],
 				'menu_id'        => [ 'type' => 'integer' ],
+				'menu_type'      => [
+					'type' => 'string',
+					'enum' => [ 'block' ],
+				],
 				'title'          => [ 'type' => 'string' ],
 				'url'            => [ 'type' => 'string' ],
 				'parent_item_id' => [
 					'type'        => 'integer',
-					'description' => 'The item it is nested under, 0 for the top level.',
+					'description' => 'Classic menus: the item it is nested under, 0 for the top level.',
 				],
-			] + MenuSupport::visibility_schema(),
-			'required'   => [ 'id', 'menu_id', 'visible', 'shown_in' ],
+			] + MenuSupport::navigation_output_schema() + MenuSupport::visibility_schema(),
+			'required'   => [ 'menu_id', 'visible', 'shown_in' ],
 		];
 	}
 
@@ -190,6 +206,10 @@ class AddMenuItem extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
+		if ( ( $args['menu_type'] ?? '' ) === 'block' ) {
+			return $this->add_to_navigation( $args );
+		}
+
 		$menu = MenuSupport::classic_menu( (int) ( $args['menu_id'] ?? 0 ) );
 		if ( is_wp_error( $menu ) ) {
 			return $menu;
@@ -201,7 +221,7 @@ class AddMenuItem extends BaseAbility {
 		if ( $parent > 0 && MenuSupport::menu_of_item( $parent ) !== $menu_id ) {
 			return new WP_Error(
 				'albert_invalid_parent_item_id',
-				__( 'The "parent_item_id" must be an item in the same menu. Call albert/get-menu to see its items, or leave it out for the top level.', 'albert-ai-butler' ),
+				__( 'The "parent_item_id" must be an item in the same menu. Call albert/view-menu to see its items, or leave it out for the top level.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -273,5 +293,38 @@ class AddMenuItem extends BaseAbility {
 			'url'            => (string) ( $item->url ?? '' ),
 			'parent_item_id' => $parent,
 		] + MenuSupport::visibility_fields( $menu_id );
+	}
+
+	/**
+	 * Add a link block to a navigation menu.
+	 *
+	 * @param array<string, mixed> $args Ability arguments.
+	 *
+	 * @return array<string, mixed>|WP_Error
+	 * @since 1.6.0
+	 */
+	private function add_to_navigation( array $args ): array|WP_Error {
+		$menu = MenuSupport::navigation_menu( (int) ( $args['menu_id'] ?? 0 ) );
+		if ( is_wp_error( $menu ) ) {
+			return $menu;
+		}
+
+		$attrs = NavigationWriter::link_attributes( $args );
+		if ( is_wp_error( $attrs ) ) {
+			return $attrs;
+		}
+
+		$editor = new NavigationEditor();
+		$opened = $editor->open_page_lists( NavigationWriter::tree( $menu ), [ 'parent' => MenuSupport::path( $args['parent_path'] ?? [] ) ] );
+		if ( is_wp_error( $opened ) ) {
+			return $opened;
+		}
+
+		$added = $editor->add( $opened[0], (array) $opened[1]['parent'], (int) ( $args['position'] ?? 0 ), NavigationTree::link_block( $attrs ) );
+		if ( is_wp_error( $added ) ) {
+			return $added;
+		}
+
+		return NavigationWriter::save( $menu, $added[0], $added[1], $editor->notices() );
 	}
 }

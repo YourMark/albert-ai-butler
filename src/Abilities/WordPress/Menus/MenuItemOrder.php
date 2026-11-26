@@ -44,7 +44,7 @@ class MenuItemOrder {
 		}
 
 		if ( ! isset( $by_id[ $item_id ] ) ) {
-			return new WP_Error( 'albert_menu_item_not_found', __( 'That item is not in this menu. Call albert/get-menu to see its items.', 'albert-ai-butler' ), [ 'status' => 404 ] );
+			return new WP_Error( 'albert_menu_item_not_found', __( 'That item is not in this menu. Call albert/view-menu to see its items.', 'albert-ai-butler' ), [ 'status' => 404 ] );
 		}
 
 		if ( $parent_id !== 0 && ! isset( $by_id[ $parent_id ] ) ) {

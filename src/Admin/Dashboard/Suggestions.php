@@ -194,8 +194,8 @@ class Suggestions {
 				'requires' => [ 'albert/find-pages' ],
 			],
 			[
-				'text'     => __( 'Which menu do visitors see in the header, and what is in it?', 'albert-ai-butler' ),
-				'requires' => [ 'albert/find-menus', 'albert/get-menu' ],
+				'text'     => __( 'Which menu do visitors see on my site, and what is in it?', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-menus', 'albert/view-menu' ],
 			],
 		];
 	}

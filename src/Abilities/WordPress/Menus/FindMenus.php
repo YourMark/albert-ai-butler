@@ -50,7 +50,7 @@ class FindMenus extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::read(
-				'Read "header" and "summary" first: on a block theme the header shows a navigation menu (type "block"), not a classic menu. Pass a menu\'s "id" to albert/get-menu as menu_id to read its items.'
+				'Read "header" and "summary" first: on a block theme the header shows a navigation menu (type "block"), not a classic menu. Pass a menu\'s "id" to albert/view-menu as menu_id, with menu_type, to read its items.'
 			),
 		];
 
@@ -268,21 +268,47 @@ class FindMenus extends BaseAbility {
 		}
 
 		$block_theme = $locator->is_block_theme();
+		$header      = $locator->header();
 
 		return [
-			'summary'                    => $block_theme
-				? __( 'Block theme: its header is a navigation block, shown in "header". Classic menus are not shown to visitors; do not edit them to change the site\'s navigation.', 'albert-ai-butler' )
-				: __( 'Classic theme: visitors see the classic menus assigned to its menu locations or used in widgets, as "visible" says. Which location is in the header is up to the theme.', 'albert-ai-butler' ),
+			'summary'                    => $block_theme ? $this->block_theme_summary( $locator, $header ) : __( 'Classic theme: visitors see the classic menus assigned to its menu locations or used in widgets, as "visible" says. Which location is in the header is up to the theme.', 'albert-ai-butler' ),
 			'theme'                      => [
 				'name'        => (string) $theme->get( 'Name' ),
 				'stylesheet'  => $theme->get_stylesheet(),
 				'block_theme' => $block_theme,
 			],
-			'header'                     => $locator->header(),
+			'header'                     => $header,
 			'classic_menus'              => $classic,
 			'navigation_menus'           => $navigation,
 			'navigation_menus_truncated' => $truncated,
 			'locations'                  => $locations,
 		];
+	}
+
+	/**
+	 * What a block theme's header shows, in plain words.
+	 *
+	 * @param MenuLocator                                                                $locator The locator.
+	 * @param array{type: string, id: int, name: string, source: string, fallback: bool} $header  What the header shows.
+	 *
+	 * @return string
+	 * @since 1.6.0
+	 */
+	private function block_theme_summary( MenuLocator $locator, array $header ): string {
+		if ( $header['type'] === 'inline' ) {
+			/* translators: %s: template part slug */
+			return sprintf( __( 'Block theme: the header keeps its own links inside the "%s" template part, not in a navigation menu. Albert cannot change those; the person can edit the header in Appearance > Editor.', 'albert-ai-butler' ), $header['source'] );
+		}
+
+		if ( $header['type'] === 'none' && $header['fallback'] ) {
+			$source = $locator->classic_fallback_source();
+
+			return $source === null
+				? __( 'Block theme with no navigation menu yet: the first time the header is shown, WordPress creates one that lists the published pages.', 'albert-ai-butler' )
+				/* translators: %s: classic menu name */
+				: sprintf( __( 'Block theme with no navigation menu yet: the first time the header is shown, WordPress copies the classic menu "%s" into a new navigation menu and shows that copy. Until then, changing that classic menu changes what gets copied; after that, only the navigation menu counts.', 'albert-ai-butler' ), $source['name'] );
+		}
+
+		return __( 'Block theme: its header is a navigation block, shown in "header". Change that navigation menu with menu_type "block". Classic menus are not shown to visitors; do not edit them to change the site\'s navigation.', 'albert-ai-butler' );
 	}
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Get Menu Ability
+ * View Menu Ability
  *
  * @package Albert
  * @subpackage Abilities\WordPress\Menus
@@ -20,7 +20,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.6.0
  */
-class GetMenu extends BaseAbility {
+class ViewMenu extends BaseAbility {
 
 	/**
 	 * Constructor.
@@ -28,8 +28,8 @@ class GetMenu extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/get-menu';
-		$this->label       = __( 'Get Menu', 'albert-ai-butler' );
+		$this->id          = 'albert/view-menu';
+		$this->label       = __( 'View Menu', 'albert-ai-butler' );
 		$this->description = __( 'Read one menu\'s items as a tree, with where visitors see it. Call albert/find-menus first for its ID.', 'albert-ai-butler' );
 		$this->category    = 'menus';
 		$this->group       = 'menus';
@@ -42,7 +42,7 @@ class GetMenu extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::read(
-				'Pass menu_id and menu_type from albert/find-menus: a classic menu and a navigation menu can share an ID. Item IDs in the result are what the menu item abilities take as menu_item_id.'
+				'Pass menu_id and menu_type from albert/find-menus: a classic menu and a navigation menu can share an ID. The menu item abilities take a classic item\'s "id" as menu_item_id, and a navigation item\'s "path" as path.'
 			),
 		];
 
@@ -96,7 +96,7 @@ class GetMenu extends BaseAbility {
 				],
 				'items'  => [
 					'type'        => 'array',
-					'description' => 'Classic items have id, title, url, type, object, object_id, parent, position and children. Navigation items have path, kind (link, submenu, page-list, home-link or block), block, label, url and children.',
+					'description' => 'Classic items have id, title, url, type, object, object_id, parent, position and children. Navigation items have path, kind (link, submenu, page-list, home-link or block), block, label, url, open_in_new_tab and children. A page-list item\'s children are the pages it lists now, marked "automatic": changing, moving or removing one turns the list into separate links first, so new pages stop appearing by themselves.',
 					'items'       => [ 'type' => 'object' ],
 				],
 			] + MenuSupport::visibility_schema(),
@@ -163,89 +163,12 @@ class GetMenu extends BaseAbility {
 			return $post;
 		}
 
-		$shown_in = ( new MenuLocator() )->navigation_shown_in( (int) $post->ID );
-		$result   = [
-			'id'       => (int) $post->ID,
-			'type'     => 'block',
-			'name'     => get_the_title( $post ),
-			'status'   => $post->post_status,
-			'items'    => $this->navigation_tree( parse_blocks( $post->post_content ), [] ),
-			'visible'  => $shown_in !== [],
-			'shown_in' => $shown_in,
-		];
-
-		if ( $shown_in === [] ) {
-			$result['notice'] = __( 'Visitors do not see this navigation menu: no navigation block in a template the theme uses shows it. Call albert/find-menus to see which menu the header shows.', 'albert-ai-butler' );
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Navigation blocks as menu items, with the block path a later edit can target.
-	 *
-	 * @param array<array<string, mixed>> $blocks Parsed blocks.
-	 * @param list<int>                   $path   Path of the parent.
-	 *
-	 * @return list<array<string, mixed>>
-	 * @since 1.6.0
-	 */
-	private function navigation_tree( array $blocks, array $path ): array {
-		$items = [];
-		$index = 0;
-
-		foreach ( $blocks as $block ) {
-			// Whitespace between blocks parses as a block with no name.
-			if ( $block['blockName'] === null ) {
-				continue;
-			}
-
-			$name  = (string) $block['blockName'];
-			$attrs = $block['attrs'];
-			$here  = array_merge( $path, [ $index++ ] );
-
-			$item = [
-				'path'  => $here,
-				'kind'  => $this->kind( $name ),
-				'block' => $name,
-				'label' => wp_strip_all_tags( (string) ( $attrs['label'] ?? '' ) ),
-				'url'   => (string) ( $attrs['url'] ?? '' ),
-			];
-
-			if ( $name === 'core/home-link' && $item['url'] === '' ) {
-				$item['url'] = home_url( '/' );
-			}
-
-			if ( isset( $attrs['id'] ) ) {
-				$item['object_id'] = (int) $attrs['id'];
-			}
-
-			if ( $name === 'core/page-list' ) {
-				$item['label'] = __( 'All published pages, listed automatically', 'albert-ai-butler' );
-			}
-
-			$item['children'] = $this->navigation_tree( $block['innerBlocks'], $here );
-			$items[]          = $item;
-		}
-
-		return $items;
-	}
-
-	/**
-	 * The menu role of a block inside a navigation menu.
-	 *
-	 * @param string $name Block name.
-	 *
-	 * @return string
-	 * @since 1.6.0
-	 */
-	private function kind( string $name ): string {
-		return match ( $name ) {
-			'core/navigation-link'    => 'link',
-			'core/navigation-submenu' => 'submenu',
-			'core/page-list'          => 'page-list',
-			'core/home-link'          => 'home-link',
-			default                   => 'block',
-		};
+		return [
+			'id'     => (int) $post->ID,
+			'type'   => 'block',
+			'name'   => get_the_title( $post ),
+			'status' => $post->post_status,
+			'items'  => NavigationTree::items( NavigationWriter::tree( $post ) ),
+		] + MenuSupport::navigation_visibility_fields( (int) $post->ID );
 	}
 }

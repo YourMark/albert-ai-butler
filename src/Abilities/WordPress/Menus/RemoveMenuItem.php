@@ -16,7 +16,7 @@ use WP_Error;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Removes an item from a classic menu; its sub-items move up a level.
+ * Removes an item from a classic or navigation menu; its sub-items move up a level.
  *
  * @since 1.6.0
  */
@@ -30,7 +30,7 @@ class RemoveMenuItem extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/remove-menu-item';
 		$this->label       = __( 'Remove Menu Item', 'albert-ai-butler' );
-		$this->description = __( 'Remove one item from a classic menu, moving its sub-items up a level without touching the linked content; read the menu with albert/get-menu first.', 'albert-ai-butler' );
+		$this->description = __( 'Remove one item from a menu, moving its sub-items up a level without touching the linked content; read the menu with albert/view-menu first.', 'albert-ai-butler' );
 		$this->category    = 'menus';
 		$this->group       = 'menus';
 
@@ -42,7 +42,7 @@ class RemoveMenuItem extends BaseAbility {
 				'public' => true,
 			],
 			// Destructive: menu items have no trash, and nothing can put one back yet.
-			'annotations' => Annotations::delete( MenuSupport::CHECK_FIRST ),
+			'annotations' => Annotations::delete( MenuSupport::CHECK_FIRST . ' A classic item is named by menu_item_id; a navigation item by menu_type "block", menu_id and its path.' ),
 		];
 
 		parent::__construct();
@@ -55,16 +55,29 @@ class RemoveMenuItem extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	private function get_input_schema(): array {
+		$navigation = MenuSupport::navigation_properties();
+		$properties = [
+			'menu_item_id' => [
+				'type'        => 'integer',
+				'description' => 'Classic menus only: the menu item ID from albert/view-menu.',
+				'minimum'     => 1,
+			],
+			'menu_type'    => $navigation['menu_type'],
+			'menu_id'      => [
+				'type'        => 'integer',
+				'description' => 'Navigation menus only: the menu ID from albert/find-menus.',
+				'minimum'     => 1,
+			],
+			'path'         => $navigation['path'],
+		];
+
 		return [
 			'type'       => 'object',
-			'properties' => [
-				'menu_item_id' => [
-					'type'        => 'integer',
-					'description' => 'The menu item ID from albert/get-menu.',
-					'minimum'     => 1,
-				],
+			'properties' => $properties,
+			'oneOf'      => [
+				MenuSupport::menu_branch( 'classic menu item by "menu_item_id"', $properties, [ 'menu_item_id' ], null, [ 'required' => [ 'menu_item_id' ] ] ),
+				MenuSupport::menu_branch( 'navigation menu item by "menu_id" and "path"', $properties, [ 'menu_type', 'menu_id', 'path' ], 'block', [ 'required' => [ 'menu_type', 'menu_id', 'path' ] ] ),
 			],
-			'required'   => [ 'menu_item_id' ],
 		];
 	}
 
@@ -78,20 +91,27 @@ class RemoveMenuItem extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'       => [ 'type' => 'integer' ],
-				'menu_id'  => [
+				'id'        => [
+					'type'        => 'integer',
+					'description' => 'Classic menus: the removed item\'s ID.',
+				],
+				'menu_id'   => [
 					'type'        => 'integer',
 					'description' => 'The menu it was in, 0 for none. With 0 the result has no "visible" or "shown_in".',
 				],
-				'title'    => [ 'type' => 'string' ],
-				'deleted'  => [ 'type' => 'boolean' ],
-				'moved_up' => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'integer' ],
-					'description' => 'Sub-items that moved up to the removed item\'s level.',
+				'menu_type' => [
+					'type' => 'string',
+					'enum' => [ 'block' ],
 				],
-			] + MenuSupport::visibility_schema(),
-			'required'   => [ 'id', 'menu_id', 'deleted', 'moved_up' ],
+				'title'     => [ 'type' => 'string' ],
+				'deleted'   => [ 'type' => 'boolean' ],
+				'moved_up'  => [
+					'type'        => 'array',
+					'items'       => [ 'type' => [ 'integer', 'array' ] ],
+					'description' => 'Sub-items that moved up to the removed item\'s level: item IDs in a classic menu, their new paths in a navigation menu.',
+				],
+			] + MenuSupport::navigation_output_schema() + MenuSupport::visibility_schema(),
+			'required'   => [ 'menu_id', 'deleted', 'moved_up' ],
 		];
 	}
 
@@ -113,6 +133,10 @@ class RemoveMenuItem extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function execute( array $args ): array|WP_Error {
+		if ( ( $args['menu_type'] ?? '' ) === 'block' ) {
+			return $this->remove_navigation_item( $args );
+		}
+
 		$post = MenuSupport::menu_item( (int) ( $args['menu_item_id'] ?? 0 ) );
 		if ( is_wp_error( $post ) ) {
 			return $post;
@@ -153,5 +177,47 @@ class RemoveMenuItem extends BaseAbility {
 
 		// An item in no menu was never shown, so there is no visibility to report.
 		return $menu_id > 0 ? $result + MenuSupport::visibility_fields( $menu_id ) : $result;
+	}
+
+	/**
+	 * Remove an item from a navigation menu.
+	 *
+	 * @param array<string, mixed> $args Ability arguments.
+	 *
+	 * @return array<string, mixed>|WP_Error
+	 * @since 1.6.0
+	 */
+	private function remove_navigation_item( array $args ): array|WP_Error {
+		$menu = MenuSupport::navigation_menu( (int) ( $args['menu_id'] ?? 0 ) );
+		if ( is_wp_error( $menu ) ) {
+			return $menu;
+		}
+
+		$editor = new NavigationEditor();
+		$opened = $editor->open_page_lists( NavigationWriter::tree( $menu ), [ 'item' => MenuSupport::path( $args['path'] ?? [] ) ] );
+		if ( is_wp_error( $opened ) ) {
+			return $opened;
+		}
+
+		$removed = $editor->remove( $opened[0], (array) $opened[1]['item'] );
+		if ( is_wp_error( $removed ) ) {
+			return $removed;
+		}
+
+		[ $tree, $block, $moved_up ] = $removed;
+		$label                       = (string) ( $block['attrs']['label'] ?? '' );
+
+		return NavigationWriter::save(
+			$menu,
+			$tree,
+			null,
+			$editor->notices(),
+			[
+				'path'     => $opened[1]['item'],
+				'title'    => NavigationTree::plain( $label ),
+				'deleted'  => true,
+				'moved_up' => $moved_up,
+			]
+		);
 	}
 }

@@ -137,6 +137,11 @@ class EditorMode {
 	 * @since 1.2.0
 	 */
 	private static function resolve( string $post_type, ?int $post_id ): bool {
+		// Core answers no for navigation menus: they have no editor screen of their own, but the Site Editor stores them as blocks.
+		if ( $post_type === 'wp_navigation' ) {
+			return true;
+		}
+
 		if ( $post_id !== null && $post_id > 0 && function_exists( 'use_block_editor_for_post' ) ) {
 			$post = get_post( $post_id );
 			if ( $post ) {

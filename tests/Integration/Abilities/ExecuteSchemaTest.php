@@ -23,7 +23,7 @@ use Albert\Abilities\WordPress\Media\CreateUploadLink;
 use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Menus\AddMenuItem;
 use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
-use Albert\Abilities\WordPress\Menus\GetMenu;
+use Albert\Abilities\WordPress\Menus\ViewMenu;
 use Albert\Abilities\WordPress\Menus\UnassignMenuLocation;
 use Albert\Abilities\WordPress\Menus\CreateMenu;
 use Albert\Abilities\WordPress\Menus\DeleteMenu;
@@ -554,12 +554,12 @@ class ExecuteSchemaTest extends TestCase {
 
 		$menu = $this->assert_execute_matches_schema( new CreateMenu(), [ 'name' => 'Schema menu' ], 'CreateMenu' );
 		$this->assert_execute_matches_schema(
-			new GetMenu(),
+			new ViewMenu(),
 			[
 				'menu_id'   => $menu['id'],
 				'menu_type' => 'classic',
 			],
-			'GetMenu'
+			'ViewMenu'
 		);
 
 		$first  = $this->assert_execute_matches_schema(

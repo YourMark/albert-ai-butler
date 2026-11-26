@@ -21,7 +21,7 @@ use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
 use Albert\Abilities\WordPress\Menus\CreateMenu;
 use Albert\Abilities\WordPress\Menus\DeleteMenu;
 use Albert\Abilities\WordPress\Menus\FindMenus;
-use Albert\Abilities\WordPress\Menus\GetMenu;
+use Albert\Abilities\WordPress\Menus\ViewMenu;
 use Albert\Abilities\WordPress\Menus\MoveMenuItem;
 use Albert\Abilities\WordPress\Menus\RemoveMenuItem;
 use Albert\Abilities\WordPress\Menus\UnassignMenuLocation;
@@ -84,7 +84,7 @@ class DirectCapabilityTest extends TestCase {
 		return [
 			// Menus.
 			'find-menus'             => [ FindMenus::class, 'edit_theme_options' ],
-			'get-menu'               => [ GetMenu::class, 'edit_theme_options' ],
+			'view-menu'              => [ ViewMenu::class, 'edit_theme_options' ],
 			'create-menu'            => [ CreateMenu::class, 'edit_theme_options' ],
 			'delete-menu'            => [ DeleteMenu::class, 'edit_theme_options' ],
 			'add-menu-item'          => [ AddMenuItem::class, 'edit_theme_options' ],
