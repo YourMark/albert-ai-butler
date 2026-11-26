@@ -607,21 +607,6 @@ code.albert-flyin__card-value {
 	background: var(--albert-color-surface);
 }
 
-.albert-perms-panel__intro {
-	margin: 0;
-	font-size: 13px;
-	line-height: 1.5;
-	color: var(--albert-color-neutral);
-}
-
-/* The shared "Required capability" card is unframed inside the panel (no
-   box-in-box); scoped so the card keeps its border anywhere else. */
-.albert-perms-panel .albert-flyin__card--capability {
-	border: 0;
-	padding: 0;
-	border-radius: 0;
-}
-
 /* Custom toggle option: label + a small lock icon signalling it's gated. */
 .albert-perms-upsell__custom-label {
 	display: inline-flex;
@@ -682,6 +667,14 @@ code.albert-flyin__card-value {
 	.albert-perms-panel .components-toggle-group-control::before {
 		transition: none;
 	}
+}
+
+/* Deprecated capabilityContent, rendered only by Albert Premium 1.1.0 and older. */
+.albert-flyin__legacy-default {
+	margin: 0;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--albert-color-neutral);
 }
 
 /* Tab content sits directly under the toggle; the panel's flex gap spaces it. */

@@ -64,10 +64,12 @@ class SetFeaturedImage extends BaseAbility {
 				'post_id'       => [
 					'type'        => 'integer',
 					'description' => 'The ID of the post or page to set the featured image for (required)',
+					'minimum'     => 1,
 				],
 				'attachment_id' => [
 					'type'        => 'integer',
 					'description' => 'The ID of the media attachment to set as featured image (required)',
+					'minimum'     => 1,
 				],
 			],
 			'required'   => [ 'post_id', 'attachment_id' ],

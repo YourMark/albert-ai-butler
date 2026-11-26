@@ -324,8 +324,11 @@ class BlockEditAbilityTest extends TestCase {
 				'id'    => 7,
 				'path'  => [ 1 ],
 				'block' => [
-					'name'       => 'core/image',
-					'attributes' => [ 'alt' => 'No url yet' ],
+					'name'       => 'core/heading',
+					'attributes' => [
+						'level'   => 9,
+						'content' => 'Too deep',
+					],
 				],
 			]
 		);
@@ -333,7 +336,7 @@ class BlockEditAbilityTest extends TestCase {
 		$this->assertIsArray( $result );
 		$this->assertCount( 1, $this->write_calls() );
 		$this->assertArrayHasKey( 'block_issues', $result );
-		$this->assertStringContainsString( 'core/image', implode( ' ', $result['block_issues'] ) );
+		$this->assertStringContainsString( 'level', implode( ' ', $result['block_issues'] ) );
 	}
 
 	public function test_edit_stale_expect_aborts_without_writing(): void {
