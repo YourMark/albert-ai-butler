@@ -1,6 +1,6 @@
 <?php
 /**
- * Unit tests for ToolCallObserver — LLM error-message improvement + failure logging.
+ * Unit tests for ToolCallObserver: guidance for a rejected execute-ability call.
  *
  * @package Albert
  */
@@ -10,7 +10,6 @@ namespace Albert\Tests\Unit\MCP;
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 require_once dirname( __DIR__ ) . '/stubs/WP_Ability.php';
 
-use Albert\Logging\ExecutionLogMarker;
 use Albert\MCP\Server;
 use Albert\MCP\ToolCallObserver;
 use PHPUnit\Framework\TestCase;
@@ -38,9 +37,8 @@ class ToolCallObserverTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		parent::setUp();
-		$GLOBALS['albert_test_hooks']     = [];
 		$GLOBALS['albert_test_abilities'] = [];
-		ExecutionLogMarker::reset();
+
 		$this->observer = new ToolCallObserver();
 	}
 
@@ -69,26 +67,36 @@ class ToolCallObserverTest extends TestCase {
 	 * @param mixed  $result    The tool result.
 	 * @param mixed  $args      The tool arguments.
 	 * @param string $tool_name The tool name.
-	 * @param mixed  $mcp_tool  The adapter tool instance, if any.
 	 *
 	 * @return mixed
 	 */
-	private function handle( $result, $args, string $tool_name, $mcp_tool = null ): mixed {
-		return $this->observer->handle( $result, $args, $tool_name, $mcp_tool, $this->server() );
+	private function handle( $result, $args, string $tool_name ): mixed {
+		return $this->observer->handle( $result, $args, $tool_name, null, $this->server() );
 	}
 
 	/**
-	 * Build the validation WP_Error the Abilities API produces.
+	 * The error execute-ability reports after the guidance is applied.
 	 *
-	 * @param string $reason The "Reason: …" tail.
+	 * @param string               $ability_name The ability the meta-tool was asked to run.
+	 * @param array<string, mixed> $parameters   The input the caller sent.
+	 * @param string               $error        The adapter's own error text.
 	 *
-	 * @return WP_Error
+	 * @return string
 	 */
-	private function invalid_input( string $reason ): WP_Error {
-		return new WP_Error(
-			'ability_invalid_input',
-			sprintf( 'Ability "albert/create-post" has invalid input. Reason: %s', $reason )
+	private function proxied( string $ability_name, array $parameters, string $error = 'Invalid input.' ): string {
+		$out = $this->handle(
+			[
+				'success' => false,
+				'error'   => $error,
+			],
+			[
+				'ability_name' => $ability_name,
+				'parameters'   => $parameters,
+			],
+			'mcp-adapter-execute-ability'
 		);
+
+		return $out['error'];
 	}
 
 	/**
@@ -99,15 +107,10 @@ class ToolCallObserverTest extends TestCase {
 	public function test_single_missing_required(): void {
 		$this->register_create_post();
 
-		$out = $this->handle(
-			$this->invalid_input( 'title is a required property of input.' ),
-			[ 'content' => 'x' ],
-			'albert/create-post'
+		$this->assertStringStartsWith(
+			'Missing required parameter: `title`.',
+			$this->proxied( 'albert/create-post', [ 'content' => 'x' ] )
 		);
-
-		$this->assertInstanceOf( WP_Error::class, $out );
-		$this->assertStringStartsWith( 'Missing required parameter: `title`.', $out->get_error_message() );
-		$this->assertSame( 'ability_invalid_input', $out->get_error_code() );
 	}
 
 	/**
@@ -118,13 +121,10 @@ class ToolCallObserverTest extends TestCase {
 	public function test_multiple_missing_required(): void {
 		$this->register_create_post( [ 'title', 'status' ] );
 
-		$out = $this->handle(
-			$this->invalid_input( 'title is a required property of input. status is a required property of input.' ),
-			[],
-			'albert/create-post'
+		$this->assertStringStartsWith(
+			'Missing required parameters: `title`, `status`.',
+			$this->proxied( 'albert/create-post', [] )
 		);
-
-		$this->assertStringStartsWith( 'Missing required parameters: `title`, `status`.', $out->get_error_message() );
 	}
 
 	/**
@@ -135,44 +135,26 @@ class ToolCallObserverTest extends TestCase {
 	public function test_other_validation_reason(): void {
 		$this->register_create_post();
 
-		$out = $this->handle(
-			$this->invalid_input( 'input[title] is not of type string.' ),
-			[ 'title' => 123 ],
-			'albert/create-post'
+		$this->assertStringStartsWith(
+			'Invalid parameters: input[title] is not of type string.',
+			$this->proxied( 'albert/create-post', [ 'title' => 123 ] )
 		);
-
-		$this->assertStringStartsWith( 'Invalid parameters: input[title] is not of type string.', $out->get_error_message() );
 	}
 
 	/**
-	 * An empty error message never reaches the LLM blank.
+	 * A tool other than the meta-tools is not Albert's server's, so it passes through.
 	 *
 	 * @return void
 	 */
-	public function test_empty_message_fallback(): void {
-		$out = $this->handle(
-			new WP_Error( 'ability_invalid_input', '' ),
-			[],
-			'albert/create-post'
-		);
+	public function test_a_non_meta_tool_result_passes_through(): void {
+		$this->register_create_post();
+		$error = new WP_Error( 'ability_invalid_input', 'raw' );
 
-		$this->assertSame( 'The "albert/create-post" operation could not be completed.', $out->get_error_message() );
+		$this->assertSame( $error, $this->handle( $error, [ 'content' => 'x' ], 'albert/create-post' ) );
 	}
 
 	/**
-	 * Non-error results pass through untouched.
-	 *
-	 * @return void
-	 */
-	public function test_success_passthrough(): void {
-		$result = [ 'id' => 5 ];
-		$out    = $this->handle( $result, [], 'albert/create-post' );
-
-		$this->assertSame( $result, $out );
-	}
-
-	/**
-	 * Adapter meta-tools are left untouched.
+	 * A meta-tool's own WP_Error is left untouched.
 	 *
 	 * @return void
 	 */
@@ -181,67 +163,6 @@ class ToolCallObserverTest extends TestCase {
 		$out   = $this->handle( $error, [], 'mcp-adapter/execute-ability' );
 
 		$this->assertSame( $error, $out );
-	}
-
-	/**
-	 * A genuine (non-validation) pre-execute failure fires after_execute so it
-	 * gets logged.
-	 *
-	 * @return void
-	 */
-	public function test_fires_after_execute_when_unmarked(): void {
-		$this->handle( new WP_Error( 'rest_cannot_create', 'Sorry, you are not allowed to create posts.' ), [ 'a' => 1 ], 'albert/create-post' );
-
-		$fired = array_filter(
-			$GLOBALS['albert_test_hooks'],
-			static function ( array $h ): bool {
-				return $h['hook'] === 'albert/abilities/after_execute';
-			}
-		);
-		$this->assertCount( 1, $fired );
-	}
-
-	/**
-	 * A self-correcting validation rejection still improves the message, but is
-	 * NOT logged — it would only add noise to an owner-facing log.
-	 *
-	 * @return void
-	 */
-	public function test_validation_rejection_improves_message_but_is_not_logged(): void {
-		$this->register_create_post();
-
-		$out = $this->handle( $this->invalid_input( 'title is a required property of input.' ), [ 'a' => 1 ], 'albert/create-post' );
-
-		// Message is still improved for the assistant.
-		$this->assertStringStartsWith( 'Missing required parameter: `title`.', $out->get_error_message() );
-
-		// But nothing is logged.
-		$fired = array_filter(
-			$GLOBALS['albert_test_hooks'],
-			static function ( array $h ): bool {
-				return $h['hook'] === 'albert/abilities/after_execute';
-			}
-		);
-		$this->assertCount( 0, $fired );
-	}
-
-	/**
-	 * An already-logged ability is not re-fired (no double-log).
-	 *
-	 * @return void
-	 */
-	public function test_skips_after_execute_when_marked(): void {
-		ExecutionLogMarker::mark( 'albert/create-post' );
-
-		$this->handle( new WP_Error( 'rest_cannot_create', 'Sorry.' ), [], 'albert/create-post' );
-
-		$fired = array_filter(
-			$GLOBALS['albert_test_hooks'],
-			static function ( array $h ): bool {
-				return $h['hook'] === 'albert/abilities/after_execute';
-			}
-		);
-		$this->assertCount( 0, $fired );
 	}
 
 	/**
@@ -303,18 +224,6 @@ class ToolCallObserverTest extends TestCase {
 	}
 
 	/**
-	 * The validation WP_Error the Abilities API produces for view-term.
-	 *
-	 * @return WP_Error
-	 */
-	private function view_term_invalid_input(): WP_Error {
-		return new WP_Error(
-			'ability_invalid_input',
-			'Ability "albert/view-term" has invalid input. Reason: id is a required property of input.'
-		);
-	}
-
-	/**
 	 * Input the schema does not recognise is named, not silently dropped.
 	 *
 	 * The reported case: `term_id` is what a caller reaches for after using an
@@ -325,20 +234,19 @@ class ToolCallObserverTest extends TestCase {
 	public function test_unrecognised_parameters_are_named(): void {
 		$this->register_view_term();
 
-		$out = $this->handle(
-			$this->view_term_invalid_input(),
+		$out = $this->proxied(
+			'albert/view-term',
 			[
 				'term_id'  => 76,
 				'taxonomy' => 'category',
 				'fields'   => 'all',
-			],
-			'albert-view-term'
+			]
 		);
 
 		$this->assertSame(
 			'Missing required parameter: `id`. Unrecognised parameters: `term_id`, `fields`. '
 			. 'Accepted parameters: `id` (integer, required), `taxonomy` (string).',
-			$out->get_error_message()
+			$out
 		);
 	}
 
@@ -350,34 +258,22 @@ class ToolCallObserverTest extends TestCase {
 	public function test_accepted_parameters_listed_without_unrecognised_line(): void {
 		$this->register_view_term();
 
-		$out = $this->handle(
-			$this->view_term_invalid_input(),
-			[ 'taxonomy' => 'category' ],
-			'albert-view-term'
-		);
-
 		$this->assertSame(
 			'Missing required parameter: `id`. Accepted parameters: `id` (integer, required), `taxonomy` (string).',
-			$out->get_error_message()
+			$this->proxied( 'albert/view-term', [ 'taxonomy' => 'category' ] )
 		);
 	}
 
 	/**
-	 * An ability Albert cannot resolve keeps core's own message.
+	 * An ability that is not registered keeps the adapter's own message.
 	 *
 	 * The guidance is read off the registered schema, so without one there is
-	 * nothing to say that is not a guess. Core's message already names the
-	 * ability and the reason, so it is passed through rather than reworded from
-	 * — which is also the only answer that does not depend on core's wording.
+	 * nothing to say that is not a guess.
 	 *
 	 * @return void
 	 */
-	public function test_unregistered_ability_keeps_cores_message(): void {
-		$raw = $this->view_term_invalid_input();
-
-		$out = $this->handle( $raw, [ 'term_id' => 76 ], 'albert-view-term' );
-
-		$this->assertSame( $raw->get_error_message(), $out->get_error_message() );
+	public function test_unregistered_ability_keeps_the_message(): void {
+		$this->assertSame( 'raw', $this->proxied( 'albert/view-term', [ 'term_id' => 76 ], 'raw' ) );
 	}
 
 	/**
@@ -388,51 +284,16 @@ class ToolCallObserverTest extends TestCase {
 	public function test_other_reason_gains_parameter_guidance(): void {
 		$this->register_view_term();
 
-		$out = $this->handle(
-			new WP_Error(
-				'ability_invalid_input',
-				'Ability "albert/view-term" has invalid input. Reason: id is not of type integer.'
-			),
+		$out = $this->proxied(
+			'albert/view-term',
 			[
 				'id'     => 'seventy-six',
 				'fields' => 'all',
-			],
-			'albert-view-term'
+			]
 		);
 
-		$this->assertStringContainsString( 'Invalid parameters: input[id] is not of type integer.', $out->get_error_message() );
-		$this->assertStringContainsString( 'Unrecognised parameters: `fields`.', $out->get_error_message() );
-	}
-
-	/**
-	 * The failure reported inside an execute-ability result is improved too.
-	 *
-	 * The meta-tool calls the ability itself and reports the failure in the
-	 * result body rather than as a WP_Error, so this is the path an assistant
-	 * that found an ability through the meta-tools actually takes.
-	 *
-	 * @return void
-	 */
-	public function test_meta_tool_result_message_is_improved(): void {
-		$this->register_view_term();
-
-		$out = $this->handle(
-			[
-				'success' => false,
-				'error'   => 'Ability "albert/view-term" has invalid input. Reason: id is a required property of input.',
-			],
-			[
-				'ability_name' => 'albert/view-term',
-				'parameters'   => [ 'term_id' => 76 ],
-			],
-			'mcp-adapter-execute-ability'
-		);
-
-		$this->assertSame(
-			'Missing required parameter: `id`. Unrecognised parameters: `term_id`. '
-			. 'Accepted parameters: `id` (integer, required), `taxonomy` (string).',
-			$out['error']
-		);
+		$this->assertStringContainsString( 'Invalid parameters: input[id] is not of type integer.', $out );
+		$this->assertStringContainsString( 'Unrecognised parameters: `fields`.', $out );
 	}
 
 	/**
@@ -468,59 +329,6 @@ class ToolCallObserverTest extends TestCase {
 	}
 
 	/**
-	 * A failure is logged against the ability id, not the sanitised tool name.
-	 *
-	 * The name arriving on the filter is what the client sent — the MCP-legal
-	 * spelling with a hyphen — so logging it verbatim wrote a row against an
-	 * ability id that does not exist, and never matched the marker that stops a
-	 * call being logged twice.
-	 *
-	 * @return void
-	 */
-	public function test_logs_against_the_ability_id(): void {
-		$this->register_ability( 'albert/create-post', [ 'type' => 'object' ] );
-
-		$this->handle(
-			new WP_Error( 'rest_cannot_create', 'Sorry, you are not allowed to create posts.' ),
-			[ 'a' => 1 ],
-			'albert-create-post'
-		);
-
-		$fired = array_values(
-			array_filter(
-				$GLOBALS['albert_test_hooks'],
-				static function ( array $h ): bool {
-					return $h['hook'] === 'albert/abilities/after_execute';
-				}
-			)
-		);
-
-		$this->assertCount( 1, $fired );
-		$this->assertSame( 'albert/create-post', $fired[0]['args'][0] );
-	}
-
-	/**
-	 * An ability already logged this request is not logged again, even when the
-	 * call came in under the sanitised tool name.
-	 *
-	 * @return void
-	 */
-	public function test_marker_matches_the_sanitised_tool_name(): void {
-		$this->register_ability( 'albert/create-post', [ 'type' => 'object' ] );
-		ExecutionLogMarker::mark( 'albert/create-post' );
-
-		$this->handle( new WP_Error( 'rest_cannot_create', 'Sorry.' ), [], 'albert-create-post' );
-
-		$fired = array_filter(
-			$GLOBALS['albert_test_hooks'],
-			static function ( array $h ): bool {
-				return $h['hook'] === 'albert/abilities/after_execute';
-			}
-		);
-		$this->assertCount( 0, $fired );
-	}
-
-	/**
 	 * A call whose only fault is an unrecognised parameter says just that.
 	 *
 	 * Core stops at the first property it does not recognise and phrases it as
@@ -532,40 +340,20 @@ class ToolCallObserverTest extends TestCase {
 	public function test_only_unrecognised_parameters(): void {
 		$this->register_view_term();
 
-		$out = $this->handle(
-			new WP_Error(
-				'ability_invalid_input',
-				'Ability "albert/view-term" has invalid input. Reason: fields is not a valid property of Object.'
-			),
+		$out = $this->proxied(
+			'albert/view-term',
 			[
 				'id'     => 76,
 				'fields' => 'all',
 				'depth'  => 2,
-			],
-			'albert-view-term'
+			]
 		);
 
 		$this->assertSame(
 			'Unrecognised parameters: `fields`, `depth`. '
 			. 'Accepted parameters: `id` (integer, required), `taxonomy` (string).',
-			$out->get_error_message()
+			$out
 		);
-	}
-
-	/**
-	 * With no schema to diff against, core's own reason is kept rather than lost.
-	 *
-	 * @return void
-	 */
-	public function test_unrecognised_reason_kept_without_a_schema(): void {
-		$raw = new WP_Error(
-			'ability_invalid_input',
-			'Ability "albert/view-term" has invalid input. Reason: fields is not a valid property of Object.'
-		);
-
-		$out = $this->handle( $raw, [ 'fields' => 'all' ], 'albert-view-term' );
-
-		$this->assertSame( $raw->get_error_message(), $out->get_error_message() );
 	}
 
 	/**
@@ -589,13 +377,7 @@ class ToolCallObserverTest extends TestCase {
 		];
 
 		$guidance = array_map(
-			function ( string $message ): string {
-				return $this->handle(
-					new WP_Error( 'ability_invalid_input', $message ),
-					[ 'term_id' => 76 ],
-					'albert-view-term'
-				)->get_error_message();
-			},
+			fn( string $message ): string => $this->proxied( 'albert/view-term', [ 'term_id' => 76 ], $message ),
 			$messages
 		);
 
@@ -604,11 +386,10 @@ class ToolCallObserverTest extends TestCase {
 	}
 
 	/**
-	 * The execute-ability path ignores the message text too.
+	 * The reported case, on a Dutch site, gets the full guidance.
 	 *
-	 * This is the path the issue was reported from, and the one with no error
-	 * code to fall back on — whether it was an input rejection used to be decided
-	 * by matching English text, so it improved nothing once that text changed.
+	 * Whether it was an input rejection used to be decided by matching English
+	 * text, so it improved nothing once that text was translated.
 	 *
 	 * @return void
 	 */
@@ -653,14 +434,10 @@ class ToolCallObserverTest extends TestCase {
 			]
 		);
 
-		$out = $this->handle(
-			new WP_Error( 'ability_invalid_input', 'Ability "albert/open-term" has invalid input. Reason: id is a required property of input.' ),
-			[ 'term_id' => 76 ],
-			'albert-open-term'
-		);
+		$out = $this->proxied( 'albert/open-term', [ 'term_id' => 76 ] );
 
-		$this->assertStringNotContainsString( 'Unrecognised', $out->get_error_message() );
-		$this->assertStringContainsString( 'Missing required parameter: `id`.', $out->get_error_message() );
+		$this->assertStringNotContainsString( 'Unrecognised', $out );
+		$this->assertStringContainsString( 'Missing required parameter: `id`.', $out );
 	}
 
 	/**
@@ -688,14 +465,10 @@ class ToolCallObserverTest extends TestCase {
 			]
 		);
 
-		$out = $this->handle(
-			new WP_Error( 'ability_invalid_input', 'Ability "albert/create-thing" has invalid input. Reason: whatever.' ),
-			[ 'status' => 'published' ],
-			'albert-create-thing'
-		);
+		$out = $this->proxied( 'albert/create-thing', [ 'status' => 'published' ] );
 
-		$this->assertStringContainsString( '`status` (draft|publish)', $out->get_error_message() );
-		$this->assertStringNotContainsString( '`status` (string', $out->get_error_message() );
+		$this->assertStringContainsString( '`status` (draft|publish)', $out );
+		$this->assertStringNotContainsString( '`status` (string', $out );
 	}
 
 	/**
@@ -719,15 +492,9 @@ class ToolCallObserverTest extends TestCase {
 			]
 		);
 
-		$out = $this->handle(
-			new WP_Error( 'ability_invalid_input', 'Ability "albert/view-sessions" has invalid input. Reason: whatever.' ),
-			[ 'limit' => 10 ],
-			'albert-view-sessions'
-		);
-
 		$this->assertSame(
 			'Unrecognised parameters: `limit`. This ability accepts no parameters.',
-			$out->get_error_message()
+			$this->proxied( 'albert/view-sessions', [ 'limit' => 10 ] )
 		);
 	}
 
@@ -761,22 +528,21 @@ class ToolCallObserverTest extends TestCase {
 			]
 		);
 
-		$out = $this->handle(
-			new WP_Error( 'ability_invalid_input', 'Ability "albert/update-order" has invalid input. Reason: company is not a valid property of Object.' ),
+		$out = $this->proxied(
+			'albert/update-order',
 			[
 				'order_id' => 1,
 				'billing'  => [
 					'company' => 'Acme BV',
 					'city'    => 'Utrecht',
 				],
-			],
-			'albert-update-order'
+			]
 		);
 
 		$this->assertSame(
 			'Unrecognised parameters: `billing.company`. '
 			. 'Accepted parameters for `billing`: `city` (string), `phone` (string).',
-			$out->get_error_message()
+			$out
 		);
 	}
 
@@ -805,16 +571,13 @@ class ToolCallObserverTest extends TestCase {
 			]
 		);
 
-		$out = $this->handle(
-			new WP_Error( 'ability_invalid_input', 'Ability "albert/update-order" has invalid input. Reason: whatever.' ),
+		$message = $this->proxied(
+			'albert/update-order',
 			[
 				'orderid' => 1,
 				'billing' => [ 'company' => 'Acme BV' ],
-			],
-			'albert-update-order'
+			]
 		);
-
-		$message = $out->get_error_message();
 		$this->assertStringContainsString( '`orderid`', $message );
 		$this->assertStringContainsString( '`billing.company`', $message );
 		$this->assertStringContainsString( 'Accepted parameters: `order_id` (integer), `billing` (object).', $message );
@@ -845,8 +608,8 @@ class ToolCallObserverTest extends TestCase {
 			]
 		);
 
-		$out = $this->handle(
-			new WP_Error( 'ability_invalid_input', 'Ability "albert/create-thing" has invalid input. Reason: whatever.' ),
+		$out = $this->proxied(
+			'albert/create-thing',
 			[
 				'blocks' => [
 					[ 'name' => 'core/paragraph' ],
@@ -855,11 +618,10 @@ class ToolCallObserverTest extends TestCase {
 						'content' => 'Hi',
 					],
 				],
-			],
-			'albert-create-thing'
+			]
 		);
 
-		$this->assertStringContainsString( 'Unrecognised parameters: `blocks[1].content`.', $out->get_error_message() );
+		$this->assertStringContainsString( 'Unrecognised parameters: `blocks[1].content`.', $out );
 	}
 
 	/**
@@ -891,8 +653,8 @@ class ToolCallObserverTest extends TestCase {
 			]
 		);
 
-		$out = $this->handle(
-			new WP_Error( 'ability_invalid_input', 'Ability "albert/create-thing" has invalid input. Reason: whatever.' ),
+		$message = $this->proxied(
+			'albert/create-thing',
 			[
 				'title'  => 'T',
 				'blocks' => [
@@ -905,11 +667,8 @@ class ToolCallObserverTest extends TestCase {
 						'y'    => 2,
 					],
 				],
-			],
-			'albert-create-thing'
+			]
 		);
-
-		$message = $out->get_error_message();
 
 		$this->assertStringContainsString( 'Unrecognised parameters: `blocks[0].x`, `blocks[1].y`.', $message );
 		$this->assertStringContainsString( 'Accepted parameters for `blocks[]`: `name` (string).', $message );
@@ -917,79 +676,7 @@ class ToolCallObserverTest extends TestCase {
 	}
 
 	/**
-	 * The ability is taken from the adapter's tool, not guessed from its name.
-	 *
-	 * A namespace may contain hyphens of its own, so unpicking the first hyphen
-	 * of a sanitised tool name is a guess. The adapter built the mapping at
-	 * registration time and hands its tool to this filter, so it is asked.
-	 *
-	 * @return void
-	 */
-	public function test_ability_comes_from_the_adapter_tool(): void {
-		$this->register_ability(
-			'albert-extra/view-term',
-			[
-				'type'                 => 'object',
-				'properties'           => [ 'id' => [ 'type' => 'integer' ] ],
-				'required'             => [ 'id' ],
-				'additionalProperties' => false,
-			]
-		);
-
-		$mcp_tool = new class() {
-			/**
-			 * The adapter's registration-time tags.
-			 *
-			 * @return array<string, mixed>
-			 */
-			public function get_observability_context(): array {
-				return [ 'ability_name' => 'albert-extra/view-term' ];
-			}
-		};
-
-		$out = $this->handle(
-			new WP_Error( 'ability_invalid_input', 'Ability "albert-extra/view-term" has invalid input. Reason: id is a required property of input.' ),
-			[ 'term_id' => 76 ],
-			'albert-extra-view-term',
-			$mcp_tool
-		);
-
-		$this->assertStringContainsString( 'Unrecognised parameters: `term_id`.', $out->get_error_message() );
-	}
-
-	/**
-	 * Another plugin's MCP server firing the same global filter is left alone.
-	 *
-	 * Its error text is not rewritten into Albert's format and, just as
-	 * importantly, its failure is not fired at `albert/abilities/after_execute`,
-	 * which is what puts a row in the owner-facing activity log. A call Albert
-	 * never served has no business appearing there.
-	 *
-	 * @return void
-	 */
-	public function test_a_foreign_server_is_left_alone(): void {
-		$this->register_create_post();
-
-		$error = new WP_Error( 'rest_cannot_create', 'Sorry, you are not allowed to create posts.' );
-
-		$out = $this->observer->handle(
-			$error,
-			[ 'a' => 1 ],
-			'albert/create-post',
-			null,
-			$this->server( 'woocommerce' )
-		);
-
-		$this->assertSame( $error, $out );
-		$this->assertSame( [], $GLOBALS['albert_test_hooks'] );
-	}
-
-	/**
 	 * A foreign server's proxied meta-tool failure keeps its own error text.
-	 *
-	 * The meta-tool branch runs before the WP_Error check, so without the server
-	 * guard this is the one path that rewrote a plain array result belonging to
-	 * someone else's server.
 	 *
 	 * @return void
 	 */
@@ -1021,9 +708,15 @@ class ToolCallObserverTest extends TestCase {
 	public function test_an_unidentified_server_is_left_alone(): void {
 		$this->register_create_post();
 
-		$error = new WP_Error( 'rest_cannot_create', 'Sorry.' );
+		$result = [
+			'success' => false,
+			'error'   => 'raw',
+		];
+		$args   = [
+			'ability_name' => 'albert/create-post',
+			'parameters'   => [],
+		];
 
-		$this->assertSame( $error, $this->observer->handle( $error, [], 'albert/create-post' ) );
-		$this->assertSame( [], $GLOBALS['albert_test_hooks'] );
+		$this->assertSame( $result, $this->observer->handle( $result, $args, 'mcp-adapter-execute-ability' ) );
 	}
 }
