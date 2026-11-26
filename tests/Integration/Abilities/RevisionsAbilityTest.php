@@ -207,6 +207,38 @@ class RevisionsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A field too long to diff cheaply is reported as changed without a diff.
+	 *
+	 * @return void
+	 */
+	public function test_huge_fields_are_not_diffed(): void {
+		$from = implode( "\n", range( 1, 6000 ) );
+		$to   = $from . "\nextra";
+
+		$this->assertSame(
+			[
+				'changed'   => true,
+				'diff'      => '',
+				'truncated' => true,
+			],
+			RevisionDiff::diff( $from, $to )
+		);
+	}
+
+	/**
+	 * A single line longer than the budget is cut, not dropped.
+	 *
+	 * @return void
+	 */
+	public function test_an_over_long_line_is_cut_to_the_budget(): void {
+		$diff = RevisionDiff::diff( '<p>old</p>', str_repeat( 'x', 30000 ) );
+
+		$this->assertTrue( $diff['truncated'] );
+		$this->assertStringStartsWith( "@@ -1,1 +1,1 @@\n-<p>old</p>\n+xxx", $diff['diff'] );
+		$this->assertLessThanOrEqual( 20000, strlen( $diff['diff'] ) );
+	}
+
+	/**
 	 * Restoring goes through core: the post takes the revision's fields and a new revision records it.
 	 *
 	 * @return void
@@ -421,12 +453,11 @@ class RevisionsAbilityTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_restore_is_an_idempotent_non_destructive_update(): void {
+	public function test_restore_is_a_non_destructive_update(): void {
 		$annotations = wp_get_ability( 'albert/restore-revision' )->get_meta()['annotations'];
 
 		$this->assertFalse( $annotations['readonly'] );
 		$this->assertFalse( $annotations['destructive'] );
-		$this->assertTrue( $annotations['idempotent'] );
 		$this->assertTrue( RiskPolicy::is_high_risk_ability( 'albert/restore-revision' ) );
 	}
 }

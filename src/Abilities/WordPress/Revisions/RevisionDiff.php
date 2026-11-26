@@ -53,6 +53,16 @@ class RevisionDiff {
 	private const MAX_CHARS = 20000;
 
 	/**
+	 * Most lines per side that are diffed at all.
+	 *
+	 * Text_Diff's cost grows with the input, not the capped output, so a larger
+	 * field is reported as changed without a diff.
+	 *
+	 * @since 1.6.0
+	 */
+	private const MAX_INPUT_LINES = 5000;
+
+	/**
 	 * Diff two strings line by line.
 	 *
 	 * @param string $from The older text.
@@ -76,7 +86,17 @@ class RevisionDiff {
 			require_once ABSPATH . 'wp-includes/Text/Diff.php';
 		}
 
-		$text_diff = new Text_Diff( 'auto', [ self::lines( $from ), self::lines( $to ) ] );
+		$from_lines = self::lines( $from );
+		$to_lines   = self::lines( $to );
+		if ( count( $from_lines ) > self::MAX_INPUT_LINES || count( $to_lines ) > self::MAX_INPUT_LINES ) {
+			return [
+				'changed'   => true,
+				'diff'      => '',
+				'truncated' => true,
+			];
+		}
+
+		$text_diff = new Text_Diff( 'auto', [ $from_lines, $to_lines ] );
 
 		return self::render( self::flatten( $text_diff->getDiff() ) );
 	}
@@ -401,7 +421,16 @@ class RevisionDiff {
 			}
 
 			foreach ( $lines as $line ) {
-				if ( count( $out ) >= self::MAX_LINES || $chars + strlen( $line ) > self::MAX_CHARS ) {
+				if ( count( $out ) >= self::MAX_LINES ) {
+					$truncated = true;
+					break 2;
+				}
+				if ( $chars + strlen( $line ) > self::MAX_CHARS ) {
+					// Keep the start of an over-long line (minified HTML is one line) rather than nothing.
+					$room = self::MAX_CHARS - $chars;
+					if ( $room > 0 ) {
+						$out[] = mb_strcut( $line, 0, $room, 'UTF-8' );
+					}
 					$truncated = true;
 					break 2;
 				}
