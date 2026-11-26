@@ -500,6 +500,37 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A page id names the ability that updates it, so the assistant does not go looking for a post.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_with_a_page_id_points_to_update_page(): void {
+		$ability = wp_get_ability( 'albert/update-post' );
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-post is not registered.' );
+		}
+
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'  => 'page',
+				'post_title' => 'Original',
+			]
+		);
+
+		$result = $ability->execute(
+			[
+				'id'    => $page_id,
+				'title' => 'Changed',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertStringContainsString( 'albert/update-page', $result->get_error_message() );
+		$this->assertSame( 'Original', get_post( $page_id )->post_title );
+	}
+
+	/**
 	 * The schema refuses an update that sends only the id, before anything runs.
 	 *
 	 * @return void

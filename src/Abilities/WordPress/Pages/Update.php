@@ -33,7 +33,7 @@ class Update extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/update-page';
 		$this->label       = __( 'Update Page', 'albert-ai-butler' );
-		$this->description = __( 'Update an existing page: only the fields you send change. Read it first with albert/view-page; to change one block use albert/edit-page-block, and for a new page use albert/create-page.', 'albert-ai-butler' );
+		$this->description = __( 'Update an existing page: only the fields you send change. Read it first with albert/view-page before replacing content or blocks; to change one block use albert/edit-page-block, and for a new page use albert/create-page.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
@@ -45,11 +45,11 @@ class Update extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::update(
-				'This replaces the whole page body. Read the page first with `albert/view-page` and '
-				. '`"format": ["blocks"]`, edit that tree, and send it back, writing without reading '
-				. 'silently discards everything you did not include. Keep every existing image block\'s `id` '
-				. 'and `url` exactly as they were unless you were asked to change the image. To change one '
-				. 'block, use `albert/edit-page-block` instead: it is cheaper and leaves every other block '
+				'Only the fields you send change. `content` and `blocks` replace the whole page body: before sending either, '
+				. 'read the page with `albert/view-page` and `"format": ["blocks"]`, edit that tree, and send it back, '
+				. 'writing without reading silently discards everything you did not include. Keep every existing '
+				. 'image block\'s `id` and `url` exactly as they were unless you were asked to change the image. To '
+				. 'change one block, use `albert/edit-page-block` instead: it is cheaper and leaves every other block '
 				. 'byte-for-byte intact.'
 			),
 		];
@@ -269,6 +269,15 @@ class Update extends BaseAbility {
 	private function refuse_unless_editable( int $page_id ): ?WP_Error {
 		// get_post( 0 ) returns the global post.
 		$page = $page_id > 0 ? get_post( $page_id ) : null;
+		if ( $page && $page->post_type === 'post' ) {
+			return new WP_Error(
+				'albert_page_not_found',
+				/* translators: %d: post ID */
+				sprintf( __( 'ID %d is a post, not a page. Use albert/update-post.', 'albert-ai-butler' ), $page_id ),
+				[ 'status' => 404 ]
+			);
+		}
+
 		if ( ! $page || $page->post_type !== 'page' ) {
 			return self::not_found( $page_id );
 		}
