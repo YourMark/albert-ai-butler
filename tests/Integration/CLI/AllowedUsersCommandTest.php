@@ -59,24 +59,31 @@ class AllowedUsersCommandTest extends TestCase {
 	}
 
 	/**
-	 * `--format=ids` gets bare IDs; an expired invitation is named as such on add.
+	 * `--format=ids` gets bare IDs, which is what Formatter prints for that format.
 	 *
 	 * @return void
 	 */
-	public function test_ids_format_and_expired_invitation(): void {
-		$command = new AllowedUsersCommand();
-		$jan     = self::factory()->user->create(
+	public function test_ids_format_lists_bare_ids(): void {
+		$jan = self::factory()->user->create( [ 'role' => 'editor' ] );
+		AllowedUsers::add( $jan );
+
+		( new AllowedUsersCommand() )->list_( [], [ 'format' => 'ids' ] );
+
+		$this->assertSame( [ $jan ], Formatter::$items );
+	}
+
+	/**
+	 * Adding someone whose invitation expired names that, rather than "already on the list".
+	 *
+	 * @return void
+	 */
+	public function test_add_names_an_expired_invitation(): void {
+		$jan = self::factory()->user->create(
 			[
 				'user_login' => 'jan',
 				'role'       => 'editor',
 			]
 		);
-		AllowedUsers::add( $jan );
-		AllowedUsers::reset_expiry_clock( 1 );
-
-		$command->list_( [], [ 'format' => 'ids' ] );
-		$this->assertSame( [ $jan ], Formatter::$items );
-
 		update_option(
 			AllowedUsers::OPTION,
 			[
@@ -88,9 +95,50 @@ class AllowedUsersCommandTest extends TestCase {
 			]
 		);
 
-		$command->add( [ 'jan' ] );
+		( new AllowedUsersCommand() )->add( [ 'jan' ] );
 
-		$this->assertStringContainsString( 'invitation expired', WP_CLI::$output[ count( WP_CLI::$output ) - 2 ][1] );
+		$warnings = array_column( array_filter( WP_CLI::$output, static fn( $line ) => $line[0] === 'warning' ), 1 );
+		$this->assertCount( 1, $warnings );
+		$this->assertStringContainsString( 'invitation expired', $warnings[ array_key_first( $warnings ) ] );
+		$this->assertSame( [ 'success', 'Added 0 of 1.' ], end( WP_CLI::$output ) );
+	}
+
+	/**
+	 * A refused save on add or remove errors, so the command exits non-zero.
+	 *
+	 * @return void
+	 */
+	public function test_a_refused_save_errors(): void {
+		$command = new AllowedUsersCommand();
+		$jan     = self::factory()->user->create(
+			[
+				'user_login' => 'jan',
+				'role'       => 'editor',
+			]
+		);
+		$refuse  = static fn( $value, $old ) => $old;
+
+		add_filter( 'pre_update_option_' . AllowedUsers::OPTION, $refuse, 10, 2 );
+
+		try {
+			$command->add( [ 'jan' ] );
+			$this->fail( 'Expected an error.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertSame( 'Added 0 of 1; 1 could not be saved.', $e->getMessage() );
+		}
+
+		remove_filter( 'pre_update_option_' . AllowedUsers::OPTION, $refuse, 10 );
+		AllowedUsers::add( $jan );
+		add_filter( 'pre_update_option_' . AllowedUsers::OPTION, $refuse, 10, 2 );
+
+		try {
+			$command->remove( [ 'jan' ] );
+			$this->fail( 'Expected an error.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertSame( 'Removed 0 of 1; 1 could not be saved.', $e->getMessage() );
+		}
+
+		$this->assertSame( [ $jan ], AllowedUsers::ids() );
 	}
 
 	/**

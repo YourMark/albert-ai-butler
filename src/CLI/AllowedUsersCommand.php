@@ -133,6 +133,7 @@ class AllowedUsersCommand {
 		}
 
 		$added   = 0;
+		$failed  = 0;
 		$entries = AllowedUsers::all();
 
 		foreach ( $users as $user ) {
@@ -146,8 +147,14 @@ class AllowedUsersCommand {
 				++$added;
 				WP_CLI::log( sprintf( 'Added %s (ID %d).', $user->user_login, $user->ID ) );
 			} else {
+				++$failed;
 				WP_CLI::warning( sprintf( '%s (ID %d) could not be saved to the list.', $user->user_login, $user->ID ) );
 			}
+		}
+
+		// A refused save must exit non-zero so a script can tell; already listed is not a failure.
+		if ( $failed > 0 ) {
+			WP_CLI::error( sprintf( 'Added %d of %d; %d could not be saved.', $added, count( $users ), $failed ) );
 		}
 
 		WP_CLI::success( sprintf( 'Added %d of %d.', $added, count( $users ) ) );
@@ -169,9 +176,12 @@ class AllowedUsersCommand {
 	public function remove( array $args ): void {
 		$users   = $this->users( $args );
 		$removed = 0;
+		$failed  = 0;
 
 		foreach ( $users as $user ) {
-			$was_listed = AllowedUsers::remove( $user->ID );
+			// remove() returns false for both "not listed" and a refused save; tell them apart.
+			$was_listed = in_array( $user->ID, AllowedUsers::ids(), true );
+			$is_removed = $was_listed && AllowedUsers::remove( $user->ID );
 
 			// Revoke either way, as the screen does: tokens can outlive a list entry.
 			Settings::revoke_user_tokens( $user->ID );
@@ -181,8 +191,18 @@ class AllowedUsersCommand {
 				continue;
 			}
 
+			if ( ! $is_removed ) {
+				++$failed;
+				WP_CLI::warning( sprintf( '%s (ID %d) could not be removed from the list. Any assistants they connected were signed out.', $user->user_login, $user->ID ) );
+				continue;
+			}
+
 			++$removed;
 			WP_CLI::log( sprintf( 'Removed %s (ID %d) and signed out their assistants.', $user->user_login, $user->ID ) );
+		}
+
+		if ( $failed > 0 ) {
+			WP_CLI::error( sprintf( 'Removed %d of %d; %d could not be saved.', $removed, count( $users ), $failed ) );
 		}
 
 		WP_CLI::success( sprintf( 'Removed %d of %d.', $removed, count( $users ) ) );
