@@ -69,7 +69,10 @@ namespace WP_CLI {
 			/** @var array<int, mixed> What the last display_items() call was given. */
 			public static array $items = [];
 
-			public function __construct( &$assoc_args, $fields = null ) {}
+			// Like WP-CLI's: the format arguments are taken out of the caller's array.
+			public function __construct( &$assoc_args, $fields = null ) {
+				unset( $assoc_args['format'], $assoc_args['fields'], $assoc_args['field'] );
+			}
 
 			public function display_items( $items ): void {
 				self::$items = $items;

@@ -94,10 +94,12 @@ class AllowedUsersCommand {
 			];
 		}
 
+		// Read before Formatter, which takes `format` out of $assoc_args.
+		$format    = $assoc_args['format'] ?? 'table';
 		$formatter = new Formatter( $assoc_args, [ 'ID', 'user_login', 'user_email', 'status', 'added', 'expires' ] );
 
 		// Formatter's `ids` prints the items themselves, so it needs bare IDs.
-		$formatter->display_items( ( $assoc_args['format'] ?? '' ) === 'ids' ? array_column( $rows, 'ID' ) : $rows );
+		$formatter->display_items( $format === 'ids' ? array_column( $rows, 'ID' ) : $rows );
 	}
 
 	/**
