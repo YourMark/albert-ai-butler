@@ -85,7 +85,8 @@ class PiiPolicy {
 	 * Redact personal data in any ability result, whatever its shape.
 	 *
 	 * Only called once core has let the caller run the ability, so on Balanced
-	 * the opt-in alone reveals: whoever may use an ability may see what it returns.
+	 * the opt-in reveals for anyone who may use it: the filtered reveal
+	 * capability defaults to `read` here, and a site can raise it as a floor.
 	 * An object is redacted as the JSON it becomes, and comes back as itself
 	 * when nothing in it changed. A bare string is masked when it is an email address.
 	 *
@@ -105,7 +106,9 @@ class PiiPolicy {
 
 		$mode   = PrivacyMode::resolve();
 		$reveal = $mode === PrivacyMode::Off
-			|| ( $mode === PrivacyMode::Balanced && ! empty( $args['reveal_personal_data'] ) );
+			|| ( $mode === PrivacyMode::Balanced
+				&& ! empty( $args['reveal_personal_data'] )
+				&& current_user_can( self::filtered_reveal_capability( 'read' ) ) );
 
 		if ( is_string( $value ) ) {
 			return $reveal ? $value : Anonymizer::anonymize( [ $value ] )[0];
@@ -162,18 +165,34 @@ class PiiPolicy {
 			return $opts['reveal_capability'];
 		}
 
+		return self::filtered_reveal_capability( 'manage_options' );
+	}
+
+	/**
+	 * The capability a reveal needs, after `albert/privacy/reveal_capability`.
+	 *
+	 * @since 1.6.0
+	 *
+	 * @param string $default_capability `read` for a connected call, `manage_options` for {@see PiiPolicy::redact()}.
+	 *
+	 * @return string The gating capability.
+	 */
+	private static function filtered_reveal_capability( string $default_capability ): string {
 		/**
 		 * Filters the capability required to reveal personal data.
 		 *
-		 * Consulted only when a caller has not passed an explicit
-		 * `reveal_capability` option.
+		 * On a connected call the default is `read`, so whoever may run an
+		 * ability may reveal its result; return a stricter capability to raise
+		 * that floor. In {@see PiiPolicy::redact()} it is consulted only when the
+		 * caller passes no `reveal_capability` option, with `manage_options`.
 		 *
 		 * @since 1.3.0
+		 * @since 1.6.0 Also gates connected calls, defaulting to `read` there.
 		 *
-		 * @param string $capability The gating capability (default `manage_options`).
+		 * @param string $capability The gating capability.
 		 */
-		$capability = apply_filters( 'albert/privacy/reveal_capability', 'manage_options' );
+		$capability = apply_filters( 'albert/privacy/reveal_capability', $default_capability );
 
-		return ( is_string( $capability ) && $capability !== '' ) ? $capability : 'manage_options';
+		return ( is_string( $capability ) && $capability !== '' ) ? $capability : $default_capability;
 	}
 }

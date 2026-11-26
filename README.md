@@ -199,7 +199,7 @@ Website: https://yourmark.nl
 
 **Fixes**
 
-- Privacy mode only covered Albert's own user, customer and order tools, so personal data returned by WordPress's own abilities and by other plugins reached your assistant unmasked. It now applies to everything your assistant calls through Albert, whichever plugin provides it, and recognises more personal data, such as IP addresses, birth dates, passwords and any value that is an email address. On Balanced, anyone allowed to use an ability can ask it for the real details.
+- Privacy mode only covered Albert's own user, customer and order tools, so personal data returned by WordPress's own abilities and by other plugins reached your assistant unmasked. It now applies to everything your assistant calls through Albert, whichever plugin provides it, and recognises more personal data, such as IP addresses, birth dates, passwords and any value that is an email address. On Balanced, anyone allowed to use Albert's user, customer and order tools can ask them for the real details.
 - Switching an ability off on the Abilities screen removed it from your whole site, so other plugins that used it stopped working too. The switch now only decides what assistants connected through Albert can use, and the screen explains this.
 - Text your assistant wrote in paragraphs, headings, lists, buttons and quotes lost tags that other plugins add, such as ThirstyAffiliates links, even for administrators. Text is now saved the way the WordPress editor saves it, with the same rules for who may store what.
 - Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.

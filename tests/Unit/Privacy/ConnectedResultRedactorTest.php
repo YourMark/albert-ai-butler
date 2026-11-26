@@ -8,6 +8,7 @@
 namespace Albert\Tests\Unit\Privacy;
 
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
+require_once dirname( __DIR__ ) . '/stubs/WP_Ability.php';
 
 use Albert\OAuth\Server\ConnectionContext;
 use Albert\Privacy\ConnectedResultRedactor;
@@ -35,7 +36,7 @@ class ConnectedResultRedactorTest extends TestCase {
 	private ConnectedResultRedactor $redactor;
 
 	/**
-	 * Open a connection on Balanced.
+	 * Open a connection on Balanced, as a signed-in user.
 	 *
 	 * @return void
 	 */
@@ -44,7 +45,7 @@ class ConnectedResultRedactorTest extends TestCase {
 		$GLOBALS['albert_test_hooks']          = [];
 		$GLOBALS['albert_test_options']        = [];
 		$GLOBALS['albert_test_filter_returns'] = [];
-		$GLOBALS['albert_test_caps']           = [];
+		$GLOBALS['albert_test_caps']           = [ 'read' ];
 		$GLOBALS['albert_test_abilities']      = [];
 		ConnectionContext::set( 'client-1' );
 
@@ -81,6 +82,25 @@ class ConnectedResultRedactorTest extends TestCase {
 	}
 
 	/**
+	 * An ability whose execute() runs the redactor's hooks around the callback, as core does.
+	 *
+	 * @param string   $name     The ability.
+	 * @param callable $callback The execute callback, given the input.
+	 *
+	 * @return \WP_Ability
+	 */
+	private function ability( string $name, callable $callback ): \WP_Ability {
+		$ability         = new \WP_Ability( $name );
+		$ability->runner = function ( \WP_Ability $called, mixed $input ) use ( $callback ): mixed {
+			$this->redactor->enter( $called->get_name() );
+
+			return $this->redactor->redact( $callback( $input ), $called->get_name(), $input );
+		};
+
+		return $ability;
+	}
+
+	/**
 	 * Run a call through the redactor as core would.
 	 *
 	 * @param string $ability The ability.
@@ -90,9 +110,7 @@ class ConnectedResultRedactorTest extends TestCase {
 	 * @return mixed
 	 */
 	private function call( string $ability, mixed $result, mixed $input = [] ): mixed {
-		$this->redactor->enter( $ability );
-
-		return $this->redactor->redact( $result, $ability, $input );
+		return $this->ability( $ability, static fn() => $result )->execute( $input );
 	}
 
 	/**
@@ -135,12 +153,56 @@ class ConnectedResultRedactorTest extends TestCase {
 	 * @return void
 	 */
 	public function test_redacts_only_the_outermost_call(): void {
-		$this->redactor->enter( self::ABILITY );
-		$inner = $this->call( 'core/get-user-info', [ 'email' => 'jane@example.com' ] );
-		$outer = $this->redactor->redact( [ 'email' => $inner['email'] ], self::ABILITY, [] );
+		$inner = $this->ability( 'core/get-user-info', static fn() => [ 'email' => 'jane@example.com' ] );
+		$seen  = null;
+		$outer = $this->ability(
+			self::ABILITY,
+			static function () use ( $inner, &$seen ): array {
+				$seen = $inner->execute( [] );
 
-		$this->assertSame( 'jane@example.com', $inner['email'] );
+				return [ 'email' => $seen['email'] ];
+			}
+		)->execute( [] );
+
+		$this->assertSame( 'jane@example.com', $seen['email'] );
 		$this->assertSame( 'j***@e***.com', $outer['email'] );
+	}
+
+	/**
+	 * A callback that throws leaves no open call behind to exempt later calls from redaction.
+	 *
+	 * @return void
+	 */
+	public function test_a_throwing_call_does_not_leave_later_calls_unredacted(): void {
+		$broken = $this->ability(
+			'acme/broken',
+			static function (): never {
+				throw new \RuntimeException( 'Callback failed.' );
+			}
+		);
+
+		try {
+			$broken->execute( [] );
+		} catch ( \RuntimeException $e ) {
+			unset( $e );
+		}
+		$next = $this->call( self::ABILITY, $this->members() );
+
+		$outer = $this->ability(
+			self::ABILITY,
+			function () use ( $broken ): array {
+				try {
+					$broken->execute( [] );
+				} catch ( \RuntimeException $e ) {
+					unset( $e );
+				}
+
+				return $this->members();
+			}
+		)->execute( [] );
+
+		$this->assertSame( 'j***@e***.com', $next['members'][0]['user_email'] );
+		$this->assertSame( 'j***@e***.com', $outer['members'][0]['user_email'] );
 	}
 
 	/**
@@ -154,6 +216,24 @@ class ConnectedResultRedactorTest extends TestCase {
 
 		$this->assertSame( 'j***@e***.com', $masked['members'][0]['user_email'] );
 		$this->assertSame( 'jane@example.com', $revealed['members'][0]['user_email'] );
+	}
+
+	/**
+	 * A site that raises the reveal capability stops a reveal by a user without it.
+	 *
+	 * @return void
+	 */
+	public function test_a_stricter_reveal_capability_stops_a_reveal(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/privacy/reveal_capability'] = 'manage_options';
+		$input = [ 'reveal_personal_data' => true ];
+
+		$GLOBALS['albert_test_caps'] = [ 'read', 'list_users' ];
+		$denied                      = $this->call( self::ABILITY, $this->members(), $input );
+		$GLOBALS['albert_test_caps'] = [ 'read', 'manage_options' ];
+		$allowed                     = $this->call( self::ABILITY, $this->members(), $input );
+
+		$this->assertSame( 'j***@e***.com', $denied['members'][0]['user_email'] );
+		$this->assertSame( 'jane@example.com', $allowed['members'][0]['user_email'] );
 	}
 
 	/**

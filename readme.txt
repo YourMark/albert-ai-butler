@@ -87,7 +87,7 @@ Switched on by default. When your assistant asks to delete a post, create or cha
 
 Whatever your assistant looks up, Albert hides the names, email addresses, phone numbers, postal addresses and IP addresses it recognises before the answer leaves your site. That includes what WordPress itself and your other plugins return. Email addresses inside your content, such as a post, are left as they are.
 
-Choose **Strict**, **Balanced** or **Off**. New sites start on Strict. On Balanced, the real details are shown only when you ask, and only if your own account is allowed to see them.
+Choose **Strict**, **Balanced** or **Off**. New sites start on Strict. On Balanced, Albert's user, customer and order tools show the real details when you ask, to anyone allowed to use them.
 
 ---
 
@@ -183,7 +183,7 @@ Yes. Albert writes real WordPress blocks, headings, lists, images, columns and t
 
 = Does my AI assistant see my visitors' and customers' personal data? =
 
-Not by default. Whatever it looks up, from Albert or any other plugin, Albert hides the names, email addresses, phone numbers and postal addresses it recognises before anything is sent. Choose Strict, Balanced or Off; on Balanced you can reveal the real details when you ask.
+Not by default. Whatever it looks up, from Albert or any other plugin, Albert hides the names, email addresses, phone numbers and postal addresses it recognises before anything is sent. Choose Strict, Balanced or Off; on Balanced, Albert's user, customer and order tools show the real details when you ask.
 
 = How does Albert know anything about my site? =
 
@@ -257,7 +257,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 **Fixes**
 
-* Privacy mode only covered Albert's own user, customer and order tools, so personal data returned by WordPress's own abilities and by other plugins reached your assistant unmasked. It now applies to everything your assistant calls through Albert, whichever plugin provides it, and recognises more personal data, such as IP addresses, birth dates, passwords and any value that is an email address. On Balanced, anyone allowed to use an ability can ask it for the real details.
+* Privacy mode only covered Albert's own user, customer and order tools, so personal data returned by WordPress's own abilities and by other plugins reached your assistant unmasked. It now applies to everything your assistant calls through Albert, whichever plugin provides it, and recognises more personal data, such as IP addresses, birth dates, passwords and any value that is an email address. On Balanced, anyone allowed to use Albert's user, customer and order tools can ask them for the real details.
 * Switching an ability off on the Abilities screen removed it from your whole site, so other plugins that used it stopped working too. The switch now only decides what assistants connected through Albert can use, and the screen explains this.
 * Text your assistant wrote in paragraphs, headings, lists, buttons and quotes lost tags that other plugins add, such as ThirstyAffiliates links, even for administrators. Text is now saved the way the WordPress editor saves it, with the same rules for who may store what.
 * Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
@@ -449,7 +449,7 @@ Initial release. Connect Claude Desktop, ChatGPT, and other MCP-compatible AI as
 
 Albert runs entirely on your own site. It has no servers of its own and sends no data about your site or your usage anywhere. The only request it makes is Site Health checking your site's own sign-in address.
 
-**What reaches your assistant.** Only the site context you choose to send, and the results of the actions you have switched on, for the person who approved the connection, within their WordPress permissions. Before a user, customer or order result from Albert's own actions leaves your site, Albert masks personal details according to your privacy mode: Strict, Balanced or Off. Other plugins' actions are not masked by Albert. New sites start on Strict. What your assistant's provider then does with that text is covered by their own privacy policy.
+**What reaches your assistant.** Only the site context you choose to send, and the results of the actions you have switched on, for the person who approved the connection, within their WordPress permissions. Before a result leaves your site, Albert masks the personal details it recognises according to your privacy mode: Strict, Balanced or Off. That includes results from WordPress itself and other plugins' actions. New sites start on Strict. What your assistant's provider then does with that text is covered by their own privacy policy.
 
 **What Albert keeps, in your own database:**
 

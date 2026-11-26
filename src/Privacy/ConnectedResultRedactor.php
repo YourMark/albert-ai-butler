@@ -27,17 +27,12 @@ use WP_Error;
  * Output validation judges the unredacted result. A masked email is no longer
  * a valid `format: email`, and that is the redaction's doing, not the ability's.
  *
+ * A result returned from `wp_pre_execute_ability` skips core's execution path
+ * and so this redaction too.
+ *
  * @since 1.6.0
  */
 class ConnectedResultRedactor implements Hookable {
-
-	/**
-	 * How many connected calls have their callback running.
-	 *
-	 * @since 1.6.0
-	 * @var int
-	 */
-	private int $depth = 0;
 
 	/**
 	 * Unredacted results awaiting output validation, per ability.
@@ -64,7 +59,10 @@ class ConnectedResultRedactor implements Hookable {
 	}
 
 	/**
-	 * Open a connected call as its callback starts.
+	 * Start a new outermost connected call with no results awaiting validation.
+	 *
+	 * A result whose validation never ran, as when a later filter turned it into
+	 * an error, must not be judged in place of this call's.
 	 *
 	 * @param string $ability_name The ability about to run.
 	 *
@@ -72,17 +70,9 @@ class ConnectedResultRedactor implements Hookable {
 	 * @since 1.6.0
 	 */
 	public function enter( string $ability_name ): void {
-		if ( ! self::applies_to( $ability_name ) ) {
-			return;
-		}
-
-		// A new outermost call: drop a result whose validation never ran, as
-		// when a later filter turned it into an error.
-		if ( $this->depth === 0 ) {
+		if ( self::applies_to( $ability_name ) && self::is_outermost() ) {
 			$this->unredacted = [];
 		}
-
-		++$this->depth;
 	}
 
 	/**
@@ -96,13 +86,7 @@ class ConnectedResultRedactor implements Hookable {
 	 * @since 1.6.0
 	 */
 	public function redact( mixed $result, string $ability_name, mixed $input = null ): mixed {
-		if ( ! self::applies_to( $ability_name ) || $this->depth === 0 ) {
-			return $result;
-		}
-
-		--$this->depth;
-
-		if ( $this->depth > 0 || $result instanceof WP_Error ) {
+		if ( ! self::applies_to( $ability_name ) || $result instanceof WP_Error || ! self::is_outermost() ) {
 			return $result;
 		}
 
@@ -157,6 +141,30 @@ class ConnectedResultRedactor implements Hookable {
 				$valid->get_error_message()
 			)
 		);
+	}
+
+	/**
+	 * Whether no other connected call is running around the current one.
+	 *
+	 * Read from the call stack rather than counted in hooks: a callback that
+	 * throws never reaches the result filter, and a stale count would leave
+	 * every later call in the request unredacted. Abilities are counted once
+	 * each, so an `execute()` override calling its parent is still one call.
+	 *
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	private static function is_outermost(): bool {
+		$running = [];
+
+		foreach ( debug_backtrace( DEBUG_BACKTRACE_PROVIDE_OBJECT | DEBUG_BACKTRACE_IGNORE_ARGS ) as $frame ) { // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace -- Detects nesting, nothing is output.
+			$ability = $frame['object'] ?? null;
+			if ( $frame['function'] === 'execute' && $ability instanceof \WP_Ability && self::applies_to( $ability->get_name() ) ) {
+				$running[ spl_object_id( $ability ) ] = true;
+			}
+		}
+
+		return count( $running ) <= 1;
 	}
 
 	/**
