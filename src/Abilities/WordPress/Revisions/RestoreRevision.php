@@ -21,8 +21,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Restores a post to one of its revisions through core, so the restore is itself a revision.
  *
- * Not destructive and idempotent: core records the restore as a new revision, so
- * it can be undone, and restoring the same revision twice changes nothing more.
+ * Not destructive: core records the restore as a new revision, so it can be undone.
  * It still replaces the live content, so RiskPolicy holds it by name.
  *
  * @since 1.6.0
@@ -48,7 +47,7 @@ class RestoreRevision extends BaseAbility {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => [ 'idempotent' => true ] + Annotations::update(
+			'annotations' => Annotations::update(
 				'The title, content and excerpt are replaced by the revision\'s, so restore only the revision the owner chose. To undo, restore the revision recorded before it.'
 			),
 		];

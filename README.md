@@ -256,7 +256,7 @@ Website: https://yourmark.nl
 - `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
 - `albert/create-post` and `albert/create-page` return `albert_post_permission_denied` and `albert_page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
 - `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
-- New abilities: `albert/find-revisions`, `albert/get-revision` and `albert/restore-revision`. `albert/restore-revision` is annotated as an idempotent update, since the restore is itself a revision, and is on the safe mode high-risk list.
+- New abilities: `albert/find-revisions`, `albert/get-revision` and `albert/restore-revision`.
 
 **Credits**
 
