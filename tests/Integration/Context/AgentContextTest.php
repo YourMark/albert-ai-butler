@@ -154,18 +154,25 @@ class AgentContextTest extends TestCase {
 	}
 
 	/**
-	 * Switching context off restores the bare discovery response.
+	 * Switching context off restores the bare discovery response, privacy line apart.
 	 *
 	 * @return void
 	 */
 	public function test_the_master_switch_removes_the_context_fields(): void {
 		ContextSettings::save( [ 'enabled' => false ] );
 		SiteContext::reset_cache();
+		update_option( 'albert_privacy_mode', 'off' );
 
 		$result = [ 'abilities' => [] ];
 
 		$this->assertSame(
 			$result,
+			( new DiscoveryContext() )->add_context( $result, [], 'mcp-adapter/discover-abilities', null, $this->server() )
+		);
+
+		update_option( 'albert_privacy_mode', 'strict' );
+		$this->assertArrayHasKey(
+			'privacy',
 			( new DiscoveryContext() )->add_context( $result, [], 'mcp-adapter/discover-abilities', null, $this->server() )
 		);
 	}

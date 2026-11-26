@@ -94,10 +94,11 @@ class PiiPolicy {
 	 *
 	 * @param mixed                $data The ability's result.
 	 * @param array<string, mixed> $args The ability's input.
+	 * @param array<string, mixed> $opts Options for {@see Anonymizer::anonymize()}.
 	 *
 	 * @return mixed The redacted result.
 	 */
-	public static function redact_value( mixed $data, array $args = [] ): mixed {
+	public static function redact_value( mixed $data, array $args = [], array $opts = [] ): mixed {
 		$value = is_object( $data ) ? json_decode( (string) wp_json_encode( $data ), true ) : $data;
 
 		if ( ! is_array( $value ) && ! is_string( $value ) ) {
@@ -111,10 +112,10 @@ class PiiPolicy {
 				&& current_user_can( self::filtered_reveal_capability( 'read' ) ) );
 
 		if ( is_string( $value ) ) {
-			return $reveal ? $value : Anonymizer::anonymize( [ $value ] )[0];
+			return $reveal ? $value : Anonymizer::anonymize( [ $value ], $opts )[0];
 		}
 
-		$redacted = $reveal ? Anonymizer::strip_payment_data( $value ) : Anonymizer::anonymize( $value );
+		$redacted = $reveal ? Anonymizer::strip_payment_data( $value ) : Anonymizer::anonymize( $value, $opts );
 
 		return $redacted === $value ? $data : $redacted;
 	}

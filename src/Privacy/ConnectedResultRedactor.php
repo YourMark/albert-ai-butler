@@ -30,9 +30,20 @@ use WP_Error;
  * A result returned from `wp_pre_execute_ability` skips core's execution path
  * and so this redaction too.
  *
+ * On Balanced it also offers `reveal_personal_data` on every ability, and takes
+ * it out of the input again before the ability sees it.
+ *
  * @since 1.6.0
  */
 class ConnectedResultRedactor implements Hookable {
+
+	/**
+	 * The input that asks for the real data.
+	 *
+	 * @since 1.6.0
+	 * @var string
+	 */
+	public const REVEAL_INPUT = 'reveal_personal_data';
 
 	/**
 	 * Unredacted results awaiting output validation, per ability.
@@ -41,6 +52,22 @@ class ConnectedResultRedactor implements Hookable {
 	 * @var array<string, list<mixed>>
 	 */
 	private array $unredacted = [];
+
+	/**
+	 * Whether the outermost connected call asked for the real data.
+	 *
+	 * @since 1.6.0
+	 * @var bool
+	 */
+	private bool $reveal = false;
+
+	/**
+	 * Abilities given the reveal input by Albert, mapped to whether they had no input schema.
+	 *
+	 * @since 1.6.0
+	 * @var array<string, bool>
+	 */
+	private array $offered = [];
 
 	/**
 	 * Register the hooks.
@@ -53,18 +80,20 @@ class ConnectedResultRedactor implements Hookable {
 	 * @since 1.6.0
 	 */
 	public function register_hooks(): void {
-		add_action( 'wp_before_execute_ability', [ $this, 'enter' ], 1, 1 );
-		add_filter( 'wp_ability_execute_result', [ $this, 'redact' ], PHP_INT_MAX - 1, 3 );
+		add_action( 'wp_ability_invoked', [ $this, 'enter' ], 1, 1 );
+		add_filter( 'wp_register_ability_args', [ $this, 'offer_reveal' ], 30, 2 );
+		add_filter( 'wp_ability_normalize_input', [ $this, 'take_reveal' ], 1, 2 );
+		add_filter( 'wp_ability_execute_result', [ $this, 'redact' ], PHP_INT_MAX - 1, 2 );
 		add_filter( 'wp_ability_validate_output', [ $this, 'validate_unredacted' ], 1, 3 );
 	}
 
 	/**
-	 * Start a new outermost connected call with no results awaiting validation.
+	 * Start a new outermost connected call: no reveal asked, no results awaiting validation.
 	 *
 	 * A result whose validation never ran, as when a later filter turned it into
 	 * an error, must not be judged in place of this call's.
 	 *
-	 * @param string $ability_name The ability about to run.
+	 * @param string $ability_name The ability invoked.
 	 *
 	 * @return void
 	 * @since 1.6.0
@@ -72,7 +101,93 @@ class ConnectedResultRedactor implements Hookable {
 	public function enter( string $ability_name ): void {
 		if ( self::applies_to( $ability_name ) && self::is_outermost() ) {
 			$this->unredacted = [];
+			$this->reveal     = false;
 		}
+	}
+
+	/**
+	 * Add the optional `reveal_personal_data` input to an ability's schema, on Balanced.
+	 *
+	 * Only where it fits: an object schema or none. An ability that declares the
+	 * input itself keeps it and reads it as before. One without an input schema
+	 * gets one, and its callbacks are still called without input, as core did.
+	 *
+	 * @param array<string, mixed> $args The registration arguments.
+	 * @param string               $name The ability being registered.
+	 *
+	 * @return array<string, mixed>
+	 * @since 1.6.0
+	 */
+	public function offer_reveal( array $args, string $name ): array {
+		if ( PrivacyMode::resolve() !== PrivacyMode::Balanced || AbilitiesRegistry::is_transport_ability( $name ) ) {
+			return $args;
+		}
+
+		$schema = $args['input_schema'] ?? [];
+		if ( ! is_array( $schema ) ) {
+			return $args;
+		}
+
+		$no_schema = $schema === [];
+		if ( $no_schema ) {
+			$schema = [
+				'type'                 => 'object',
+				'additionalProperties' => false,
+			];
+			foreach ( [ 'execute_callback', 'permission_callback' ] as $key ) {
+				if ( isset( $args[ $key ] ) && is_callable( $args[ $key ] ) ) {
+					$callback     = $args[ $key ];
+					$args[ $key ] = static fn() => call_user_func( $callback );
+				}
+			}
+		} elseif ( ( $schema['type'] ?? null ) !== 'object' || isset( $schema['properties'][ self::REVEAL_INPUT ] ) ) {
+			return $args;
+		}
+
+		$schema['properties']                       = (array) ( $schema['properties'] ?? [] );
+		$schema['properties'][ self::REVEAL_INPUT ] = [
+			'type'        => 'boolean',
+			'description' => 'Return the real personal data instead of masked values. Anyone allowed to run this ability may ask; only on Balanced privacy mode.',
+		];
+
+		$args['input_schema']   = $schema;
+		$this->offered[ $name ] = $no_schema;
+
+		return $args;
+	}
+
+	/**
+	 * Note whether the call asks for the real data, and take the input Albert added back out.
+	 *
+	 * Runs before validation, so a schema's own rules (`minProperties`, `anyOf`)
+	 * judge only the ability's own input, and its callbacks never receive it.
+	 *
+	 * @param mixed  $input        The input.
+	 * @param string $ability_name The ability.
+	 *
+	 * @return mixed The input without `reveal_personal_data` where Albert added it.
+	 * @since 1.6.0
+	 */
+	public function take_reveal( mixed $input, string $ability_name ): mixed {
+		if ( self::applies_to( $ability_name ) && self::is_outermost() ) {
+			$this->reveal = is_array( $input ) && ! empty( $input[ self::REVEAL_INPUT ] );
+		}
+
+		if ( ! isset( $this->offered[ $ability_name ] ) ) {
+			return $input;
+		}
+
+		// Its schema is Albert's, an object, which null would fail.
+		if ( $input === null && $this->offered[ $ability_name ] ) {
+			return [];
+		}
+
+		// Anything but a boolean stays, for the schema to refuse.
+		if ( is_array( $input ) && is_bool( $input[ self::REVEAL_INPUT ] ?? null ) ) {
+			unset( $input[ self::REVEAL_INPUT ] );
+		}
+
+		return $input;
 	}
 
 	/**
@@ -80,17 +195,16 @@ class ConnectedResultRedactor implements Hookable {
 	 *
 	 * @param mixed  $result       The callback's result, or a WP_Error.
 	 * @param string $ability_name The ability that ran.
-	 * @param mixed  $input        The normalised input; carries `reveal_personal_data`.
 	 *
 	 * @return mixed The redacted result.
 	 * @since 1.6.0
 	 */
-	public function redact( mixed $result, string $ability_name, mixed $input = null ): mixed {
+	public function redact( mixed $result, string $ability_name ): mixed {
 		if ( ! self::applies_to( $ability_name ) || $result instanceof WP_Error || ! self::is_outermost() ) {
 			return $result;
 		}
 
-		$redacted = PiiPolicy::redact_value( $result, is_array( $input ) ? $input : [] );
+		$redacted = PiiPolicy::redact_value( $result, [ self::REVEAL_INPUT => $this->reveal ], self::anonymizer_options( $ability_name ) );
 
 		if ( $redacted !== $result ) {
 			$this->unredacted[ $ability_name ][] = $result;
@@ -141,6 +255,42 @@ class ConnectedResultRedactor implements Hookable {
 				$valid->get_error_message()
 			)
 		);
+	}
+
+	/**
+	 * What counts as personal data in one ability's result.
+	 *
+	 * Albert's own abilities return known shapes, so they get the full list,
+	 * names and addresses included. Another plugin's result can be anything, a
+	 * settings array or a form, so only keys that are personal everywhere apply.
+	 *
+	 * @param string $ability_name The ability.
+	 *
+	 * @return array<string, mixed> Options for {@see Anonymizer::anonymize()}.
+	 * @since 1.6.0
+	 */
+	private static function anonymizer_options( string $ability_name ): array {
+		$keys = str_starts_with( $ability_name, 'albert/' ) ? Anonymizer::fields() : Anonymizer::essential_fields();
+
+		/**
+		 * Filters the keys masked in one ability's result on a connected call.
+		 *
+		 * Grouped by rule, as `albert/privacy/pii_fields`. Albert's own abilities
+		 * start from that full list; any other ability only from email, phone,
+		 * IP address, password hash and token keys.
+		 *
+		 * @since 1.6.0
+		 *
+		 * @param array<string, array<int, string>> $keys         Key names per rule.
+		 * @param string                            $ability_name The ability whose result is masked.
+		 */
+		$filtered = apply_filters( 'albert/privacy/personal_keys', $keys, $ability_name );
+
+		return [
+			'rules'     => is_array( $filtered ) ? $filtered : $keys,
+			// Woo's customers are customers; everyone else is a WordPress user.
+			'ref_label' => str_starts_with( $ability_name, 'albert/woo-' ) ? 'Customer' : 'User',
+		];
 	}
 
 	/**

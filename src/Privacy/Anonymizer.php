@@ -60,31 +60,42 @@ class Anonymizer {
 	 *
 	 * @since 1.3.0
 	 *
+	 * @since 1.6.0 Added the `rules` and `ref_label` options.
+	 *
 	 * @param array<int|string, mixed> $data The array to anonymize.
-	 * @param array<string, mixed>     $opts Optional. `fields` merges category overrides OVER
+	 * @param array<string, mixed>     $opts Optional. `rules` replaces the allow-list wholesale
+	 *                                       (see {@see self::essential_fields()});
+	 *                                       `fields` merges category overrides OVER
 	 *                                       the filtered allow-list (so the
 	 *                                       `albert/privacy/pii_fields` filter is still honoured);
 	 *                                       `mask_context_names` (bool) applies the ambiguous
 	 *                                       `context_*` keys (`name`, `url`, `description`)
 	 *                                       everywhere, not only on a person record — use for
-	 *                                       person-record results that carry no product data.
+	 *                                       person-record results that carry no product data;
+	 *                                       `ref_label` names a masked person with an id
+	 *                                       (default `Customer`, giving `Customer #42`).
 	 *
 	 * @return array<int|string, mixed> The anonymized array.
 	 */
 	public static function anonymize( array $data, array $opts = [] ): array {
-		// Start from the FILTERED allow-list so add-on `pii_fields` registrations
-		// are honoured even when a caller passes its own `fields` override.
-		$fields = self::get_pii_fields();
-		if ( isset( $opts['fields'] ) && is_array( $opts['fields'] ) ) {
-			$fields = array_merge( $fields, $opts['fields'] );
+		if ( isset( $opts['rules'] ) && is_array( $opts['rules'] ) ) {
+			$fields = $opts['rules'];
+		} else {
+			// Start from the FILTERED allow-list so add-on `pii_fields` registrations
+			// are honoured even when a caller passes its own `fields` override.
+			$fields = self::fields();
+			if ( isset( $opts['fields'] ) && is_array( $opts['fields'] ) ) {
+				$fields = array_merge( $fields, $opts['fields'] );
+			}
 		}
 		$fields = self::lowercase_fields( $fields );
 
 		// Resolve the payment/card matchers ONCE per call and thread them through
 		// the recursion — walk() runs per key, so we must not filter per key.
 		$payment = self::get_payment_matchers();
+		$label   = isset( $opts['ref_label'] ) && is_string( $opts['ref_label'] ) ? $opts['ref_label'] : 'Customer';
 
-		return self::walk( $data, $fields, $payment, '', ! empty( $opts['mask_context_names'] ) );
+		return self::walk( $data, $fields, $payment, '', ! empty( $opts['mask_context_names'] ), $label );
 	}
 
 	/**
@@ -141,10 +152,11 @@ class Anonymizer {
 	 * @param array{keys: array<int, string>, prefixes: array<int, string>} $payment The resolved payment matchers.
 	 * @param string                                                        $context Current PII context ('' or 'customer').
 	 * @param bool                                                          $always  Mask context keys regardless of context.
+	 * @param string                                                        $label   Names a masked person with an id: `{label} #{id}`.
 	 *
 	 * @return array<int|string, mixed>
 	 */
-	private static function walk( array $node, array $fields, array $payment, string $context, bool $always ): array {
+	private static function walk( array $node, array $fields, array $payment, string $context, bool $always, string $label ): array {
 		$ref    = self::node_customer_ref( $node );
 		$person = $always || $context !== '' || self::is_person_record( $node, $fields );
 		$out    = [];
@@ -165,7 +177,7 @@ class Anonymizer {
 			if ( is_array( $value ) ) {
 				$out[ $key ] = $rule === 'empty'
 					? []
-					: self::walk( $value, $fields, $payment, self::child_context( $key, $context ), $always );
+					: self::walk( $value, $fields, $payment, self::child_context( $key, $context ), $always, $label );
 				continue;
 			}
 
@@ -175,7 +187,7 @@ class Anonymizer {
 				'email'    => is_string( $value ) ? self::mask_email( $value ) : $value,
 				'phone'    => is_scalar( $value ) && ! is_bool( $value ) ? self::mask_phone( (string) $value ) : $value,
 				'postcode' => is_scalar( $value ) && ! is_bool( $value ) ? self::mask_postcode( (string) $value ) : $value,
-				'name'     => $ref !== null ? 'Customer #' . $ref : self::mask_name( self::to_string( $value ) ),
+				'name'     => $ref !== null ? $label . ' #' . $ref : self::mask_name( self::to_string( $value ) ),
 				default    => self::is_email_value( $value ) ? self::mask_email( (string) $value ) : $value,
 			};
 		}
@@ -305,13 +317,47 @@ class Anonymizer {
 	}
 
 	/**
-	 * Get the (filtered) PII allow-list.
+	 * Keys that are personal data in any plugin's result, grouped by rule.
 	 *
-	 * @since 1.3.0
+	 * Deliberately narrow: no names, slugs, URLs or numbers, which in another
+	 * plugin's settings or records are as likely to be the site's own data.
+	 *
+	 * @since 1.6.0
 	 *
 	 * @return array<string, array<int, string>>
 	 */
-	private static function get_pii_fields(): array {
+	public static function essential_fields(): array {
+		$defaults = self::default_pii_fields();
+
+		return [
+			'email' => $defaults['email'],
+			'phone' => [ 'phone', 'phone_number', 'mobile_phone', 'telephone', 'billing_phone', 'shipping_phone' ],
+			'strip' => [
+				'ip',
+				'ip_address',
+				'customer_ip_address',
+				'remote_addr',
+				'user_pass',
+				'password_hash',
+				'user_activation_key',
+				'session_tokens',
+				'session_token',
+				'auth_token',
+				'access_token',
+				'refresh_token',
+			],
+		];
+	}
+
+	/**
+	 * Get the (filtered) PII allow-list.
+	 *
+	 * @since 1.3.0
+	 * @since 1.6.0 Public, renamed from `get_pii_fields()`.
+	 *
+	 * @return array<string, array<int, string>>
+	 */
+	public static function fields(): array {
 		$defaults = self::default_pii_fields();
 
 		/**

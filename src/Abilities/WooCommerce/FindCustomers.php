@@ -57,39 +57,34 @@ class FindCustomers extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'page'                 => [
+				'page'     => [
 					'type'        => 'integer',
 					'description' => 'Page number for pagination.',
 					'default'     => 1,
 					'minimum'     => 1,
 				],
-				'per_page'             => [
+				'per_page' => [
 					'type'        => 'integer',
 					'description' => 'Number of customers per page.',
 					'default'     => 10,
 					'minimum'     => 1,
 					'maximum'     => 100,
 				],
-				'search'               => [
+				'search'   => [
 					'type'        => 'string',
 					'description' => 'Search customers by name or email.',
 				],
-				'orderby'              => [
+				'orderby'  => [
 					'type'        => 'string',
 					'description' => 'Sort by field.',
 					'enum'        => [ 'registered', 'display_name', 'email', 'id' ],
 					'default'     => 'registered',
 				],
-				'order'                => [
+				'order'    => [
 					'type'        => 'string',
 					'description' => 'Order direction.',
 					'enum'        => [ 'asc', 'desc' ],
 					'default'     => 'desc',
-				],
-				'reveal_personal_data' => [
-					'type'        => 'boolean',
-					'description' => 'Return real customer PII instead of anonymised placeholders. Ignored unless privacy mode is Balanced.',
-					'default'     => false,
 				],
 			],
 		];

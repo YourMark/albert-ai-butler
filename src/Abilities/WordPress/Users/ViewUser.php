@@ -56,15 +56,10 @@ class ViewUser extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'                   => [
+				'id' => [
 					'type'        => 'integer',
 					'description' => 'The user ID to retrieve.',
 					'minimum'     => 1,
-				],
-				'reveal_personal_data' => [
-					'type'        => 'boolean',
-					'description' => 'Return real personal data instead of anonymised placeholders. Ignored unless privacy mode is Balanced.',
-					'default'     => false,
 				],
 			],
 			'required'   => [ 'id' ],

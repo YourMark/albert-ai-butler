@@ -193,7 +193,12 @@ class UsersAbilityTest extends TestCase {
 			]
 		);
 
-		$result = ( new FindUsers() )->execute( [ 'id' => $user_id ] );
+		ConnectionContext::set( 'client-1' );
+		try {
+			$result = wp_get_ability( 'albert/find-users' )->execute( [ 'id' => $user_id ] );
+		} finally {
+			ConnectionContext::reset();
+		}
 
 		$this->assertIsArray( $result );
 		$this->assertNotSame( 'private@albert.test', $result['users'][0]['email'] );
@@ -264,7 +269,7 @@ class UsersAbilityTest extends TestCase {
 		$this->assertStringContainsString( '***', $result['user']['email'] );
 
 		// Previously-leaked account fields are now masked, not raw.
-		$this->assertNotSame( 'maskeduser', $result['user']['username'] );
+		$this->assertSame( 'User #' . $user_id, $result['user']['username'] );
 		$this->assertNotSame( 'https://maskeduser.example', $result['user']['url'] );
 		$this->assertSame( '', $result['user']['url'] );
 		$this->assertNotSame( 'A personal bio that must not reach the LLM.', $result['user']['description'] );

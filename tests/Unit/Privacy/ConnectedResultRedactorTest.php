@@ -47,6 +47,7 @@ class ConnectedResultRedactorTest extends TestCase {
 		$GLOBALS['albert_test_filter_returns'] = [];
 		$GLOBALS['albert_test_caps']           = [ 'read' ];
 		$GLOBALS['albert_test_abilities']      = [];
+		unset( $GLOBALS['albert_test_filter_callbacks'] );
 		ConnectionContext::set( 'client-1' );
 
 		$this->redactor = new ConnectedResultRedactor();
@@ -93,8 +94,9 @@ class ConnectedResultRedactorTest extends TestCase {
 		$ability         = new \WP_Ability( $name );
 		$ability->runner = function ( \WP_Ability $called, mixed $input ) use ( $callback ): mixed {
 			$this->redactor->enter( $called->get_name() );
+			$input = $this->redactor->take_reveal( $input, $called->get_name() );
 
-			return $this->redactor->redact( $callback( $input ), $called->get_name(), $input );
+			return $this->redactor->redact( $callback( $input ), $called->get_name() );
 		};
 
 		return $ability;
@@ -122,9 +124,112 @@ class ConnectedResultRedactorTest extends TestCase {
 		$member = $this->call( self::ABILITY, $this->members() )['members'][0];
 
 		$this->assertSame( 'j***@e***.com', $member['user_email'] );
-		$this->assertSame( 'J.D.', $member['name'] );
 		$this->assertArrayNotHasKey( 'last_ip', $member );
 		$this->assertSame( 'gold', $member['plan'] );
+	}
+
+	/**
+	 * Another plugin's settings and records keep everything but clearly personal keys.
+	 *
+	 * @return void
+	 */
+	public function test_another_plugins_result_keeps_names_slugs_and_numbers(): void {
+		$result = [
+			'breakpoints' => [
+				'mobile' => 768,
+				'tel'    => 480,
+			],
+			'form'        => [
+				'id'    => 3,
+				'name'  => 'Contact us',
+				'slug'  => 'contact-us',
+				'email' => 'owner@example.com',
+			],
+			'shop'        => [
+				'url'     => 'https://shop.example',
+				'zip'     => '1234AB',
+				'address' => 'Main street 1',
+			],
+			'smtp'        => [
+				'username' => 'Postmaster',
+				'password' => 'secret',
+			],
+			'blocked'     => [
+				[
+					'ip'     => '203.0.113.9',
+					'reason' => 'spam',
+				],
+			],
+			'session'     => [
+				'session_tokens' => [ 'abc' ],
+				'phone'          => '+31 6 12345678',
+			],
+		];
+
+		$out = $this->call( self::ABILITY, $result );
+
+		$this->assertSame( $result['breakpoints'], $out['breakpoints'] );
+		$this->assertSame( 'Contact us', $out['form']['name'] );
+		$this->assertSame( 'contact-us', $out['form']['slug'] );
+		$this->assertSame( 'o***@e***.com', $out['form']['email'] );
+		$this->assertSame( $result['shop'], $out['shop'] );
+		$this->assertSame( 'Postmaster', $out['smtp']['username'] );
+		$this->assertSame( [ 'reason' => 'spam' ], $out['blocked'][0] );
+		$this->assertArrayNotHasKey( 'session_tokens', $out['session'] );
+		$this->assertSame( '*********78', $out['session']['phone'] );
+	}
+
+	/**
+	 * Albert's own abilities keep the full list, and a WordPress user is a User.
+	 *
+	 * @return void
+	 */
+	public function test_albert_abilities_keep_the_full_list(): void {
+		$user     = $this->call(
+			'albert/view-user',
+			[
+				'user' => [
+					'id'         => 12,
+					'email'      => 'jane@example.com',
+					'username'   => 'jane',
+					'first_name' => 'Jane',
+					'url'        => 'https://jane.example',
+				],
+			]
+		)['user'];
+		$customer = $this->call(
+			'albert/woo-view-customer',
+			[
+				'customer' => [
+					'id'         => 42,
+					'first_name' => 'Jane',
+				],
+			]
+		)['customer'];
+
+		$this->assertSame( 'User #12', $user['username'] );
+		$this->assertSame( 'User #12', $user['first_name'] );
+		$this->assertSame( '', $user['url'] );
+		$this->assertSame( 'Customer #42', $customer['first_name'] );
+	}
+
+	/**
+	 * A site adds a key for one ability through `albert/privacy/personal_keys`.
+	 *
+	 * @return void
+	 */
+	public function test_personal_keys_filter_adds_a_key_per_ability(): void {
+		$GLOBALS['albert_test_filter_callbacks']['albert/privacy/personal_keys'] = static function ( array $keys, string $ability ): array {
+			if ( $ability === self::ABILITY ) {
+				$keys['redact'][] = 'notes';
+			}
+
+			return $keys;
+		};
+		$result = [ 'notes' => 'Allergic to nuts' ];
+
+		$this->assertSame( [ 'notes' => '[redacted]' ], $this->call( self::ABILITY, $result ) );
+		$this->assertSame( $result, $this->call( 'acme/other', $result ) );
 	}
 
 	/**
@@ -372,5 +477,109 @@ class ConnectedResultRedactorTest extends TestCase {
 		$this->call( self::ABILITY, [ 'plan' => 'gold' ] );
 
 		$this->assertSame( $verdict, $this->redactor->validate_unredacted( $verdict, [ 'plan' => 'gold' ], self::ABILITY ) );
+	}
+
+	/**
+	 * On Balanced, an object schema that forbids extra input gets the reveal input.
+	 *
+	 * @return void
+	 */
+	public function test_offers_reveal_on_a_closed_object_schema(): void {
+		$args = $this->redactor->offer_reveal(
+			[
+				'input_schema' => [
+					'type'                 => 'object',
+					'properties'           => [ 'id' => [ 'type' => 'integer' ] ],
+					'additionalProperties' => false,
+				],
+			],
+			self::ABILITY
+		);
+
+		$this->assertSame( 'boolean', $args['input_schema']['properties']['reveal_personal_data']['type'] );
+		$this->assertArrayHasKey( 'id', $args['input_schema']['properties'] );
+		$this->assertFalse( $args['input_schema']['additionalProperties'] );
+	}
+
+	/**
+	 * The reveal input is taken out before the callback, which sees only its own input.
+	 *
+	 * @return void
+	 */
+	public function test_the_callback_never_receives_the_reveal_input(): void {
+		$this->redactor->offer_reveal( [ 'input_schema' => [ 'type' => 'object' ] ], self::ABILITY );
+		$seen = null;
+
+		$result = $this->ability(
+			self::ABILITY,
+			static function ( $input ) use ( &$seen ): array {
+				$seen = $input;
+
+				return [ 'email' => 'jane@example.com' ];
+			}
+		)->execute(
+			[
+				'id'                   => 7,
+				'reveal_personal_data' => true,
+			]
+		);
+
+		$this->assertSame( [ 'id' => 7 ], $seen );
+		$this->assertSame( 'jane@example.com', $result['email'] );
+	}
+
+	/**
+	 * An ability that declares the input itself keeps receiving it.
+	 *
+	 * @return void
+	 */
+	public function test_an_ability_declaring_the_input_keeps_it(): void {
+		$schema = [
+			'type'       => 'object',
+			'properties' => [ 'reveal_personal_data' => [ 'type' => 'boolean' ] ],
+		];
+
+		$args  = $this->redactor->offer_reveal( [ 'input_schema' => $schema ], self::ABILITY );
+		$input = $this->redactor->take_reveal( [ 'reveal_personal_data' => true ], self::ABILITY );
+
+		$this->assertSame( $schema, $args['input_schema'] );
+		$this->assertSame( [ 'reveal_personal_data' => true ], $input );
+	}
+
+	/**
+	 * An ability without input gets a schema, and its callbacks are still called without input.
+	 *
+	 * @return void
+	 */
+	public function test_an_ability_without_input_still_runs_without_input(): void {
+		$args = $this->redactor->offer_reveal(
+			[
+				'execute_callback'    => static fn() => func_get_args(),
+				'permission_callback' => static fn() => func_get_args() === [],
+			],
+			self::ABILITY
+		);
+
+		$this->assertSame( 'object', $args['input_schema']['type'] );
+		$this->assertSame( [], $this->redactor->take_reveal( null, self::ABILITY ) );
+		$this->assertSame( [], $this->redactor->take_reveal( [ 'reveal_personal_data' => true ], self::ABILITY ) );
+		$this->assertSame( [], ( $args['execute_callback'] )( [] ) );
+		$this->assertTrue( ( $args['permission_callback'] )( [] ) );
+	}
+
+	/**
+	 * No reveal input where it cannot fit or would do nothing.
+	 *
+	 * @return void
+	 */
+	public function test_no_reveal_input_off_balanced_or_on_other_schemas(): void {
+		$string = [ 'input_schema' => [ 'type' => 'string' ] ];
+		$object = [ 'input_schema' => [ 'type' => 'object' ] ];
+
+		$this->assertSame( $string, $this->redactor->offer_reveal( $string, self::ABILITY ) );
+		$this->assertSame( $object, $this->redactor->offer_reveal( $object, 'mcp-adapter/execute-ability' ) );
+
+		$GLOBALS['albert_test_options']['albert_privacy_mode'] = 'strict';
+		$this->assertSame( $object, $this->redactor->offer_reveal( $object, self::ABILITY ) );
 	}
 }

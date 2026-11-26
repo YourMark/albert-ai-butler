@@ -24,7 +24,7 @@ Albert removes that step. Connect your AI assistant to your site once, and it wr
 * **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 * **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 * **No tracking.** Albert sends nothing about your site or your usage anywhere.
-* **Personal data hidden by default.** Whatever your assistant looks up, from any plugin, the names, email addresses, phone numbers and postal addresses Albert recognises are masked. New sites start on Strict.
+* **Personal data hidden by default.** Whatever your assistant looks up, from any plugin, email addresses, phone numbers and IP addresses are masked. Albert's own user, customer and order tools mask names and postal addresses too. New sites start on Strict.
 
 ---
 
@@ -85,9 +85,9 @@ Switched on by default. When your assistant asks to delete a post, create or cha
 
 ### Personal data stays private
 
-Whatever your assistant looks up, Albert hides the names, email addresses, phone numbers, postal addresses and IP addresses it recognises before the answer leaves your site. That includes what WordPress itself and your other plugins return. Email addresses inside your content, such as a post, are left as they are.
+Whatever your assistant looks up, Albert hides email addresses, phone numbers and IP addresses before the answer leaves your site. That includes what WordPress itself and your other plugins return. Albert's own user, customer and order tools also hide names and postal addresses. Email addresses inside your content, such as a post, are left as they are.
 
-Choose **Strict**, **Balanced** or **Off**. New sites start on Strict. On Balanced, Albert's user, customer and order tools show the real details when you ask, to anyone allowed to use them.
+Choose **Strict**, **Balanced** or **Off**. New sites start on Strict. On Balanced, anyone allowed to use a tool can ask it for the real details.
 
 ---
 
@@ -183,7 +183,7 @@ Yes. Albert writes real WordPress blocks, headings, lists, images, columns and t
 
 = Does my AI assistant see my visitors' and customers' personal data? =
 
-Not by default. Whatever it looks up, from Albert or any other plugin, Albert hides the names, email addresses, phone numbers and postal addresses it recognises before anything is sent. Choose Strict, Balanced or Off; on Balanced, Albert's user, customer and order tools show the real details when you ask.
+Not by default. Whatever it looks up, from Albert or any other plugin, Albert hides email addresses, phone numbers and IP addresses before anything is sent, and Albert's own user, customer and order tools hide names and postal addresses too. Choose Strict, Balanced or Off; on Balanced, your assistant can ask for the real details when you need them.
 
 = How does Albert know anything about my site? =
 
@@ -258,7 +258,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 **Fixes**
 
-* Privacy mode only covered Albert's own user, customer and order tools, so personal data returned by WordPress's own abilities and by other plugins reached your assistant unmasked. It now applies to everything your assistant calls through Albert, whichever plugin provides it, and recognises more personal data, such as IP addresses, birth dates, passwords and any value that is an email address. On Balanced, anyone allowed to use Albert's user, customer and order tools can ask them for the real details.
+* Privacy mode only covered Albert's own user, customer and order tools, so personal data returned by WordPress's own abilities and by other plugins reached your assistant unmasked. It now applies to everything your assistant calls through Albert: email addresses, phone numbers, IP addresses, passwords and sign-in tokens are masked or removed whichever plugin returns them, and Albert's own tools also mask names, postal addresses and birth dates. Your assistant is told never to write a masked value back. On Balanced, anyone allowed to use a tool can ask it for the real details.
 * Switching an ability off on the Abilities screen removed it from your whole site, so other plugins that used it stopped working too. The switch now only decides what assistants connected through Albert can use, and the screen explains this.
 * Text your assistant wrote in paragraphs, headings, lists, buttons and quotes lost tags that other plugins add, such as ThirstyAffiliates links, even for administrators. Text is now saved the way the WordPress editor saves it, with the same rules for who may store what.
 * Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
@@ -291,6 +291,9 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 **Developer**
 
+* New filter `albert/privacy/personal_keys` (`$keys`, `$ability_name`) sets which keys are masked in one ability's result, grouped by rule as in `albert/privacy/pii_fields`. Albert's own abilities start from the full list, any other ability only from email, phone, IP address, password hash and token keys.
+* On Balanced, every ability with an object input schema or none gets an optional `reveal_personal_data` input, which Albert removes before the ability's own callbacks run. An ability that declares the input itself still receives it. `albert/privacy/reveal_capability` defaults to `read` on these calls.
+* The `discover-abilities` response carries a `privacy` field while privacy mode is Strict or Balanced.
 * Deprecated the `albert/abilities/required_capability` filter and `AbilitiesRegistry::resolve_required_capability()`; neither has any effect now, and the method returns an empty string. The `capability` and `capabilityRoles` keys of an Abilities screen row are always empty and will be removed in a future version.
 * Switching an ability off no longer unregisters it. Albert's MCP server leaves it out of discovery and refuses to describe or run it, and safe mode refuses to approve a held call for it. An Albert ability that an add-on refuses, such as one that needs a licence, is still unregistered.
 * `albert/abilities/disabled_list` now also applies to Albert's own abilities.

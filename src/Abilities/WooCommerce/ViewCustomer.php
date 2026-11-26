@@ -57,15 +57,10 @@ class ViewCustomer extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'                   => [
+				'id' => [
 					'type'        => 'integer',
 					'description' => 'The customer user ID to retrieve.',
 					'minimum'     => 1,
-				],
-				'reveal_personal_data' => [
-					'type'        => 'boolean',
-					'description' => 'Return real customer PII instead of anonymised placeholders. Ignored unless privacy mode is Balanced.',
-					'default'     => false,
 				],
 			],
 			'required'   => [ 'id' ],
