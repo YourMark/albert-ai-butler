@@ -9,7 +9,6 @@ namespace Albert\Tests\Integration\MCP;
 
 use Albert\Database\Installer;
 use Albert\Database\Tables;
-use Albert\Logging\ExecutionLogMarker;
 use Albert\Logging\Repository;
 use Albert\MCP\DisabledAbilities;
 use Albert\MCP\Server;
@@ -145,7 +144,6 @@ class DisabledAbilitiesTest extends TestCase {
 		Installer::install();
 		$repository = new Repository();
 		$repository->truncate();
-		ExecutionLogMarker::reset();
 
 		$args = [
 			'ability_name' => 'other/switched-off',
