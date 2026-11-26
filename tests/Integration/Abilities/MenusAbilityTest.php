@@ -366,6 +366,141 @@ class MenusAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A theme pattern placed in a template is followed to the navigation block inside it.
+	 *
+	 * @return void
+	 */
+	public function test_a_pattern_in_a_template_is_followed(): void {
+		$this->use_block_theme();
+		$nav = $this->navigation( 'Main' );
+		register_block_pattern(
+			'albert-test/nav',
+			[
+				'title'   => 'Nav',
+				'content' => '<!-- wp:navigation {"ref":' . $nav . '} /-->',
+			]
+		);
+
+		$template = self::factory()->post->create(
+			[
+				'post_type'    => 'wp_template',
+				'post_name'    => 'page',
+				'post_title'   => 'Page',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:pattern {"slug":"albert-test/nav"} /-->',
+			]
+		);
+		wp_set_post_terms( $template, 'albert-block-test', 'wp_theme' );
+
+		$used = array_column( ( new FindMenus() )->execute( [] )['navigation_menus'], null, 'id' )[ $nav ]['used_in'];
+		unregister_block_pattern( 'albert-test/nav' );
+
+		$by_slug = array_column( $used, null, 'slug' );
+		$this->assertArrayHasKey( 'page', $by_slug );
+		$this->assertTrue( $by_slug['page']['in_use'] );
+	}
+
+	/**
+	 * A part nested in a part a template shows is in use too.
+	 *
+	 * @return void
+	 */
+	public function test_a_part_nested_in_a_used_part_is_in_use(): void {
+		$this->use_block_theme();
+		$nav = $this->navigation( 'Main' );
+
+		$parts = [
+			'header' => '<!-- wp:template-part {"slug":"inner"} /-->',
+			'inner'  => '<!-- wp:navigation {"ref":' . $nav . '} /-->',
+		];
+		foreach ( $parts as $slug => $content ) {
+			$part = self::factory()->post->create(
+				[
+					'post_type'    => 'wp_template_part',
+					'post_name'    => $slug,
+					'post_title'   => ucfirst( $slug ),
+					'post_status'  => 'publish',
+					'post_content' => $content,
+				]
+			);
+			wp_set_post_terms( $part, 'albert-block-test', 'wp_theme' );
+		}
+
+		$used = array_column( ( new FindMenus() )->execute( [] )['navigation_menus'], null, 'id' )[ $nav ]['used_in'];
+
+		$by_slug = array_column( $used, null, 'slug' );
+		$this->assertArrayHasKey( 'inner', $by_slug );
+		$this->assertTrue( $by_slug['inner']['in_use'] );
+	}
+
+	/**
+	 * A navigation block saved with the legacy `navigationMenuId` attribute shows that menu.
+	 *
+	 * @return void
+	 */
+	public function test_the_legacy_navigation_menu_id_attribute_is_read(): void {
+		$this->use_block_theme();
+		$named = $this->navigation( 'Named', '2026-01-01 10:00:00' );
+		$this->navigation( 'Newer', '2026-02-01 10:00:00' );
+
+		$part = self::factory()->post->create(
+			[
+				'post_type'    => 'wp_template_part',
+				'post_name'    => 'header',
+				'post_title'   => 'Header',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:navigation {"navigationMenuId":' . $named . '} /-->',
+			]
+		);
+		wp_set_post_terms( $part, 'albert-block-test', 'wp_theme' );
+		wp_set_post_terms( $part, 'header', 'wp_template_part_area' );
+
+		$header = ( new FindMenus() )->execute( [] )['header'];
+
+		$this->assertSame( $named, $header['id'] );
+		$this->assertFalse( $header['fallback'] );
+	}
+
+	/**
+	 * On a classic theme a menu shown only by a Navigation Menu widget is visible.
+	 *
+	 * @return void
+	 */
+	public function test_a_navigation_menu_widget_makes_a_classic_menu_visible(): void {
+		global $_wp_sidebars_widgets;
+
+		$this->use_classic_theme();
+		$menu  = $this->classic_menu( 'Widget menu' );
+		$spare = $this->classic_menu( 'Spare' );
+		register_sidebar(
+			[
+				'id'   => 'albert-sidebar',
+				'name' => 'Albert Sidebar',
+			]
+		);
+		update_option( 'widget_nav_menu', [ 3 => [ 'nav_menu' => $menu ] ] );
+		update_option(
+			'sidebars_widgets',
+			[
+				'albert-sidebar'      => [ 'nav_menu-3' ],
+				'wp_inactive_widgets' => [],
+			]
+		);
+		// wp_get_sidebars_widgets() keeps a copy outside the admin.
+		$_wp_sidebars_widgets = [];
+
+		$result = ( new FindMenus() )->execute( [] );
+
+		unregister_sidebar( 'albert-sidebar' );
+		$_wp_sidebars_widgets = [];
+
+		$by_id = array_column( $result['classic_menus'], null, 'id' );
+		$this->assertTrue( $by_id[ $menu ]['visible'] );
+		$this->assertStringContainsString( 'Albert Sidebar', implode( ' ', $by_id[ $menu ]['shown_in'] ) );
+		$this->assertFalse( $by_id[ $spare ]['visible'] );
+	}
+
+	/**
 	 * A navigation menu's blocks read as a tree with paths.
 	 *
 	 * @return void
@@ -523,6 +658,58 @@ class MenusAbilityTest extends TestCase {
 		$this->assertTrue( $deleted['deleted'] );
 		$this->assertTrue( $deleted['was_visible'] );
 		$this->assertFalse( wp_get_nav_menu_object( $menu_id ) );
+	}
+
+	/**
+	 * A title that is empty once sanitised is refused, not saved as a blank label.
+	 *
+	 * @return void
+	 */
+	public function test_a_title_empty_after_sanitising_is_refused(): void {
+		$this->use_classic_theme();
+		$menu = $this->classic_menu( 'Labels' );
+		$item = $this->link( $menu, 'Keep' );
+
+		$added   = ( new AddMenuItem() )->execute(
+			[
+				'menu_id' => $menu,
+				'title'   => '<b></b>',
+				'url'     => 'https://example.com/blank',
+			]
+		);
+		$updated = ( new UpdateMenuItem() )->execute(
+			[
+				'menu_item_id' => $item,
+				'title'        => '<b></b>',
+			]
+		);
+
+		$this->assertSame( 'albert_invalid_title', $added->get_error_code() );
+		$this->assertSame( 'albert_invalid_title', $updated->get_error_code() );
+		$this->assertSame( [ 'Keep' ], $this->titles( $this->view( $menu )['items'] ) );
+	}
+
+	/**
+	 * Removing an item that is in no menu reports no visibility.
+	 *
+	 * @return void
+	 */
+	public function test_removing_an_item_in_no_menu_omits_visibility(): void {
+		$orphan = (int) self::factory()->post->create(
+			[
+				'post_type'   => 'nav_menu_item',
+				'post_status' => 'publish',
+				'post_title'  => 'Orphan',
+			]
+		);
+
+		$result = ( new RemoveMenuItem() )->execute( [ 'menu_item_id' => $orphan ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 0, $result['menu_id'] );
+		$this->assertTrue( $result['deleted'] );
+		$this->assertArrayNotHasKey( 'visible', $result );
+		$this->assertArrayNotHasKey( 'notice', $result );
 	}
 
 	/**

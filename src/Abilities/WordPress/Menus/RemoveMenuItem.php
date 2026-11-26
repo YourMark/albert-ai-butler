@@ -79,7 +79,10 @@ class RemoveMenuItem extends BaseAbility {
 			'type'       => 'object',
 			'properties' => [
 				'id'       => [ 'type' => 'integer' ],
-				'menu_id'  => [ 'type' => 'integer' ],
+				'menu_id'  => [
+					'type'        => 'integer',
+					'description' => 'The menu it was in, 0 for none. With 0 the result has no "visible" or "shown_in".',
+				],
 				'title'    => [ 'type' => 'string' ],
 				'deleted'  => [ 'type' => 'boolean' ],
 				'moved_up' => [
@@ -88,7 +91,7 @@ class RemoveMenuItem extends BaseAbility {
 					'description' => 'Sub-items that moved up to the removed item\'s level.',
 				],
 			] + MenuSupport::visibility_schema(),
-			'required'   => [ 'id', 'menu_id', 'deleted', 'moved_up', 'visible', 'shown_in' ],
+			'required'   => [ 'id', 'menu_id', 'deleted', 'moved_up' ],
 		];
 	}
 
@@ -140,12 +143,15 @@ class RemoveMenuItem extends BaseAbility {
 			return $data;
 		}
 
-		return [
+		$result = [
 			'id'       => $id,
 			'menu_id'  => $menu_id,
 			'title'    => (string) ( $item->title ?? '' ),
 			'deleted'  => true,
 			'moved_up' => $moved,
-		] + MenuSupport::visibility_fields( $menu_id );
+		];
+
+		// An item in no menu was never shown, so there is no visibility to report.
+		return $menu_id > 0 ? $result + MenuSupport::visibility_fields( $menu_id ) : $result;
 	}
 }

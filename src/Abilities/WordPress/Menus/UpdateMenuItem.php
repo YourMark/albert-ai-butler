@@ -153,6 +153,13 @@ class UpdateMenuItem extends BaseAbility {
 
 		if ( isset( $args['title'] ) ) {
 			$params['title'] = sanitize_text_field( (string) $args['title'] );
+			if ( $params['title'] === '' ) {
+				return new WP_Error(
+					'albert_invalid_title',
+					__( 'The "title" is empty once HTML and extra spaces are removed. Send the label as plain text.', 'albert-ai-butler' ),
+					[ 'status' => 400 ]
+				);
+			}
 		}
 		if ( ! empty( $args['use_original_title'] ) ) {
 			// An empty title is how core stores "use the linked item's title".

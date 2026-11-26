@@ -228,6 +228,13 @@ class AddMenuItem extends BaseAbility {
 		}
 		if ( isset( $args['title'] ) ) {
 			$params['title'] = sanitize_text_field( (string) $args['title'] );
+			if ( $params['title'] === '' ) {
+				return new WP_Error(
+					'albert_invalid_title',
+					__( 'The "title" is empty once HTML and extra spaces are removed. Send the label as plain text.', 'albert-ai-butler' ),
+					[ 'status' => 400 ]
+				);
+			}
 		}
 		if ( isset( $args['url'] ) ) {
 			$params['url'] = esc_url_raw( (string) $args['url'] );
