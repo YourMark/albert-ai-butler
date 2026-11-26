@@ -41,6 +41,14 @@ class TargetResolver {
 	 * @since 1.5.0
 	 */
 	public function describe( string $ability_name, array $input ): ?array {
+		// A revision call changes the revision's post, so the reviewer sees that post and its edits since.
+		if ( isset( $input['revision_id'] ) && is_numeric( $input['revision_id'] ) ) {
+			$revision_id = (int) $input['revision_id'];
+			$revision    = wp_get_post_revision( $revision_id );
+
+			return $revision instanceof \WP_Post ? $this->describe_post( (int) $revision->post_parent ) : null;
+		}
+
 		$id = $this->target_id( $input );
 
 		if ( $id <= 0 ) {
