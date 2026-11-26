@@ -452,7 +452,8 @@ abstract class BaseAbility implements Ability {
 	 * Turn a failed REST response into an error, with core's refusal renamed so the log reads it as one.
 	 *
 	 * Core refuses with codes such as `rest_cannot_edit`, which would log as a failure;
-	 * any `*_permission_denied` code logs as blocked.
+	 * any `*_permission_denied` code logs as blocked. Public so the menu helpers, which
+	 * are not abilities, can share it.
 	 *
 	 * @param mixed  $data        Response data from `rest_get_server()->response_to_data()`.
 	 * @param int    $status      HTTP status of the response.
