@@ -30,7 +30,7 @@ class Delete extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/delete-page';
 		$this->label       = __( 'Delete Page', 'albert-ai-butler' );
-		$this->description = __( 'Delete a WordPress page permanently or move it to trash.', 'albert-ai-butler' );
+		$this->description = __( 'Move a WordPress page to the trash, or delete it permanently with "force".', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
@@ -42,9 +42,9 @@ class Delete extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::delete(
-				'This is not reversible through Albert. Confirm which page you have, with `albert/view-page` '
-				. 'on the id, before calling it, and check nothing links to it: deleting a page that is in '
-				. 'a navigation menu leaves the menu pointing at nothing.'
+				'Without `force` the page goes to the trash; `force: true` deletes it permanently. Confirm which '
+				. 'page you have, with `albert/view-page` on the id, before calling it, and check nothing links '
+				. 'to it: a page in a navigation menu leaves the menu pointing at nothing.'
 			),
 		];
 
@@ -68,7 +68,7 @@ class Delete extends BaseAbility {
 				],
 				'force' => [
 					'type'        => 'boolean',
-					'description' => 'Whether to bypass trash and force deletion',
+					'description' => 'Delete the page permanently instead of moving it to the trash. Default false.',
 					'default'     => false,
 				],
 			],
@@ -87,7 +87,10 @@ class Delete extends BaseAbility {
 			'type'       => 'object',
 			'properties' => [
 				'id'      => [ 'type' => 'integer' ],
-				'deleted' => [ 'type' => 'boolean' ],
+				'deleted' => [
+					'type'        => 'boolean',
+					'description' => 'True only when the page was deleted permanently.',
+				],
 				'status'  => [ 'type' => 'string' ],
 			],
 			'required'   => [ 'id', 'deleted' ],
@@ -158,7 +161,7 @@ class Delete extends BaseAbility {
 		// Return deletion result.
 		return [
 			'id'      => $page_id,
-			'deleted' => true,
+			'deleted' => $force,
 			'status'  => $force ? 'deleted' : 'trashed',
 		];
 	}

@@ -514,7 +514,7 @@ class PostsAbilityTest extends TestCase {
 		$result = ( new DeletePost() )->execute( [ 'id' => $post_id ] );
 
 		$this->assertIsArray( $result );
-		$this->assertTrue( $result['deleted'] );
+		$this->assertFalse( $result['deleted'] );
 		$this->assertSame( 'trashed', $result['status'] );
 		$this->assertSame( 'trash', get_post_status( $post_id ) );
 	}

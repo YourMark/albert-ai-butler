@@ -440,7 +440,7 @@ class PagesAbilityTest extends TestCase {
 		$result = ( new DeletePage() )->execute( [ 'id' => $page_id ] );
 
 		$this->assertIsArray( $result );
-		$this->assertTrue( $result['deleted'] );
+		$this->assertFalse( $result['deleted'] );
 		$this->assertSame( 'trashed', $result['status'] );
 		$this->assertSame( 'trash', get_post_status( $page_id ) );
 	}

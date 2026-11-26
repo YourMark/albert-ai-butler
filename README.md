@@ -9,7 +9,7 @@
 
 ## Safe by default
 
-- **Deletions wait for you.** Safe mode is on from the start. Deleting content, creating or changing a user account, or changing a key site setting waits for your approval, and the assistant cannot approve its own request. Ordinary edits to posts and pages go ahead without approval.
+- **Deletions wait for you.** Safe mode is on from the start. Permanently deleting content, creating or changing a user account, or changing a key site setting waits for your approval, and the assistant cannot approve its own request. Ordinary edits to posts and pages go ahead without approval.
 - **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 - **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 - **No tracking.** Albert sends nothing about your site or your usage anywhere.
@@ -194,6 +194,7 @@ Website: https://yourmark.nl
 - Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
 - When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
 - When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
+- Safe mode no longer asks you to approve moving a post, page or block pattern to the trash, because you can restore it from the trash yourself. Deleting one permanently still waits for your approval.
 - Albert no longer saves a block it can only guess, such as an image without an address, a cover or a block from another plugin without its markup, or blocks nested where the editor would drop them. Your assistant gets a message saying what to send instead, and nothing is saved.
 - The Context screen now says when a saved change takes effect: the next time an assistant asks what your site can do. A conversation that is already open keeps what it started with, so start a new one to use your changes.
 
@@ -205,6 +206,7 @@ Website: https://yourmark.nl
 - Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
 - Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
 - A group block sent with its contents written out was saved empty. It now keeps them.
+- After moving a post or page to the trash, your assistant was told it had been deleted and that this could not be undone through Albert. It is now told the item is in the trash, where you can restore it.
 - Deleting a category or tag through your assistant always failed. Terms have no trash in WordPress, so Albert now deletes them permanently, and the assistant is told so before it asks.
 - Deleting a user through your assistant always failed unless it named someone to take over their posts, while it was told their content would be deleted with them. It must now name the user who receives everything the deleted user wrote, and it can no longer delete the user it is connected as.
 - Copying a page or post block by block lost its bold text, links and images, and centred headings opened in the editor as broken, while the assistant was told it had worked. Each block now comes with its saved markup when your assistant reads it, so it is written back exactly as it was.
@@ -217,6 +219,9 @@ Website: https://yourmark.nl
 - When your assistant used an action from another plugin, it did not show in Recent activity, and the Abilities screen said it was never used. These calls are now recorded like Albert's own.
 - When an action's answer did not have the shape it promises, your assistant got an error but Recent activity said it succeeded. It now shows as failed.
 - When your assistant asked for an action it is not allowed to use, the refusal did not show in Recent activity. It now shows as blocked.
+- When a plugin on your site blocked the list of users, choosing who may approve an assistant failed with a message to reload the page, which never helped. It now says that something on the site blocks the user list and what to allow.
+- When your assistant searched your users, their email addresses and roles always came back empty, and the username shown was not the name they log in with. Both are now filled in correctly. Privacy mode still hides email addresses and usernames as before.
+- Asking for one user by ID in a user search returned a jumbled result instead of that user. It now returns just that user.
 
 **Security**
 
@@ -244,12 +249,14 @@ Website: https://yourmark.nl
 - New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
 - Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 - `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
+- `albert/delete-post`, `albert/delete-page` and `albert/delete-pattern` return `deleted: false` when they move the item to the trash; `deleted` is `true` only for a permanent delete.
 - `albert/delete-term` always deletes permanently; its `force` input is still accepted and ignored. `albert/delete-user` requires `reassign`.
 - The `blocks` tree from `albert/view-post`, `albert/view-page`, `albert/find-posts`, `albert/find-pages` and the block-edit abilities gives each block without inner blocks its saved markup in `html`. A block spec whose markup-sourced attribute (such as `content` or `url`) differs from the `html` sent with it is refused, as are an image without `url`, children under a block that cannot nest them, and a registered block Albert has no template for unless it comes with `html`; these were warnings in `block_issues`.
 - New abilities `albert/replace-post-text` and `albert/replace-page-text`: `post_id` or `page_id`, `search`, `replace`, `field` (`content`, `title` or `excerpt`), `expected_count` (default 1) and `remove_tags`. Errors: `albert_invalid_search` (text not found), `albert_invalid_expected_count` (with `count`), `albert_invalid_replace` (the change alters blocks), `albert_invalid_field` (the post type has no such field), `albert_post_not_found` or `albert_page_not_found`, `albert_post_permission_denied` or `albert_page_permission_denied`, and `tags_removed`. A `notice` in the result says when WordPress stored something other than what was sent.
 - The post, page and pattern create and update abilities now return an `albert_invalid_content` error when `content` is Markdown, instead of saving it as one paragraph. Send `blocks` instead.
 - `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
 - `albert/create-post` and `albert/create-page` return `albert_post_permission_denied` and `albert_page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
+- `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
 
 **Credits**
 
