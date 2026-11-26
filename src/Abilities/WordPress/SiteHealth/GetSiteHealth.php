@@ -175,7 +175,7 @@ class GetSiteHealth extends BaseAbility {
 		foreach ( (array) ( $tests['direct'] ?? [] ) as $slug => $test ) {
 			$test = is_array( $test ) ? $test : [];
 
-			// Core skips these outside the browser too: they need the viewer's login cookie, which an MCP call lacks.
+			// Core skips these in its cron check; an MCP call has no login cookie either.
 			if ( ! empty( $test['skip_cron'] ) ) {
 				$not_run[] = $this->not_run_entry( (string) $slug, $test );
 				continue;

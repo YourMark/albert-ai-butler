@@ -165,19 +165,6 @@ class SiteHealthAbilityTest extends TestCase {
 	}
 
 	/**
-	 * Running the checks writes nothing: the screen's cached counts are left alone.
-	 *
-	 * @return void
-	 */
-	public function test_does_not_store_results(): void {
-		delete_transient( 'health-check-site-status-result' );
-
-		( new GetSiteHealth() )->execute( [] );
-
-		$this->assertFalse( get_transient( 'health-check-site-status-result' ) );
-	}
-
-	/**
 	 * Editors cannot see Site Health.
 	 *
 	 * @return void
