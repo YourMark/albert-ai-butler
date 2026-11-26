@@ -439,6 +439,42 @@ class PagesAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A post the user may not read gets the plain not-found error, so the hint does not reveal it exists.
+	 *
+	 * @return void
+	 */
+	public function test_update_page_with_an_unreadable_post_id_says_not_found(): void {
+		$ability = wp_get_ability( 'albert/update-page' );
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-page is not registered.' );
+		}
+
+		$private_id = self::factory()->post->create(
+			[
+				'post_type'   => 'post',
+				'post_status' => 'private',
+				'post_author' => get_current_user_id(),
+			]
+		);
+		// An author with edit_pages may run update-page but not read another user's private post.
+		$author = self::factory()->user->create_and_get( [ 'role' => 'author' ] );
+		$author->add_cap( 'edit_pages' );
+		wp_set_current_user( $author->ID );
+
+		$result = $ability->execute(
+			[
+				'id'    => $private_id,
+				'title' => 'Changed',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+		$this->assertStringNotContainsString( 'albert/update-post', $result->get_error_message() );
+		$this->assertStringNotContainsString( 'is a post', $result->get_error_message() );
+	}
+
+	/**
 	 * The schema refuses an update that sends only the id, before anything runs.
 	 *
 	 * @return void

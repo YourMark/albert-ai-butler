@@ -269,7 +269,8 @@ class Update extends BaseAbility {
 	private function refuse_unless_editable( int $page_id ): ?WP_Error {
 		// get_post( 0 ) returns the global post.
 		$page = $page_id > 0 ? get_post( $page_id ) : null;
-		if ( $page && $page->post_type === 'post' ) {
+		// Name the other type only to a user who may read it, so the hint leaks nothing.
+		if ( $page && $page->post_type === 'post' && current_user_can( 'read_post', $page_id ) ) {
 			return new WP_Error(
 				'albert_page_not_found',
 				/* translators: %d: post ID */
