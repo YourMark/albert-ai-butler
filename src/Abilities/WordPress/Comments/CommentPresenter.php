@@ -19,10 +19,6 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Turns comments into ability output, with the author's details masked per privacy mode.
  *
- * The author's name is `display_name`, which the anonymiser always masks, so the post
- * reference can keep a plain `name`. The author has no `id`, so the name becomes initials
- * instead of a "Customer #" reference; the URL is emptied and the IP dropped.
- *
  * @since 1.6.0
  */
 class CommentPresenter {
@@ -35,11 +31,11 @@ class CommentPresenter {
 	public const CAPABILITY = 'moderate_comments';
 
 	/**
-	 * Statuses, in the REST API's words.
+	 * Statuses, in the REST API's words. `post-trashed` is a comment whose post is in the trash.
 	 *
 	 * @since 1.6.0
 	 */
-	public const STATUSES = [ 'approved', 'hold', 'spam', 'trash' ];
+	public const STATUSES = [ 'approved', 'hold', 'spam', 'trash', 'post-trashed' ];
 
 	/**
 	 * The only comment types these abilities handle: comments and pings.
@@ -132,11 +128,39 @@ class CommentPresenter {
 	 * @since 1.6.0
 	 */
 	public static function redact( array $payload, array $args ): array {
+		if ( self::masks( $args ) ) {
+			// The account ID would tie a masked commenter to a known user.
+			$payload = self::drop_author_ids( $payload );
+		}
+
 		return PiiPolicy::redact(
 			$payload,
 			$args,
 			[ 'reveal_capability' => self::CAPABILITY ]
 		);
+	}
+
+	/**
+	 * Remove `author.user_id` from every comment in a payload.
+	 *
+	 * @param array<mixed> $data Payload or part of it.
+	 * @return array<mixed>
+	 * @since 1.6.0
+	 */
+	private static function drop_author_ids( array $data ): array {
+		foreach ( $data as $key => $value ) {
+			if ( ! is_array( $value ) ) {
+				continue;
+			}
+			if ( $key === 'author' ) {
+				unset( $value['user_id'] );
+				$data[ $key ] = $value;
+				continue;
+			}
+			$data[ $key ] = self::drop_author_ids( $value );
+		}
+
+		return $data;
 	}
 
 	/**

@@ -99,7 +99,7 @@ class DeleteComment extends BaseAbility {
 				],
 				'previous_status' => [
 					'type'        => 'string',
-					'description' => 'The status before this call: approved, hold, spam or trash.',
+					'description' => 'The status before this call: approved, hold, spam, trash, or post-trashed when the comment\'s post is in the trash.',
 				],
 			],
 			'required'   => [ 'id', 'trashed', 'deleted', 'previous_status' ],

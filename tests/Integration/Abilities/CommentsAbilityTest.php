@@ -233,6 +233,101 @@ class CommentsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * Totals and pages count only the comments a moderator who cannot edit others' posts can handle.
+	 *
+	 * @return void
+	 */
+	public function test_totals_count_only_comments_the_user_can_handle(): void {
+		$user = self::factory()->user->create( [ 'role' => 'author' ] );
+		get_user_by( 'id', $user )->add_cap( 'moderate_comments' );
+
+		$own  = self::factory()->post->create( [ 'post_author' => $user ] );
+		$mine = [];
+		foreach ( [ '2026-01-01 10:00:00', '2026-01-02 10:00:00', '2026-01-03 10:00:00' ] as $date ) {
+			$mine[] = (int) self::factory()->comment->create(
+				[
+					'comment_post_ID'  => $own,
+					'comment_approved' => '1',
+					'comment_date_gmt' => $date,
+				]
+			);
+		}
+		wp_set_current_user( $user );
+
+		$first  = ( new FindComments() )->execute( [ 'per_page' => 2 ] );
+		$second = ( new FindComments() )->execute(
+			[
+				'per_page' => 2,
+				'page'     => 2,
+			]
+		);
+
+		$this->assertIsArray( $first );
+		$this->assertIsArray( $second );
+		$this->assertSame( 3, $first['total'] );
+		$this->assertSame( 2, $first['total_pages'] );
+		$this->assertSame( [ $mine[2], $mine[1] ], array_column( $first['comments'], 'id' ) );
+		$this->assertSame( [ $mine[0] ], array_column( $second['comments'], 'id' ) );
+	}
+
+	/**
+	 * The commenter's account ID is masked with the rest of their details.
+	 *
+	 * @return void
+	 */
+	public function test_author_user_id_follows_masking(): void {
+		$member  = self::factory()->user->create();
+		$comment = $this->comment(
+			[
+				'comment_approved' => '1',
+				'user_id'          => $member,
+			]
+		);
+
+		$masked = ( new GetComment() )->execute( [ 'comment_id' => $comment ] );
+		$this->assertIsArray( $masked );
+		$this->assertArrayNotHasKey( 'user_id', $masked['comment']['author'] );
+
+		$found = ( new FindComments() )->execute( [] );
+		$this->assertIsArray( $found );
+		foreach ( $found['comments'] as $item ) {
+			$this->assertArrayNotHasKey( 'user_id', $item['author'] );
+		}
+
+		$revealed = ( new GetComment() )->execute(
+			[
+				'comment_id'           => $comment,
+				'reveal_personal_data' => true,
+			]
+		);
+		$this->assertIsArray( $revealed );
+		$this->assertSame( $member, $revealed['comment']['author']['user_id'] );
+	}
+
+	/**
+	 * A comment on a trashed post reports that status, and a reply to it is refused.
+	 *
+	 * @return void
+	 */
+	public function test_comment_on_trashed_post(): void {
+		wp_trash_post( $this->post_id );
+
+		$found = ( new FindComments() )->execute( [ 'status' => 'post-trashed' ] );
+		$this->assertIsArray( $found );
+		$this->assertContains( $this->held_id, array_column( $found['comments'], 'id' ) );
+		$this->assertSame( [ 'post-trashed' ], array_unique( array_column( $found['comments'], 'status' ) ) );
+
+		$result = ( new ReplyToComment() )->execute(
+			[
+				'comment_id' => $this->held_id,
+				'content'    => 'Hello',
+			]
+		);
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_invalid_comment_id', $result->get_error_code() );
+	}
+
+	/**
 	 * A refused reply leaves the held comment held.
 	 *
 	 * @return void

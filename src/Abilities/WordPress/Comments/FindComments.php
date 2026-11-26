@@ -68,7 +68,7 @@ class FindComments extends BaseAbility {
 				'status'    => [
 					'type'        => 'string',
 					'enum'        => array_merge( [ 'all' ], CommentPresenter::STATUSES ),
-					'description' => 'Which comments to return. "hold" is waiting for approval. "all" is approved and held, without spam and trash. Default "all".',
+					'description' => 'Which comments to return. "hold" is waiting for approval. "post-trashed" is comments on posts in the trash. "all" is approved and held, without spam and trash. Default "all".',
 					'default'     => 'all',
 				],
 				'post_id'   => [
@@ -124,7 +124,7 @@ class FindComments extends BaseAbility {
 				],
 				'total'       => [
 					'type'        => 'integer',
-					'description' => 'Every matching comment, including ones on posts you cannot edit, which are left out. A page can therefore hold fewer than per_page.',
+					'description' => 'Every matching comment you can handle.',
 				],
 				'total_pages' => [ 'type' => 'integer' ],
 			],
@@ -157,7 +157,7 @@ class FindComments extends BaseAbility {
 		$query_args = [
 			'status'        => match ( $status ) {
 				'approved' => 'approve',
-				'hold', 'spam', 'trash' => $status,
+				'hold', 'spam', 'trash', 'post-trashed' => $status,
 				default    => 'all',
 			},
 			'number'        => $per_page,
@@ -196,6 +196,20 @@ class FindComments extends BaseAbility {
 			}
 		}
 
+		// Without these, some comments belong to posts the user cannot edit. Paging those in
+		// SQL would count them in `total` and leave short pages, so filter them all first.
+		$sees_all = current_user_can( 'edit_others_posts' ) && current_user_can( 'edit_others_pages' )
+			&& current_user_can( 'edit_private_posts' ) && current_user_can( 'edit_private_pages' );
+
+		if ( ! $sees_all ) {
+			$query_args['number'] = 0;
+			unset( $query_args['offset'] );
+
+			if ( ! current_user_can( 'edit_others_posts' ) && ! current_user_can( 'edit_others_pages' ) ) {
+				$query_args['post_author__in'] = [ get_current_user_id() ];
+			}
+		}
+
 		$query    = new WP_Comment_Query();
 		$comments = $query->query( $query_args );
 
@@ -204,8 +218,6 @@ class FindComments extends BaseAbility {
 		}
 		$comments = is_array( $comments ) ? $comments : [];
 
-		// Filtered after the query, as core's endpoint does, so `total` may count
-		// comments on posts this user cannot edit.
 		$items = [];
 		foreach ( $comments as $comment ) {
 			if ( $comment instanceof WP_Comment && CommentPresenter::can_access( $comment ) ) {
@@ -213,7 +225,12 @@ class FindComments extends BaseAbility {
 			}
 		}
 
-		$total = (int) $query->found_comments;
+		if ( $sees_all ) {
+			$total = (int) $query->found_comments;
+		} else {
+			$total = count( $items );
+			$items = array_slice( $items, ( $page - 1 ) * $per_page, $per_page );
+		}
 
 		return CommentPresenter::redact(
 			[
