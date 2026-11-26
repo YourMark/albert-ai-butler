@@ -257,7 +257,7 @@ Website: https://yourmark.nl
 - `albert/create-post` and `albert/create-page` return `albert_post_permission_denied` and `albert_page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
 - `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
 - New WP-CLI command `wp albert allowed-users` with `list`, `add` and `remove`. It takes user IDs, logins or email addresses and changes nothing if any of them is not found, or, for `add`, lacks the capability from `albert/connections/allowed_user_capability`.
-- New actions `albert/allowed_users/added` `( $user_id, $expires_at )` and `albert/allowed_users/removed` `( $user_id )`. They fire however the list changes: the Connections screen, the command, an add-on or an invitation lapsing, and only once the change is saved. `AllowedUsers::remove()` now returns whether the person was removed.
+- New actions `albert/allowed_users/added` `( $user_id, $expires_at )` and `albert/allowed_users/removed` `( $user_id )`. They fire whenever someone is added or removed, by the Connections screen, the command, an add-on or an invitation lapsing, and only once the change is saved. `AllowedUsers::remove()` now returns whether the person was removed.
 - `albert/connections/allowed_user_capability` now also decides who may be added to the list, on the Connections screen as well as in the picker. Before, it only filtered who the picker offered.
 
 **Credits**

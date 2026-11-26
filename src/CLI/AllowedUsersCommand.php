@@ -32,18 +32,6 @@ use WP_CLI\Formatter;
 class AllowedUsersCommand {
 
 	/**
-	 * Register the command. Only under WP-CLI.
-	 *
-	 * @return void
-	 * @since 1.6.0
-	 */
-	public static function register(): void {
-		if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			WP_CLI::add_command( 'albert allowed-users', self::class );
-		}
-	}
-
-	/**
 	 * List the people who may connect an assistant.
 	 *
 	 * Status is `authorised` (has connected, never lapses), `invited` (not
@@ -144,11 +132,15 @@ class AllowedUsersCommand {
 			}
 		}
 
-		$added = 0;
-		$ids   = AllowedUsers::ids();
+		$added   = 0;
+		$entries = AllowedUsers::all();
 
 		foreach ( $users as $user ) {
-			if ( in_array( $user->ID, $ids, true ) ) {
+			$entry = $entries[ $user->ID ] ?? null;
+
+			if ( $entry !== null && AllowedUsers::is_expired( $entry ) ) {
+				WP_CLI::warning( sprintf( '%s (ID %d) is on the list, but their invitation expired. Send them a setup link from the Connections screen to renew it.', $user->user_login, $user->ID ) );
+			} elseif ( $entry !== null ) {
 				WP_CLI::warning( sprintf( '%s (ID %d) is already on the list.', $user->user_login, $user->ID ) );
 			} elseif ( AllowedUsers::add( $user->ID ) ) {
 				++$added;
@@ -179,12 +171,16 @@ class AllowedUsersCommand {
 		$removed = 0;
 
 		foreach ( $users as $user ) {
-			if ( ! AllowedUsers::remove( $user->ID ) ) {
-				WP_CLI::warning( sprintf( '%s (ID %d) is not on the list.', $user->user_login, $user->ID ) );
+			$was_listed = AllowedUsers::remove( $user->ID );
+
+			// Revoke either way, as the screen does: tokens can outlive a list entry.
+			Settings::revoke_user_tokens( $user->ID );
+
+			if ( ! $was_listed ) {
+				WP_CLI::warning( sprintf( '%s (ID %d) is not on the list. Any assistants they connected were signed out.', $user->user_login, $user->ID ) );
 				continue;
 			}
 
-			Settings::revoke_user_tokens( $user->ID );
 			++$removed;
 			WP_CLI::log( sprintf( 'Removed %s (ID %d) and signed out their assistants.', $user->user_login, $user->ID ) );
 		}

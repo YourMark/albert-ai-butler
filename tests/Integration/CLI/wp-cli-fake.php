@@ -13,6 +13,31 @@ namespace {
 			/** @var array<int, array{0: string, 1: string}> Lines printed, as [ type, message ]. */
 			public static array $output = [];
 
+			/** @var array<int, string> Command names, in the order they were registered. */
+			public static array $commands = [];
+
+			/** @var array<string, string> Subcommands waiting for their parent, as [ name => parent ]. */
+			public static array $deferred = [];
+
+			// Like WP-CLI: `a b` is held back, and add_command() returns false, until `a` exists.
+			public static function add_command( $name, $callable, $args = [] ): bool {
+				$space = strrpos( $name, ' ' );
+
+				if ( $space !== false && ! in_array( substr( $name, 0, $space ), self::$commands, true ) ) {
+					self::$deferred[ $name ] = substr( $name, 0, $space );
+					return false;
+				}
+
+				self::$commands[] = $name;
+
+				foreach ( array_keys( self::$deferred, $name, true ) as $child ) {
+					unset( self::$deferred[ $child ] );
+					self::add_command( $child, null );
+				}
+
+				return true;
+			}
+
 			public static function log( $message ): void {
 				self::$output[] = [ 'log', $message ];
 			}
@@ -46,6 +71,12 @@ namespace WP_CLI {
 				self::$items = $items;
 			}
 		}
+	}
+}
+
+namespace WP_CLI\Dispatcher {
+	if ( ! class_exists( __NAMESPACE__ . '\CommandNamespace' ) ) {
+		class CommandNamespace {}
 	}
 }
 

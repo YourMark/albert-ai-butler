@@ -10,6 +10,7 @@ namespace Albert\Tests\Integration\CLI;
 require_once __DIR__ . '/wp-cli-fake.php';
 
 use Albert\CLI\AllowedUsersCommand;
+use Albert\CLI\Commands;
 use Albert\Database\Installer;
 use Albert\Database\Tables;
 use Albert\OAuth\AllowedUsers;
@@ -35,7 +36,61 @@ class AllowedUsersCommandTest extends TestCase {
 
 		Installer::install();
 		delete_option( AllowedUsers::OPTION );
-		WP_CLI::$output = [];
+		WP_CLI::$output   = [];
+		WP_CLI::$commands = [];
+		WP_CLI::$deferred = [];
+		Formatter::$items = [];
+	}
+
+	/**
+	 * `wp albert allowed-users` exists once registered: WP-CLI drops a subcommand whose parent is missing.
+	 *
+	 * @return void
+	 */
+	public function test_the_command_is_registered(): void {
+		$this->assertFalse( WP_CLI::add_command( 'albert allowed-users', AllowedUsersCommand::class ) );
+		$this->assertNotContains( 'albert allowed-users', WP_CLI::$commands );
+
+		WP_CLI::$deferred = [];
+		Commands::add_commands();
+
+		$this->assertContains( 'albert allowed-users', WP_CLI::$commands );
+		$this->assertSame( [], WP_CLI::$deferred );
+	}
+
+	/**
+	 * `--format=ids` gets bare IDs; an expired invitation is named as such on add.
+	 *
+	 * @return void
+	 */
+	public function test_ids_format_and_expired_invitation(): void {
+		$command = new AllowedUsersCommand();
+		$jan     = self::factory()->user->create(
+			[
+				'user_login' => 'jan',
+				'role'       => 'editor',
+			]
+		);
+		AllowedUsers::add( $jan );
+		AllowedUsers::reset_expiry_clock( 1 );
+
+		$command->list_( [], [ 'format' => 'ids' ] );
+		$this->assertSame( [ $jan ], Formatter::$items );
+
+		update_option(
+			AllowedUsers::OPTION,
+			[
+				$jan => [
+					'added_at'      => gmdate( 'Y-m-d H:i:s', time() - 2 * DAY_IN_SECONDS ),
+					'authorised_at' => null,
+					'expires_at'    => gmdate( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS ),
+				],
+			]
+		);
+
+		$command->add( [ 'jan' ] );
+
+		$this->assertStringContainsString( 'invitation expired', WP_CLI::$output[ count( WP_CLI::$output ) - 2 ][1] );
 	}
 
 	/**
@@ -120,7 +175,7 @@ class AllowedUsersCommandTest extends TestCase {
 		( new AllowedUsersCommand() )->remove( [ 'jan', 'maria' ] );
 
 		$this->assertSame( [], AllowedUsers::ids() );
-		$this->assertContains( [ 'warning', 'maria (ID ' . get_user_by( 'login', 'maria' )->ID . ') is not on the list.' ], WP_CLI::$output );
+		$this->assertContains( [ 'warning', 'maria (ID ' . get_user_by( 'login', 'maria' )->ID . ') is not on the list. Any assistants they connected were signed out.' ], WP_CLI::$output );
 		$this->assertSame( [ 'success', 'Removed 1 of 2.' ], end( WP_CLI::$output ) );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test assertion.

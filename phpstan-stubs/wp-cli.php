@@ -53,6 +53,10 @@ namespace WP_CLI {
 	}
 }
 
+namespace WP_CLI\Dispatcher {
+	class CommandNamespace {}
+}
+
 namespace WP_CLI\Fetchers {
 	class User {
 		/**
