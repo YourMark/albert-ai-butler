@@ -15,7 +15,7 @@ require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 
 use Albert\Abilities\WordPress\Comments\DeleteComment;
 use Albert\Abilities\WordPress\Comments\FindComments;
-use Albert\Abilities\WordPress\Comments\GetComment;
+use Albert\Abilities\WordPress\Comments\ViewComment;
 use Albert\Abilities\WordPress\Comments\ModerateComment;
 use Albert\Abilities\WordPress\Comments\ReplyToComment;
 use Albert\Abilities\WordPress\Media\DeleteMedia;
@@ -79,7 +79,7 @@ class DirectCapabilityTest extends TestCase {
 		return [
 			// Comments.
 			'find-comments'      => [ FindComments::class, 'moderate_comments' ],
-			'get-comment'        => [ GetComment::class, 'moderate_comments' ],
+			'view-comment'       => [ ViewComment::class, 'moderate_comments' ],
 			'reply-to-comment'   => [ ReplyToComment::class, 'moderate_comments' ],
 			'moderate-comment'   => [ ModerateComment::class, 'moderate_comments' ],
 			'delete-comment'     => [ DeleteComment::class, 'moderate_comments' ],

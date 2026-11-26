@@ -1,6 +1,6 @@
 <?php
 /**
- * Get Comment Ability
+ * View Comment Ability
  *
  * @package Albert
  * @subpackage Abilities\WordPress\Comments
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.6.0
  */
-class GetComment extends BaseAbility {
+class ViewComment extends BaseAbility {
 
 	/**
 	 * Most replies to include.
@@ -36,8 +36,8 @@ class GetComment extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/get-comment';
-		$this->label       = __( 'Get Comment', 'albert-ai-butler' );
+		$this->id          = 'albert/view-comment';
+		$this->label       = __( 'View Comment', 'albert-ai-butler' );
 		$this->description = __( 'Read one comment in its thread before you act on it; get the ID from albert/find-comments.', 'albert-ai-butler' );
 		$this->category    = 'comments';
 		$this->group       = 'comments';

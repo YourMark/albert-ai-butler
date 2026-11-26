@@ -35,7 +35,7 @@ class ReplyToComment extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/reply-to-comment';
 		$this->label       = __( 'Reply to Comment', 'albert-ai-butler' );
-		$this->description = __( 'Publish a reply to a comment as the connected user, after reading it with albert/get-comment.', 'albert-ai-butler' );
+		$this->description = __( 'Publish a reply to a comment as the connected user, after reading it with albert/view-comment.', 'albert-ai-butler' );
 		$this->category    = 'comments';
 		$this->group       = 'comments';
 
@@ -48,7 +48,7 @@ class ReplyToComment extends BaseAbility {
 			],
 			'annotations' => Annotations::create(
 				'The reply is public and signed with the connected user\'s name. Read the comment with '
-				. 'albert/get-comment first, and show the person your reply before sending it. A comment waiting '
+				. 'albert/view-comment first, and show the person your reply before sending it. A comment waiting '
 				. 'for approval is approved when you reply, as in wp-admin.'
 			),
 		];

@@ -11,9 +11,15 @@ namespace Albert\Tests\Integration\Abilities;
 
 use Albert\Abilities\WordPress\Comments\DeleteComment;
 use Albert\Abilities\WordPress\Comments\FindComments;
-use Albert\Abilities\WordPress\Comments\GetComment;
 use Albert\Abilities\WordPress\Comments\ModerateComment;
 use Albert\Abilities\WordPress\Comments\ReplyToComment;
+use Albert\Abilities\WordPress\Comments\ViewComment;
+use Albert\Database\Installer;
+use Albert\Logging\Outcome;
+use Albert\OAuth\Server\ConnectionContext;
+use Albert\SafeMode\Approver;
+use Albert\SafeMode\Gate;
+use Albert\SafeMode\Repository;
 use Albert\Tests\TestCase;
 use WP_Error;
 
@@ -110,13 +116,13 @@ class CommentsAbilityTest extends TestCase {
 			'reveal_personal_data' => true,
 		];
 
-		$revealed = ( new GetComment() )->execute( $args );
+		$revealed = ( new ViewComment() )->execute( $args );
 		$this->assertIsArray( $revealed );
 		$this->assertSame( 'jane@example.com', $revealed['comment']['author']['email'] );
 		$this->assertSame( '203.0.113.7', $revealed['comment']['author']['ip_address'] );
 
 		update_option( 'albert_privacy_mode', 'strict' );
-		$strict = ( new GetComment() )->execute( $args );
+		$strict = ( new ViewComment() )->execute( $args );
 		$this->assertIsArray( $strict );
 		$this->assertSame( 'j***@e***.com', $strict['comment']['author']['email'] );
 	}
@@ -151,7 +157,7 @@ class CommentsAbilityTest extends TestCase {
 	public function test_privacy_off_returns_raw_details(): void {
 		update_option( 'albert_privacy_mode', 'off' );
 
-		$result = ( new GetComment() )->execute( [ 'comment_id' => $this->held_id ] );
+		$result = ( new ViewComment() )->execute( [ 'comment_id' => $this->held_id ] );
 
 		$this->assertIsArray( $result );
 		$this->assertSame( 'Jane Visitor', $result['comment']['author']['display_name'] );
@@ -180,8 +186,13 @@ class CommentsAbilityTest extends TestCase {
 				$this->assertContains( $this->held_id, $ids, $type . '/' . $filter );
 			}
 
-			foreach ( [ new GetComment(), new DeleteComment() ] as $ability ) {
-				$result = $ability->execute( [ 'comment_id' => $id ] );
+			foreach (
+				[
+					[ new ViewComment(), [ 'comment_id' => $id ] ],
+					[ new DeleteComment(), [ 'comment_ids' => [ $id ] ] ],
+				] as [ $ability, $input ]
+			) {
+				$result = $ability->execute( $input );
 				$this->assertInstanceOf( WP_Error::class, $result, $type );
 				$this->assertSame( 'albert_comment_not_found', $result->get_error_code(), $type );
 			}
@@ -219,7 +230,7 @@ class CommentsAbilityTest extends TestCase {
 		$this->assertIsArray( $found );
 		$this->assertNotContains( $hidden, array_column( $found['comments'], 'id' ) );
 
-		$viewed = ( new GetComment() )->execute( [ 'comment_id' => $hidden ] );
+		$viewed = ( new ViewComment() )->execute( [ 'comment_id' => $hidden ] );
 		$this->assertInstanceOf( WP_Error::class, $viewed );
 
 		$replied = ( new ReplyToComment() )->execute(
@@ -233,7 +244,7 @@ class CommentsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * Totals and pages count only the comments a moderator who cannot edit others' posts can handle.
+	 * An author who cannot edit others' posts gets their own posts' comments, paged and counted in SQL.
 	 *
 	 * @return void
 	 */
@@ -271,6 +282,57 @@ class CommentsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * Paged in SQL like core's endpoint: a comment the user cannot edit counts in total but is left off the page.
+	 *
+	 * @return void
+	 */
+	public function test_total_counts_comments_filtered_from_the_page(): void {
+		$private = self::factory()->post->create( [ 'post_status' => 'private' ] );
+		$hidden  = (int) self::factory()->comment->create(
+			[
+				'comment_post_ID'  => $private,
+				'comment_approved' => '1',
+			]
+		);
+
+		$user = get_user_by( 'id', self::factory()->user->create( [ 'role' => 'author' ] ) );
+		foreach ( [ 'moderate_comments', 'edit_others_posts', 'edit_others_pages' ] as $cap ) {
+			$user->add_cap( $cap );
+		}
+		wp_set_current_user( $user->ID );
+
+		$result = wp_get_ability( 'albert/find-comments' )->execute( [ 'per_page' => 3 ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 3, $result['total'] );
+		$this->assertCount( 2, $result['comments'] );
+		$this->assertNotContains( $hidden, array_column( $result['comments'], 'id' ) );
+	}
+
+	/**
+	 * A masked search that finds nothing says names and emails were not searched.
+	 *
+	 * @return void
+	 */
+	public function test_empty_masked_search_explains_itself(): void {
+		$ability = wp_get_ability( 'albert/find-comments' );
+
+		$empty = $ability->execute( [ 'search' => 'Jane Visitor' ] );
+		$this->assertIsArray( $empty );
+		$this->assertSame( [], $empty['comments'] );
+		$this->assertStringContainsString( 'revealed', $empty['note'] );
+
+		$found = $ability->execute( [ 'search' => 'still in stock' ] );
+		$this->assertIsArray( $found );
+		$this->assertArrayNotHasKey( 'note', $found );
+
+		update_option( 'albert_privacy_mode', 'off' );
+		$unmasked = $ability->execute( [ 'search' => 'nothing like this' ] );
+		$this->assertIsArray( $unmasked );
+		$this->assertArrayNotHasKey( 'note', $unmasked );
+	}
+
+	/**
 	 * The commenter's account ID is masked with the rest of their details.
 	 *
 	 * @return void
@@ -284,7 +346,7 @@ class CommentsAbilityTest extends TestCase {
 			]
 		);
 
-		$masked = ( new GetComment() )->execute( [ 'comment_id' => $comment ] );
+		$masked = ( new ViewComment() )->execute( [ 'comment_id' => $comment ] );
 		$this->assertIsArray( $masked );
 		$this->assertArrayNotHasKey( 'user_id', $masked['comment']['author'] );
 
@@ -294,7 +356,7 @@ class CommentsAbilityTest extends TestCase {
 			$this->assertArrayNotHasKey( 'user_id', $item['author'] );
 		}
 
-		$revealed = ( new GetComment() )->execute(
+		$revealed = ( new ViewComment() )->execute(
 			[
 				'comment_id'           => $comment,
 				'reveal_personal_data' => true,
@@ -364,11 +426,11 @@ class CommentsAbilityTest extends TestCase {
 			]
 		);
 
-		$result = ( new GetComment() )->execute( [ 'comment_id' => $reply ] );
+		$result = ( new ViewComment() )->execute( [ 'comment_id' => $reply ] );
 		$this->assertIsArray( $result );
 		$this->assertSame( $this->held_id, $result['in_reply']['id'] );
 
-		$parent = ( new GetComment() )->execute( [ 'comment_id' => $this->held_id ] );
+		$parent = ( new ViewComment() )->execute( [ 'comment_id' => $this->held_id ] );
 		$this->assertIsArray( $parent );
 		$this->assertSame( [ $reply ], array_column( $parent['replies'], 'id' ) );
 		$this->assertNull( $parent['in_reply'] );
@@ -380,7 +442,7 @@ class CommentsAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_unknown_comment_is_not_found(): void {
-		$result = ( new GetComment() )->execute( [ 'comment_id' => 999999 ] );
+		$result = ( new ViewComment() )->execute( [ 'comment_id' => 999999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'albert_comment_not_found', $result->get_error_code() );
@@ -506,48 +568,143 @@ class CommentsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * Delete moves the comment to the trash by default.
+	 * Delete moves the comments to the trash by default.
 	 *
 	 * @return void
 	 */
 	public function test_delete_trashes_by_default(): void {
-		$result = ( new DeleteComment() )->execute( [ 'comment_id' => $this->held_id ] );
+		$other  = $this->comment( [ 'comment_approved' => '1' ] );
+		$result = wp_get_ability( 'albert/delete-comment' )->execute( [ 'comment_ids' => [ $this->held_id, $other ] ] );
 
 		$this->assertIsArray( $result );
-		$this->assertTrue( $result['trashed'] );
-		$this->assertFalse( $result['deleted'] );
-		$this->assertSame( 'hold', $result['previous_status'] );
+		$this->assertSame(
+			[
+				[
+					'id'              => $this->held_id,
+					'previous_status' => 'hold',
+				],
+				[
+					'id'              => $other,
+					'previous_status' => 'approved',
+				],
+			],
+			$result['trashed']
+		);
+		$this->assertSame( [], $result['deleted'] );
+		$this->assertSame( [], $result['failed'] );
 		$this->assertSame( 'trash', wp_get_comment_status( $this->held_id ) );
+		$this->assertSame( 'trash', wp_get_comment_status( $other ) );
 	}
 
 	/**
-	 * With force the comment is deleted for good, from the trash too.
+	 * With force the comments are deleted for good, from the trash too.
 	 *
 	 * @return void
 	 */
 	public function test_delete_with_force_is_permanent(): void {
 		wp_trash_comment( $this->held_id );
+		$other = $this->comment( [ 'comment_approved' => '1' ] );
 
-		$result = ( new DeleteComment() )->execute(
+		$result = wp_get_ability( 'albert/delete-comment' )->execute(
 			[
-				'comment_id' => $this->held_id,
-				'force'      => true,
+				'comment_ids' => [ $this->held_id, $other ],
+				'force'       => true,
 			]
 		);
 
 		$this->assertIsArray( $result );
-		$this->assertTrue( $result['deleted'] );
-		$this->assertFalse( $result['trashed'] );
-		$this->assertSame( 'trash', $result['previous_status'] );
+		$this->assertSame( [], $result['trashed'] );
+		$this->assertSame( [ $this->held_id, $other ], array_column( $result['deleted'], 'id' ) );
+		$this->assertSame( 'trash', $result['deleted'][0]['previous_status'] );
 		$this->assertNull( get_comment( $this->held_id ) );
+		$this->assertNull( get_comment( $other ) );
 	}
 
 	/**
-	 * Get Comment says when it returns only some of the replies, and how many there are.
+	 * A batch goes ahead for the rest and lists what failed; a single failure is the error.
 	 *
 	 * @return void
 	 */
-	public function test_get_comment_marks_truncated_replies(): void {
+	public function test_bulk_delete_lists_failures(): void {
+		$result = wp_get_ability( 'albert/delete-comment' )->execute( [ 'comment_ids' => [ $this->held_id, 999999 ] ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( [ $this->held_id ], array_column( $result['trashed'], 'id' ) );
+		$this->assertSame( 999999, $result['failed'][0]['id'] );
+		$this->assertSame( 'albert_comment_not_found', $result['failed'][0]['code'] );
+
+		$single = wp_get_ability( 'albert/delete-comment' )->execute( [ 'comment_ids' => [ 999999 ] ] );
+		$this->assertInstanceOf( WP_Error::class, $single );
+		$this->assertSame( 'albert_comment_not_found', $single->get_error_code() );
+	}
+
+	/**
+	 * Delete takes 1 to 50 comment IDs.
+	 *
+	 * @return void
+	 */
+	public function test_delete_takes_a_list_of_up_to_50_ids(): void {
+		$ability = wp_get_ability( 'albert/delete-comment' );
+
+		$this->assertSame( [ 'comment_ids' ], $ability->get_input_schema()['required'] );
+		$this->assertInstanceOf( WP_Error::class, $ability->execute( [ 'comment_ids' => [] ] ) );
+		$this->assertInstanceOf( WP_Error::class, $ability->execute( [ 'comment_ids' => range( 1, 51 ) ] ) );
+		$this->assertSame( '0', get_comment( $this->held_id )->comment_approved );
+	}
+
+	/**
+	 * Through an assistant's connection, trashing runs at once and a permanent batch waits for one approval.
+	 *
+	 * @return void
+	 */
+	public function test_safe_mode_holds_only_a_permanent_delete_once_per_batch(): void {
+		Installer::install();
+		update_option( Gate::OPTION, 'on' );
+		$other   = $this->comment( [ 'comment_approved' => '1' ] );
+		$third   = $this->comment( [ 'comment_approved' => '1' ] );
+		$ability = wp_get_ability( 'albert/delete-comment' );
+
+		ConnectionContext::set( 'comments-test-client' );
+		try {
+			$trashed = $ability->execute( [ 'comment_ids' => [ $this->held_id ] ] );
+			$held    = $ability->execute(
+				[
+					'comment_ids' => [ $other, $third ],
+					'force'       => true,
+				]
+			);
+		} finally {
+			ConnectionContext::reset();
+		}
+
+		$this->assertIsArray( $trashed );
+		$this->assertSame( 'trash', wp_get_comment_status( $this->held_id ) );
+
+		$this->assertInstanceOf( WP_Error::class, $held );
+		$this->assertSame( Outcome::HELD_CODE, $held->get_error_code() );
+		$this->assertNotNull( get_comment( $other ) );
+
+		$repository = new Repository();
+		$pending    = array_values(
+			array_filter(
+				$repository->list_open(),
+				static fn( $action ) => $action->ability_name === 'albert/delete-comment'
+			)
+		);
+		$this->assertCount( 1, $pending );
+
+		$approved = ( new Approver( $repository ) )->approve( $pending[0], get_current_user_id() );
+		$this->assertNotInstanceOf( WP_Error::class, $approved );
+		$this->assertNull( get_comment( $other ) );
+		$this->assertNull( get_comment( $third ) );
+	}
+
+	/**
+	 * View Comment says when it returns only some of the replies, and how many there are.
+	 *
+	 * @return void
+	 */
+	public function test_view_comment_marks_truncated_replies(): void {
 		for ( $i = 0; $i < 51; $i++ ) {
 			$this->comment(
 				[
@@ -557,7 +714,7 @@ class CommentsAbilityTest extends TestCase {
 			);
 		}
 
-		$result = ( new GetComment() )->execute( [ 'comment_id' => $this->held_id ] );
+		$result = ( new ViewComment() )->execute( [ 'comment_id' => $this->held_id ] );
 
 		$this->assertIsArray( $result );
 		$this->assertCount( 50, $result['replies'] );

@@ -21,7 +21,7 @@ use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Comments\DeleteComment;
 use Albert\Abilities\WordPress\Comments\FindComments;
-use Albert\Abilities\WordPress\Comments\GetComment;
+use Albert\Abilities\WordPress\Comments\ViewComment;
 use Albert\Abilities\WordPress\Comments\ModerateComment;
 use Albert\Abilities\WordPress\Comments\ReplyToComment;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
@@ -550,7 +550,7 @@ class ExecuteSchemaTest extends TestCase {
 		);
 
 		$this->assert_execute_matches_schema( new FindComments(), [], 'FindComments' );
-		$this->assert_execute_matches_schema( new GetComment(), [ 'comment_id' => $comment_id ], 'GetComment' );
+		$this->assert_execute_matches_schema( new ViewComment(), [ 'comment_id' => $comment_id ], 'ViewComment' );
 		$this->assert_execute_matches_schema(
 			new ReplyToComment(),
 			[
@@ -567,7 +567,7 @@ class ExecuteSchemaTest extends TestCase {
 			],
 			'ModerateComment'
 		);
-		$this->assert_execute_matches_schema( new DeleteComment(), [ 'comment_id' => $comment_id ], 'DeleteComment' );
+		$this->assert_execute_matches_schema( new DeleteComment(), [ 'comment_ids' => [ $comment_id ] ], 'DeleteComment' );
 	}
 
 	/**

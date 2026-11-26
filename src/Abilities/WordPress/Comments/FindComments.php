@@ -83,7 +83,7 @@ class FindComments extends BaseAbility {
 				],
 				'search'    => [
 					'type'        => 'string',
-					'description' => 'Text to look for in the comment. While personal data is masked, only the comment text is searched; otherwise also its author name, email and website.',
+					'description' => 'Text to look for. While personal data is masked, only the comment text is searched; commenters\' names, emails and websites are matched only when personal data is revealed (reveal_personal_data, or privacy mode Off).',
 				],
 				'type'      => [
 					'type'        => 'string',
@@ -124,9 +124,13 @@ class FindComments extends BaseAbility {
 				],
 				'total'       => [
 					'type'        => 'integer',
-					'description' => 'Every matching comment you can handle.',
+					'description' => 'Every matching comment, which can include ones on posts you cannot edit. Those are left out of the list, so a page can hold fewer than per_page; keep paging up to total_pages.',
 				],
 				'total_pages' => [ 'type' => 'integer' ],
+				'note'        => [
+					'type'        => 'string',
+					'description' => 'Why a masked search may have found nothing.',
+				],
 			],
 			'required'   => [ 'comments', 'total' ],
 		];
@@ -196,18 +200,9 @@ class FindComments extends BaseAbility {
 			}
 		}
 
-		// Without these, some comments belong to posts the user cannot edit. Paging those in
-		// SQL would count them in `total` and leave short pages, so filter them all first.
-		$sees_all = current_user_can( 'edit_others_posts' ) && current_user_can( 'edit_others_pages' )
-			&& current_user_can( 'edit_private_posts' ) && current_user_can( 'edit_private_pages' );
-
-		if ( ! $sees_all ) {
-			$query_args['number'] = 0;
-			unset( $query_args['offset'] );
-
-			if ( ! current_user_can( 'edit_others_posts' ) && ! current_user_can( 'edit_others_pages' ) ) {
-				$query_args['post_author__in'] = [ get_current_user_id() ];
-			}
+		// Every comment on someone else's post would be filtered out below; leave them out of the total too.
+		if ( ! current_user_can( 'edit_others_posts' ) && ! current_user_can( 'edit_others_pages' ) ) {
+			$query_args['post_author__in'] = [ get_current_user_id() ];
 		}
 
 		$query    = new WP_Comment_Query();
@@ -218,6 +213,8 @@ class FindComments extends BaseAbility {
 		}
 		$comments = is_array( $comments ) ? $comments : [];
 
+		// Paged in SQL and filtered afterwards, as core's comments endpoint does: filtering
+		// every match in PHP first costs a query per comment on a large site.
 		$items = [];
 		foreach ( $comments as $comment ) {
 			if ( $comment instanceof WP_Comment && CommentPresenter::can_access( $comment ) ) {
@@ -225,20 +222,17 @@ class FindComments extends BaseAbility {
 			}
 		}
 
-		if ( $sees_all ) {
-			$total = (int) $query->found_comments;
-		} else {
-			$total = count( $items );
-			$items = array_slice( $items, ( $page - 1 ) * $per_page, $per_page );
+		$total  = (int) $query->found_comments;
+		$result = [
+			'comments'    => $items,
+			'total'       => $total,
+			'total_pages' => (int) ceil( $total / $per_page ),
+		];
+
+		if ( $content_only !== null && $total === 0 ) {
+			$result['note'] = __( 'Nothing matched in the comment text. While personal data is masked, search does not look at commenters\' names, emails or websites; those are matched only when personal data is revealed.', 'albert-ai-butler' );
 		}
 
-		return CommentPresenter::redact(
-			[
-				'comments'    => $items,
-				'total'       => $total,
-				'total_pages' => (int) ceil( $total / $per_page ),
-			],
-			$args
-		);
+		return CommentPresenter::redact( $result, $args );
 	}
 }

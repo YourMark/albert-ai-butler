@@ -58,7 +58,7 @@ class Gate {
 	 * @since 1.6.0
 	 * @var string[]
 	 */
-	private const TRASH_ABILITIES = [ 'albert/delete-post', 'albert/delete-page', 'albert/delete-pattern' ];
+	private const TRASH_ABILITIES = [ 'albert/delete-post', 'albert/delete-page', 'albert/delete-pattern', 'albert/delete-comment' ];
 
 	/**
 	 * Classifies a call's risk beyond its annotation.
@@ -273,7 +273,7 @@ class Gate {
 	}
 
 	/**
-	 * Whether this call only moves a post, page or pattern to the trash.
+	 * Whether this call only moves a post, page, pattern or comments to the trash.
 	 *
 	 * Trash is core's own undo, so only the permanent call needs a person. Anything but
 	 * an absent or exactly `false` `force` is held, a string `"false"` included.
