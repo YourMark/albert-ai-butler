@@ -45,6 +45,25 @@ class ClassicEditorWriteTest extends TestCase {
 		$GLOBALS['albert_test_rest_calls']     = [];
 		$GLOBALS['albert_test_rest_responses'] = [];
 
+		// The update abilities refuse an id that is not an existing post or page.
+		$GLOBALS['albert_test_posts'] = [
+			7  => (object) [
+				'ID'           => 7,
+				'post_type'    => 'post',
+				'post_content' => '',
+			],
+			9  => (object) [
+				'ID'           => 9,
+				'post_type'    => 'page',
+				'post_content' => '',
+			],
+			55 => (object) [
+				'ID'           => 55,
+				'post_type'    => 'page',
+				'post_content' => '',
+			],
+		];
+
 		// Both post types use the classic editor for these tests.
 		$GLOBALS['albert_test_block_editor_post_types'] = [
 			'post' => false,
@@ -66,6 +85,7 @@ class ClassicEditorWriteTest extends TestCase {
 			$GLOBALS['albert_test_block_types'],
 			$GLOBALS['albert_test_rest_calls'],
 			$GLOBALS['albert_test_rest_responses'],
+			$GLOBALS['albert_test_posts'],
 			$GLOBALS['albert_test_block_editor_post_types'],
 			$GLOBALS['albert_test_block_editor_posts']
 		);

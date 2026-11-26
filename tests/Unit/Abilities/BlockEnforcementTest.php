@@ -47,7 +47,14 @@ class BlockEnforcementTest extends TestCase {
 		$GLOBALS['albert_test_rest_calls']     = [];
 		$GLOBALS['albert_test_rest_responses'] = [];
 		$GLOBALS['albert_test_hooks']          = [];
-		$GLOBALS['albert_test_posts']          = [];
+		// The update abilities refuse an id that is not an existing post.
+		$GLOBALS['albert_test_posts'] = [
+			7 => (object) [
+				'ID'           => 7,
+				'post_type'    => 'post',
+				'post_content' => '',
+			],
+		];
 
 		albert_test_register_default_block_types();
 	}
@@ -260,6 +267,7 @@ class BlockEnforcementTest extends TestCase {
 		$GLOBALS['albert_test_allowed_block_types'] = [ 'core/paragraph' ];
 		$GLOBALS['albert_test_posts'][7]            = (object) [
 			'ID'           => 7,
+			'post_type'    => 'post',
 			'post_content' => '<!-- wp:heading --><h2 class="wp-block-heading">Existing</h2><!-- /wp:heading -->',
 		];
 		$this->queue_write_success(
@@ -304,6 +312,7 @@ class BlockEnforcementTest extends TestCase {
 		$GLOBALS['albert_test_allowed_block_types'] = [ 'core/paragraph' ];
 		$GLOBALS['albert_test_posts'][8]            = (object) [
 			'ID'           => 8,
+			'post_type'    => 'post',
 			'post_content' => '<!-- wp:heading --><h2 class="wp-block-heading">Existing</h2><!-- /wp:heading -->',
 		];
 		$ability                                    = new UpdatePost();
@@ -335,6 +344,7 @@ class BlockEnforcementTest extends TestCase {
 		$GLOBALS['albert_test_allowed_block_types'] = [ 'core/paragraph' ];
 		$GLOBALS['albert_test_posts'][55]           = (object) [
 			'ID'           => 55,
+			'post_type'    => 'page',
 			'post_content' => '<!-- wp:heading --><h2 class="wp-block-heading">Existing</h2><!-- /wp:heading -->',
 		];
 		$this->queue_write_success(

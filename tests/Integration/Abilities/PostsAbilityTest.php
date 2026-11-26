@@ -482,6 +482,24 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A bad id is refused before tags are resolved, so no tag is created.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_not_found_creates_no_tag(): void {
+		$result = ( new UpdatePost() )->execute(
+			[
+				'id'   => 99999,
+				'tags' => [ 'orphan-tag' ],
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertEmpty( term_exists( 'orphan-tag', 'post_tag' ) );
+	}
+
+	/**
 	 * The schema refuses an update that sends only the id, before anything runs.
 	 *
 	 * @return void

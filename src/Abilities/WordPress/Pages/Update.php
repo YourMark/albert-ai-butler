@@ -101,7 +101,7 @@ class Update extends BaseAbility {
 			'type'          => 'object',
 			'properties'    => array_merge( $properties, PostFields::input_schema( PostFields::PAGE ) ),
 			'required'      => [ 'id' ],
-			// Every property besides `id` is a change, so this means at least one change.
+			// Refuses a call that sends nothing but `id`.
 			'minProperties' => 2,
 		];
 	}
@@ -171,6 +171,13 @@ class Update extends BaseAbility {
 	public function execute( array $args ): array|WP_Error {
 		$page_id = absint( $args['id'] );
 
+		// Checked first so a bad id or a refused page is reported as such, not as
+		// whatever input check happens to run before the REST write.
+		$refused = $this->refuse_unless_editable( $page_id );
+		if ( $refused ) {
+			return $refused;
+		}
+
 		$request_data = PostFields::to_rest( $args, PostFields::PAGE, 'page', $page_id );
 		if ( is_wp_error( $request_data ) ) {
 			return $request_data;
@@ -226,12 +233,7 @@ class Update extends BaseAbility {
 
 		if ( $response->is_error() ) {
 			if ( is_array( $data ) && ( $data['code'] ?? '' ) === 'rest_post_invalid_id' ) {
-				return new WP_Error(
-					'albert_page_not_found',
-					/* translators: %d: page ID */
-					sprintf( __( 'No page with ID %d. Find it with albert/find-pages.', 'albert-ai-butler' ), $page_id ),
-					[ 'status' => 404 ]
-				);
+				return self::not_found( $page_id );
 			}
 
 			return self::rest_failure( $data, $response->get_status(), __( 'The page could not be updated.', 'albert-ai-butler' ), 'albert_page_permission_denied' );
@@ -255,5 +257,47 @@ class Update extends BaseAbility {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Refuse an id that is not an editable page, before any side effect runs.
+	 *
+	 * @param int $page_id Page ID.
+	 * @return WP_Error|null Null when the page exists and the user may edit it.
+	 * @since 1.6.0
+	 */
+	private function refuse_unless_editable( int $page_id ): ?WP_Error {
+		// get_post( 0 ) returns the global post.
+		$page = $page_id > 0 ? get_post( $page_id ) : null;
+		if ( ! $page || $page->post_type !== 'page' ) {
+			return self::not_found( $page_id );
+		}
+
+		if ( ! current_user_can( 'edit_post', $page_id ) ) {
+			return new WP_Error(
+				'albert_page_permission_denied',
+				/* translators: %d: page ID */
+				sprintf( __( 'This account may not edit page %d.', 'albert-ai-butler' ), $page_id ),
+				[ 'status' => rest_authorization_required_code() ]
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * The error for an id that is not a page.
+	 *
+	 * @param int $page_id Page ID.
+	 * @return WP_Error
+	 * @since 1.6.0
+	 */
+	private static function not_found( int $page_id ): WP_Error {
+		return new WP_Error(
+			'albert_page_not_found',
+			/* translators: %d: page ID */
+			sprintf( __( 'No page with ID %d. Find it with albert/find-pages.', 'albert-ai-butler' ), $page_id ),
+			[ 'status' => 404 ]
+		);
 	}
 }

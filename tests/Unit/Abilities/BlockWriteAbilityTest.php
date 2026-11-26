@@ -43,6 +43,25 @@ class BlockWriteAbilityTest extends TestCase {
 		$GLOBALS['albert_test_rest_calls']     = [];
 		$GLOBALS['albert_test_rest_responses'] = [];
 
+		// The update abilities refuse an id that is not an existing post or page.
+		$GLOBALS['albert_test_posts'] = [
+			7  => (object) [
+				'ID'           => 7,
+				'post_type'    => 'post',
+				'post_content' => '',
+			],
+			9  => (object) [
+				'ID'           => 9,
+				'post_type'    => 'page',
+				'post_content' => '',
+			],
+			55 => (object) [
+				'ID'           => 55,
+				'post_type'    => 'page',
+				'post_content' => '',
+			],
+		];
+
 		albert_test_register_default_block_types();
 	}
 
@@ -55,7 +74,8 @@ class BlockWriteAbilityTest extends TestCase {
 		unset(
 			$GLOBALS['albert_test_block_types'],
 			$GLOBALS['albert_test_rest_calls'],
-			$GLOBALS['albert_test_rest_responses']
+			$GLOBALS['albert_test_rest_responses'],
+			$GLOBALS['albert_test_posts']
 		);
 		parent::tearDown();
 	}
