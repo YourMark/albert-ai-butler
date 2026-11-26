@@ -186,7 +186,7 @@ class Suggestions {
 				'requires' => [ 'albert/find-media', 'albert/update-media' ],
 			],
 			[
-				'text'     => __( 'Find everything on this site that mentions our opening hours.', 'albert-ai-butler' ),
+				'text'     => __( 'Find every page, post, pattern, header and footer that mentions our opening hours.', 'albert-ai-butler' ),
 				'requires' => [ 'albert/search-content' ],
 			],
 			[
