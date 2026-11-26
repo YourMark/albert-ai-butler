@@ -289,9 +289,8 @@ class Outcome {
 	 * Two signals decide the answer, and the stage wins. A writer that recorded
 	 * `permission` watched the invocation stop in the permission check; that is
 	 * a fact about the run, where an error code is only a convention about how
-	 * somebody spelled it. Free never stamps a stage — it has nowhere to learn
-	 * one — so the code rules below are what classify its own rows, and Premium
-	 * gets both.
+	 * somebody spelled it. Free stamps a stage only for calls `ExecutionObserver`
+	 * watched; its other rows are classified by the code rules below.
 	 *
 	 * @param WP_Error    $error         The error the invocation produced.
 	 * @param string      $ability_name  The ability identifier.

@@ -33,7 +33,7 @@ class Create extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/create-post';
 		$this->label       = __( 'Create Post', 'albert-ai-butler' );
-		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', 'albert-ai-butler' );
+		$this->description = __( 'Create a new blog post, saved as a draft unless you set a status. To change an existing post use albert/update-post; for a page use albert/create-page.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
@@ -68,11 +68,11 @@ class Create extends BaseAbility {
 		$properties = [
 			'title'      => [
 				'type'        => 'string',
-				'description' => 'The post title',
+				'description' => 'The post title, as plain text.',
 			],
 			'content'    => [
 				'type'        => 'string',
-				'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
+				'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
 				'default'     => '',
 			],
 			'blocks'     => [
@@ -84,24 +84,24 @@ class Create extends BaseAbility {
 			'status'     => [
 				'type'        => 'string',
 				'enum'        => $post_statuses,
-				'description' => 'Post status',
+				'description' => 'Publication status: "draft" (the default) saves without publishing, "pending" waits for review, "private" is visible only to editors and administrators, "publish" makes it public. To schedule, send "publish" with a future "date".',
 				'default'     => 'draft',
 			],
 			'excerpt'    => [
 				'type'        => 'string',
-				'description' => 'Optional post excerpt',
+				'description' => 'Short plain-text summary shown in archives and search results instead of the start of the post.',
 				'default'     => '',
 			],
 			'categories' => [
 				'type'        => 'array',
 				'items'       => [ 'type' => 'integer' ],
-				'description' => 'Array of category IDs',
+				'description' => 'IDs of the categories to file the post under. Find them with albert/find-terms.',
 				'default'     => [],
 			],
 			'tags'       => [
 				'type'        => 'array',
 				'items'       => [ 'type' => 'string' ],
-				'description' => 'Array of tag names',
+				'description' => 'Tag names to add to the post. A tag that does not exist yet is created.',
 				'default'     => [],
 			],
 		];
@@ -138,7 +138,7 @@ class Create extends BaseAbility {
 				],
 				'block_issues' => [
 					'type'        => 'array',
-					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the post is not created.',
+					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.level must be between 1 and 6 (got 9). Defaulting to 2.". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the post is not created.',
 					'items'       => [ 'type' => 'string' ],
 				],
 			],
@@ -240,11 +240,7 @@ class Create extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return new WP_Error(
-				$data['code'] ?? 'rest_error',
-				self::rest_error_message( $data ) ?? __( 'An error occurred while creating the post.', 'albert-ai-butler' ),
-				[ 'status' => $response->get_status() ]
-			);
+			return self::rest_failure( $data, $response->get_status(), __( 'The post could not be created.', 'albert-ai-butler' ), 'albert_post_permission_denied' );
 		}
 
 		// Return formatted post data.

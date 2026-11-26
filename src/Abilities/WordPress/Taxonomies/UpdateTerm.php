@@ -67,6 +67,7 @@ class UpdateTerm extends BaseAbility {
 				'id'          => [
 					'type'        => 'integer',
 					'description' => 'The term ID to update (required)',
+					'minimum'     => 1,
 				],
 				'name'        => [
 					'type'        => 'string',

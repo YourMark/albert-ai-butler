@@ -179,10 +179,13 @@ class BlockWriteAbilityTest extends TestCase {
 			[
 				'title'  => 'My post',
 				'blocks' => [
-					// Missing url on core/image is a recoverable warning.
+					// A clamped heading level is a recoverable warning.
 					[
-						'name'       => 'core/image',
-						'attributes' => [ 'alt' => 'No source yet' ],
+						'name'       => 'core/heading',
+						'attributes' => [
+							'level'   => 9,
+							'content' => 'Too deep',
+						],
 					],
 				],
 			]
@@ -198,7 +201,7 @@ class BlockWriteAbilityTest extends TestCase {
 		$this->assertArrayHasKey( 'block_issues', $result );
 		$this->assertNotEmpty( $result['block_issues'] );
 		$this->assertContainsOnly( 'string', $result['block_issues'] );
-		$this->assertStringContainsString( 'core/image', implode( ' ', $result['block_issues'] ) );
+		$this->assertStringContainsString( 'level', implode( ' ', $result['block_issues'] ) );
 	}
 
 	public function test_create_post_with_clean_blocks_saves_without_block_issues(): void {
@@ -248,8 +251,11 @@ class BlockWriteAbilityTest extends TestCase {
 				'id'     => 55,
 				'blocks' => [
 					[
-						'name'       => 'core/image',
-						'attributes' => [ 'alt' => 'Pending' ],
+						'name'       => 'core/heading',
+						'attributes' => [
+							'level'   => 9,
+							'content' => 'Too deep',
+						],
 					],
 				],
 			]
