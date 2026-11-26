@@ -51,7 +51,7 @@ use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Skills\GetSkill;
-use Albert\Abilities\WordPress\SiteHealth\GetSiteHealth;
+use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
 use Albert\Abilities\WordPress\Taxonomies\FindTerms;
 use Albert\Abilities\WordPress\Taxonomies\ViewTerm;
@@ -454,7 +454,7 @@ class Plugin {
 		$this->abilities_manager->add_ability( new DeleteTerm() );
 
 		// Site Health (read only).
-		$this->abilities_manager->add_ability( new GetSiteHealth() );
+		$this->abilities_manager->add_ability( new ViewSiteHealth() );
 
 		// Block abilities (block type discovery).
 		$this->abilities_manager->add_ability( new ListBlockTypes() );

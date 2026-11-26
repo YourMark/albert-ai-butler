@@ -1,6 +1,6 @@
 <?php
 /**
- * Get Site Health Ability
+ * View Site Health Ability
  *
  * @package Albert
  * @subpackage Abilities\WordPress\SiteHealth
@@ -17,11 +17,11 @@ use WP_Site_Health;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Runs core's direct Site Health tests the way the Site Health screen does, and lists the ones that need the browser as not run.
+ * Runs core's Site Health tests the way WordPress's scheduled check does: direct tests always, background ones on request.
  *
  * @since 1.6.0
  */
-class GetSiteHealth extends BaseAbility {
+class ViewSiteHealth extends BaseAbility {
 
 	/**
 	 * Order the screen groups results in.
@@ -40,8 +40,8 @@ class GetSiteHealth extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/get-site-health';
-		$this->label       = __( 'Get Site Health', 'albert-ai-butler' );
+		$this->id          = 'albert/view-site-health';
+		$this->label       = __( 'View Site Health', 'albert-ai-butler' );
 		$this->description = __( 'Report the site\'s Site Health results; use it when the person asks what on the site needs attention.', 'albert-ai-butler' );
 		$this->category    = 'maintenance';
 		$this->group       = 'site-health';
@@ -54,7 +54,7 @@ class GetSiteHealth extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::read(
-				'Each result has a status (critical, recommended or good), a label, a category and an explanation, as the Site Health screen shows it. Checks that need a background request or the browser\'s login cannot run here and are listed in not_run: report them as not checked and never guess their result. The owner can run them on the Site Health screen (site_health_url).'
+				'Each result has a status (critical, recommended or good), a label, a category and an explanation, as the Site Health screen shows it. Checks listed in not_run were not run by this call: report them as not checked and never guess their result. Set run_background_checks when the question is about a critical issue or when counts differ from last_screen_counts (what the dashboard shows); it can take a while. Checks that need the browser\'s login are never run by this call; the owner can run them on the Site Health screen (site_health_url).'
 			),
 		];
 
@@ -71,10 +71,15 @@ class GetSiteHealth extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'include_passed' => [
+				'include_passed'        => [
 					'type'        => 'boolean',
 					'description' => 'Include the checks that passed. Set false to get only what needs attention.',
 					'default'     => true,
+				],
+				'run_background_checks' => [
+					'type'        => 'boolean',
+					'description' => 'Also run the checks the Site Health screen runs in the background, such as WordPress.org communication, background updates, loopback requests, HTTPS and page cache. Use it for a critical issue or when the counts differ from the dashboard. Slower: these checks make network requests.',
+					'default'     => false,
 				],
 			],
 		];
@@ -87,18 +92,27 @@ class GetSiteHealth extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	private function get_output_schema(): array {
+		$counts = [
+			'type'       => 'object',
+			'properties' => [
+				'critical'    => [ 'type' => 'integer' ],
+				'recommended' => [ 'type' => 'integer' ],
+				'good'        => [ 'type' => 'integer' ],
+			],
+		];
+
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'counts'          => [
-					'type'       => 'object',
-					'properties' => [
-						'critical'    => [ 'type' => 'integer' ],
-						'recommended' => [ 'type' => 'integer' ],
-						'good'        => [ 'type' => 'integer' ],
-					],
-				],
-				'results'         => [
+				'counts'             => $counts,
+				'last_screen_counts' => array_merge(
+					$counts,
+					[
+						'type'        => [ 'object', 'null' ],
+						'description' => 'The counts the Site Health screen or WordPress\'s weekly check last stored, which the dashboard shows. Null when none are stored.',
+					]
+				),
+				'results'            => [
 					'type'        => 'array',
 					'description' => 'Critical first, then recommended, then good, as on the Site Health screen.',
 					'items'       => [
@@ -119,9 +133,9 @@ class GetSiteHealth extends BaseAbility {
 						],
 					],
 				],
-				'not_run'         => [
+				'not_run'            => [
 					'type'        => 'array',
-					'description' => 'Checks that only the Site Health screen can run, in the background or with the browser\'s login. Their result is unknown.',
+					'description' => 'Checks not run by this call: background checks unless run_background_checks is set, and checks that need the browser\'s login. Their result is unknown.',
 					'items'       => [
 						'type'       => 'object',
 						'properties' => [
@@ -130,9 +144,9 @@ class GetSiteHealth extends BaseAbility {
 						],
 					],
 				],
-				'site_health_url' => [ 'type' => 'string' ],
+				'site_health_url'    => [ 'type' => 'string' ],
 			],
-			'required'   => [ 'counts', 'results', 'not_run' ],
+			'required'   => [ 'counts', 'last_screen_counts', 'results', 'not_run' ],
 		];
 	}
 
@@ -156,8 +170,9 @@ class GetSiteHealth extends BaseAbility {
 	public function execute( array $args ): array|WP_Error {
 		$this->load_site_health();
 
-		$site_health = WP_Site_Health::get_instance();
-		$tests       = WP_Site_Health::get_tests();
+		$site_health    = WP_Site_Health::get_instance();
+		$tests          = WP_Site_Health::get_tests();
+		$run_background = ! empty( $args['run_background_checks'] );
 
 		// The screen skips this check on development sites; so do we.
 		if ( $site_health->is_development_environment() ) {
@@ -172,17 +187,35 @@ class GetSiteHealth extends BaseAbility {
 		$results = [];
 		$not_run = [];
 
+		// Core skips skip_cron tests in its scheduled check; an MCP call has no login cookie either.
+		$runnable = [];
 		foreach ( (array) ( $tests['direct'] ?? [] ) as $slug => $test ) {
 			$test = is_array( $test ) ? $test : [];
-
-			// Core skips these in its cron check; an MCP call has no login cookie either.
 			if ( ! empty( $test['skip_cron'] ) ) {
 				$not_run[] = $this->not_run_entry( (string) $slug, $test );
 				continue;
 			}
+			$callback = $this->direct_callback( $site_health, $test );
+			if ( $callback !== null ) {
+				$runnable[] = [ (string) $slug, $callback ];
+			}
+		}
+		foreach ( (array) ( $tests['async'] ?? [] ) as $slug => $test ) {
+			$test   = is_array( $test ) ? $test : [];
+			$runner = $test['async_direct_test'] ?? null;
 
-			$result = $this->run_direct_test( $site_health, $test );
-			if ( $result === null ) {
+			// Without a server-side runner the test needs a request carrying the browser's login.
+			if ( ! $run_background || ! empty( $test['skip_cron'] ) || ! is_callable( $runner ) ) {
+				$not_run[] = $this->not_run_entry( (string) $slug, $test );
+				continue;
+			}
+			$runnable[] = [ (string) $slug, $runner ];
+		}
+
+		foreach ( $runnable as [ $slug, $callback ] ) {
+			// Core filter: the same one the Site Health screen applies.
+			$result = apply_filters( 'site_status_test_result', call_user_func( $callback ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+			if ( ! is_array( $result ) ) {
 				continue;
 			}
 
@@ -208,15 +241,34 @@ class GetSiteHealth extends BaseAbility {
 			$results = array_values( array_filter( $results, static fn( array $r ): bool => $r['status'] !== 'good' ) );
 		}
 
-		foreach ( (array) ( $tests['async'] ?? [] ) as $slug => $test ) {
-			$not_run[] = $this->not_run_entry( (string) $slug, is_array( $test ) ? $test : [] );
+		return [
+			'counts'             => $counts,
+			'last_screen_counts' => $this->last_screen_counts(),
+			'results'            => $results,
+			'not_run'            => $not_run,
+			'site_health_url'    => admin_url( 'site-health.php' ),
+		];
+	}
+
+	/**
+	 * The counts the Site Health screen or core's weekly check last stored, which the dashboard widget shows.
+	 *
+	 * @return array{critical: int, recommended: int, good: int}|null
+	 * @since 1.6.0
+	 */
+	private function last_screen_counts(): ?array {
+		$stored = get_transient( 'health-check-site-status-result' );
+		$counts = is_string( $stored ) ? json_decode( $stored, true ) : null;
+
+		if ( ! is_array( $counts ) ) {
+			return null;
 		}
 
+		// The screen posts its counts as strings.
 		return [
-			'counts'          => $counts,
-			'results'         => $results,
-			'not_run'         => $not_run,
-			'site_health_url' => admin_url( 'site-health.php' ),
+			'critical'    => (int) ( $counts['critical'] ?? 0 ),
+			'recommended' => (int) ( $counts['recommended'] ?? 0 ),
+			'good'        => (int) ( $counts['good'] ?? 0 ),
 		];
 	}
 
@@ -236,38 +288,27 @@ class GetSiteHealth extends BaseAbility {
 	}
 
 	/**
-	 * Run one direct test as the Site Health screen does.
+	 * Resolve a direct test's runner as core does.
 	 *
 	 * A string test names a `get_test_{name}` method on WP_Site_Health; anything
-	 * else must be a callable. Results pass through `site_status_test_result`,
-	 * like the screen's.
+	 * else must be a callable.
 	 *
 	 * @param WP_Site_Health       $site_health Core's Site Health instance.
 	 * @param array<string, mixed> $test        The test definition.
-	 * @return array<string, mixed>|null The result, or null when the test cannot run.
+	 * @return callable|null The runner, or null when the test cannot run.
 	 * @since 1.6.0
 	 */
-	private function run_direct_test( WP_Site_Health $site_health, array $test ): ?array {
-		$callback = null;
-		$name     = $test['test'] ?? null;
+	private function direct_callback( WP_Site_Health $site_health, array $test ): ?callable {
+		$name = $test['test'] ?? null;
 
 		if ( is_string( $name ) ) {
 			$method = 'get_test_' . $name;
 			if ( method_exists( $site_health, $method ) && is_callable( [ $site_health, $method ] ) ) {
-				$callback = [ $site_health, $method ];
+				return [ $site_health, $method ];
 			}
 		}
-		if ( $callback === null && is_callable( $name ) ) {
-			$callback = $name;
-		}
-		if ( $callback === null ) {
-			return null;
-		}
 
-		// Core filter: the same one the Site Health screen applies.
-		$result = apply_filters( 'site_status_test_result', call_user_func( $callback ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
-
-		return is_array( $result ) ? $result : null;
+		return is_callable( $name ) ? $name : null;
 	}
 
 	/**
@@ -292,7 +333,7 @@ class GetSiteHealth extends BaseAbility {
 	}
 
 	/**
-	 * Turn a test's HTML into readable plain text.
+	 * Turn a test's HTML into readable plain text, keeping link targets.
 	 *
 	 * @param mixed $html HTML from a test result.
 	 * @return string
@@ -302,6 +343,23 @@ class GetSiteHealth extends BaseAbility {
 		if ( ! is_string( $html ) ) {
 			return '';
 		}
+
+		// "Text (URL)", so the assistant can point the person at the fix.
+		$html = (string) preg_replace_callback(
+			'#<a\s[^>]*?href=(["\'])(.*?)\1[^>]*>(.*?)</a>#is',
+			static function ( array $m ): string {
+				// Drops the "(opens in a new tab)" hint, which means nothing outside the browser.
+				$text = (string) preg_replace( '#<span[^>]*screen-reader-text[^>]*>.*?</span>#is', '', $m[3] );
+				$url  = trim( $m[2] );
+
+				if ( $url === '' || str_starts_with( $url, '#' ) || stripos( $url, 'javascript:' ) === 0 ) {
+					return $text;
+				}
+
+				return trim( $text ) . ' (' . $url . ')';
+			},
+			$html
+		);
 
 		// Keep paragraph and list breaks, which wp_strip_all_tags() would merge.
 		$html = (string) preg_replace( '#</(p|li|h[1-6]|div)>|<br\s*/?>#i', "\n", $html );
