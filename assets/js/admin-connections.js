@@ -815,12 +815,44 @@
 			);
 
 			if ( ! response.ok ) {
-				throw new Error( 'HTTP ' + response.status );
+				const error = new Error( 'HTTP ' + response.status );
+				error.status = response.status;
+				error.code = (
+					await response.json().catch( () => ( {} ) )
+				).code;
+				throw error;
 			}
 
 			const users = await response.json();
 
 			return Array.isArray( users ) ? users : [];
+		},
+
+		/**
+		 * The message for a failed fetch.
+		 *
+		 * A 401, 403 or 404 does not go away on reload: something on the site
+		 * (often a security plugin hiding users from the REST API) blocks or
+		 * removes the route for administrators too. An expired nonce or session
+		 * does, so those keep the reload message.
+		 *
+		 * @param {Error} error The error fetchUsers() threw.
+		 * @return {string} The message to show.
+		 */
+		failureMessage( error ) {
+			const reloadFixes = [
+				'rest_cookie_invalid_nonce',
+				'rest_not_logged_in',
+			];
+
+			if (
+				[ 401, 403, 404 ].includes( error.status ) &&
+				! reloadFixes.includes( error.code )
+			) {
+				return i18n.blocked || '';
+			}
+
+			return i18n.failed || '';
 		},
 
 		/**
@@ -837,7 +869,7 @@
 			} catch ( error ) {
 				if ( id === this.requestId ) {
 					this.renderResults( [] );
-					this.setCount( i18n.failed || '' );
+					this.setCount( this.failureMessage( error ) );
 				}
 
 				return;
@@ -899,7 +931,7 @@
 			} catch ( error ) {
 				if ( id === this.requestId ) {
 					this.renderResults( [] );
-					this.setCount( i18n.failed || '' );
+					this.setCount( this.failureMessage( error ) );
 				}
 
 				return;
