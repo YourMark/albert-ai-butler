@@ -71,6 +71,7 @@ class Update extends BaseAbility {
 			'id'      => [
 				'type'        => 'integer',
 				'description' => 'The page ID to update',
+				'minimum'     => 1,
 			],
 			'title'   => [
 				'type'        => 'string',
@@ -78,7 +79,7 @@ class Update extends BaseAbility {
 			],
 			'content' => [
 				'type'        => 'string',
-				'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML or Markdown (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire page body when set.',
+				'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire page body when set.',
 			],
 			'blocks'  => [
 				'type'        => 'array',

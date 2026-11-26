@@ -68,6 +68,7 @@ class Update extends BaseAbility {
 				'id'          => [
 					'type'        => 'integer',
 					'description' => 'The user ID to update',
+					'minimum'     => 1,
 				],
 				'email'       => [
 					'type'        => 'string',

@@ -29,6 +29,7 @@ use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Pages\Create as CreatePage;
 use Albert\Abilities\WordPress\Pages\Delete as DeletePage;
 use Albert\Abilities\WordPress\Pages\FindPages;
+use Albert\Abilities\WordPress\Pages\ReplaceText as ReplacePageText;
 use Albert\Abilities\WordPress\Pages\Update as UpdatePage;
 use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Posts\AddTerms as AddPostTerms;
@@ -36,6 +37,7 @@ use Albert\Abilities\WordPress\Posts\Create as CreatePost;
 use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
 use Albert\Abilities\WordPress\Posts\FindPosts;
 use Albert\Abilities\WordPress\Posts\RemoveTerms as RemovePostTerms;
+use Albert\Abilities\WordPress\Posts\ReplaceText as ReplacePostText;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
@@ -265,6 +267,49 @@ class ExecuteSchemaTest extends TestCase {
 				'terms'    => [ 'schema-tag' ],
 			],
 			'RemovePostTerms'
+		);
+	}
+
+	/**
+	 * ReplacePostText returns the replacement count matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_replace_post_text_output_matches_schema(): void {
+		$post_id = self::factory()->post->create( [ 'post_content' => '<!-- wp:paragraph --><p>Old words</p><!-- /wp:paragraph -->' ] );
+
+		$this->assert_execute_matches_schema(
+			new ReplacePostText(),
+			[
+				'post_id' => $post_id,
+				'search'  => 'Old',
+				'replace' => 'New',
+			],
+			'ReplacePostText'
+		);
+	}
+
+	/**
+	 * ReplacePageText returns the replacement count matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_replace_page_text_output_matches_schema(): void {
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'    => 'page',
+				'post_content' => '<!-- wp:paragraph --><p>Old words</p><!-- /wp:paragraph -->',
+			]
+		);
+
+		$this->assert_execute_matches_schema(
+			new ReplacePageText(),
+			[
+				'page_id' => $page_id,
+				'search'  => 'Old',
+				'replace' => 'New',
+			],
+			'ReplacePageText'
 		);
 	}
 

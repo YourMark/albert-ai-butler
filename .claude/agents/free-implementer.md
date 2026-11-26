@@ -57,6 +57,7 @@ If the user is in plan mode, this step is already covered — skip to Step 4.
 ## Step 4 — Implement
 
 - Hook naming: `albert/{module}/{action}` — grep existing hooks in `src/` before picking a name
+- Abilities: design and build by `agent-rules/abilities.md` (scope, name, description, annotations, errors, input defaults)
 - Ability IDs: `albert/{verb}-{noun}` (e.g. `albert/create-post`, `albert/find-users`) — grep existing IDs in `src/` first. Legacy Woo IDs (`albert/woo-find-products`) are frozen public API; never rename them
 - Free must work fully with zero active add-ons after your change
 
