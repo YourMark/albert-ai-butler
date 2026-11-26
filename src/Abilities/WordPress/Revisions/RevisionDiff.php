@@ -63,6 +63,30 @@ class RevisionDiff {
 	private const MAX_INPUT_LINES = 5000;
 
 	/**
+	 * Most characters shown of one line.
+	 *
+	 * Minified HTML is one line; without this one changed line on its `-` side fills the
+	 * whole budget and its `+` side is never shown.
+	 *
+	 * @since 1.6.0
+	 */
+	private const MAX_LINE_CHARS = 4000;
+
+	/**
+	 * Unchanged characters shown on each side of a change within a long line.
+	 *
+	 * @since 1.6.0
+	 */
+	private const LINE_CONTEXT = 200;
+
+	/**
+	 * Marks text left out of a long line.
+	 *
+	 * @since 1.6.0
+	 */
+	private const ELLIPSIS = '…';
+
+	/**
 	 * Diff two strings line by line.
 	 *
 	 * @param string $from The older text.
@@ -139,6 +163,30 @@ class RevisionDiff {
 	}
 
 	/**
+	 * The revision saved just before this one, skipping autosaves.
+	 *
+	 * @param WP_Post            $revision     The revision.
+	 * @param array<int|WP_Post> $revision_ids The post's revision IDs, newest first, from `wp_get_post_revisions()` with `fields` `ids`.
+	 * @return WP_Post|null Null for the oldest revision.
+	 * @since 1.6.0
+	 */
+	public static function previous_revision( WP_Post $revision, array $revision_ids ): ?WP_Post {
+		$ids      = array_map( static fn( $id ): int => $id instanceof WP_Post ? (int) $id->ID : (int) $id, array_values( $revision_ids ) );
+		$position = array_search( (int) $revision->ID, $ids, true );
+		if ( $position === false ) {
+			return null;
+		}
+
+		foreach ( array_slice( $ids, $position + 1 ) as $candidate_id ) {
+			$candidate = get_post( $candidate_id );
+			if ( $candidate instanceof WP_Post && ! wp_is_post_autosave( $candidate ) ) {
+				return $candidate;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Find a revision and the post it belongs to, if the user may edit that post.
 	 *
 	 * @param int $revision_id Revision ID.
@@ -150,7 +198,7 @@ class RevisionDiff {
 		if ( ! $revision instanceof WP_Post ) {
 			return new WP_Error(
 				'albert_revision_not_found',
-				__( 'No revision with that ID. Use albert/find-revisions to list the revisions of a post.', 'albert-ai-butler' ),
+				__( 'No revision with that ID. Use albert/find-revisions to list the revisions of a post, page or other content.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -177,7 +225,7 @@ class RevisionDiff {
 		if ( ! $post instanceof WP_Post || $post->post_type === 'revision' ) {
 			return new WP_Error(
 				'albert_post_not_found',
-				__( 'No post with that ID. Use albert/find-posts or albert/find-pages to find its ID.', 'albert-ai-butler' ),
+				__( 'No content with that ID. Send the ID of any content that keeps revisions; use albert/find-posts or albert/find-pages to find it.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
 		}
@@ -185,7 +233,7 @@ class RevisionDiff {
 		if ( ! current_user_can( 'edit_post', $post->ID ) ) {
 			return new WP_Error(
 				'albert_post_permission_denied',
-				__( 'You cannot edit this post, so you may not see or restore its revisions.', 'albert-ai-butler' ),
+				__( 'You cannot edit this content, so you may not see or restore its revisions.', 'albert-ai-butler' ),
 				[ 'status' => 403 ]
 			);
 		}
@@ -195,7 +243,7 @@ class RevisionDiff {
 				'albert_invalid_post_id',
 				sprintf(
 					/* translators: %s: post type name */
-					__( 'The "%s" post type does not keep revisions. Send the ID of a post or page.', 'albert-ai-butler' ),
+					__( 'The "%s" post type does not keep revisions. Send the ID of content that does, such as a post, page, template or navigation menu.', 'albert-ai-butler' ),
 					$post->post_type
 				),
 				[ 'status' => 400 ]
@@ -340,10 +388,10 @@ class RevisionDiff {
 	}
 
 	/**
-	 * Turn Text_Diff's edits into one entry per line.
+	 * Turn Text_Diff's edits into one entry per line, long lines cut down.
 	 *
 	 * @param array<int, object> $edits Text_Diff operations.
-	 * @return array<int, array{0: string, 1: string, 2: int, 3: int}> Prefix, text, old line, new line.
+	 * @return array<int, array{0: string, 1: string, 2: int, 3: int, 4: bool}> Prefix, text, old line, new line, whether the text was cut.
 	 * @since 1.6.0
 	 */
 	private static function flatten( array $edits ): array {
@@ -352,21 +400,36 @@ class RevisionDiff {
 		$new  = 1;
 
 		foreach ( $edits as $edit ) {
-			$orig  = ( $edit instanceof Text_Diff_Op_copy || $edit instanceof Text_Diff_Op_delete || $edit instanceof Text_Diff_Op_change ) && is_array( $edit->orig ) ? $edit->orig : [];
-			$final = ( $edit instanceof Text_Diff_Op_copy || $edit instanceof Text_Diff_Op_add || $edit instanceof Text_Diff_Op_change ) && is_array( $edit->final ) ? $edit->final : [];
+			$orig  = ( $edit instanceof Text_Diff_Op_copy || $edit instanceof Text_Diff_Op_delete || $edit instanceof Text_Diff_Op_change ) && is_array( $edit->orig ) ? array_map( 'strval', $edit->orig ) : [];
+			$final = ( $edit instanceof Text_Diff_Op_copy || $edit instanceof Text_Diff_Op_add || $edit instanceof Text_Diff_Op_change ) && is_array( $edit->final ) ? array_map( 'strval', $edit->final ) : [];
 
 			if ( $edit instanceof Text_Diff_Op_copy ) {
 				foreach ( $orig as $line ) {
-					$rows[] = [ ' ', (string) $line, $old++, $new++ ];
+					$text   = self::clip( $line, 0, self::MAX_LINE_CHARS );
+					$rows[] = [ ' ', $text, $old++, $new++, $text !== $line ];
 				}
 				continue;
 			}
 
-			foreach ( $orig as $line ) {
-				$rows[] = [ '-', (string) $line, $old++, $new ];
+			// Pair each removed line with the line that replaced it, so both sides show the change.
+			$from = [];
+			$to   = [];
+			foreach ( $orig as $k => $line ) {
+				if ( isset( $final[ $k ] ) ) {
+					[ $from[ $k ], $to[ $k ] ] = self::clip_pair( $line, $final[ $k ] );
+				} else {
+					$from[ $k ] = self::clip( $line, 0, self::MAX_LINE_CHARS );
+				}
 			}
-			foreach ( $final as $line ) {
-				$rows[] = [ '+', (string) $line, $old, $new++ ];
+			foreach ( $final as $k => $line ) {
+				$to[ $k ] ??= self::clip( $line, 0, self::MAX_LINE_CHARS );
+			}
+
+			foreach ( $orig as $k => $line ) {
+				$rows[] = [ '-', $from[ $k ], $old++, $new, $from[ $k ] !== $line ];
+			}
+			foreach ( $final as $k => $line ) {
+				$rows[] = [ '+', $to[ $k ], $old, $new++, $to[ $k ] !== $line ];
 			}
 		}
 
@@ -374,9 +437,56 @@ class RevisionDiff {
 	}
 
 	/**
+	 * Cut a long changed line and its replacement to the area around the change, on both sides.
+	 *
+	 * @param string $from The older line.
+	 * @param string $to   The newer line.
+	 * @return array{0: string, 1: string}
+	 * @since 1.6.0
+	 */
+	private static function clip_pair( string $from, string $to ): array {
+		if ( strlen( $from ) <= self::MAX_LINE_CHARS && strlen( $to ) <= self::MAX_LINE_CHARS ) {
+			return [ $from, $to ];
+		}
+
+		$shortest = min( strlen( $from ), strlen( $to ) );
+		$prefix   = strspn( substr( $from, 0, $shortest ) ^ substr( $to, 0, $shortest ), "\0" );
+		$suffix   = min(
+			strspn( strrev( substr( $from, -$shortest ) ) ^ strrev( substr( $to, -$shortest ) ), "\0" ),
+			$shortest - $prefix
+		);
+		$start    = max( 0, $prefix - self::LINE_CONTEXT );
+
+		return [
+			self::clip( $from, $start, strlen( $from ) - $suffix + self::LINE_CONTEXT - $start ),
+			self::clip( $to, $start, strlen( $to ) - $suffix + self::LINE_CONTEXT - $start ),
+		];
+	}
+
+	/**
+	 * Part of a line, at most MAX_LINE_CHARS long, with "…" where text was left out.
+	 *
+	 * @param string $line   The line.
+	 * @param int    $start  Byte offset to start at.
+	 * @param int    $length Bytes wanted.
+	 * @return string
+	 * @since 1.6.0
+	 */
+	private static function clip( string $line, int $start, int $length ): string {
+		$length = min( $length, self::MAX_LINE_CHARS );
+		if ( $start === 0 && strlen( $line ) <= $length ) {
+			return $line;
+		}
+
+		$part = mb_strcut( $line, $start, $length, 'UTF-8' );
+
+		return ( $start > 0 ? self::ELLIPSIS : '' ) . $part . ( $start + strlen( $part ) < strlen( $line ) ? self::ELLIPSIS : '' );
+	}
+
+	/**
 	 * Render changed lines with a little context, as unified diff hunks.
 	 *
-	 * @param array<int, array{0: string, 1: string, 2: int, 3: int}> $rows Flattened diff.
+	 * @param array<int, array{0: string, 1: string, 2: int, 3: int, 4: bool}> $rows Flattened diff.
 	 * @return array{changed: bool, diff: string, truncated: bool}
 	 * @since 1.6.0
 	 */
@@ -417,7 +527,8 @@ class RevisionDiff {
 			$new_lines = count( array_filter( $hunk, static fn( array $r ): bool => $r[0] !== '-' ) );
 			$lines     = [ sprintf( '@@ -%d,%d +%d,%d @@', $hunk[0][2], $old_lines, $hunk[0][3], $new_lines ) ];
 			foreach ( $hunk as $row ) {
-				$lines[] = $row[0] . $row[1];
+				$lines[]   = $row[0] . $row[1];
+				$truncated = $truncated || $row[4];
 			}
 
 			foreach ( $lines as $line ) {
@@ -426,7 +537,7 @@ class RevisionDiff {
 					break 2;
 				}
 				if ( $chars + strlen( $line ) > self::MAX_CHARS ) {
-					// Keep the start of an over-long line (minified HTML is one line) rather than nothing.
+					// Keep the start of the line that crosses the budget rather than nothing.
 					$room = self::MAX_CHARS - $chars;
 					if ( $room > 0 ) {
 						$out[] = mb_strcut( $line, 0, $room, 'UTF-8' );

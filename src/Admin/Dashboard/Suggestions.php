@@ -187,7 +187,7 @@ class Suggestions {
 			],
 			[
 				'text'     => __( 'What changed the last time my homepage was edited?', 'albert-ai-butler' ),
-				'requires' => [ 'albert/find-pages', 'albert/find-revisions', 'albert/get-revision' ],
+				'requires' => [ 'albert/find-pages', 'albert/find-revisions', 'albert/view-revision' ],
 			],
 			[
 				'text'     => __( 'Who has administrator access to this site?', 'albert-ai-butler' ),

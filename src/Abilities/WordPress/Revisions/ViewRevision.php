@@ -1,6 +1,6 @@
 <?php
 /**
- * Get Revision Ability
+ * View Revision Ability
  *
  * @package Albert
  * @subpackage Abilities\WordPress\Revisions
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.6.0
  */
-class GetRevision extends BaseAbility {
+class ViewRevision extends BaseAbility {
 
 	/**
 	 * Constructor.
@@ -29,9 +29,9 @@ class GetRevision extends BaseAbility {
 	 * @since 1.6.0
 	 */
 	public function __construct() {
-		$this->id          = 'albert/get-revision';
-		$this->label       = __( 'Get Revision', 'albert-ai-butler' );
-		$this->description = __( 'Show one revision\'s changes as a line diff; use it before albert/restore-revision.', 'albert-ai-butler' );
+		$this->id          = 'albert/view-revision';
+		$this->label       = __( 'View Revision', 'albert-ai-butler' );
+		$this->description = __( 'Show one revision\'s changes as a line diff, against the current version or the revision before it; the newest revision is the current version, so compare it with "previous" to see the last edit. Use it before albert/restore-revision.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'revisions';
 
@@ -67,7 +67,7 @@ class GetRevision extends BaseAbility {
 				],
 				'compare_to'  => [
 					'type'        => 'string',
-					'description' => '"current" compares with the post as it is now; "previous" shows what this revision changed compared with the revision before it.',
+					'description' => '"current" compares with the content as it is now; "previous" shows what this revision changed compared with the revision before it.',
 					'enum'        => [ 'current', 'previous' ],
 					'default'     => 'current',
 				],
@@ -96,7 +96,7 @@ class GetRevision extends BaseAbility {
 			'type'       => 'object',
 			'properties' => [
 				'revision'  => RevisionDiff::summary_schema(),
-				'post'      => RevisionDiff::post_reference_schema( 'The post the revision belongs to.' ),
+				'post'      => RevisionDiff::post_reference_schema( 'The post, page, template or other content the revision belongs to.' ),
 				'from'      => $version,
 				'to'        => $version,
 				'changed'   => [ 'type' => 'boolean' ],
@@ -154,11 +154,11 @@ class GetRevision extends BaseAbility {
 		$compare_to = ( $args['compare_to'] ?? 'current' ) === 'previous' ? 'previous' : 'current';
 
 		if ( $compare_to === 'previous' ) {
-			$previous = $this->previous_revision( $revision, $post );
+			$previous = RevisionDiff::previous_revision( $revision, wp_get_post_revisions( $post->ID, [ 'fields' => 'ids' ] ) );
 			if ( ! $previous instanceof WP_Post ) {
 				return new WP_Error(
 					'albert_invalid_compare_to',
-					__( 'This is the oldest revision of the post, so there is nothing before it. Use compare_to "current" instead.', 'albert-ai-butler' ),
+					__( 'This is the oldest revision, so there is nothing before it. Use compare_to "current" instead.', 'albert-ai-butler' ),
 					[ 'status' => 400 ]
 				);
 			}
@@ -184,30 +184,6 @@ class GetRevision extends BaseAbility {
 			'fields'    => $fields,
 			'edit_link' => admin_url( 'revision.php?revision=' . (int) $revision->ID ),
 		];
-	}
-
-	/**
-	 * The revision saved just before this one, skipping autosaves.
-	 *
-	 * @param WP_Post $revision The revision.
-	 * @param WP_Post $post     Its post.
-	 * @return WP_Post|null
-	 * @since 1.6.0
-	 */
-	private function previous_revision( WP_Post $revision, WP_Post $post ): ?WP_Post {
-		$found = false;
-		foreach ( wp_get_post_revisions( $post->ID ) as $candidate ) {
-			if ( ! $candidate instanceof WP_Post ) {
-				continue;
-			}
-			if ( $found && ! wp_is_post_autosave( $candidate ) ) {
-				return $candidate;
-			}
-			if ( (int) $candidate->ID === (int) $revision->ID ) {
-				$found = true;
-			}
-		}
-		return null;
 	}
 
 	/**

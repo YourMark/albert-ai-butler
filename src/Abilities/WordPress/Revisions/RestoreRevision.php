@@ -36,7 +36,7 @@ class RestoreRevision extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/restore-revision';
 		$this->label       = __( 'Restore Revision', 'albert-ai-butler' );
-		$this->description = __( 'Put a post back to one of its revisions, recorded as a new revision so it can be undone; show the owner the changes with albert/get-revision first.', 'albert-ai-butler' );
+		$this->description = __( 'Put a post, page, template or other content back to one of its revisions, recorded as a new revision so it can be undone; show the owner the changes with albert/view-revision first.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'revisions';
 
@@ -85,7 +85,7 @@ class RestoreRevision extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'post'            => RevisionDiff::post_reference_schema( 'The restored post, with its title after the restore.' ),
+				'post'            => RevisionDiff::post_reference_schema( 'The restored content, with its title after the restore.' ),
 				'restored_from'   => [ 'type' => 'integer' ],
 				'new_revision_id' => [
 					'type'        => [ 'integer', 'null' ],
@@ -130,7 +130,7 @@ class RestoreRevision extends BaseAbility {
 		if ( $post->post_status === 'trash' ) {
 			return new WP_Error(
 				'albert_invalid_revision_id',
-				__( 'This revision belongs to a post in the trash. Ask the owner to restore the post from the trash first.', 'albert-ai-butler' ),
+				__( 'This revision belongs to content in the trash. Ask the owner to restore it from the trash first.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
 		}
@@ -139,7 +139,7 @@ class RestoreRevision extends BaseAbility {
 		if ( ! wp_revisions_enabled( $post ) && ! wp_is_post_autosave( $revision ) ) {
 			return new WP_Error(
 				'albert_invalid_revision_id',
-				__( 'Revisions are turned off for this post, so a restore here could not be undone.', 'albert-ai-butler' ),
+				__( 'Revisions are turned off for this content, so a restore here could not be undone.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
 		}

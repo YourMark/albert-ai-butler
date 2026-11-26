@@ -39,7 +39,7 @@ use Albert\Abilities\WordPress\Posts\ReplaceText as ReplacePostText;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Abilities\WordPress\Revisions\FindRevisions;
-use Albert\Abilities\WordPress\Revisions\GetRevision;
+use Albert\Abilities\WordPress\Revisions\ViewRevision;
 use Albert\Abilities\WordPress\Revisions\RestoreRevision;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
@@ -549,7 +549,7 @@ class ExecuteSchemaTest extends TestCase {
 		$revision_id = (int) array_key_last( wp_get_post_revisions( $post_id ) );
 
 		$this->assert_execute_matches_schema( new FindRevisions(), [ 'post_id' => $post_id ], 'FindRevisions' );
-		$this->assert_execute_matches_schema( new GetRevision(), [ 'revision_id' => $revision_id ], 'GetRevision' );
+		$this->assert_execute_matches_schema( new ViewRevision(), [ 'revision_id' => $revision_id ], 'ViewRevision' );
 		$this->assert_execute_matches_schema( new RestoreRevision(), [ 'revision_id' => $revision_id ], 'RestoreRevision' );
 	}
 

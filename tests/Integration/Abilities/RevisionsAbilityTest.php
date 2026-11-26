@@ -12,7 +12,7 @@ namespace Albert\Tests\Integration\Abilities;
 use Albert\Abilities\WordPress\Revisions\FindRevisions;
 use Albert\Abilities\WordPress\Revisions\RestoreRevision;
 use Albert\Abilities\WordPress\Revisions\RevisionDiff;
-use Albert\Abilities\WordPress\Revisions\GetRevision;
+use Albert\Abilities\WordPress\Revisions\ViewRevision;
 use Albert\SafeMode\Gate;
 use Albert\SafeMode\RiskPolicy;
 use Albert\Tests\TestCase;
@@ -106,6 +106,78 @@ class RevisionsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * Each listed revision says which fields that save changed, so "what changed last time?" is answered from the list.
+	 *
+	 * @return void
+	 */
+	public function test_find_says_what_each_save_changed(): void {
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_excerpt' => 'Hours for the shop.',
+			]
+		);
+		$third = $this->save_revision();
+
+		$result = wp_get_ability( 'albert/find-revisions' )->execute( [ 'post_id' => $this->post_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( $third, $result['revisions'][0]['id'], 'The newest revision is the current version.' );
+
+		$by_id = array_column( $result['revisions'], null, 'id' );
+		$this->assertSame( [ 'post_excerpt' ], $by_id[ $third ]['changed_fields'] );
+		$this->assertSame( [ 'post_title', 'post_content' ], $by_id[ $this->second_revision ]['changed_fields'] );
+		$this->assertNull( $by_id[ $this->first_revision ]['changed_fields'], 'The oldest revision has nothing before it.' );
+	}
+
+	/**
+	 * The save before a revision is found even when it is on the next page.
+	 *
+	 * @return void
+	 */
+	public function test_find_compares_across_pages(): void {
+		$result = wp_get_ability( 'albert/find-revisions' )->execute(
+			[
+				'post_id'  => $this->post_id,
+				'per_page' => 1,
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertSame( $this->second_revision, $result['revisions'][0]['id'] );
+		$this->assertSame( [ 'post_title', 'post_content' ], $result['revisions'][0]['changed_fields'] );
+	}
+
+	/**
+	 * Content other than posts and pages, such as a navigation menu, has its revisions listed too.
+	 *
+	 * @return void
+	 */
+	public function test_find_lists_navigation_menu_revisions(): void {
+		$menu_id = self::factory()->post->create(
+			[
+				'post_type'    => 'wp_navigation',
+				'post_title'   => 'Main menu',
+				'post_content' => '<!-- wp:navigation-link {"label":"Home","url":"/"} /-->',
+			]
+		);
+		wp_save_post_revision( $menu_id );
+		wp_update_post(
+			[
+				'ID'           => $menu_id,
+				'post_content' => '<!-- wp:navigation-link {"label":"Start","url":"/"} /-->',
+			]
+		);
+		wp_save_post_revision( $menu_id );
+
+		$result = wp_get_ability( 'albert/find-revisions' )->execute( [ 'post_id' => $menu_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 'wp_navigation', $result['post']['type'] );
+		$this->assertSame( [ 'post_content' ], $result['revisions'][0]['changed_fields'] );
+	}
+
+	/**
 	 * Paging bounds the list and reports the total.
 	 *
 	 * @return void
@@ -130,7 +202,7 @@ class RevisionsAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_view_diffs_against_the_current_version(): void {
-		$result = ( new GetRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
+		$result = ( new ViewRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
 
 		$this->assertIsArray( $result );
 		$this->assertTrue( $result['changed'] );
@@ -158,7 +230,7 @@ class RevisionsAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_view_compares_with_the_previous_revision(): void {
-		$result = ( new GetRevision() )->execute(
+		$result = ( new ViewRevision() )->execute(
 			[
 				'revision_id' => $this->second_revision,
 				'compare_to'  => 'previous',
@@ -179,7 +251,7 @@ class RevisionsAbilityTest extends TestCase {
 	public function test_view_previous_of_the_oldest_is_an_invalid_compare_to(): void {
 		$oldest = (int) array_key_last( wp_get_post_revisions( $this->post_id ) );
 
-		$result = ( new GetRevision() )->execute(
+		$result = ( new ViewRevision() )->execute(
 			[
 				'revision_id' => $oldest,
 				'compare_to'  => 'previous',
@@ -236,6 +308,49 @@ class RevisionsAbilityTest extends TestCase {
 		$this->assertTrue( $diff['truncated'] );
 		$this->assertStringStartsWith( "@@ -1,1 +1,1 @@\n-<p>old</p>\n+xxx", $diff['diff'] );
 		$this->assertLessThanOrEqual( 20000, strlen( $diff['diff'] ) );
+	}
+
+	/**
+	 * A word added in the middle of one very long line shows on both sides, around the change.
+	 *
+	 * @return void
+	 */
+	public function test_a_change_in_a_long_line_shows_both_sides(): void {
+		$half = str_repeat( 'lorem ipsum ', 1167 );
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => $half . $half,
+			]
+		);
+		$this->save_revision();
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => $half . 'INSERTED ' . $half,
+			]
+		);
+		$newest = $this->save_revision();
+
+		$result = wp_get_ability( 'albert/view-revision' )->execute(
+			[
+				'revision_id' => $newest,
+				'compare_to'  => 'previous',
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertGreaterThanOrEqual( 28000, strlen( $half . $half ) );
+		$content = array_column( $result['fields'], null, 'field' )['post_content'];
+		$lines   = explode( "\n", $content['diff'] );
+
+		$this->assertTrue( $content['truncated'] );
+		$this->assertCount( 3, $lines );
+		$this->assertStringStartsWith( '-…', $lines[1] );
+		$this->assertStringNotContainsString( 'INSERTED', $lines[1] );
+		$this->assertStringStartsWith( '+…', $lines[2] );
+		$this->assertStringContainsString( 'lorem ipsum INSERTED lorem ipsum', $lines[2] );
+		$this->assertLessThan( 1000, strlen( $content['diff'] ), 'Only the area around the change is shown.' );
 	}
 
 	/**
@@ -342,7 +457,7 @@ class RevisionsAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_unknown_ids_are_not_found(): void {
-		$view = ( new GetRevision() )->execute( [ 'revision_id' => $this->post_id ] );
+		$view = ( new ViewRevision() )->execute( [ 'revision_id' => $this->post_id ] );
 		$this->assertInstanceOf( WP_Error::class, $view );
 		$this->assertSame( 'albert_revision_not_found', $view->get_error_code() );
 
@@ -381,7 +496,7 @@ class RevisionsAbilityTest extends TestCase {
 		$this->assertInstanceOf( WP_Error::class, $find );
 		$this->assertSame( 'albert_post_permission_denied', $find->get_error_code() );
 
-		foreach ( [ new GetRevision(), new RestoreRevision() ] as $ability ) {
+		foreach ( [ new ViewRevision(), new RestoreRevision() ] as $ability ) {
 			$result = $ability->execute( [ 'revision_id' => $this->first_revision ] );
 			$this->assertInstanceOf( WP_Error::class, $result, $ability->get_id() );
 			$this->assertSame( 'albert_post_permission_denied', $result->get_error_code(), $ability->get_id() );
@@ -398,7 +513,7 @@ class RevisionsAbilityTest extends TestCase {
 	public function test_subscribers_are_refused(): void {
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
 
-		foreach ( [ new FindRevisions(), new GetRevision(), new RestoreRevision() ] as $ability ) {
+		foreach ( [ new FindRevisions(), new ViewRevision(), new RestoreRevision() ] as $ability ) {
 			$this->assertInstanceOf( WP_Error::class, $ability->check_permission(), $ability->get_id() );
 		}
 	}
@@ -413,7 +528,7 @@ class RevisionsAbilityTest extends TestCase {
 
 		$expected = [
 			'albert/find-revisions'   => false,
-			'albert/get-revision'     => false,
+			'albert/view-revision'     => false,
 			'albert/restore-revision' => true,
 		];
 

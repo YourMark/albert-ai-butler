@@ -17,7 +17,7 @@ use WP_Post;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Lists a post's revisions, newest first, with what each differs in from the current version.
+ * Lists a post's revisions, newest first, with what each save changed and what differs from the current version.
  *
  * @since 1.6.0
  */
@@ -31,7 +31,7 @@ class FindRevisions extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/find-revisions';
 		$this->label       = __( 'Find Revisions', 'albert-ai-butler' );
-		$this->description = __( 'List the saved revisions of a post or page, newest first, with the fields each one differs in from the current version; use albert/get-revision to see what one revision changed.', 'albert-ai-butler' );
+		$this->description = __( 'List the saved revisions of any content that keeps revisions, newest first (the newest is the current version), with the fields each save changed; use albert/view-revision to see one revision\'s changes line by line.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'revisions';
 
@@ -42,7 +42,7 @@ class FindRevisions extends BaseAbility {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::read( 'Use albert/get-revision to see the line-by-line changes of one revision, and albert/restore-revision to put one back.' ),
+			'annotations' => Annotations::read( 'Works for posts, pages, templates, navigation menus and other content that keeps revisions. Use albert/view-revision to see the line-by-line changes of one revision, and albert/restore-revision to put one back.' ),
 		];
 
 		parent::__construct();
@@ -60,7 +60,7 @@ class FindRevisions extends BaseAbility {
 			'properties' => [
 				'post_id'  => [
 					'type'        => 'integer',
-					'description' => 'The ID of the post or page whose revisions to list.',
+					'description' => 'The ID of the content whose revisions to list: a post, page, template, navigation menu or anything else that keeps revisions. Find it with albert/find-posts or albert/find-pages.',
 					'minimum'     => 1,
 				],
 				'page'     => [
@@ -89,6 +89,12 @@ class FindRevisions extends BaseAbility {
 	 */
 	private function get_output_schema(): array {
 		$item = RevisionDiff::summary_schema();
+
+		$item['properties']['changed_fields'] = [
+			'type'        => [ 'array', 'null' ],
+			'description' => 'Fields this save changed compared with the revision before it. Null for the oldest revision, which has nothing before it.',
+			'items'       => [ 'type' => 'string' ],
+		];
 
 		$item['properties']['differs_from_current'] = [
 			'type'        => 'array',
@@ -147,7 +153,8 @@ class FindRevisions extends BaseAbility {
 		$page     = max( 1, absint( $args['page'] ?? 1 ) );
 		$per_page = min( 50, max( 1, absint( $args['per_page'] ?? 10 ) ) );
 
-		$total     = count( wp_get_post_revisions( $post->ID, [ 'fields' => 'ids' ] ) );
+		$all_ids   = wp_get_post_revisions( $post->ID, [ 'fields' => 'ids' ] );
+		$total     = count( $all_ids );
 		$revisions = wp_get_post_revisions(
 			$post->ID,
 			[
@@ -159,7 +166,9 @@ class FindRevisions extends BaseAbility {
 		$items = [];
 		foreach ( $revisions as $revision ) {
 			if ( $revision instanceof WP_Post ) {
-				$items[] = RevisionDiff::summary( $revision ) + [
+				$previous = RevisionDiff::previous_revision( $revision, $all_ids );
+				$items[]  = RevisionDiff::summary( $revision ) + [
+					'changed_fields'       => $previous instanceof WP_Post ? RevisionDiff::changed_fields( $previous, $revision ) : null,
 					'differs_from_current' => RevisionDiff::changed_fields( $revision, $post ),
 				];
 			}
