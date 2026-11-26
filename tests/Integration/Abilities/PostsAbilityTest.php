@@ -205,7 +205,7 @@ class PostsAbilityTest extends TestCase {
 		$result = ( new ViewPost() )->execute( [ 'id' => 99999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'post_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -219,7 +219,7 @@ class PostsAbilityTest extends TestCase {
 		$result = ( new ViewPost() )->execute( [ 'id' => $page_id ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'post_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
 	}
 
 	// ─── CreatePost ─────────────────────────────────────────────────
@@ -528,7 +528,7 @@ class PostsAbilityTest extends TestCase {
 		$result = ( new DeletePost() )->execute( [ 'id' => 99999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'post_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
 	}
 
 	/**

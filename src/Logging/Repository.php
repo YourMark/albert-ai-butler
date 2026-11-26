@@ -59,7 +59,7 @@ class Repository {
 	 *
 	 * `status` is classified here for the same reason: an `error` handed in is
 	 * re-read through {@see Outcome} so that a truthful negative answer —
-	 * `term_not_found` — is stored as `success`, and a policy block — permission
+	 * `albert_term_not_found` — is stored as `success`, and a policy block — permission
 	 * refused, ability switched off — is stored as `warning`, no matter which
 	 * writer produced it. Every writer classifies identically instead of each
 	 * one carrying its own copy of the rule.

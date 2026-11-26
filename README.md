@@ -256,6 +256,7 @@ Website: https://yourmark.nl
 - `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
 - `albert/create-post` and `albert/create-page` return `albert_post_permission_denied` and `albert_page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
 - `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
+- Not-found errors now use `albert_{resource}_not_found` everywhere. Renamed: `post_not_found` to `albert_post_not_found` (the page block-edit abilities now return `albert_page_not_found`), `page_not_found` to `albert_page_not_found`, `user_not_found` to `albert_user_not_found`, `term_not_found` to `albert_term_not_found`, `media_not_found` to `albert_media_not_found`, `pattern_not_found` to `albert_pattern_not_found`, `block_path_not_found` to `albert_block_path_not_found`, `skill_not_found` to `albert_skill_not_found`, `product_not_found` to `albert_product_not_found`, `order_not_found` to `albert_order_not_found`, `customer_not_found` to `albert_customer_not_found`, `block_not_registered` to `albert_block_type_not_found`, and `invalid_post` and `invalid_attachment` from `albert/set-featured-image` to `albert_post_not_found` and `albert_media_not_found`.
 
 **Credits**
 

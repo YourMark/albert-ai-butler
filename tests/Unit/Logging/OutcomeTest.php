@@ -84,14 +84,12 @@ class OutcomeTest extends TestCase {
 	 */
 	public static function provide_not_found_codes(): array {
 		return [
-			'term'               => [ 'term_not_found' ],
-			'post'               => [ 'post_not_found' ],
-			'product'            => [ 'product_not_found' ],
+			'term'               => [ 'albert_term_not_found' ],
+			'post'               => [ 'albert_post_not_found' ],
+			'product'            => [ 'albert_product_not_found' ],
 			'session'            => [ 'session_not_found' ],
 			'third party suffix' => [ 'acme_widget_not_found' ],
 			'bare not_found'     => [ 'not_found' ],
-			'invalid_post'       => [ 'invalid_post' ],
-			'invalid_attachment' => [ 'invalid_attachment' ],
 		];
 	}
 
@@ -153,7 +151,7 @@ class OutcomeTest extends TestCase {
 	 * @return void
 	 */
 	public function test_permission_stage_beats_the_not_found_rule(): void {
-		$error = new WP_Error( 'term_not_found', 'No such term.' );
+		$error = new WP_Error( 'albert_term_not_found', 'No such term.' );
 
 		$this->assertSame( 'warning', Outcome::for_error( $error, 'albert/view-term', 'permission' ) );
 	}
@@ -259,7 +257,7 @@ class OutcomeTest extends TestCase {
 			'premium ability' => [ 'albert_premium_ability_not_found' ],
 			'bare ability'    => [ 'ability_not_found' ],
 			'mcp tool'        => [ 'tool_not_found' ],
-			'skill'           => [ 'skill_not_found' ],
+			'skill'           => [ 'albert_skill_not_found' ],
 		];
 	}
 
@@ -327,7 +325,7 @@ class OutcomeTest extends TestCase {
 	 * @return void
 	 */
 	public function test_filter_receives_the_documented_arguments(): void {
-		$error = new WP_Error( 'term_not_found', 'No such term.' );
+		$error = new WP_Error( 'albert_term_not_found', 'No such term.' );
 
 		Outcome::classify( $error, 'albert/view-term' );
 
@@ -351,7 +349,7 @@ class OutcomeTest extends TestCase {
 	public function test_filter_returning_an_unknown_value_is_ignored(): void {
 		$GLOBALS['albert_test_filter_returns']['albert/logging/outcome'] = 'no_match';
 
-		$error = new WP_Error( 'term_not_found', 'No such term.' );
+		$error = new WP_Error( 'albert_term_not_found', 'No such term.' );
 
 		$this->assertSame( 'success', Outcome::classify( $error, 'albert/view-term' ) );
 	}

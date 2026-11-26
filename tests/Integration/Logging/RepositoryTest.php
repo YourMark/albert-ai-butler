@@ -93,13 +93,13 @@ class RepositoryTest extends TestCase {
 	 * @return void
 	 */
 	public function test_insert_classifies_a_not_found_error_as_success(): void {
-		$this->repository->insert( 'albert/view-term', 5, 'error', 'term_not_found' );
+		$this->repository->insert( 'albert/view-term', 5, 'error', 'albert_term_not_found' );
 
 		$row = $this->repository->latest_for_ability( 'albert/view-term' );
 
 		$this->assertNotNull( $row );
 		$this->assertSame( 'success', $row->status );
-		$this->assertSame( 'term_not_found', $row->error_code );
+		$this->assertSame( 'albert_term_not_found', $row->error_code );
 	}
 
 	/**
@@ -156,7 +156,7 @@ class RepositoryTest extends TestCase {
 			'albert/view-term',
 			5,
 			'error',
-			'term_not_found',
+			'albert_term_not_found',
 			[ 'failure_stage' => 'execute' ]
 		);
 

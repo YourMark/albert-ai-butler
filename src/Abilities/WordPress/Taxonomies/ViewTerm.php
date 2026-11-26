@@ -121,7 +121,7 @@ class ViewTerm extends BaseAbility {
 
 		if ( ! $term ) {
 			return new WP_Error(
-				'term_not_found',
+				'albert_term_not_found',
 				sprintf(
 					/* translators: %d: Term ID */
 					__( 'Term with ID %d not found.', 'albert-ai-butler' ),

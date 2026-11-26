@@ -116,7 +116,7 @@ class ViewOrder extends BaseAbility {
 
 		if ( ! $order instanceof WC_Order ) {
 			return new WP_Error(
-				'order_not_found',
+				'albert_order_not_found',
 				sprintf(
 					/* translators: %d: Order ID */
 					__( 'Order with ID %d not found.', 'albert-ai-butler' ),

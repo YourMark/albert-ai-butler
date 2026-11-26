@@ -166,7 +166,7 @@ class EditSeveralBlocksTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'block_path_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_block_path_not_found', $result->get_error_code() );
 		$this->assertSame( 1, $result->get_error_data()['edit_index'] );
 		$this->assertSame( self::THREE_PARAGRAPHS, get_post( $this->post_id )->post_content );
 		$this->assertSame( $before, $this->revision_count() );

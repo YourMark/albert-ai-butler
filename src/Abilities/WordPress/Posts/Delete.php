@@ -128,7 +128,7 @@ class Delete extends BaseAbility {
 		$post = get_post( $post_id );
 		if ( ! $post ) {
 			return new WP_Error(
-				'post_not_found',
+				'albert_post_not_found',
 				__( 'Post not found.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);

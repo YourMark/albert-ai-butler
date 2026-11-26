@@ -37,7 +37,7 @@ use WP_Error;
  *   - `error`   — the site could not do what was asked. Something broke, timed
  *                 out, or was malformed.
  *
- * `term_not_found` is a `success`, not a status of its own. An earlier draft of
+ * `albert_term_not_found` is a `success`, not a status of its own. An earlier draft of
  * this class gave it a `no_match` value, and that was wrong for a reason worth
  * writing down: *succeeded* and *failed* describe the run, while *not found*
  * describes the answer. Two kinds of statement in one column is what made the
@@ -51,7 +51,7 @@ use WP_Error;
  *
  * Nothing is lost by folding a truthful "no" into `success`. `error_code` is
  * still stored, so `status = 'success' AND error_code IS NOT NULL` still finds
- * the burst of `product_not_found` from somebody enumerating IDs. That signal
+ * the burst of `albert_product_not_found` from somebody enumerating IDs. That signal
  * never needed to spend a status value.
  *
  * **The test for the next `*_not_found` code somebody adds: is the thing
@@ -188,8 +188,8 @@ class Outcome {
 	/**
 	 * Error-code suffix that marks a truthful negative answer.
 	 *
-	 * Albert's own convention: `post_not_found`, `term_not_found`,
-	 * `product_not_found`. Add-ons that follow the convention inherit the
+	 * Albert's own convention: `albert_post_not_found`, `albert_term_not_found`,
+	 * `albert_product_not_found`. Add-ons that follow the convention inherit the
 	 * classification for free; third-party abilities that do not have the
 	 * `albert/logging/outcome` filter.
 	 *
@@ -201,13 +201,8 @@ class Outcome {
 	/**
 	 * Exact error codes treated as a truthful negative answer.
 	 *
-	 * Deliberately short. Every entry was checked against every site that
-	 * raises it, and each one means "the record you named is not there" and
-	 * nothing else:
-	 *
-	 *   - `not_found`          — the bare, unprefixed form of the suffix rule.
-	 *   - `invalid_post`       — "The specified post does not exist."
-	 *   - `invalid_attachment` — "The specified attachment does not exist."
+	 * Deliberately short: only `not_found`, the bare, unprefixed form of the
+	 * suffix rule. Albert's own codes follow `albert_{resource}_not_found`.
 	 *
 	 * Codes deliberately left as `error` even though they read close to this
 	 * list: `token_already_used` and `link_already_used` both say "invalid **or**
@@ -221,10 +216,10 @@ class Outcome {
 	 * is the interesting one: core raises it for an id of zero or less, for a
 	 * post that is genuinely absent, *and* for a post whose type does not match
 	 * the route — two of those three readings are a malformed request. Albert's
-	 * own abilities check existence first and answer with `post_not_found`,
-	 * `page_not_found` or `user_not_found`, so `rest_post_invalid_id` never
-	 * carries the plain "does it exist?" question anyway; by the time it appears
-	 * the ability believed the id was good and REST disagreed.
+	 * own abilities check existence first and answer with `albert_post_not_found`,
+	 * `albert_page_not_found` or `albert_user_not_found`, so `rest_post_invalid_id`
+	 * never carries the plain "does it exist?" question anyway; by the time it
+	 * appears the ability believed the id was good and REST disagreed.
 	 *
 	 * Erring toward `error` is the safe direction: a misclassified failure that
 	 * shouts is better than a real failure that whispers.
@@ -232,7 +227,7 @@ class Outcome {
 	 * @since 1.4.0
 	 * @var array<int, string>
 	 */
-	const NOT_FOUND_CODES = [ 'not_found', 'invalid_post', 'invalid_attachment' ];
+	const NOT_FOUND_CODES = [ 'not_found' ];
 
 	/**
 	 * `*_not_found` codes that are API-surface misses, not content misses.
@@ -246,8 +241,8 @@ class Outcome {
 	 *   - `albert_ability_not_found`, `albert_premium_ability_not_found`,
 	 *     `ability_not_found` — the ability id is not registered.
 	 *   - `tool_not_found` — the MCP tool name is not one the server exposes.
-	 *   - `skill_not_found` — a judgement call, written down rather than left to
-	 *     the suffix rule: skills *are* enumerated to the assistant, so asking
+	 *   - `albert_skill_not_found` — a judgement call, written down rather than
+	 *     left to the suffix rule: skills *are* enumerated to the assistant, so asking
 	 *     for one that does not exist is the same client bug as the others.
 	 *
 	 * @since 1.4.0
@@ -258,7 +253,7 @@ class Outcome {
 		'albert_premium_ability_not_found',
 		'ability_not_found',
 		'tool_not_found',
-		'skill_not_found',
+		'albert_skill_not_found',
 	];
 
 	/**

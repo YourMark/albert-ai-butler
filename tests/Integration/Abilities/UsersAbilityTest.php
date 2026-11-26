@@ -274,7 +274,7 @@ class UsersAbilityTest extends TestCase {
 		$result = ( new ViewUser() )->execute( [ 'id' => 99999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'user_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_user_not_found', $result->get_error_code() );
 	}
 
 	// ─── CreateUser ─────────────────────────────────────────────────
@@ -556,7 +556,7 @@ class UsersAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'user_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_user_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -672,7 +672,7 @@ class UsersAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'user_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_user_not_found', $result->get_error_code() );
 	}
 
 	/**

@@ -133,7 +133,7 @@ class SetFeaturedImage extends BaseAbility {
 
 			if ( $page_response->is_error() ) {
 				return new WP_Error(
-					'invalid_post',
+					'albert_post_not_found',
 					__( 'The specified post or page does not exist.', 'albert-ai-butler' ),
 					[ 'status' => 404 ]
 				);
@@ -146,7 +146,7 @@ class SetFeaturedImage extends BaseAbility {
 
 		if ( $media_response->is_error() ) {
 			return new WP_Error(
-				'invalid_attachment',
+				'albert_media_not_found',
 				__( 'The specified attachment does not exist.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);

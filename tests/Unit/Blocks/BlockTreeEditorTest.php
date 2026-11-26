@@ -431,7 +431,7 @@ class BlockTreeEditorTest extends TestCase {
 		$result = $this->editor->edit( $tree, [ 9 ], $this->heading_block() );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'block_path_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_block_path_not_found', $result->get_error_code() );
 		$this->assertStringContainsString( '[9]', $result->get_error_message() );
 	}
 
@@ -441,7 +441,7 @@ class BlockTreeEditorTest extends TestCase {
 		$result = $this->editor->remove( $tree, [ 0, 0 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'block_path_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_block_path_not_found', $result->get_error_code() );
 	}
 
 	public function test_expect_mismatch_returns_conflict(): void {
@@ -468,6 +468,6 @@ class BlockTreeEditorTest extends TestCase {
 		$result = $this->editor->edit( $tree, [], $this->heading_block() );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'block_path_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_block_path_not_found', $result->get_error_code() );
 	}
 }

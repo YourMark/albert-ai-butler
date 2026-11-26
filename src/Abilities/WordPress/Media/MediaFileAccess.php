@@ -26,7 +26,7 @@ trait MediaFileAccess {
 	 * Asks core's meta capability for that file, so safe mode refuses another user's
 	 * file at once instead of holding a call core would refuse after approval. Without
 	 * input (listing abilities) only `upload_files` is checked. An ID that is not a media
-	 * file passes, so execute() can answer `media_not_found`: core turns any error from
+	 * file passes, so execute() can answer `albert_media_not_found`: core turns any error from
 	 * a permission check into "does not have necessary permission", which would tell the
 	 * assistant the wrong thing.
 	 *
@@ -52,7 +52,7 @@ trait MediaFileAccess {
 	}
 
 	/**
-	 * A `media_not_found` error when the ID is not a media file, null when it is.
+	 * A `albert_media_not_found` error when the ID is not a media file, null when it is.
 	 *
 	 * Checked before core's endpoint so a post ID is never sent to it.
 	 *
@@ -68,7 +68,7 @@ trait MediaFileAccess {
 		}
 
 		return new WP_Error(
-			'media_not_found',
+			'albert_media_not_found',
 			sprintf(
 				/* translators: %d: Media ID */
 				__( 'Media with ID %d not found.', 'albert-ai-butler' ),

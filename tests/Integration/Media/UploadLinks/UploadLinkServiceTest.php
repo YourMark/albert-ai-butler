@@ -397,7 +397,7 @@ class UploadLinkServiceTest extends TestCase {
 		$link = $this->service->mint( $this->admin_id, [ 'post_id' => 999999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $link );
-		$this->assertSame( 'invalid_post', $link->get_error_code() );
+		$this->assertSame( 'albert_post_not_found', $link->get_error_code() );
 	}
 
 	/**

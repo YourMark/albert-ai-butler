@@ -107,7 +107,7 @@ class ViewMedia extends BaseAbility {
 
 		if ( ! $media || $media->post_type !== 'attachment' ) {
 			return new WP_Error(
-				'media_not_found',
+				'albert_media_not_found',
 				sprintf(
 					/* translators: %d: Media ID */
 					__( 'Media with ID %d not found.', 'albert-ai-butler' ),

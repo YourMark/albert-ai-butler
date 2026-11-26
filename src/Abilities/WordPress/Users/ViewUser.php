@@ -113,7 +113,7 @@ class ViewUser extends BaseAbility {
 
 		if ( ! $user ) {
 			return new WP_Error(
-				'user_not_found',
+				'albert_user_not_found',
 				sprintf(
 					/* translators: %d: User ID */
 					__( 'User with ID %d not found.', 'albert-ai-butler' ),

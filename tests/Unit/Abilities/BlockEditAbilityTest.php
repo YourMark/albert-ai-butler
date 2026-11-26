@@ -508,7 +508,7 @@ class BlockEditAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'block_path_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_block_path_not_found', $result->get_error_code() );
 		$this->assertSame( [], $this->write_calls() );
 	}
 
@@ -571,7 +571,7 @@ class BlockEditAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'post_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
 	}
 
 	public function test_wrong_post_type_returns_not_found(): void {
@@ -588,7 +588,7 @@ class BlockEditAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'post_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
 	}
 
 	// =====================================================================

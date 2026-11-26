@@ -233,7 +233,7 @@ class UpdatePattern extends BaseAbility {
 
 		if ( $pattern === null ) {
 			return new WP_Error(
-				'pattern_not_found',
+				'albert_pattern_not_found',
 				/* translators: %s: pattern name. */
 				sprintf( __( 'No pattern named "%s" is registered on this site.', 'albert-ai-butler' ), $name ),
 				[ 'status' => 404 ]

@@ -224,7 +224,7 @@ class AgentContextTest extends TestCase {
 		$result = ( new GetSkill() )->execute( [ 'slug' => 'no-such-skill' ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'skill_not_found', $result->get_error_code() );
+		$this->assertSame( 'albert_skill_not_found', $result->get_error_code() );
 		$this->assertStringContainsString( 'block-editor', $result->get_error_message() );
 	}
 

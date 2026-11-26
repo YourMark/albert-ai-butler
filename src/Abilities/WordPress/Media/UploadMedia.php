@@ -173,7 +173,7 @@ class UploadMedia extends BaseAbility {
 			$post = get_post( $post_id );
 			if ( ! $post ) {
 				return new WP_Error(
-					'invalid_post',
+					'albert_post_not_found',
 					__( 'The specified post does not exist.', 'albert-ai-butler' ),
 					[ 'status' => 404 ]
 				);

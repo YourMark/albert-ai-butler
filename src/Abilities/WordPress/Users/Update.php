@@ -177,7 +177,7 @@ class Update extends BaseAbility {
 		// Check if user exists.
 		if ( ! get_userdata( $user_id ) ) {
 			return new WP_Error(
-				'user_not_found',
+				'albert_user_not_found',
 				__( 'User not found.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
