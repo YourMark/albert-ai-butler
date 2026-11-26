@@ -96,15 +96,16 @@ class Update extends BaseAbility {
 				'type'        => 'string',
 				'description' => 'Optional post excerpt',
 			],
+			// The anyOf title is the only schema text core puts in its error, so it carries the pointer to remove-post-terms.
 			'categories' => [
 				'type'        => 'array',
-				'items'       => [ 'type' => 'integer' ],
-				'description' => 'Deprecated: use albert/add-post-terms or albert/remove-post-terms. Category IDs that replace the post\'s categories; an empty list changes nothing.',
+				'anyOf'       => [ self::non_empty_list( 'integer', 'categories' ) ],
+				'description' => 'Deprecated: use albert/add-post-terms or albert/remove-post-terms. Category IDs that replace the post\'s categories. To take categories off, use albert/remove-post-terms.',
 			],
 			'tags'       => [
 				'type'        => 'array',
-				'items'       => [ 'type' => 'string' ],
-				'description' => 'Deprecated: use albert/add-post-terms or albert/remove-post-terms. Tag names, created when missing, that replace the post\'s tags; an empty list changes nothing.',
+				'anyOf'       => [ self::non_empty_list( 'string', 'tags' ) ],
+				'description' => 'Deprecated: use albert/add-post-terms or albert/remove-post-terms. Tag names, created when missing, that replace the post\'s tags. To take tags off, use albert/remove-post-terms.',
 			],
 		];
 
@@ -112,6 +113,23 @@ class Update extends BaseAbility {
 			'type'       => 'object',
 			'properties' => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ),
 			'required'   => [ 'id' ],
+		];
+	}
+
+	/**
+	 * A list of at least one item, whose title names albert/remove-post-terms for an empty one.
+	 *
+	 * @param string $type What the list holds.
+	 * @param string $what "categories" or "tags".
+	 * @return array<string, mixed>
+	 * @since 1.6.0
+	 */
+	private static function non_empty_list( string $type, string $what ): array {
+		return [
+			'title'    => 'list with at least one item (to take ' . $what . ' off, use albert/remove-post-terms)',
+			'type'     => 'array',
+			'items'    => [ 'type' => $type ],
+			'minItems' => 1,
 		];
 	}
 

@@ -43,6 +43,14 @@ abstract class AbstractPostTerms extends BaseAbility {
 	protected const CREATE_TAGS = true;
 
 	/**
+	 * Whether tags may also be sent by ID. A numeric string stays a name, since "2024" is a valid tag.
+	 *
+	 * @var bool
+	 * @since 1.6.0
+	 */
+	protected const TAG_IDS = false;
+
+	/**
 	 * The new term IDs, from the current IDs and the resolved IDs sent.
 	 *
 	 * @param array<int, int> $current IDs on the post now.
@@ -161,8 +169,6 @@ abstract class AbstractPostTerms extends BaseAbility {
 		}
 
 		$unchanged = array_diff( $new, $current ) === [] && array_diff( $current, $new ) === [];
-		// Removing the default category from a post that only has it changes nothing, so nothing was put back.
-		$default_applied = $emptied && ! $unchanged;
 		if ( ! $unchanged ) {
 			$written = $this->write( $post_id, $taxonomy, $new );
 			if ( is_wp_error( $written ) ) {
@@ -171,7 +177,8 @@ abstract class AbstractPostTerms extends BaseAbility {
 			clean_post_cache( $post_id );
 		}
 
-		return $this->result( $post_id, $taxonomy, $default_applied );
+		// Removing the default category from a post that only has it changes nothing, so nothing was put back.
+		return $this->result( $post_id, $taxonomy, $emptied && ! $unchanged, $emptied && $unchanged );
 	}
 
 	/**
@@ -180,10 +187,11 @@ abstract class AbstractPostTerms extends BaseAbility {
 	 * @param int    $post_id         Post ID.
 	 * @param string $taxonomy        Taxonomy name.
 	 * @param bool   $default_applied Whether the default category was put back.
+	 * @param bool   $default_kept    Whether the post kept its only category, the default, because a post always keeps one.
 	 * @return array<string, mixed>
 	 * @since 1.6.0
 	 */
-	protected function result( int $post_id, string $taxonomy, bool $default_applied ): array {
+	protected function result( int $post_id, string $taxonomy, bool $default_applied, bool $default_kept ): array {
 		$post = get_post( $post_id );
 
 		return [
@@ -203,24 +211,46 @@ abstract class AbstractPostTerms extends BaseAbility {
 	 */
 	private function resolve( string $taxonomy, array $terms ): array|WP_Error {
 		if ( $taxonomy === 'category' ) {
+			$ids = [];
 			foreach ( $terms as $term ) {
+				// Assistants often send an ID as text ("19").
+				if ( is_string( $term ) && ctype_digit( $term ) ) {
+					$term = (int) $term;
+				}
 				if ( ! is_int( $term ) ) {
 					return $this->invalid_terms( __( 'For "category", "terms" takes category IDs as numbers. Look them up with albert/find-terms.', 'albert-ai-butler' ) );
 				}
+				$ids[] = $term;
 			}
 
-			$unknown = PostTerms::check_category_ids( $terms );
+			$unknown = PostTerms::check_category_ids( $ids );
 
-			return $unknown ?? array_values( array_unique( $terms ) );
+			return $unknown ?? array_values( array_unique( $ids ) );
 		}
 
+		$ids   = [];
+		$names = [];
 		foreach ( $terms as $term ) {
-			if ( ! is_string( $term ) || trim( $term ) === '' ) {
-				return $this->invalid_terms( __( 'For "post_tag", "terms" takes tag names as text, not IDs.', 'albert-ai-butler' ) );
+			if ( is_int( $term ) && static::TAG_IDS ) {
+				$ids[] = $term;
+				continue;
 			}
+			if ( ! is_string( $term ) || trim( $term ) === '' ) {
+				return $this->invalid_terms(
+					static::TAG_IDS
+					? __( 'For "post_tag", "terms" takes tag names as text or tag IDs as numbers.', 'albert-ai-butler' )
+					: __( 'For "post_tag", "terms" takes tag names as text, not IDs.', 'albert-ai-butler' )
+				);
+			}
+			$names[] = $term;
 		}
 
-		return PostTerms::tag_ids( $terms, static::CREATE_TAGS, 'terms' );
+		$named = PostTerms::tag_ids( $names, static::CREATE_TAGS, 'terms' );
+		if ( is_wp_error( $named ) ) {
+			return $named;
+		}
+
+		return array_values( array_unique( array_merge( $ids, $named ) ) );
 	}
 
 	/**

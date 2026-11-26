@@ -259,9 +259,9 @@ Website: https://yourmark.nl
 - `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
 - `albert/create-post` and `albert/create-page` return `albert_post_permission_denied` and `albert_page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
 - `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
-- New abilities: `albert/add-post-terms` and `albert/remove-post-terms`. Both take `post_id`, `taxonomy` (`category` or `post_tag`) and up to 50 `terms`, and return the post's terms afterwards. `albert/remove-post-terms` returns `default_category_applied` when removing the last category put the default category back.
+- New abilities: `albert/add-post-terms` and `albert/remove-post-terms`. Both take `post_id`, `taxonomy` (`category` or `post_tag`) and up to 50 `terms`, and return the post's terms afterwards. Category IDs may be sent as numbers or as text. `albert/remove-post-terms` also takes tag IDs next to tag names, returns `default_category_applied` when removing the last category put the default category back, and a `note` saying why when the default category was the post's only one and stayed.
 - `albert/view-post` and `albert/view-page` return `categories` and `tags` as `{ id, name }` lists, left out when the post type does not use that taxonomy.
-- Deprecated: the `categories` and `tags` inputs of `albert/update-post`. Use `albert/add-post-terms` or `albert/remove-post-terms`. An empty list still changes nothing.
+- Deprecated: the `categories` and `tags` inputs of `albert/update-post`. Use `albert/add-post-terms` or `albert/remove-post-terms`. An empty list is refused as invalid input, with an error that names `albert/remove-post-terms`.
 - `albert/create-post` and `albert/update-post` return `albert_category_not_found` for a category ID that does not exist, and `albert_invalid_tags` or `albert_tag_permission_denied` for a tag WordPress refuses to create, and save nothing, instead of leaving it off.
 
 **Credits**

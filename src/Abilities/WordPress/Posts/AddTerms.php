@@ -34,7 +34,7 @@ class AddTerms extends AbstractPostTerms {
 		$this->group       = 'posts';
 
 		$this->input_schema  = $this->terms_input_schema(
-			'Category IDs (numbers) for "category", found with albert/find-terms. Tag names (text) for "post_tag"; a tag that does not exist yet is created.'
+			'Category IDs for "category", found with albert/find-terms. Tag names (text) for "post_tag"; a tag that does not exist yet is created.'
 		);
 		$this->output_schema = $this->terms_output_schema();
 

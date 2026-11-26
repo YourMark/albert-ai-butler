@@ -207,7 +207,7 @@ class PostsAbilityTest extends TestCase {
 		$post_id = self::factory()->post->create();
 		$this->assertSame( [], ( new ViewPost() )->execute( [ 'id' => $post_id ] )['post']['tags'] );
 
-		$cat_id  = self::factory()->term->create(
+		$cat_id = self::factory()->term->create(
 			[
 				'taxonomy' => 'category',
 				'name'     => 'ViewCat',
@@ -508,7 +508,7 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
-	 * UpdatePost leaves categories and tags alone when they are not sent or sent as an empty list.
+	 * UpdatePost leaves categories and tags alone when they are not sent.
 	 *
 	 * @return void
 	 */
@@ -516,25 +516,80 @@ class PostsAbilityTest extends TestCase {
 		$post_id = self::factory()->post->create();
 		$cat_id  = self::factory()->term->create( [ 'taxonomy' => 'category' ] );
 		wp_set_post_categories( $post_id, [ $cat_id ] );
-		wp_set_post_tags( $post_id, [ 'clear-me' ] );
+		wp_set_post_tags( $post_id, [ 'keep-me' ] );
 
-		( new UpdatePost() )->execute(
+		$result = ( new UpdatePost() )->execute(
 			[
 				'id'    => $post_id,
 				'title' => 'Renamed',
 			]
 		);
-		$result = ( new UpdatePost() )->execute(
+
+		$this->assertIsArray( $result );
+		$this->assertSame( [ $cat_id ], wp_get_post_categories( $post_id ) );
+		$this->assertSame( 'keep-me', wp_get_post_tags( $post_id )[0]->name );
+	}
+
+	/**
+	 * Empty term lists sent to update-post.
+	 *
+	 * @return array<string, array{0: string}>
+	 */
+	public static function provideEmptyTermFields(): array {
+		return [
+			'categories' => [ 'categories' ],
+			'tags'       => [ 'tags' ],
+		];
+	}
+
+	/**
+	 * Update-post refuses an empty categories or tags list and points at remove-post-terms.
+	 *
+	 * @dataProvider provideEmptyTermFields
+	 *
+	 * @param string $field The term field sent empty.
+	 * @return void
+	 */
+	public function test_update_post_refuses_empty_term_list( string $field ): void {
+		$post_id = self::factory()->post->create();
+		$cat_id  = self::factory()->term->create( [ 'taxonomy' => 'category' ] );
+		wp_set_post_categories( $post_id, [ $cat_id ] );
+		wp_set_post_tags( $post_id, [ 'keep-me' ] );
+
+		$result = wp_get_ability( 'albert/update-post' )->execute(
+			[
+				'id'   => $post_id,
+				$field => [],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+		$this->assertStringContainsString( 'albert/remove-post-terms', $result->get_error_message() );
+		$this->assertSame( [ $cat_id ], wp_get_post_categories( $post_id ) );
+		$this->assertSame( 'keep-me', wp_get_post_tags( $post_id )[0]->name );
+	}
+
+	/**
+	 * Update-post still accepts a filled categories list through the registry.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_accepts_category_list_through_registry(): void {
+		$post_id = self::factory()->post->create();
+		$cat_id  = self::factory()->term->create( [ 'taxonomy' => 'category' ] );
+
+		$result = wp_get_ability( 'albert/update-post' )->execute(
 			[
 				'id'         => $post_id,
-				'categories' => [],
-				'tags'       => [],
+				'categories' => [ $cat_id ],
+				'tags'       => [ 'registry-tag' ],
 			]
 		);
 
 		$this->assertIsArray( $result );
 		$this->assertSame( [ $cat_id ], wp_get_post_categories( $post_id ) );
-		$this->assertSame( 'clear-me', wp_get_post_tags( $post_id )[0]->name );
+		$this->assertSame( 'registry-tag', wp_get_post_tags( $post_id )[0]->name );
 	}
 
 	/**
@@ -888,6 +943,135 @@ class PostsAbilityTest extends TestCase {
 
 		$this->assertFalse( $result['default_category_applied'] );
 		$this->assertSame( [ $keep_id ], wp_get_post_categories( $post_id ) );
+	}
+
+	/**
+	 * Remove-post-terms on a post whose only category is the default says why nothing changed.
+	 *
+	 * @return void
+	 */
+	public function test_remove_post_terms_default_only_category_says_why(): void {
+		$post_id    = self::factory()->post->create();
+		$default_id = (int) get_option( 'default_category' );
+		wp_set_post_categories( $post_id, [ $default_id ] );
+
+		$result = wp_get_ability( 'albert/remove-post-terms' )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'category',
+				'terms'    => [ $default_id ],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertFalse( $result['default_category_applied'] );
+		$this->assertStringContainsString( 'albert/add-post-terms', $result['note'] );
+		$this->assertSame( [ $default_id ], wp_get_post_categories( $post_id ) );
+	}
+
+	/**
+	 * Remove-post-terms adds no note when it changed something.
+	 *
+	 * @return void
+	 */
+	public function test_remove_post_terms_without_note_when_changed(): void {
+		$post_id = self::factory()->post->create();
+		$keep_id = self::factory()->category->create();
+		$drop_id = self::factory()->category->create();
+		wp_set_post_categories( $post_id, [ $keep_id, $drop_id ] );
+
+		$result = wp_get_ability( 'albert/remove-post-terms' )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'category',
+				'terms'    => [ $drop_id ],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertArrayNotHasKey( 'note', $result );
+	}
+
+	/**
+	 * Remove-post-terms takes tag IDs next to names.
+	 *
+	 * @return void
+	 */
+	public function test_remove_post_terms_accepts_tag_ids(): void {
+		$post_id = self::factory()->post->create();
+		wp_set_post_tags( $post_id, [ 'by-id', 'by-name', 'stays' ] );
+		$by_id = get_term_by( 'name', 'by-id', 'post_tag' );
+		$this->assertInstanceOf( \WP_Term::class, $by_id );
+
+		$result = wp_get_ability( 'albert/remove-post-terms' )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ (int) $by_id->term_id, 'by-name' ],
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertSame( [ 'stays' ], wp_list_pluck( $result['terms'], 'name' ) );
+		$this->assertSame( [ 'stays' ], wp_list_pluck( wp_get_post_tags( $post_id ), 'name' ) );
+	}
+
+	/**
+	 * Add-post-terms still takes tags by name only: a number is refused, not looked up.
+	 *
+	 * @return void
+	 */
+	public function test_add_post_terms_refuses_tag_ids(): void {
+		$post_id = self::factory()->post->create();
+		$tag_id  = self::factory()->tag->create();
+
+		$result = wp_get_ability( 'albert/add-post-terms' )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ $tag_id ],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'albert_invalid_terms', $result->get_error_code() );
+		$this->assertSame( [], wp_get_post_tags( $post_id ) );
+	}
+
+	/**
+	 * Add-post-terms and remove-post-terms take category IDs sent as text.
+	 *
+	 * @return void
+	 */
+	public function test_post_terms_accept_category_ids_as_text(): void {
+		$post_id = self::factory()->post->create();
+		$keep_id = self::factory()->category->create();
+		$move_id = self::factory()->category->create();
+		wp_set_post_categories( $post_id, [ $keep_id ] );
+
+		$added = wp_get_ability( 'albert/add-post-terms' )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'category',
+				'terms'    => [ (string) $move_id ],
+			]
+		);
+
+		$this->assertIsArray( $added );
+		$ids = wp_get_post_categories( $post_id );
+		sort( $ids );
+		$this->assertSame( [ $keep_id, $move_id ], $ids );
+
+		$removed = wp_get_ability( 'albert/remove-post-terms' )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'category',
+				'terms'    => [ (string) $keep_id ],
+			]
+		);
+
+		$this->assertIsArray( $removed );
+		$this->assertSame( [ $move_id ], wp_get_post_categories( $post_id ) );
 	}
 
 	// ─── DeletePost ─────────────────────────────────────────────────
