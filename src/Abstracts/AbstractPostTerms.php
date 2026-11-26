@@ -154,14 +154,15 @@ abstract class AbstractPostTerms extends BaseAbility {
 		$current = array_column( PostTerms::terms( $post, $taxonomy ), 'id' );
 		$new     = array_values( array_unique( $this->apply( $current, $sent ) ) );
 
-		$default_applied = false;
 		// Mirrors wp_set_post_categories(): a post always keeps one category.
-		if ( $taxonomy === 'category' && $new === [] && $post->post_status !== 'auto-draft' ) {
-			$new             = [ (int) get_option( 'default_category' ) ];
-			$default_applied = true;
+		$emptied = $taxonomy === 'category' && $new === [] && $post->post_status !== 'auto-draft';
+		if ( $emptied ) {
+			$new = [ (int) get_option( 'default_category' ) ];
 		}
 
 		$unchanged = array_diff( $new, $current ) === [] && array_diff( $current, $new ) === [];
+		// Removing the default category from a post that only has it changes nothing, so nothing was put back.
+		$default_applied = $emptied && ! $unchanged;
 		if ( ! $unchanged ) {
 			$written = $this->write( $post_id, $taxonomy, $new );
 			if ( is_wp_error( $written ) ) {

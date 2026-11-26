@@ -846,6 +846,28 @@ class PostsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * RemovePostTerms does not report the default category as put back when the post only had it.
+	 *
+	 * @return void
+	 */
+	public function test_remove_post_terms_default_only_category_reports_nothing_applied(): void {
+		$post_id    = self::factory()->post->create();
+		$default_id = (int) get_option( 'default_category' );
+		wp_set_post_categories( $post_id, [ $default_id ] );
+
+		$result = ( new RemovePostTerms() )->execute(
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'category',
+				'terms'    => [ $default_id ],
+			]
+		);
+
+		$this->assertFalse( $result['default_category_applied'] );
+		$this->assertSame( [ $default_id ], wp_get_post_categories( $post_id ) );
+	}
+
+	/**
 	 * RemovePostTerms keeps the other categories when one of several is removed.
 	 *
 	 * @return void

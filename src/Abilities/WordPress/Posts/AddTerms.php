@@ -29,7 +29,7 @@ class AddTerms extends AbstractPostTerms {
 	public function __construct() {
 		$this->id          = 'albert/add-post-terms';
 		$this->label       = __( 'Add Post Terms', 'albert-ai-butler' );
-		$this->description = __( 'Add terms of one taxonomy to a post, keeping the terms it already has. Use it to categorise a post or tag it, instead of the categories and tags fields of albert/update-post.', 'albert-ai-butler' );
+		$this->description = __( 'Add terms of one taxonomy to a post, keeping the terms it already has, including the default category (such as Uncategorized) if that is all it has; remove that one with albert/remove-post-terms. Use it to categorise a post or tag it, instead of the categories and tags fields of albert/update-post.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
