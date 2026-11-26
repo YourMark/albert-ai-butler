@@ -7,7 +7,7 @@
 
 namespace Albert\Tests\Integration\CLI;
 
-require_once __DIR__ . '/wp-cli-fake.php';
+require_once dirname( __DIR__, 3 ) . '/tests-fakes/wp-cli.php';
 
 use Albert\CLI\AllowedUsersCommand;
 use Albert\CLI\Commands;

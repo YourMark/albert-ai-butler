@@ -2,6 +2,10 @@
 /**
  * A stand-in for the WP-CLI API the commands use, so they run inside the test suite.
  *
+ * Kept outside tests/: the Jetpack autoloader maps every class under an autoload
+ * path, dev ones included, and its prepended loader would serve these instead of
+ * the real WP-CLI's on any install with dev dependencies.
+ *
  * @package Albert
  */
 
