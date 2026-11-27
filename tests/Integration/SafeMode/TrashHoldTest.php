@@ -28,6 +28,7 @@ class TrashHoldTest extends TestCase {
 			'delete-post'    => [ 'albert/delete-post', [ 'id' => 5 ] ],
 			'delete-page'    => [ 'albert/delete-page', [ 'id' => 5 ] ],
 			'delete-pattern' => [ 'albert/delete-pattern', [ 'name' => 'core/x' ] ],
+			'delete-comment' => [ 'albert/delete-comment', [ 'comment_ids' => [ 5, 6 ] ] ],
 		];
 	}
 

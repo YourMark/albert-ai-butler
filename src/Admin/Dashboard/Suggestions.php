@@ -186,6 +186,10 @@ class Suggestions {
 				'requires' => [ 'albert/find-media', 'albert/update-media' ],
 			],
 			[
+				'text'     => __( 'Are any comments waiting for approval? Tell me which look like spam.', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-comments' ],
+			],
+			[
 				'text'     => __( 'Find every page, post, pattern, header and footer that mentions our opening hours.', 'albert-ai-butler' ),
 				'requires' => [ 'albert/search-content' ],
 			],
