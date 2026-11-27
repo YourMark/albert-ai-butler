@@ -1,0 +1,647 @@
+<?php
+/**
+ * Integration tests for the revision abilities.
+ *
+ * Real posts and revisions, core's restore, and the safe mode gate.
+ *
+ * @package Albert
+ */
+
+namespace Albert\Tests\Integration\Abilities;
+
+use Albert\Abilities\WordPress\Revisions\FindRevisions;
+use Albert\Abilities\WordPress\Revisions\RestoreRevision;
+use Albert\Abilities\WordPress\Revisions\RevisionDiff;
+use Albert\Abilities\WordPress\Revisions\ViewRevision;
+use Albert\SafeMode\Gate;
+use Albert\SafeMode\RiskPolicy;
+use Albert\Tests\TestCase;
+use WP_Error;
+
+/**
+ * Revision ability tests.
+ */
+class RevisionsAbilityTest extends TestCase {
+
+	/**
+	 * The post under test.
+	 *
+	 * @var int
+	 */
+	private int $post_id;
+
+	/**
+	 * The revision holding the first version.
+	 *
+	 * @var int
+	 */
+	private int $first_revision;
+
+	/**
+	 * The revision holding the second (current) version.
+	 *
+	 * @var int
+	 */
+	private int $second_revision;
+
+	/**
+	 * Run as an administrator with a post edited once.
+	 *
+	 * @return void
+	 */
+	public function set_up(): void {
+		parent::set_up();
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'administrator' ] ) );
+		delete_option( 'albert_disabled_abilities' );
+		update_option( 'albert_abilities_saved', true );
+
+		$this->post_id        = self::factory()->post->create(
+			[
+				'post_title'   => 'Opening hours',
+				'post_content' => "We open at nine.\n\nWe close at five.\n\nClosed on Sundays.",
+			]
+		);
+		$this->first_revision = $this->save_revision();
+
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_title'   => 'Opening times',
+				'post_content' => "We open at ten.\n\nWe close at five.\n\nClosed on Sundays.",
+			]
+		);
+		$this->second_revision = $this->save_revision();
+	}
+
+	/**
+	 * Store the post as it is now as a revision, as an editor save does.
+	 *
+	 * @return int The revision ID.
+	 */
+	private function save_revision(): int {
+		$revision_id = wp_save_post_revision( $this->post_id );
+		if ( ! $revision_id ) {
+			$revisions   = wp_get_post_revisions( $this->post_id );
+			$revision_id = (int) array_key_first( $revisions );
+		}
+		return (int) $revision_id;
+	}
+
+	/**
+	 * Revisions are listed newest first, with the fields that differ from the current version.
+	 *
+	 * @return void
+	 */
+	public function test_find_lists_revisions_with_what_differs(): void {
+		$result = ( new FindRevisions() )->execute( [ 'post_id' => $this->post_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 'Opening times', $result['post']['title'] );
+
+		$by_id = array_column( $result['revisions'], null, 'id' );
+		$this->assertSame( $this->second_revision, $result['revisions'][0]['id'] );
+		$this->assertSame( [], $by_id[ $this->second_revision ]['differs_from_current'] );
+		$this->assertSame( [ 'post_title', 'post_content' ], $by_id[ $this->first_revision ]['differs_from_current'] );
+	}
+
+	/**
+	 * Each listed revision says which fields that save changed, so "what changed last time?" is answered from the list.
+	 *
+	 * @return void
+	 */
+	public function test_find_says_what_each_save_changed(): void {
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_excerpt' => 'Hours for the shop.',
+			]
+		);
+		$third = $this->save_revision();
+
+		$result = wp_get_ability( 'albert/find-revisions' )->execute( [ 'post_id' => $this->post_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( $third, $result['revisions'][0]['id'], 'The newest revision is the current version.' );
+
+		$by_id = array_column( $result['revisions'], null, 'id' );
+		$this->assertSame( [ 'post_excerpt' ], $by_id[ $third ]['changed_fields'] );
+		$this->assertSame( [ 'post_title', 'post_content' ], $by_id[ $this->second_revision ]['changed_fields'] );
+		$this->assertNull( $by_id[ $this->first_revision ]['changed_fields'], 'The oldest revision has nothing before it.' );
+	}
+
+	/**
+	 * The save before a revision is found even when it is on the next page.
+	 *
+	 * @return void
+	 */
+	public function test_find_compares_across_pages(): void {
+		$result = wp_get_ability( 'albert/find-revisions' )->execute(
+			[
+				'post_id'  => $this->post_id,
+				'per_page' => 1,
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertSame( $this->second_revision, $result['revisions'][0]['id'] );
+		$this->assertSame( [ 'post_title', 'post_content' ], $result['revisions'][0]['changed_fields'] );
+	}
+
+	/**
+	 * Content other than posts and pages, such as a navigation menu, has its revisions listed too.
+	 *
+	 * @return void
+	 */
+	public function test_find_lists_navigation_menu_revisions(): void {
+		$menu_id = self::factory()->post->create(
+			[
+				'post_type'    => 'wp_navigation',
+				'post_title'   => 'Main menu',
+				'post_content' => '<!-- wp:navigation-link {"label":"Home","url":"/"} /-->',
+			]
+		);
+		wp_save_post_revision( $menu_id );
+		wp_update_post(
+			[
+				'ID'           => $menu_id,
+				'post_content' => '<!-- wp:navigation-link {"label":"Start","url":"/"} /-->',
+			]
+		);
+		wp_save_post_revision( $menu_id );
+
+		$result = wp_get_ability( 'albert/find-revisions' )->execute( [ 'post_id' => $menu_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 'wp_navigation', $result['post']['type'] );
+		$this->assertSame( [ 'post_content' ], $result['revisions'][0]['changed_fields'] );
+	}
+
+	/**
+	 * Paging bounds the list and reports the total.
+	 *
+	 * @return void
+	 */
+	public function test_find_pages_the_list(): void {
+		$result = ( new FindRevisions() )->execute(
+			[
+				'post_id'  => $this->post_id,
+				'per_page' => 1,
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 1, $result['revisions'] );
+		$this->assertGreaterThanOrEqual( 2, $result['total'] );
+		$this->assertSame( $result['total'], $result['total_pages'] );
+	}
+
+	/**
+	 * View diffs a revision against the current version, line by line.
+	 *
+	 * @return void
+	 */
+	public function test_view_diffs_against_the_current_version(): void {
+		$result = ( new ViewRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
+
+		$this->assertIsArray( $result );
+		$this->assertTrue( $result['changed'] );
+		$this->assertSame( $this->post_id, $result['to']['id'] );
+		$this->assertSame(
+			[
+				'id'   => $this->post_id,
+				'name' => 'Opening times',
+			],
+			$result['post']
+		);
+
+		$fields = array_column( $result['fields'], null, 'field' );
+		$this->assertSame( "@@ -1,1 +1,1 @@\n-Opening hours\n+Opening times", $fields['post_title']['diff'] );
+		$this->assertStringContainsString( '-We open at nine.', $fields['post_content']['diff'] );
+		$this->assertStringContainsString( '+We open at ten.', $fields['post_content']['diff'] );
+		$this->assertStringNotContainsString( 'Closed on Sundays.', $fields['post_content']['diff'], 'Lines far from a change are left out.' );
+		$this->assertFalse( $fields['post_excerpt']['changed'] );
+		$this->assertSame( '', $fields['post_excerpt']['diff'] );
+	}
+
+	/**
+	 * "previous" shows what a revision changed compared with the one before it.
+	 *
+	 * @return void
+	 */
+	public function test_view_compares_with_the_previous_revision(): void {
+		$result = ( new ViewRevision() )->execute(
+			[
+				'revision_id' => $this->second_revision,
+				'compare_to'  => 'previous',
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertSame( $this->first_revision, $result['from']['id'] );
+		$this->assertSame( $this->second_revision, $result['to']['id'] );
+		$this->assertTrue( $result['changed'] );
+	}
+
+	/**
+	 * The oldest revision has nothing before it: the input is wrong, the revision exists.
+	 *
+	 * @return void
+	 */
+	public function test_view_previous_of_the_oldest_is_an_invalid_compare_to(): void {
+		$oldest = (int) array_key_last( wp_get_post_revisions( $this->post_id ) );
+
+		$result = ( new ViewRevision() )->execute(
+			[
+				'revision_id' => $oldest,
+				'compare_to'  => 'previous',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'invalid_compare_to', $result->get_error_code() );
+	}
+
+	/**
+	 * A long diff is cut short and says so.
+	 *
+	 * @return void
+	 */
+	public function test_long_diffs_are_bounded(): void {
+		$from = implode( "\n", range( 1, 1000 ) );
+		$to   = implode( "\n", array_map( static fn( int $n ): string => 'changed ' . $n, range( 1, 1000 ) ) );
+
+		$diff = RevisionDiff::diff( $from, $to );
+
+		$this->assertTrue( $diff['changed'] );
+		$this->assertTrue( $diff['truncated'] );
+		$this->assertLessThanOrEqual( 300, substr_count( $diff['diff'], "\n" ) + 1 );
+	}
+
+	/**
+	 * A field too long to diff cheaply is reported as changed without a diff.
+	 *
+	 * @return void
+	 */
+	public function test_huge_fields_are_not_diffed(): void {
+		$from = implode( "\n", range( 1, 6000 ) );
+		$to   = $from . "\nextra";
+
+		$this->assertSame(
+			[
+				'changed'   => true,
+				'diff'      => '',
+				'truncated' => true,
+			],
+			RevisionDiff::diff( $from, $to )
+		);
+	}
+
+	/**
+	 * A single line longer than the budget is cut, not dropped.
+	 *
+	 * @return void
+	 */
+	public function test_an_over_long_line_is_cut_to_the_budget(): void {
+		$diff = RevisionDiff::diff( '<p>old</p>', str_repeat( 'x', 30000 ) );
+
+		$this->assertTrue( $diff['truncated'] );
+		$this->assertStringStartsWith( "@@ -1,1 +1,1 @@\n-<p>old</p>\n+xxx", $diff['diff'] );
+		$this->assertLessThanOrEqual( 20000, strlen( $diff['diff'] ) );
+	}
+
+	/**
+	 * A word added in the middle of one very long line shows on both sides, around the change.
+	 *
+	 * @return void
+	 */
+	public function test_a_change_in_a_long_line_shows_both_sides(): void {
+		$half = str_repeat( 'lorem ipsum ', 1167 );
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => $half . $half,
+			]
+		);
+		$this->save_revision();
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => $half . 'INSERTED ' . $half,
+			]
+		);
+		$newest = $this->save_revision();
+
+		$result = wp_get_ability( 'albert/view-revision' )->execute(
+			[
+				'revision_id' => $newest,
+				'compare_to'  => 'previous',
+			]
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertGreaterThanOrEqual( 28000, strlen( $half . $half ) );
+		$content = array_column( $result['fields'], null, 'field' )['post_content'];
+		$lines   = explode( "\n", $content['diff'] );
+
+		$this->assertTrue( $content['truncated'] );
+		$this->assertCount( 3, $lines );
+		$this->assertStringStartsWith( '-…', $lines[1] );
+		$this->assertStringNotContainsString( 'INSERTED', $lines[1] );
+		$this->assertStringStartsWith( '+…', $lines[2] );
+		$this->assertStringContainsString( 'lorem ipsum INSERTED lorem ipsum', $lines[2] );
+		$this->assertLessThan( 1000, strlen( $content['diff'] ), 'Only the area around the change is shown.' );
+	}
+
+	/**
+	 * Restoring goes through core: the post takes the revision's fields and a new revision records it.
+	 *
+	 * @return void
+	 */
+	public function test_restore_goes_through_core_and_records_a_revision(): void {
+		$restored_hook = 0;
+		add_action(
+			'wp_restore_post_revision',
+			static function () use ( &$restored_hook ): void {
+				++$restored_hook;
+			}
+		);
+
+		$result = ( new RestoreRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 1, $restored_hook );
+		$this->assertSame( [ 'post_title', 'post_content' ], $result['changed_fields'] );
+		$this->assertSame(
+			[
+				'id'   => $this->post_id,
+				'name' => 'Opening hours',
+			],
+			$result['post'],
+			'The post is referenced by ID and its title after the restore.'
+		);
+
+		$post = get_post( $this->post_id );
+		$this->assertSame( 'Opening hours', $post->post_title );
+		$this->assertStringContainsString( 'We open at nine.', $post->post_content );
+
+		$this->assertIsInt( $result['new_revision_id'] );
+		$this->assertNotContains( $result['new_revision_id'], [ $this->first_revision, $this->second_revision ] );
+		$this->assertSame( 'Opening hours', get_post( $result['new_revision_id'] )->post_title );
+	}
+
+	/**
+	 * A revision holding a block the site no longer allows is refused, as update-post would.
+	 *
+	 * @return void
+	 */
+	public function test_restore_refuses_a_block_no_longer_allowed(): void {
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => "<!-- wp:html -->\n<p>Old widget</p>\n<!-- /wp:html -->",
+			]
+		);
+		$with_html = $this->save_revision();
+		wp_update_post(
+			[
+				'ID'           => $this->post_id,
+				'post_content' => "<!-- wp:paragraph -->\n<p>Plain.</p>\n<!-- /wp:paragraph -->",
+			]
+		);
+
+		$only_paragraphs = static fn(): array => [ 'core/paragraph' ];
+		add_filter( 'allowed_block_types_all', $only_paragraphs );
+		$result          = ( new RestoreRevision() )->execute( [ 'revision_id' => $with_html ] );
+		remove_filter( 'allowed_block_types_all', $only_paragraphs );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'block_validation_failed', $result->get_error_code() );
+		$this->assertStringNotContainsString( 'wp:html', get_post( $this->post_id )->post_content );
+	}
+
+	/**
+	 * A trashed post is not restored behind the owner's back.
+	 *
+	 * @return void
+	 */
+	public function test_restore_refuses_a_trashed_post(): void {
+		wp_trash_post( $this->post_id );
+
+		$result = ( new RestoreRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'invalid_revision_id', $result->get_error_code() );
+	}
+
+	/**
+	 * With revisions turned off, a restore is refused: nothing would record it.
+	 *
+	 * @return void
+	 */
+	public function test_restore_refuses_when_revisions_are_off(): void {
+		add_filter( 'wp_revisions_to_keep', '__return_zero' );
+
+		$result = ( new RestoreRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
+
+		remove_filter( 'wp_revisions_to_keep', '__return_zero' );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'invalid_revision_id', $result->get_error_code() );
+		$this->assertSame( 'Opening times', get_post( $this->post_id )->post_title );
+	}
+
+	/**
+	 * With revisions turned off, the ones saved before stay readable, and the listing says they are off.
+	 *
+	 * @return void
+	 */
+	public function test_revisions_stay_readable_when_turned_off(): void {
+		add_filter( 'wp_revisions_to_keep', '__return_zero' );
+
+		$find = ( new FindRevisions() )->execute( [ 'post_id' => $this->post_id ] );
+		$view = ( new ViewRevision() )->execute(
+			[
+				'revision_id' => $this->second_revision,
+				'compare_to'  => 'previous',
+			]
+		);
+
+		remove_filter( 'wp_revisions_to_keep', '__return_zero' );
+
+		$this->assertIsArray( $find );
+		$this->assertFalse( $find['revisions_enabled'] );
+		$this->assertContains( $this->first_revision, array_column( $find['revisions'], 'id' ) );
+		$this->assertIsArray( $view, 'The revision before it is found, not reported as missing.' );
+		$this->assertSame( $this->first_revision, $view['from']['id'] );
+	}
+
+	/**
+	 * The restore's new revision is reported even when saving it prunes the oldest one.
+	 *
+	 * @return void
+	 */
+	public function test_restore_reports_the_new_revision_when_the_oldest_is_pruned(): void {
+		$keep = static fn(): int => 2;
+		add_filter( 'wp_revisions_to_keep', $keep );
+
+		$result = ( new RestoreRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
+
+		remove_filter( 'wp_revisions_to_keep', $keep );
+
+		$this->assertIsArray( $result );
+		$this->assertIsInt( $result['new_revision_id'] );
+		$this->assertSame( 'Opening hours', get_post( $result['new_revision_id'] )->post_title );
+	}
+
+	/**
+	 * Core's revision field filter gets the parent post, as when core saves a revision.
+	 *
+	 * @return void
+	 */
+	public function test_revision_fields_filter_gets_the_parent(): void {
+		$types  = [];
+		$record = static function ( array $fields, $post ) use ( &$types ): array {
+			$types[] = is_array( $post ) ? ( $post['post_type'] ?? '' ) : '';
+			return $fields;
+		};
+		add_filter( '_wp_post_revision_fields', $record, 10, 2 );
+
+		( new ViewRevision() )->execute(
+			[
+				'revision_id' => $this->second_revision,
+				'compare_to'  => 'previous',
+			]
+		);
+
+		remove_filter( '_wp_post_revision_fields', $record, 10 );
+
+		$this->assertNotEmpty( $types );
+		$this->assertSame( [ 'post' ], array_values( array_unique( $types ) ) );
+	}
+
+	/**
+	 * Unknown revisions and posts are reported as not found; a post ID is not a revision ID.
+	 *
+	 * @return void
+	 */
+	public function test_unknown_ids_are_not_found(): void {
+		$view = ( new ViewRevision() )->execute( [ 'revision_id' => $this->post_id ] );
+		$this->assertInstanceOf( WP_Error::class, $view );
+		$this->assertSame( 'revision_not_found', $view->get_error_code() );
+
+		$find = ( new FindRevisions() )->execute( [ 'post_id' => 999999 ] );
+		$this->assertInstanceOf( WP_Error::class, $find );
+		$this->assertSame( 'post_not_found', $find->get_error_code() );
+
+		$find_revision = ( new FindRevisions() )->execute( [ 'post_id' => $this->first_revision ] );
+		$this->assertInstanceOf( WP_Error::class, $find_revision );
+		$this->assertSame( 'post_not_found', $find_revision->get_error_code() );
+	}
+
+	/**
+	 * A post type without revisions says so.
+	 *
+	 * @return void
+	 */
+	public function test_post_type_without_revisions_is_refused(): void {
+		$attachment = self::factory()->post->create( [ 'post_type' => 'attachment' ] );
+
+		$result = ( new FindRevisions() )->execute( [ 'post_id' => $attachment ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'invalid_post_id', $result->get_error_code() );
+	}
+
+	/**
+	 * Someone who cannot edit the post sees none of its revisions and cannot restore one.
+	 *
+	 * @return void
+	 */
+	public function test_users_who_cannot_edit_the_post_are_refused(): void {
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
+
+		$find = ( new FindRevisions() )->execute( [ 'post_id' => $this->post_id ] );
+		$this->assertInstanceOf( WP_Error::class, $find );
+		$this->assertSame( 'post_permission_denied', $find->get_error_code() );
+
+		foreach ( [ new ViewRevision(), new RestoreRevision() ] as $ability ) {
+			$result = $ability->execute( [ 'revision_id' => $this->first_revision ] );
+			$this->assertInstanceOf( WP_Error::class, $result, $ability->get_id() );
+			$this->assertSame( 'post_permission_denied', $result->get_error_code(), $ability->get_id() );
+		}
+
+		$this->assertSame( 'Opening times', get_post( $this->post_id )->post_title, 'Nothing was restored.' );
+	}
+
+	/**
+	 * Subscribers cannot use the revision abilities at all.
+	 *
+	 * @return void
+	 */
+	public function test_subscribers_are_refused(): void {
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
+
+		foreach ( [ new FindRevisions(), new ViewRevision(), new RestoreRevision() ] as $ability ) {
+			$this->assertInstanceOf( WP_Error::class, $ability->check_permission(), $ability->get_id() );
+		}
+	}
+
+	/**
+	 * Reads pass safe mode; restoring is held for approval.
+	 *
+	 * @return void
+	 */
+	public function test_safe_mode_holds_restore(): void {
+		$gate = new Gate();
+
+		$expected = [
+			'albert/find-revisions'   => false,
+			'albert/view-revision'    => false,
+			'albert/restore-revision' => true,
+		];
+
+		foreach ( $expected as $id => $held ) {
+			$ability = wp_get_ability( $id );
+			$this->assertNotNull( $ability, $id . ' is registered' );
+			$this->assertSame( $held, $gate->must_gate( $ability, [ 'revision_id' => $this->first_revision ] ), $id );
+		}
+	}
+
+	/**
+	 * Each revision names its author alongside the ID.
+	 *
+	 * @return void
+	 */
+	public function test_revisions_name_their_author(): void {
+		$author                = self::factory()->user->create(
+			[
+				'role'         => 'editor',
+				'display_name' => 'Ada Editor',
+			]
+		);
+		$revision              = get_post( $this->first_revision );
+		$revision->post_author = (string) $author;
+
+		$this->assertSame(
+			[
+				'id'   => $author,
+				'name' => 'Ada Editor',
+			],
+			RevisionDiff::summary( $revision )['author']
+		);
+	}
+
+	/**
+	 * Restore is undoable through the revision it records, so it is not destructive, yet safe mode holds it by name.
+	 *
+	 * @return void
+	 */
+	public function test_restore_is_a_non_destructive_update(): void {
+		$annotations = wp_get_ability( 'albert/restore-revision' )->get_meta()['annotations'];
+
+		$this->assertFalse( $annotations['readonly'] );
+		$this->assertFalse( $annotations['destructive'] );
+		$this->assertTrue( RiskPolicy::is_high_risk_ability( 'albert/restore-revision' ) );
+	}
+}
