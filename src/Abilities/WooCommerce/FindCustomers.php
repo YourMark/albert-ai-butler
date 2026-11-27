@@ -11,7 +11,6 @@ namespace Albert\Abilities\WooCommerce;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use Albert\Privacy\PiiPolicy;
 use WP_Error;
 use WP_User_Query;
 
@@ -58,39 +57,34 @@ class FindCustomers extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'page'                 => [
+				'page'     => [
 					'type'        => 'integer',
 					'description' => 'Page number for pagination.',
 					'default'     => 1,
 					'minimum'     => 1,
 				],
-				'per_page'             => [
+				'per_page' => [
 					'type'        => 'integer',
 					'description' => 'Number of customers per page.',
 					'default'     => 10,
 					'minimum'     => 1,
 					'maximum'     => 100,
 				],
-				'search'               => [
+				'search'   => [
 					'type'        => 'string',
 					'description' => 'Search customers by name or email.',
 				],
-				'orderby'              => [
+				'orderby'  => [
 					'type'        => 'string',
 					'description' => 'Sort by field.',
 					'enum'        => [ 'registered', 'display_name', 'email', 'id' ],
 					'default'     => 'registered',
 				],
-				'order'                => [
+				'order'    => [
 					'type'        => 'string',
 					'description' => 'Order direction.',
 					'enum'        => [ 'asc', 'desc' ],
 					'default'     => 'desc',
-				],
-				'reveal_personal_data' => [
-					'type'        => 'boolean',
-					'description' => "Return real customer PII instead of anonymised placeholders. Requires the ability's own capability; ignored unless privacy mode is Balanced.",
-					'default'     => false,
 				],
 			],
 		];
@@ -179,17 +173,10 @@ class FindCustomers extends BaseAbility {
 			];
 		}
 
-		return PiiPolicy::redact(
-			[
-				'customers'   => $customers,
-				'total'       => $total,
-				'total_pages' => (int) ceil( $total / $per_page ),
-			],
-			$args,
-			[
-				'mask_context_names' => true,
-				'reveal_capability'  => 'list_users',
-			]
-		);
+		return [
+			'customers'   => $customers,
+			'total'       => $total,
+			'total_pages' => (int) ceil( $total / $per_page ),
+		];
 	}
 }
