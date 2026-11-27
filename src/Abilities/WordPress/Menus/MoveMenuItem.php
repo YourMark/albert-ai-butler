@@ -93,7 +93,7 @@ class MoveMenuItem extends BaseAbility {
 					'classic menu item by "menu_item_id"',
 					$properties,
 					[ 'menu_item_id', 'parent_item_id', 'position' ],
-					null,
+					'classic',
 					[
 						'required' => [ 'menu_item_id' ],
 						'anyOf'    => [

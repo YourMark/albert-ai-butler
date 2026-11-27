@@ -91,9 +91,12 @@ class NavigationTree {
 			$children = self::items( (array) $block['innerBlocks'], $here, $automatic );
 
 			if ( $name === self::PAGE_LIST ) {
-				$item['label'] = __( 'All published pages, listed automatically', 'albert-ai-butler' );
 				$links         = self::page_list_links( $attrs );
-				$children      = $links === null ? [] : self::items( $links, $here, true );
+				$item['label'] = $links === null
+					/* translators: %d: most pages listed */
+					? sprintf( __( 'All published pages, listed automatically: more than %d, so they are not listed here', 'albert-ai-butler' ), self::MAX_PAGE_LIST )
+					: __( 'All published pages, listed automatically', 'albert-ai-butler' );
+				$children = $links === null ? [] : self::items( $links, $here, true );
 			}
 
 			$item['children'] = $children;
@@ -111,7 +114,7 @@ class NavigationTree {
 	 *
 	 * @param array<string, mixed> $attrs The page list's attributes.
 	 *
-	 * @return list<array<string, mixed>>|null Null when it shows more than {@see self::MAX_PAGE_LIST} pages.
+	 * @return list<array<string, mixed>>|null Null when it shows more than {@see self::MAX_PAGE_LIST} pages; pages outside its `parentPageID` branch do not count.
 	 * @since 1.6.0
 	 */
 	public static function page_list_links( array $attrs ): ?array {
@@ -123,18 +126,38 @@ class NavigationTree {
 			]
 		);
 
-		$pages = is_array( $pages ) ? $pages : [];
-
-		if ( count( $pages ) > self::MAX_PAGE_LIST ) {
-			return null;
-		}
-
 		$by_parent = [];
-		foreach ( $pages as $page ) {
+		foreach ( is_array( $pages ) ? $pages : [] as $page ) {
 			$by_parent[ (int) $page->post_parent ][] = $page;
 		}
 
-		return self::page_branch( $by_parent, (int) ( $attrs['parentPageID'] ?? 0 ) );
+		$parent_id = (int) ( $attrs['parentPageID'] ?? 0 );
+
+		// Counted before any link is built, so a large site never gets a permalink per page.
+		if ( self::count_pages( $by_parent, $parent_id ) > self::MAX_PAGE_LIST ) {
+			return null;
+		}
+
+		return self::page_branch( $by_parent, $parent_id );
+	}
+
+	/**
+	 * How many pages sit below a parent, at any depth.
+	 *
+	 * @param array<int, list<WP_Post>> $by_parent Pages keyed by parent id.
+	 * @param int                       $parent_id Parent page id.
+	 *
+	 * @return int
+	 * @since 1.6.0
+	 */
+	private static function count_pages( array $by_parent, int $parent_id ): int {
+		$count = 0;
+
+		foreach ( $by_parent[ $parent_id ] ?? [] as $page ) {
+			$count += 1 + self::count_pages( $by_parent, (int) $page->ID );
+		}
+
+		return $count;
 	}
 
 	/**

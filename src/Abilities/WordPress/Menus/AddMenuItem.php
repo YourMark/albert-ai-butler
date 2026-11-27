@@ -240,11 +240,21 @@ class AddMenuItem extends BaseAbility {
 			'menu_order' => $last + 1,
 		];
 
+		$object = isset( $args['object_type'] ) ? sanitize_key( (string) $args['object_type'] ) : '';
 		if ( isset( $args['object_id'] ) ) {
 			$params['object_id'] = (int) $args['object_id'];
 		}
-		if ( isset( $args['object_type'] ) ) {
-			$params['object'] = sanitize_key( (string) $args['object_type'] );
+		if ( $object !== '' ) {
+			$params['object'] = $object;
+		}
+
+		$linked = match ( $params['type'] ) {
+			'post_type' => MenuSupport::linkable_post( (int) ( $args['object_id'] ?? 0 ), $object ),
+			'taxonomy'  => MenuSupport::linkable_term( (int) ( $args['object_id'] ?? 0 ), $object ),
+			default     => null,
+		};
+		if ( is_wp_error( $linked ) ) {
+			return $linked;
 		}
 		if ( isset( $args['title'] ) ) {
 			$params['title'] = sanitize_text_field( (string) $args['title'] );
@@ -257,7 +267,11 @@ class AddMenuItem extends BaseAbility {
 			}
 		}
 		if ( isset( $args['url'] ) ) {
-			$params['url'] = esc_url_raw( (string) $args['url'] );
+			$url = MenuSupport::url( (string) $args['url'] );
+			if ( is_wp_error( $url ) ) {
+				return $url;
+			}
+			$params['url'] = $url;
 		}
 		if ( isset( $args['open_in_new_tab'] ) ) {
 			$params['target'] = $args['open_in_new_tab'] ? '_blank' : '';

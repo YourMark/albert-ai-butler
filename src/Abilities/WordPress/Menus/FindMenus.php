@@ -258,7 +258,7 @@ class FindMenus extends BaseAbility {
 			$shown_in     = $locator->navigation_shown_in( $id );
 			$navigation[] = [
 				'id'       => $id,
-				'title'    => get_the_title( $post ),
+				'title'    => $post->post_title,
 				'status'   => $post->post_status,
 				'date'     => (string) $post->post_date,
 				'visible'  => $shown_in !== [],

@@ -75,7 +75,7 @@ class RemoveMenuItem extends BaseAbility {
 			'type'       => 'object',
 			'properties' => $properties,
 			'oneOf'      => [
-				MenuSupport::menu_branch( 'classic menu item by "menu_item_id"', $properties, [ 'menu_item_id' ], null, [ 'required' => [ 'menu_item_id' ] ] ),
+				MenuSupport::menu_branch( 'classic menu item by "menu_item_id"', $properties, [ 'menu_item_id' ], 'classic', [ 'required' => [ 'menu_item_id' ] ] ),
 				MenuSupport::menu_branch( 'navigation menu item by "menu_id" and "path"', $properties, [ 'menu_type', 'menu_id', 'path' ], 'block', [ 'required' => [ 'menu_type', 'menu_id', 'path' ] ] ),
 			],
 		];

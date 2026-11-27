@@ -514,7 +514,7 @@ class Plugin {
 		$this->abilities_manager->add_ability( new UpdatePattern() );
 		$this->abilities_manager->add_ability( new DeletePattern() );
 
-		// Menu abilities: classic menus, and finding the navigation menu a block theme shows.
+		// Menu abilities: classic menus and the navigation menus a block theme shows.
 		$this->abilities_manager->add_ability( new FindMenus() );
 		$this->abilities_manager->add_ability( new ViewMenu() );
 		$this->abilities_manager->add_ability( new CreateMenu() );

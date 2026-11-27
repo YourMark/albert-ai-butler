@@ -107,6 +107,88 @@ class MenuSupport {
 	}
 
 	/**
+	 * A link address from the input, refused when it sanitises to nothing.
+	 *
+	 * `esc_url_raw()` empties a `javascript:` address or one with a protocol
+	 * WordPress does not allow; saving that would leave a link that goes nowhere.
+	 *
+	 * @param string $url Input address.
+	 *
+	 * @return string|WP_Error
+	 * @since 1.6.0
+	 */
+	public static function url( string $url ): string|WP_Error {
+		$clean = esc_url_raw( trim( $url ) );
+
+		if ( $clean === '' ) {
+			return new WP_Error(
+				'albert_invalid_url',
+				__( 'The "url" is not an address WordPress allows in a link. Send a web address such as https://example.com/page, a path such as /contact, or a mailto: or tel: link.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		return $clean;
+	}
+
+	/**
+	 * A published post visitors can open, to link from a menu.
+	 *
+	 * The Site Editor and the classic Menus screen offer only published content of a
+	 * public post type; a draft, a trashed post or a revision would be a broken link.
+	 *
+	 * @param int    $id        Post ID.
+	 * @param string $post_type Expected post type, '' for any.
+	 *
+	 * @return WP_Post|WP_Error
+	 * @since 1.6.0
+	 */
+	public static function linkable_post( int $id, string $post_type ): WP_Post|WP_Error {
+		$post = $id > 0 ? get_post( $id ) : null;
+
+		if ( ! $post instanceof WP_Post || ( $post_type !== '' && $post->post_type !== $post_type ) || ! is_post_type_viewable( $post->post_type ) ) {
+			return new WP_Error(
+				'albert_invalid_object_id',
+				__( 'No page or post visitors can open has that "object_id". Find it with albert/find-pages or albert/find-posts.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		if ( $post->post_status !== 'publish' ) {
+			return new WP_Error(
+				'albert_invalid_object_id',
+				__( 'That page or post is not published, so visitors cannot open it. Publish it first, then add it to the menu.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		return $post;
+	}
+
+	/**
+	 * A term of a public taxonomy, to link from a menu.
+	 *
+	 * @param int    $id       Term ID.
+	 * @param string $taxonomy Expected taxonomy, '' for any.
+	 *
+	 * @return WP_Term|WP_Error
+	 * @since 1.6.0
+	 */
+	public static function linkable_term( int $id, string $taxonomy ): WP_Term|WP_Error {
+		$term = $id > 0 ? get_term( $id, $taxonomy ) : null;
+
+		if ( ! $term instanceof WP_Term || ! is_taxonomy_viewable( $term->taxonomy ) ) {
+			return new WP_Error(
+				'albert_invalid_object_id',
+				__( 'No category or term visitors can open has that "object_id". Find it with albert/find-terms.', 'albert-ai-butler' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		return $term;
+	}
+
+	/**
 	 * The classic menu an item belongs to.
 	 *
 	 * @param int $item_id Menu item post id.
@@ -401,21 +483,18 @@ class MenuSupport {
 	 * @param string                              $title      What the branch is, for core's refusal message.
 	 * @param array<string, array<string, mixed>> $properties Every input property.
 	 * @param list<string>                        $keys       The properties this kind of menu takes.
-	 * @param string|null                         $menu_type  The `menu_type` it requires, null for none.
+	 * @param string                              $menu_type  The `menu_type` it accepts; `required` in $schema decides whether it must be sent.
 	 * @param array<string, mixed>                $schema     More keywords, such as `required` or `anyOf`.
 	 *
 	 * @return array<string, mixed>
 	 * @since 1.6.0
 	 */
-	public static function menu_branch( string $title, array $properties, array $keys, ?string $menu_type, array $schema ): array {
-		$own = array_intersect_key( $properties, array_flip( $keys ) );
-
-		if ( $menu_type !== null ) {
-			$own['menu_type'] = [
-				'type' => 'string',
-				'enum' => [ $menu_type ],
-			];
-		}
+	public static function menu_branch( string $title, array $properties, array $keys, string $menu_type, array $schema ): array {
+		$own              = array_intersect_key( $properties, array_flip( $keys ) );
+		$own['menu_type'] = [
+			'type' => 'string',
+			'enum' => [ $menu_type ],
+		];
 
 		return [
 			'title'                => $title,

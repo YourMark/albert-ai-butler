@@ -690,6 +690,58 @@ class MenusAbilityTest extends TestCase {
 	}
 
 	/**
+	 * A link visitors could not follow is refused before anything is saved.
+	 *
+	 * @return void
+	 */
+	public function test_links_visitors_cannot_open_are_refused(): void {
+		$this->use_classic_theme();
+		$menu  = $this->classic_menu( 'Links' );
+		$item  = $this->link( $menu, 'Keep' );
+		$draft = (int) self::factory()->post->create(
+			[
+				'post_type'   => 'page',
+				'post_status' => 'draft',
+			]
+		);
+
+		$script = ( new AddMenuItem() )->execute(
+			[
+				'menu_id' => $menu,
+				'title'   => 'Script',
+				'url'     => 'javascript:alert(1)',
+			]
+		);
+		$page   = ( new AddMenuItem() )->execute(
+			[
+				'menu_id'   => $menu,
+				'item_type' => 'post_type',
+				'object_id' => $draft,
+			]
+		);
+		$term   = ( new AddMenuItem() )->execute(
+			[
+				'menu_id'   => $menu,
+				'item_type' => 'taxonomy',
+				'object_id' => $menu,
+			]
+		);
+		$update = ( new UpdateMenuItem() )->execute(
+			[
+				'menu_item_id' => $item,
+				'url'          => 'javascript:alert(1)',
+			]
+		);
+
+		$this->assertSame( 'albert_invalid_url', $script->get_error_code() );
+		$this->assertStringContainsString( 'not published', $page->get_error_message() );
+		$this->assertSame( 'albert_invalid_object_id', $term->get_error_code(), 'A menu is a term, but not one visitors can open.' );
+		$this->assertSame( 'albert_invalid_url', $update->get_error_code() );
+		$this->assertSame( [ 'Keep' ], $this->titles( $this->view( $menu )['items'] ) );
+		$this->assertSame( 'https://example.com/keep', $this->view( $menu )['items'][0]['url'] );
+	}
+
+	/**
 	 * Removing an item that is in no menu reports no visibility.
 	 *
 	 * @return void
@@ -1028,6 +1080,15 @@ class MenusAbilityTest extends TestCase {
 				]
 			)
 		);
+
+		$classic = [
+			'menu_type'    => 'classic',
+			'menu_item_id' => 1,
+		];
+		$this->assertTrue( $valid( 'albert/update-menu-item', $classic + [ 'title' => 'A' ] ), 'view-menu names the menu classic, so an assistant may send that back.' );
+		$this->assertFalse( $valid( 'albert/update-menu-item', $classic ), 'menu_type is not a field to change.' );
+		$this->assertTrue( $valid( 'albert/move-menu-item', $classic + [ 'position' => 2 ] ) );
+		$this->assertTrue( $valid( 'albert/remove-menu-item', $classic ) );
 
 		$this->assertFalse(
 			$valid(

@@ -98,6 +98,7 @@ class UpdateMenuItem extends BaseAbility {
 			],
 		];
 		$fields     = [ 'title', 'use_original_title', 'url', 'attr_title', 'description', 'open_in_new_tab' ];
+		$one_field  = array_map( static fn( string $field ): array => [ 'required' => [ $field ] ], $fields );
 
 		return [
 			'type'       => 'object',
@@ -107,11 +108,10 @@ class UpdateMenuItem extends BaseAbility {
 					'classic menu item by "menu_item_id"',
 					$properties,
 					array_merge( [ 'menu_item_id' ], $fields ),
-					null,
+					'classic',
 					[
-						'required'      => [ 'menu_item_id' ],
-						// Only `menu_item_id` and the fields are allowed, so this means at least one field.
-						'minProperties' => 2,
+						'required' => [ 'menu_item_id' ],
+						'anyOf'    => $one_field,
 					]
 				),
 				MenuSupport::menu_branch(
@@ -120,8 +120,8 @@ class UpdateMenuItem extends BaseAbility {
 					array_merge( [ 'menu_type', 'menu_id', 'path' ], $fields ),
 					'block',
 					[
-						'required'      => [ 'menu_type', 'menu_id', 'path' ],
-						'minProperties' => 4,
+						'required' => [ 'menu_type', 'menu_id', 'path' ],
+						'anyOf'    => $one_field,
 					]
 				),
 			],
@@ -208,7 +208,11 @@ class UpdateMenuItem extends BaseAbility {
 			$params['title'] = '';
 		}
 		if ( isset( $args['url'] ) ) {
-			$params['url'] = esc_url_raw( (string) $args['url'] );
+			$url = MenuSupport::url( (string) $args['url'] );
+			if ( is_wp_error( $url ) ) {
+				return $url;
+			}
+			$params['url'] = $url;
 		}
 		if ( isset( $args['attr_title'] ) ) {
 			$params['attr_title'] = sanitize_text_field( (string) $args['attr_title'] );

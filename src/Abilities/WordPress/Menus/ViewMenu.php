@@ -166,7 +166,7 @@ class ViewMenu extends BaseAbility {
 		return [
 			'id'     => (int) $post->ID,
 			'type'   => 'block',
-			'name'   => get_the_title( $post ),
+			'name'   => $post->post_title,
 			'status' => $post->post_status,
 			'items'  => NavigationTree::items( NavigationWriter::tree( $post ) ),
 		] + MenuSupport::navigation_visibility_fields( (int) $post->ID );

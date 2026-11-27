@@ -140,7 +140,7 @@ class MenuLocator {
 				return [
 					'type'     => $renders['type'],
 					'id'       => $renders['id'],
-					'name'     => $renders['type'] === 'block' ? get_the_title( $renders['id'] ) : '',
+					'name'     => $renders['type'] === 'block' ? (string) get_post_field( 'post_title', $renders['id'] ) : '',
 					'source'   => $placement['surface']['slug'],
 					'fallback' => $renders['fallback'],
 				];
@@ -278,7 +278,8 @@ class MenuLocator {
 	 * Only meaningful while no navigation menu is published: the primary
 	 * location's menu, else one with the slug "primary", else the newest.
 	 *
-	 * @return array{id: int, name: string}|null
+	 * @return array{id: int, name: string}|null Null when there is none, or when the pick is
+	 *                                           empty: core then refuses to convert it and lists the pages.
 	 * @since 1.6.0
 	 */
 	public function classic_fallback_source(): ?array {
@@ -293,6 +294,7 @@ class MenuLocator {
 		foreach ( $menus as $menu ) {
 			if ( $pick === null && $menu->slug === 'primary' ) {
 				$pick = MenuSupport::menu_reference( (int) $menu->term_id );
+				break;
 			}
 		}
 
@@ -301,7 +303,7 @@ class MenuLocator {
 			$pick = MenuSupport::menu_reference( (int) $menus[0]->term_id );
 		}
 
-		return $pick;
+		return $pick !== null && MenuSupport::classic_items( $pick['id'] ) !== [] ? $pick : null;
 	}
 
 	/**

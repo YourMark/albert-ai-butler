@@ -7,6 +7,7 @@
 
 namespace Albert\Tests\Integration\Abilities;
 
+use Albert\Abilities\WordPress\Menus\NavigationTree;
 use Albert\Blocks\EditorMode;
 use Albert\Tests\TestCase;
 use WP_Error;
@@ -712,12 +713,109 @@ class NavigationMenusAbilityTest extends TestCase {
 	 * @return void
 	 */
 	public function test_find_menus_names_the_classic_menu_wordpress_copies(): void {
-		wp_create_nav_menu( 'Old main' );
+		$old = (int) wp_create_nav_menu( 'Old main' );
 
+		$this->assertStringContainsString( 'lists the published pages', $this->call( 'albert/find-menus', [] )['summary'], 'Core does not copy an empty menu.' );
+
+		wp_update_nav_menu_item(
+			$old,
+			0,
+			[
+				'menu-item-title'  => 'Home',
+				'menu-item-url'    => 'https://example.com/',
+				'menu-item-status' => 'publish',
+			]
+		);
 		$found = $this->call( 'albert/find-menus', [] );
 
 		$this->assertSame( 'none', $found['header']['type'] );
 		$this->assertStringContainsString( 'copies the classic menu "Old main"', $found['summary'] );
+	}
+
+	/**
+	 * A link visitors could not follow is refused, and the menu is left as it was.
+	 *
+	 * @return void
+	 */
+	public function test_links_visitors_cannot_open_are_refused(): void {
+		$main   = $this->standard_navigation();
+		$before = get_post( $main )->post_content;
+		$block  = [
+			'menu_id'   => $main,
+			'menu_type' => 'block',
+		];
+		$draft  = (int) self::factory()->post->create(
+			[
+				'post_type'   => 'page',
+				'post_status' => 'draft',
+			]
+		);
+
+		$script   = $this->call(
+			'albert/add-menu-item',
+			$block + [
+				'title' => 'Script',
+				'url'   => 'javascript:alert(1)',
+			]
+		);
+		$page     = $this->call(
+			'albert/add-menu-item',
+			$block + [
+				'item_type' => 'post_type',
+				'object_id' => $draft,
+			]
+		);
+		$itself   = $this->call(
+			'albert/add-menu-item',
+			$block + [
+				'item_type' => 'post_type',
+				'object_id' => $main,
+			]
+		);
+		$retarget = $this->call(
+			'albert/update-menu-item',
+			$block + [
+				'path' => [ 0 ],
+				'url'  => 'javascript:alert(1)',
+			]
+		);
+
+		$this->assertSame( 'albert_invalid_url', $script->get_error_code() );
+		$this->assertStringContainsString( 'not published', $page->get_error_message() );
+		$this->assertSame( 'albert_invalid_object_id', $itself->get_error_code(), 'A navigation menu is not a page visitors open.' );
+		$this->assertSame( 'albert_invalid_url', $retarget->get_error_code() );
+		$this->assertSame( $before, get_post( $main )->post_content );
+	}
+
+	/**
+	 * Only the pages a page list shows count towards its limit.
+	 *
+	 * @return void
+	 */
+	public function test_a_page_list_branch_on_a_large_site_is_listed(): void {
+		$parent = (int) self::factory()->post->create(
+			[
+				'post_type'  => 'page',
+				'post_title' => 'Services',
+			]
+		);
+		foreach ( [ 'Design', 'Hosting' ] as $title ) {
+			self::factory()->post->create(
+				[
+					'post_type'   => 'page',
+					'post_title'  => $title,
+					'post_parent' => $parent,
+				]
+			);
+		}
+		self::factory()->post->create_many( NavigationTree::MAX_PAGE_LIST, [ 'post_type' => 'page' ] );
+
+		$branch = $this->view( $this->navigation( '<!-- wp:page-list {"parentPageID":' . $parent . '} /-->' ) );
+		$this->assertSame( [ 'Design', 'Hosting' ], array_column( $branch['items'][0]['children'], 'label' ) );
+
+		$all = $this->navigation( '<!-- wp:page-list /-->' );
+		$this->assertSame( [], $this->view( $all )['items'][0]['children'] );
+		$this->assertStringContainsString( 'not listed here', $this->view( $all )['items'][0]['label'] );
 	}
 
 	/**
@@ -824,6 +922,16 @@ class NavigationMenusAbilityTest extends TestCase {
 		$this->assertTrue( $valid( 'albert/remove-menu-item', $block + [ 'path' => [ 1 ] ] ) );
 		$this->assertFalse( $valid( 'albert/remove-menu-item', $block ) );
 		$this->assertTrue( $valid( 'albert/remove-menu-item', [ 'menu_item_id' => 1 ] ) );
+		$this->assertFalse(
+			$valid(
+				'albert/remove-menu-item',
+				[
+					'menu_item_id' => 1,
+					'menu_type'    => 'block',
+				]
+			),
+			'A classic item is not in a navigation menu.'
+		);
 	}
 
 	/**

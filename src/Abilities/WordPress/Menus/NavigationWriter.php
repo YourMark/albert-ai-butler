@@ -53,9 +53,9 @@ class NavigationWriter {
 
 		switch ( $type ) {
 			case 'post_type':
-				$post = get_post( $id );
-				if ( ! $post instanceof WP_Post || ( $object !== '' && $post->post_type !== $object ) ) {
-					return self::invalid_object( __( 'No page or post has that "object_id". Find it with albert/find-pages or albert/find-posts.', 'albert-ai-butler' ) );
+				$post = MenuSupport::linkable_post( $id, $object );
+				if ( is_wp_error( $post ) ) {
+					return $post;
 				}
 				$attrs    = [
 					'type' => $post->post_type,
@@ -67,9 +67,9 @@ class NavigationWriter {
 				break;
 
 			case 'taxonomy':
-				$term = get_term( $id, $object );
-				if ( ! $term instanceof WP_Term ) {
-					return self::invalid_object( __( 'No category or term has that "object_id". Find it with albert/find-terms.', 'albert-ai-butler' ) );
+				$term = MenuSupport::linkable_term( $id, $object );
+				if ( is_wp_error( $term ) ) {
+					return $term;
 				}
 				$link     = get_term_link( $term );
 				$attrs    = [
@@ -100,8 +100,12 @@ class NavigationWriter {
 				break;
 
 			default:
+				$url = MenuSupport::url( (string) ( $args['url'] ?? '' ) );
+				if ( is_wp_error( $url ) ) {
+					return $url;
+				}
 				$attrs    = [
-					'url'  => esc_url_raw( (string) ( $args['url'] ?? '' ) ),
+					'url'  => $url,
 					'kind' => 'custom',
 				];
 				$fallback = '';
@@ -153,9 +157,13 @@ class NavigationWriter {
 		}
 
 		if ( isset( $args['url'] ) ) {
+			$url = MenuSupport::url( (string) $args['url'] );
+			if ( is_wp_error( $url ) ) {
+				return $url;
+			}
 			// A new address replaces the linked page or term, as in the Site Editor.
 			$changes += [
-				'url'  => esc_url_raw( (string) $args['url'] ),
+				'url'  => $url,
 				'kind' => 'custom',
 				'id'   => null,
 				'type' => null,
@@ -287,17 +295,5 @@ class NavigationWriter {
 		}
 
 		return null;
-	}
-
-	/**
-	 * An `object_id` that names nothing linkable.
-	 *
-	 * @param string $message What to do.
-	 *
-	 * @return WP_Error
-	 * @since 1.6.0
-	 */
-	private static function invalid_object( string $message ): WP_Error {
-		return new WP_Error( 'albert_invalid_object_id', $message, [ 'status' => 400 ] );
 	}
 }
