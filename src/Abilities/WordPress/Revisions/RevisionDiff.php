@@ -197,7 +197,7 @@ class RevisionDiff {
 		$revision = $revision_id > 0 ? wp_get_post_revision( $revision_id ) : null;
 		if ( ! $revision instanceof WP_Post ) {
 			return new WP_Error(
-				'albert_revision_not_found',
+				'revision_not_found',
 				__( 'No revision with that ID. Use albert/find-revisions to list the revisions of a post, page or other content.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
@@ -224,7 +224,7 @@ class RevisionDiff {
 		$post = $post_id > 0 ? get_post( $post_id ) : null;
 		if ( ! $post instanceof WP_Post || $post->post_type === 'revision' ) {
 			return new WP_Error(
-				'albert_post_not_found',
+				'post_not_found',
 				__( 'No content with that ID. Send the ID of any content that keeps revisions; use albert/find-posts or albert/find-pages to find it.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
@@ -232,7 +232,7 @@ class RevisionDiff {
 
 		if ( ! current_user_can( 'edit_post', $post->ID ) ) {
 			return new WP_Error(
-				'albert_post_permission_denied',
+				'post_permission_denied',
 				__( 'You cannot edit this content, so you may not see or restore its revisions.', 'albert-ai-butler' ),
 				[ 'status' => 403 ]
 			);
@@ -240,7 +240,7 @@ class RevisionDiff {
 
 		if ( ! post_type_supports( $post->post_type, 'revisions' ) ) {
 			return new WP_Error(
-				'albert_invalid_post_id',
+				'invalid_post_id',
 				sprintf(
 					/* translators: %s: post type name */
 					__( 'The "%s" post type does not keep revisions. Send the ID of content that does, such as a post, page, template or navigation menu.', 'albert-ai-butler' ),

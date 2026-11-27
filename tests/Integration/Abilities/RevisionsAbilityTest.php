@@ -259,7 +259,7 @@ class RevisionsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_compare_to', $result->get_error_code() );
+		$this->assertSame( 'invalid_compare_to', $result->get_error_code() );
 	}
 
 	/**
@@ -431,7 +431,7 @@ class RevisionsAbilityTest extends TestCase {
 		$result = ( new RestoreRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_revision_id', $result->get_error_code() );
+		$this->assertSame( 'invalid_revision_id', $result->get_error_code() );
 	}
 
 	/**
@@ -447,7 +447,7 @@ class RevisionsAbilityTest extends TestCase {
 		remove_filter( 'wp_revisions_to_keep', '__return_zero' );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_revision_id', $result->get_error_code() );
+		$this->assertSame( 'invalid_revision_id', $result->get_error_code() );
 		$this->assertSame( 'Opening times', get_post( $this->post_id )->post_title );
 	}
 
@@ -459,15 +459,15 @@ class RevisionsAbilityTest extends TestCase {
 	public function test_unknown_ids_are_not_found(): void {
 		$view = ( new ViewRevision() )->execute( [ 'revision_id' => $this->post_id ] );
 		$this->assertInstanceOf( WP_Error::class, $view );
-		$this->assertSame( 'albert_revision_not_found', $view->get_error_code() );
+		$this->assertSame( 'revision_not_found', $view->get_error_code() );
 
 		$find = ( new FindRevisions() )->execute( [ 'post_id' => 999999 ] );
 		$this->assertInstanceOf( WP_Error::class, $find );
-		$this->assertSame( 'albert_post_not_found', $find->get_error_code() );
+		$this->assertSame( 'post_not_found', $find->get_error_code() );
 
 		$find_revision = ( new FindRevisions() )->execute( [ 'post_id' => $this->first_revision ] );
 		$this->assertInstanceOf( WP_Error::class, $find_revision );
-		$this->assertSame( 'albert_post_not_found', $find_revision->get_error_code() );
+		$this->assertSame( 'post_not_found', $find_revision->get_error_code() );
 	}
 
 	/**
@@ -481,7 +481,7 @@ class RevisionsAbilityTest extends TestCase {
 		$result = ( new FindRevisions() )->execute( [ 'post_id' => $attachment ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_post_id', $result->get_error_code() );
+		$this->assertSame( 'invalid_post_id', $result->get_error_code() );
 	}
 
 	/**
@@ -494,12 +494,12 @@ class RevisionsAbilityTest extends TestCase {
 
 		$find = ( new FindRevisions() )->execute( [ 'post_id' => $this->post_id ] );
 		$this->assertInstanceOf( WP_Error::class, $find );
-		$this->assertSame( 'albert_post_permission_denied', $find->get_error_code() );
+		$this->assertSame( 'post_permission_denied', $find->get_error_code() );
 
 		foreach ( [ new ViewRevision(), new RestoreRevision() ] as $ability ) {
 			$result = $ability->execute( [ 'revision_id' => $this->first_revision ] );
 			$this->assertInstanceOf( WP_Error::class, $result, $ability->get_id() );
-			$this->assertSame( 'albert_post_permission_denied', $result->get_error_code(), $ability->get_id() );
+			$this->assertSame( 'post_permission_denied', $result->get_error_code(), $ability->get_id() );
 		}
 
 		$this->assertSame( 'Opening times', get_post( $this->post_id )->post_title, 'Nothing was restored.' );
@@ -528,7 +528,7 @@ class RevisionsAbilityTest extends TestCase {
 
 		$expected = [
 			'albert/find-revisions'   => false,
-			'albert/view-revision'     => false,
+			'albert/view-revision'    => false,
 			'albert/restore-revision' => true,
 		];
 

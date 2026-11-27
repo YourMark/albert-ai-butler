@@ -157,7 +157,7 @@ class ViewRevision extends BaseAbility {
 			$previous = RevisionDiff::previous_revision( $revision, wp_get_post_revisions( $post->ID, [ 'fields' => 'ids' ] ) );
 			if ( ! $previous instanceof WP_Post ) {
 				return new WP_Error(
-					'albert_invalid_compare_to',
+					'invalid_compare_to',
 					__( 'This is the oldest revision, so there is nothing before it. Use compare_to "current" instead.', 'albert-ai-butler' ),
 					[ 'status' => 400 ]
 				);

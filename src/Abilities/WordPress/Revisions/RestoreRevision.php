@@ -129,7 +129,7 @@ class RestoreRevision extends BaseAbility {
 
 		if ( $post->post_status === 'trash' ) {
 			return new WP_Error(
-				'albert_invalid_revision_id',
+				'invalid_revision_id',
 				__( 'This revision belongs to content in the trash. Ask the owner to restore it from the trash first.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -138,7 +138,7 @@ class RestoreRevision extends BaseAbility {
 		// As core's revision.php: with revisions off, the restore would leave no revision to undo it.
 		if ( ! wp_revisions_enabled( $post ) && ! wp_is_post_autosave( $revision ) ) {
 			return new WP_Error(
-				'albert_invalid_revision_id',
+				'invalid_revision_id',
 				__( 'Revisions are turned off for this content, so a restore here could not be undone.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -162,7 +162,7 @@ class RestoreRevision extends BaseAbility {
 		$restored = wp_restore_post_revision( $revision->ID );
 		if ( ! $restored ) {
 			return new WP_Error(
-				'albert_revision_data_unavailable',
+				'revision_data_unavailable',
 				__( 'WordPress could not restore this revision. Try again in a moment.', 'albert-ai-butler' ),
 				[ 'status' => 500 ]
 			);
