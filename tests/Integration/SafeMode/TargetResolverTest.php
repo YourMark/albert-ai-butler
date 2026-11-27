@@ -69,6 +69,7 @@ class TargetResolverTest extends TestCase {
 		$this->assertSame( 'Home', $staged['label'] );
 
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- wp_update_post() would reset the modified date this test backdates.
 		$wpdb->update( $wpdb->posts, [ 'post_modified_gmt' => '2030-01-01 00:00:00' ], [ 'ID' => $page_id ] );
 		clean_post_cache( $page_id );
 
