@@ -105,6 +105,10 @@ class ReplyToComment extends BaseAbility {
 				],
 				'status'    => [ 'type' => 'string' ],
 				'permalink' => [ 'type' => 'string' ],
+				'warning'   => [
+					'type'        => 'string',
+					'description' => 'Only when the reply was saved but the comment it answers could not be approved.',
+				],
 			],
 			'required'   => [ 'id', 'parent_id', 'status' ],
 		];
@@ -166,9 +170,19 @@ class ReplyToComment extends BaseAbility {
 			return self::rest_failure( $data, $response->get_status(), __( 'The reply could not be saved.', 'albert-ai-butler' ), CommentPresenter::PERMISSION_DENIED );
 		}
 
+		$result = [
+			'id'        => (int) $data['id'],
+			'parent_id' => (int) $parent->comment_ID,
+			'post'      => CommentPresenter::post_reference( (int) $parent->comment_post_ID ),
+			'status'    => (string) $data['status'],
+			'permalink' => (string) $data['link'],
+		];
+
 		// wp-admin approves a held comment when a moderator replies to it; do the
 		// same, or the reply would be public under an invisible comment. After the
 		// reply, as wp-admin does, so a refused reply leaves the comment untouched.
+		// The reply exists by now, so a failed approval is a warning: an error would
+		// invite a retry that core refuses as a duplicate.
 		if ( $status === 'hold' ) {
 			$approved = ModerateComment::set_status(
 				(int) $parent->comment_ID,
@@ -176,16 +190,14 @@ class ReplyToComment extends BaseAbility {
 				__( 'The reply was saved, but the comment it answers could not be approved.', 'albert-ai-butler' )
 			);
 			if ( is_wp_error( $approved ) ) {
-				return $approved;
+				$result['warning'] = sprintf(
+					/* translators: %s: why the approval failed */
+					__( 'The reply was saved, but the comment it answers is still waiting for approval: %s Approve it with albert/moderate-comment; do not send the reply again.', 'albert-ai-butler' ),
+					$approved->get_error_message()
+				);
 			}
 		}
 
-		return [
-			'id'        => (int) $data['id'],
-			'parent_id' => (int) $parent->comment_ID,
-			'post'      => CommentPresenter::post_reference( (int) $parent->comment_post_ID ),
-			'status'    => (string) $data['status'],
-			'permalink' => (string) $data['link'],
-		];
+		return $result;
 	}
 }

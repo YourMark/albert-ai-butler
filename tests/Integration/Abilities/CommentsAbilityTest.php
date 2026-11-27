@@ -22,6 +22,7 @@ use Albert\SafeMode\Gate;
 use Albert\SafeMode\Repository;
 use Albert\Tests\TestCase;
 use WP_Error;
+use WP_REST_Request;
 
 /**
  * Comment ability tests.
@@ -410,6 +411,35 @@ class CommentsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( '0', get_comment( $this->held_id )->comment_approved );
+	}
+
+	/**
+	 * A saved reply whose held parent cannot be approved succeeds with a warning, so it is not sent again.
+	 *
+	 * @return void
+	 */
+	public function test_failed_approval_after_reply_is_a_warning(): void {
+		$held_id = $this->held_id;
+		$refuse  = static function ( $response, $handler, WP_REST_Request $request ) use ( $held_id ) {
+			return $request->get_route() === '/wp/v2/comments/' . $held_id
+				? new WP_Error( 'rest_cannot_edit', 'Approval refused.', [ 'status' => 403 ] )
+				: $response;
+		};
+		add_filter( 'rest_request_before_callbacks', $refuse, 10, 3 );
+
+		$result = ( new ReplyToComment() )->execute(
+			[
+				'comment_id' => $this->held_id,
+				'content'    => 'Thanks!',
+			]
+		);
+
+		remove_filter( 'rest_request_before_callbacks', $refuse, 10 );
+
+		$this->assertIsArray( $result );
+		$this->assertInstanceOf( \WP_Comment::class, get_comment( $result['id'] ) );
+		$this->assertStringContainsString( 'Approval refused.', $result['warning'] );
 		$this->assertSame( '0', get_comment( $this->held_id )->comment_approved );
 	}
 
