@@ -40,6 +40,7 @@ use Albert\Abilities\WordPress\Posts\RemoveTerms as RemovePostTerms;
 use Albert\Abilities\WordPress\Posts\ReplaceText as ReplacePostText;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
@@ -568,6 +569,42 @@ class ExecuteSchemaTest extends TestCase {
 			[ 'id' => $attachment_id ],
 			'DeleteMedia'
 		);
+	}
+
+	/**
+	 * ViewSiteHealth returns results matching the output schema.
+	 *
+	 * Limited to one cheap core test and two that end up in not_run, so the suite makes no HTTP requests.
+	 *
+	 * @return void
+	 */
+	public function test_view_site_health_output_matches_schema(): void {
+		$only_timezone = static function (): array {
+			return [
+				'direct' => [
+					'php_default_timezone' => [
+						'label' => 'PHP Default Timezone',
+						'test'  => 'php_default_timezone',
+					],
+					'broken'               => [
+						'label' => 'Broken',
+						'test'  => 'no_such_test_method',
+					],
+				],
+				'async'  => [
+					'background' => [
+						'label'             => 'Background',
+						'test'              => 'https://example.com/background',
+						'async_direct_test' => static fn(): array => [],
+					],
+				],
+			];
+		};
+		add_filter( 'site_status_tests', $only_timezone, 999 );
+
+		$this->assert_execute_matches_schema( new ViewSiteHealth(), [], 'ViewSiteHealth' );
+
+		remove_filter( 'site_status_tests', $only_timezone, 999 );
 	}
 
 	/**

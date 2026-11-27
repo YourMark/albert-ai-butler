@@ -186,6 +186,10 @@ class Suggestions {
 				'requires' => [ 'albert/find-media', 'albert/update-media' ],
 			],
 			[
+				'text'     => __( 'Does Site Health flag anything I should fix?', 'albert-ai-butler' ),
+				'requires' => [ 'albert/view-site-health' ],
+			],
+			[
 				'text'     => __( 'Who has administrator access to this site?', 'albert-ai-butler' ),
 				'requires' => [ 'albert/find-users' ],
 			],
