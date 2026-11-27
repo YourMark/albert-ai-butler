@@ -692,6 +692,7 @@ class CommentsAbilityTest extends TestCase {
 			)
 		);
 		$this->assertCount( 1, $pending );
+		$this->assertSame( "2 comments on 'Commented post'", $pending[0]->target['label'] ?? null );
 
 		$approved = ( new Approver( $repository ) )->approve( $pending[0], get_current_user_id() );
 		$this->assertNotInstanceOf( WP_Error::class, $approved );

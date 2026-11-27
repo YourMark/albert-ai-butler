@@ -44,7 +44,7 @@ class TargetResolver {
 		$id = $this->target_id( $input );
 
 		if ( $id <= 0 ) {
-			return null;
+			return $this->describe_comments( $input );
 		}
 
 		$family = $this->family( $ability_name );
@@ -199,6 +199,69 @@ class TargetResolver {
 			'label'       => (string) $term->name,
 			'status'      => '',
 			'modified_at' => null,
+		];
+	}
+
+	/**
+	 * Describe the comments a call names in `comment_ids` or `comment_id`.
+	 *
+	 * Comments have no modified time, so `modified_at` carries a hash of each
+	 * comment's status and content: an edit, a moderation or a deletion since
+	 * staging still shows as changed.
+	 *
+	 * @param array<string, mixed> $input Resolved input.
+	 *
+	 * @return array{type: string, id: int, label: string, status: string, modified_at: string|null}|null
+	 * @since 1.6.0
+	 */
+	private function describe_comments( array $input ): ?array {
+		$ids = $input['comment_ids'] ?? ( isset( $input['comment_id'] ) ? [ $input['comment_id'] ] : [] );
+		$ids = array_unique( array_map( 'intval', array_filter( (array) $ids, 'is_numeric' ) ) );
+		sort( $ids );
+
+		$comments = [];
+		foreach ( $ids as $comment_id ) {
+			$comment = $comment_id > 0 ? get_comment( $comment_id ) : null;
+			if ( $comment instanceof \WP_Comment ) {
+				$comments[] = $comment;
+			}
+		}
+
+		if ( $comments === [] ) {
+			return null;
+		}
+
+		$titles      = [];
+		$fingerprint = '';
+		foreach ( $comments as $comment ) {
+			$titles[ (int) $comment->comment_post_ID ] = sprintf( "'%s'", get_the_title( (int) $comment->comment_post_ID ) );
+			$fingerprint                              .= $comment->comment_ID . ':' . $comment->comment_approved . ':' . $comment->comment_content . "\n";
+		}
+
+		$count = count( $comments );
+		$first = $comments[0];
+
+		if ( $count === 1 ) {
+			/* translators: 1: comment ID, 2: quoted post title. */
+			$label = sprintf( __( 'Comment %1$d on %2$s', 'albert-ai-butler' ), (int) $first->comment_ID, reset( $titles ) );
+		} else {
+			$shown = array_slice( $titles, 0, 3 );
+			$more  = count( $titles ) - count( $shown );
+			$on    = implode( ', ', $shown );
+			if ( $more > 0 ) {
+				/* translators: 1: quoted post titles, 2: number of further posts. */
+				$on = sprintf( _n( '%1$s and %2$d other post', '%1$s and %2$d other posts', $more, 'albert-ai-butler' ), $on, $more );
+			}
+			/* translators: 1: number of comments, 2: the posts they are on. */
+			$label = sprintf( _n( '%1$d comment on %2$s', '%1$d comments on %2$s', $count, 'albert-ai-butler' ), $count, $on );
+		}
+
+		return [
+			'type'        => 'comment',
+			'id'          => (int) $first->comment_ID,
+			'label'       => $label,
+			'status'      => $count === 1 ? (string) wp_get_comment_status( $first ) : '',
+			'modified_at' => md5( $fingerprint ),
 		];
 	}
 }
