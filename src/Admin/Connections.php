@@ -383,7 +383,9 @@ class Connections implements Hookable {
 		}
 
 		$added_ids = [];
+		$already   = 0;
 		$refused   = 0;
+		$listed    = AllowedUsers::ids();
 
 		foreach ( $ids as $user_id ) {
 			$user = get_user_by( 'id', $user_id );
@@ -394,6 +396,11 @@ class Connections implements Hookable {
 
 			if ( ! self::can_be_allowed( $user ) ) {
 				++$refused;
+				continue;
+			}
+
+			if ( in_array( $user_id, $listed, true ) ) {
+				++$already;
 				continue;
 			}
 
@@ -411,8 +418,16 @@ class Connections implements Hookable {
 				_n( '%d person can now approve an assistant.', '%d people can now approve an assistant.', $added, 'albert-ai-butler' ),
 				$added
 			);
-		} elseif ( $refused === 0 ) {
+		}
+
+		if ( $already > 0 && $added === 0 && $refused === 0 ) {
 			$parts[] = __( 'Everyone you chose could already approve an assistant, so nothing changed.', 'albert-ai-butler' );
+		} elseif ( $already > 0 ) {
+			$parts[] = sprintf(
+				/* translators: %d: number of chosen users already on the list. */
+				_n( '%d person could already approve an assistant.', '%d people could already approve an assistant.', $already, 'albert-ai-butler' ),
+				$already
+			);
 		}
 
 		if ( $refused > 0 ) {
