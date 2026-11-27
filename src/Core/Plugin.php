@@ -11,6 +11,7 @@ namespace Albert\Core;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\CLI\Commands;
 use Albert\Abilities\WordPress\Posts\FindPosts;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
@@ -100,6 +101,7 @@ use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
 use Albert\OAuth\DiscoveryHealth;
 use Albert\OAuth\PasswordChange;
+use Albert\OAuth\UserDeletion;
 use Albert\Privacy\ConnectedResultRedactor;
 use Albert\Privacy\PrivacyMode;
 use Albert\Execution\InterceptorDecision;
@@ -245,6 +247,9 @@ class Plugin {
 		AllowedUserExpiry::schedule();
 
 		( new PasswordChange() )->register_hooks();
+		( new UserDeletion() )->register_hooks();
+
+		Commands::register();
 
 		// Daily cleanup of expired OAuth token rows. Same self-healing reason.
 		( new TokenCleanup() )->register_hooks();
@@ -711,6 +716,7 @@ class Plugin {
 
 		// Unschedule the daily invitation-expiry sweep.
 		AllowedUserExpiry::unschedule();
+		UserDeletion::unschedule();
 
 		// Unschedule the daily expired-token cleanup.
 		TokenCleanup::unschedule();

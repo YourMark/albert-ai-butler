@@ -62,10 +62,12 @@ final class UserPickerModal {
 		 * Filters the capability a user needs to appear in the allowed-users picker.
 		 *
 		 * Return an empty string to offer every user, or another capability to
-		 * widen or narrow the candidate list. This only changes who is *offered*:
-		 * the authorisation gate itself is the stored allowed-users list.
+		 * widen or narrow the candidate list. Since 1.6.0 it is also who may be
+		 * added, on the screen and through WP-CLI. The authorisation gate itself
+		 * stays the stored allowed-users list.
 		 *
 		 * @since 1.4.0
+		 * @since 1.6.0 Also limits who may be added.
 		 *
 		 * @param string $capability Default `edit_posts`.
 		 */
