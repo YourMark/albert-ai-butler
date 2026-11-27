@@ -55,7 +55,7 @@ namespace {
 			}
 
 			// Throws instead of exiting, so a test can carry on.
-			public static function error( $message ) {
+			public static function error( $message ): never {
 				self::$output[] = [ 'error', $message ];
 				throw new \RuntimeException( $message );
 			}

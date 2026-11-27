@@ -28,9 +28,8 @@ namespace {
 		/**
 		 * @param string   $message
 		 * @param bool|int $exit
-		 * @return never
 		 */
-		public static function error( $message, $exit = true ) {
+		public static function error( $message, $exit = true ): never {
 			exit( 1 );
 		}
 	}
