@@ -68,6 +68,7 @@ class BlockTreeEditor {
 		'core/quote',
 		'core/details',
 		'core/navigation',
+		'core/navigation-submenu',
 	];
 
 	/**

@@ -452,7 +452,8 @@ abstract class BaseAbility implements Ability {
 	 * Turn a failed REST response into an error, with core's refusal renamed so the log reads it as one.
 	 *
 	 * Core refuses with codes such as `rest_cannot_edit`, which would log as a failure;
-	 * any `*_permission_denied` code logs as blocked.
+	 * any `*_permission_denied` code logs as blocked. Public so the menu helpers, which
+	 * are not abilities, can share it.
 	 *
 	 * @param mixed  $data        Response data from `rest_get_server()->response_to_data()`.
 	 * @param int    $status      HTTP status of the response.
@@ -461,7 +462,7 @@ abstract class BaseAbility implements Ability {
 	 * @return WP_Error
 	 * @since 1.6.0
 	 */
-	protected static function rest_failure( $data, int $status, string $fallback, string $denied_code ): WP_Error {
+	public static function rest_failure( $data, int $status, string $fallback, string $denied_code ): WP_Error {
 		$data = is_array( $data ) ? $data : [];
 		$code = $status === 401 || $status === 403 ? $denied_code : (string) ( $data['code'] ?? 'rest_error' );
 

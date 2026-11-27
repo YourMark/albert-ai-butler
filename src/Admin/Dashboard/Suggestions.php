@@ -209,6 +209,10 @@ class Suggestions {
 				'text'     => __( 'Summarise what this site is about.', 'albert-ai-butler' ),
 				'requires' => [ 'albert/find-pages' ],
 			],
+			[
+				'text'     => __( 'Which menu do visitors see on my site, and what is in it?', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-menus', 'albert/view-menu' ],
+			],
 		];
 	}
 }
