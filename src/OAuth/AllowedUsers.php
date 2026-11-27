@@ -465,8 +465,8 @@ class AllowedUsers {
 	 *
 	 * @param array<int, array{added_at: int|null, authorised_at: int|null, expires_at: int|null}> $all Normalised entries.
 	 *
-	 * @return bool Whether the option changed. False when a sanitize filter (such as
-	 *              `ConnectionGuard` during an assistant request) kept the stored value.
+	 * @return bool Whether the option now holds these entries. False when a sanitize filter
+	 *              (such as `ConnectionGuard` during an assistant request) kept the stored value.
 	 * @since 1.4.0
 	 * @since 1.6.0 Returns whether it saved.
 	 */
@@ -481,7 +481,10 @@ class AllowedUsers {
 			];
 		}
 
-		return update_option( self::OPTION, $stored );
+		update_option( self::OPTION, $stored );
+
+		// update_option() is also false for an unchanged value, such as a second renewal within the same second.
+		return get_option( self::OPTION ) === $stored;
 	}
 
 	/**

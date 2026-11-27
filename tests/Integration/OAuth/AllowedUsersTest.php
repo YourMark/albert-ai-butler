@@ -474,6 +474,26 @@ class AllowedUsersTest extends TestCase {
 	}
 
 	/**
+	 * Renewing twice within one second saves nothing new, and still reports success.
+	 *
+	 * @return void
+	 */
+	public function test_renewing_twice_in_a_second_succeeds(): void {
+		$user_id = self::factory()->user->create();
+		$this->seed( $user_id, time() - 3 * DAY_IN_SECONDS, null, time() - DAY_IN_SECONDS );
+
+		// Retry until both renewals land in the same second, the case update_option() reports as false.
+		do {
+			$second = time();
+			$first  = AllowedUsers::renew_invitation( $user_id );
+			$again  = AllowedUsers::renew_invitation( $user_id );
+		} while ( time() !== $second );
+
+		$this->assertTrue( $first );
+		$this->assertTrue( $again );
+	}
+
+	/**
 	 * An assistant deleting a user cannot write the list, so the user leaves it on the next cron run.
 	 *
 	 * @return void
