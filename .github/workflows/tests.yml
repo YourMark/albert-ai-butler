@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.1', '8.2', '8.3', '8.4', '8.5', '8.6']
+        php: ['8.2', '8.3', '8.4', '8.5', '8.6']
 
     steps:
       - name: Checkout code
@@ -70,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.1', '8.2', '8.3', '8.4', '8.5', '8.6']
+        php: ['8.2', '8.3', '8.4', '8.5', '8.6']
         # Support policy: the declared floor (`Requires at least`) up to latest.
         #
         # `latest` stays dynamic on purpose: it tracks whatever wordpress.org is

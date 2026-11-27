@@ -1,6 +1,6 @@
 # Albert
 
-![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.1+-blue)
+![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.2+-blue)
 ![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-7.1+-blue)
 ![Tested up to](https://img.shields.io/badge/Tested%20up%20to-7.1-blue)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
@@ -95,7 +95,7 @@ What an assistant can do with each plugin is decided by that plugin. Albert adds
 ## Requirements
 
 - **WordPress**: 7.1 or higher
-- **PHP**: 8.1 or higher (8.3+ recommended)
+- **PHP**: 8.2 or higher (8.3+ recommended)
 - **WooCommerce**: 11.0 or higher (if WooCommerce integration is used)
 - **MySQL**: 8.0+ or MariaDB 10.5+
 - **HTTPS**: required for OAuth
@@ -184,6 +184,7 @@ Website: https://yourmark.nl
 
 **Improvements**
 
+- Albert now requires PHP 8.2 or higher. PHP 8.1 no longer gets security fixes, so a site on it keeps the version of Albert it has.
 - The Abilities screen now labels an ability from another plugin that doesn't say whether it only reads or can change something as Not declared, instead of guessing Write, and explains what that means. Albert still treats it as one that can make changes, so safe mode holds it.
 - The Abilities screen no longer shows a "Required capability" for each ability. It was a guess from the ability's name and was wrong in places. Without Albert Premium's advanced permissions, the ability's own permission check decides, as it always did.
 - When your assistant edits a single block and the new text would lose a tag the block had, such as a ThirstyAffiliates link, Albert refuses the edit and tells the assistant to ask you first. Nothing is saved until you agree.
