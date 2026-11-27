@@ -574,7 +574,7 @@ class ExecuteSchemaTest extends TestCase {
 	/**
 	 * ViewSiteHealth returns results matching the output schema.
 	 *
-	 * Limited to one cheap core test, so the suite makes no HTTP requests.
+	 * Limited to one cheap core test and two that end up in not_run, so the suite makes no HTTP requests.
 	 *
 	 * @return void
 	 */
@@ -586,8 +586,18 @@ class ExecuteSchemaTest extends TestCase {
 						'label' => 'PHP Default Timezone',
 						'test'  => 'php_default_timezone',
 					],
+					'broken'               => [
+						'label' => 'Broken',
+						'test'  => 'no_such_test_method',
+					],
 				],
-				'async'  => [],
+				'async'  => [
+					'background' => [
+						'label'             => 'Background',
+						'test'              => 'https://example.com/background',
+						'async_direct_test' => static fn(): array => [],
+					],
+				],
 			];
 		};
 		add_filter( 'site_status_tests', $only_timezone, 999 );

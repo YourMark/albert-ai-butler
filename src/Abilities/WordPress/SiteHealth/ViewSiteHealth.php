@@ -17,7 +17,7 @@ use WP_Site_Health;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Runs core's Site Health tests the way WordPress's scheduled check does: direct tests always, background ones on request.
+ * Runs core's Site Health tests as WordPress's weekly check does.
  *
  * @since 1.6.0
  */
@@ -33,6 +33,34 @@ class ViewSiteHealth extends BaseAbility {
 		'recommended' => 1,
 		'good'        => 2,
 	];
+
+	/**
+	 * A background check, not requested.
+	 *
+	 * @since 1.6.0
+	 */
+	private const NOT_RUN_BACKGROUND = 'background';
+
+	/**
+	 * A check that needs the request to carry the browser's login.
+	 *
+	 * @since 1.6.0
+	 */
+	private const NOT_RUN_NEEDS_BROWSER = 'needs_browser';
+
+	/**
+	 * A check core skips on development sites.
+	 *
+	 * @since 1.6.0
+	 */
+	private const NOT_RUN_DEVELOPMENT_SITE = 'development_site';
+
+	/**
+	 * A check that threw, could not be called or returned no valid result.
+	 *
+	 * @since 1.6.0
+	 */
+	private const NOT_RUN_FAILED = 'failed';
 
 	/**
 	 * Constructor.
@@ -54,7 +82,7 @@ class ViewSiteHealth extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::read(
-				'Each result has a status (critical, recommended or good), a label, a category and an explanation, as the Site Health screen shows it. Checks listed in not_run were not run by this call: report them as not checked and never guess their result. Set run_background_checks when the question is about a critical issue or when counts differ from last_screen_counts (what the dashboard shows); it can take a while. Checks that need the browser\'s login are never run by this call; the owner can run them on the Site Health screen (site_health_url).'
+				'Each result has a status (critical, recommended or good), a label, a category and an explanation, as the Site Health screen shows it. Checks listed in not_run have no result from this call, and their reason says why: report them as not checked and never guess their result. A check whose reason is failed broke while running; say so. Set run_background_checks when the question is about a critical issue or when counts differ from last_screen_counts (what the dashboard shows); it can take a while. Checks that need the browser\'s login are never run by this call; the owner can run them on the Site Health screen (site_health_url).'
 			),
 		];
 
@@ -78,7 +106,7 @@ class ViewSiteHealth extends BaseAbility {
 				],
 				'run_background_checks' => [
 					'type'        => 'boolean',
-					'description' => 'Also run the checks the Site Health screen runs in the background, such as WordPress.org communication, background updates, loopback requests, HTTPS and page cache. Use it for a critical issue or when the counts differ from the dashboard. Slower: these checks make network requests.',
+					'description' => 'Also run the checks the Site Health screen runs in the background, such as WordPress.org communication, background updates, loopback requests, HTTPS and page cache. Use it for a critical issue or when the counts differ from the dashboard. Slower: these checks make more requests, to WordPress.org and to the site itself. On a server that handles one request at a time, such as some local setups, the loopback check can fail because this call is still running.',
 					'default'     => false,
 				],
 			],
@@ -104,7 +132,10 @@ class ViewSiteHealth extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'counts'             => $counts,
+				'counts'             => array_merge(
+					$counts,
+					[ 'description' => 'Counts of the results returned. Checks in not_run are not counted, so these can differ from the dashboard.' ]
+				),
 				'last_screen_counts' => array_merge(
 					$counts,
 					[
@@ -135,12 +166,17 @@ class ViewSiteHealth extends BaseAbility {
 				],
 				'not_run'            => [
 					'type'        => 'array',
-					'description' => 'Checks not run by this call: background checks unless run_background_checks is set, and checks that need the browser\'s login. Their result is unknown.',
+					'description' => 'Checks with no result from this call. Their result is unknown.',
 					'items'       => [
 						'type'       => 'object',
 						'properties' => [
-							'test'  => [ 'type' => 'string' ],
-							'label' => [ 'type' => 'string' ],
+							'test'   => [ 'type' => 'string' ],
+							'label'  => [ 'type' => 'string' ],
+							'reason' => [
+								'type'        => 'string',
+								'enum'        => [ self::NOT_RUN_BACKGROUND, self::NOT_RUN_NEEDS_BROWSER, self::NOT_RUN_DEVELOPMENT_SITE, self::NOT_RUN_FAILED ],
+								'description' => 'background: run_background_checks was not set. needs_browser: only the Site Health screen can run it. development_site: skipped on development sites, as on the screen. failed: the check broke or returned no valid result.',
+							],
 						],
 					],
 				],
@@ -174,11 +210,6 @@ class ViewSiteHealth extends BaseAbility {
 		$tests          = WP_Site_Health::get_tests();
 		$run_background = ! empty( $args['run_background_checks'] );
 
-		// The screen skips this check on development sites; so do we.
-		if ( $site_health->is_development_environment() ) {
-			unset( $tests['async']['https_status'] );
-		}
-
 		$counts  = [
 			'critical'    => 0,
 			'recommended' => 0,
@@ -187,43 +218,60 @@ class ViewSiteHealth extends BaseAbility {
 		$results = [];
 		$not_run = [];
 
+		// The screen skips this check on development sites; so do we.
+		if ( $site_health->is_development_environment() && isset( $tests['async']['https_status'] ) ) {
+			$not_run[] = $this->not_run_entry( 'https_status', (array) $tests['async']['https_status'], self::NOT_RUN_DEVELOPMENT_SITE );
+			unset( $tests['async']['https_status'] );
+		}
+
 		// Core skips skip_cron tests in its scheduled check; an MCP call has no login cookie either.
 		$runnable = [];
 		foreach ( (array) ( $tests['direct'] ?? [] ) as $slug => $test ) {
 			$test = is_array( $test ) ? $test : [];
 			if ( ! empty( $test['skip_cron'] ) ) {
-				$not_run[] = $this->not_run_entry( (string) $slug, $test );
+				$not_run[] = $this->not_run_entry( (string) $slug, $test, self::NOT_RUN_NEEDS_BROWSER );
 				continue;
 			}
 			$callback = $this->direct_callback( $site_health, $test );
-			if ( $callback !== null ) {
-				$runnable[] = [ (string) $slug, $callback ];
+			if ( $callback === null ) {
+				$not_run[] = $this->not_run_entry( (string) $slug, $test, self::NOT_RUN_FAILED );
+				continue;
 			}
+			$runnable[] = [ (string) $slug, $callback, $test ];
 		}
 		foreach ( (array) ( $tests['async'] ?? [] ) as $slug => $test ) {
 			$test   = is_array( $test ) ? $test : [];
 			$runner = $test['async_direct_test'] ?? null;
 
 			// Without a server-side runner the test needs a request carrying the browser's login.
-			if ( ! $run_background || ! empty( $test['skip_cron'] ) || ! is_callable( $runner ) ) {
-				$not_run[] = $this->not_run_entry( (string) $slug, $test );
+			if ( ! empty( $test['skip_cron'] ) || ! is_callable( $runner ) ) {
+				$not_run[] = $this->not_run_entry( (string) $slug, $test, self::NOT_RUN_NEEDS_BROWSER );
 				continue;
 			}
-			$runnable[] = [ (string) $slug, $runner ];
+			if ( ! $run_background ) {
+				$not_run[] = $this->not_run_entry( (string) $slug, $test, self::NOT_RUN_BACKGROUND );
+				continue;
+			}
+			$runnable[] = [ (string) $slug, $runner, $test ];
 		}
 
-		foreach ( $runnable as [ $slug, $callback ] ) {
-			// Core filter: the same one the Site Health screen applies.
-			$result = apply_filters( 'site_status_test_result', call_user_func( $callback ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
-			if ( ! is_array( $result ) ) {
-				continue;
+		foreach ( $runnable as [ $slug, $callback, $test ] ) {
+			// One broken check, often a plugin's, must not cost the report every other result.
+			try {
+				$result = apply_filters( 'site_status_test_result', call_user_func( $callback ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+			} catch ( \Throwable $e ) {
+				$result = null;
 			}
 
-			$status = isset( self::STATUS_ORDER[ $result['status'] ?? '' ] ) ? (string) $result['status'] : 'recommended';
+			$status = is_array( $result ) && is_string( $result['status'] ?? null ) ? $result['status'] : '';
+			if ( ! isset( self::STATUS_ORDER[ $status ] ) ) {
+				$not_run[] = $this->not_run_entry( $slug, $test, self::NOT_RUN_FAILED );
+				continue;
+			}
 			++$counts[ $status ];
 
 			$results[] = [
-				'test'        => (string) ( $result['test'] ?? $slug ),
+				'test'        => is_string( $result['test'] ?? null ) ? $result['test'] : $slug,
 				'status'      => $status,
 				'label'       => $this->plain_text( $result['label'] ?? '' ),
 				'badge'       => $this->plain_text( is_array( $result['badge'] ?? null ) ? ( $result['badge']['label'] ?? '' ) : '' ),
@@ -275,15 +323,17 @@ class ViewSiteHealth extends BaseAbility {
 	/**
 	 * Describe a check that was not run.
 	 *
-	 * @param string               $slug The test's key. Not its `test` value: for REST-run tests that is a URL.
-	 * @param array<string, mixed> $test The test definition.
-	 * @return array{test: string, label: string}
+	 * @param string               $slug   The test's key. Not its `test` value: for REST-run tests that is a URL.
+	 * @param array<string, mixed> $test   The test definition.
+	 * @param string               $reason One of the NOT_RUN_* constants.
+	 * @return array{test: string, label: string, reason: string}
 	 * @since 1.6.0
 	 */
-	private function not_run_entry( string $slug, array $test ): array {
+	private function not_run_entry( string $slug, array $test, string $reason ): array {
 		return [
-			'test'  => $slug,
-			'label' => $this->plain_text( $test['label'] ?? '' ),
+			'test'   => $slug,
+			'label'  => $this->plain_text( $test['label'] ?? '' ),
+			'reason' => $reason,
 		];
 	}
 

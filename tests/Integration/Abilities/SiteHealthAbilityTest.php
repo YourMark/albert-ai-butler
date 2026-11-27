@@ -160,7 +160,7 @@ class SiteHealthAbilityTest extends TestCase {
 		$result = $this->view_site_health();
 
 		$this->assertIsArray( $result );
-		$this->assertCount( 2, $result['results'], 'A test that cannot run is skipped, not invented.' );
+		$this->assertCount( 2, $result['results'] );
 		$this->assertSame( 1, $result['counts']['critical'] );
 
 		$first = $result['results'][0];
@@ -174,10 +174,19 @@ class SiteHealthAbilityTest extends TestCase {
 		$this->assertSame( 'php_default_timezone', $result['results'][1]['test'] );
 
 		$this->assertSame(
-			[ 'rest_availability', 'dotorg_communication', 'loopback_requests', 'authorization_header', 'rest_only', 'albert_oauth_discovery' ],
-			array_column( $result['not_run'], 'test' )
+			[
+				'broken'                 => 'failed',
+				'rest_availability'      => 'needs_browser',
+				'dotorg_communication'   => 'background',
+				'loopback_requests'      => 'background',
+				'authorization_header'   => 'needs_browser',
+				'rest_only'              => 'needs_browser',
+				'albert_oauth_discovery' => 'background',
+			],
+			array_column( $result['not_run'], 'reason', 'test' ),
+			'A test that cannot run is listed as failed, not left out.'
 		);
-		$this->assertSame( 'Communication with WordPress.org', $result['not_run'][1]['label'] );
+		$this->assertSame( 'Communication with WordPress.org', $result['not_run'][2]['label'] );
 		$this->assertSame( [], $this->requests, 'No background check makes a request unless asked.' );
 		$this->assertStringContainsString( 'site-health.php', $result['site_health_url'] );
 	}
@@ -201,7 +210,7 @@ class SiteHealthAbilityTest extends TestCase {
 		$this->assertSame( 'recommended', $by_test['albert_oauth_discovery']['status'] );
 
 		$this->assertSame(
-			[ 'rest_availability', 'authorization_header', 'rest_only' ],
+			[ 'broken', 'rest_availability', 'authorization_header', 'rest_only' ],
 			array_column( $result['not_run'], 'test' ),
 			'Only skip_cron tests and tests without a server-side runner stay not run.'
 		);
@@ -303,5 +312,105 @@ class SiteHealthAbilityTest extends TestCase {
 
 		$this->assertNotNull( $ability );
 		$this->assertFalse( ( new Gate() )->must_gate( $ability, [] ) );
+	}
+
+	/**
+	 * A check that throws, returns no result or an unknown status is listed as failed; the others still report.
+	 *
+	 * @return void
+	 */
+	public function test_a_broken_check_is_listed_as_failed(): void {
+		$add_broken = static function ( array $tests ): array {
+			$tests['direct']['throws']    = [
+				'label' => 'Throws',
+				'test'  => static function (): array {
+					throw new \RuntimeException( '/var/www/secret/path' );
+				},
+			];
+			$tests['direct']['malformed'] = [
+				'label' => 'Malformed',
+				'test'  => static fn(): string => 'not a result',
+			];
+			$tests['direct']['odd']       = [
+				'label' => 'Odd status',
+				'test'  => static fn(): array => [
+					'status' => 'unknown',
+					'label'  => 'Odd',
+				],
+			];
+			return $tests;
+		};
+		add_filter( 'site_status_tests', $add_broken, 1000 );
+
+		$result = $this->view_site_health();
+
+		remove_filter( 'site_status_tests', $add_broken, 1000 );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( [ 'albert_example', 'php_default_timezone' ], array_column( $result['results'], 'test' ) );
+		$this->assertSame( 2, array_sum( $result['counts'] ) );
+
+		$reasons = array_column( $result['not_run'], 'reason', 'test' );
+		$this->assertSame( 'failed', $reasons['throws'] );
+		$this->assertSame( 'failed', $reasons['malformed'] );
+		$this->assertSame( 'failed', $reasons['odd'] );
+		$this->assertStringNotContainsString( '/var/www/secret/path', (string) wp_json_encode( $result ) );
+	}
+
+	/**
+	 * A result filter that throws fails only that check.
+	 *
+	 * @return void
+	 */
+	public function test_a_throwing_result_filter_fails_only_that_check(): void {
+		$throw = static function ( $result ) {
+			if ( is_array( $result ) && ( $result['test'] ?? '' ) === 'albert_example' ) {
+				throw new \TypeError( 'Plugin bug.' );
+			}
+			return $result;
+		};
+		add_filter( 'site_status_test_result', $throw );
+
+		$result = $this->view_site_health();
+
+		remove_filter( 'site_status_test_result', $throw );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( [ 'php_default_timezone' ], array_column( $result['results'], 'test' ) );
+		$this->assertSame( 'failed', array_column( $result['not_run'], 'reason', 'test' )['albert_example'] );
+	}
+
+	/**
+	 * On a development site the HTTPS check is skipped, as on the screen, and listed with that reason.
+	 *
+	 * WordPress reads the environment type once per process, so run with WP_ENVIRONMENT_TYPE=local.
+	 *
+	 * @return void
+	 */
+	public function test_a_development_site_skips_the_https_check(): void {
+		if ( ! WP_Site_Health::get_instance()->is_development_environment() ) {
+			$this->markTestSkipped( 'Needs WP_ENVIRONMENT_TYPE=local.' );
+		}
+
+		$add_https = static function ( array $tests ): array {
+			$tests['async']['https_status'] = [
+				'label'             => 'HTTPS status',
+				'test'              => 'https://example.com/https-status',
+				'async_direct_test' => static fn(): array => [
+					'status' => 'good',
+					'label'  => 'HTTPS',
+				],
+			];
+			return $tests;
+		};
+		add_filter( 'site_status_tests', $add_https, 1000 );
+
+		$result = $this->view_site_health( [ 'run_background_checks' => true ] );
+
+		remove_filter( 'site_status_tests', $add_https, 1000 );
+
+		$this->assertIsArray( $result );
+		$this->assertNotContains( 'https_status', array_column( $result['results'], 'test' ) );
+		$this->assertSame( 'development_site', array_column( $result['not_run'], 'reason', 'test' )['https_status'] );
 	}
 }
