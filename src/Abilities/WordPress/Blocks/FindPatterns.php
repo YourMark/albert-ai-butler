@@ -49,7 +49,7 @@ class FindPatterns extends BaseAbility {
 
 		$this->id          = 'albert/find-patterns';
 		$this->label       = __( 'Find Patterns', 'albert-ai-butler' );
-		$this->description = __( 'List the block patterns registered on this site (theme, plugin and user-created), optionally filtered by a search term or category. Reuse a pattern as the basis for new content. Fetch one pattern\'s block markup with view-pattern.', 'albert-ai-butler' );
+		$this->description = __( 'List the block patterns registered on this site (theme, plugin and user-created), optionally filtered by a search term or category. To place one, send its name as `pattern` to add-post-block or add-page-block; read its markup with view-pattern only to adapt it.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'patterns';
 
@@ -60,7 +60,9 @@ class FindPatterns extends BaseAbility {
 			'mcp'         => [ 'public' => true ],
 			'annotations' => Annotations::read(
 				'A pattern is real, valid block markup already on this site. Prefer building from one over composing a '
-				. 'complex layout from scratch. Summaries omit the markup; call view-pattern for the content you will reuse.'
+				. 'complex layout from scratch. To place one unchanged, send its `name` as `pattern` to albert/add-post-block '
+				. 'or albert/add-page-block, also on an empty post or page: the server inserts it exactly as stored. '
+				. 'Summaries omit the markup; call view-pattern only when you will adapt it.'
 			),
 		];
 

@@ -66,7 +66,12 @@ class AccessEndsTest extends TestCase {
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', Tables::oauth()[ $key ] ) );
 		}
 
-		$this->user_id = self::factory()->user->create( [ 'role' => 'editor', 'user_pass' => 'old-password' ] );
+		$this->user_id = self::factory()->user->create(
+			[
+				'role'      => 'editor',
+				'user_pass' => 'old-password',
+			]
+		);
 		AllowedUsers::add( $this->user_id );
 		AllowedUsers::mark_authorised( $this->user_id );
 
@@ -74,7 +79,7 @@ class AccessEndsTest extends TestCase {
 	}
 
 	/**
-	 * validate_request() marks the request as a connection, which would refuse later option writes.
+	 * The validate_request() call marks the request as a connection, which would refuse later option writes.
 	 *
 	 * @return void
 	 */

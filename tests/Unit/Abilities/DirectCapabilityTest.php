@@ -13,6 +13,11 @@ namespace Albert\Tests\Unit\Abilities;
 
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 
+use Albert\Abilities\WordPress\Comments\DeleteComment;
+use Albert\Abilities\WordPress\Comments\FindComments;
+use Albert\Abilities\WordPress\Comments\ViewComment;
+use Albert\Abilities\WordPress\Comments\ModerateComment;
+use Albert\Abilities\WordPress\Comments\ReplyToComment;
 use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\UpdateMedia;
@@ -20,6 +25,8 @@ use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\Search\SearchContent;
+use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
 use Albert\Abilities\WordPress\Revisions\FindRevisions;
 use Albert\Abilities\WordPress\Revisions\ViewRevision;
 use Albert\Abilities\WordPress\Revisions\RestoreRevision;
@@ -75,6 +82,13 @@ class DirectCapabilityTest extends TestCase {
 	 */
 	public static function provideAbilitiesWithCaps(): array {
 		return [
+			// Comments.
+			'find-comments'      => [ FindComments::class, 'moderate_comments' ],
+			'view-comment'       => [ ViewComment::class, 'moderate_comments' ],
+			'reply-to-comment'   => [ ReplyToComment::class, 'moderate_comments' ],
+			'moderate-comment'   => [ ModerateComment::class, 'moderate_comments' ],
+			'delete-comment'     => [ DeleteComment::class, 'moderate_comments' ],
+
 			// Media.
 			'find-media'         => [ FindMedia::class, 'upload_files' ],
 			'view-media'         => [ ViewMedia::class, 'upload_files' ],
@@ -85,6 +99,12 @@ class DirectCapabilityTest extends TestCase {
 			// Posts/Pages (read-only).
 			'view-post'          => [ ViewPost::class, 'read' ],
 			'view-page'          => [ ViewPage::class, 'read' ],
+
+			// Search (core's search route is public).
+			'search-content'     => [ SearchContent::class, 'read' ],
+
+			// Site Health.
+			'view-site-health'   => [ ViewSiteHealth::class, 'view_site_health_checks' ],
 
 			// Revisions (the per-post edit_post check runs in execute()).
 			'find-revisions'     => [ FindRevisions::class, 'edit_posts' ],

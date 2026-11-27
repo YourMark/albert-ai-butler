@@ -39,7 +39,7 @@ class PostFieldsTest extends TestCase {
 		parent::setUp();
 
 		$GLOBALS['albert_test_user_id']        = 1;
-		$GLOBALS['albert_test_caps']           = [ 'edit_posts', 'edit_pages', 'edit_others_posts', 'edit_others_pages' ];
+		$GLOBALS['albert_test_caps']           = [ 'edit_posts', 'edit_pages', 'edit_others_posts', 'edit_others_pages', 'edit_post' ];
 		$GLOBALS['albert_test_users']          = [
 			1 => [
 				'display_name' => 'Admin',

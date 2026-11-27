@@ -235,8 +235,7 @@ class AbilityContractTest extends TestCase {
 
 		$reflection = new \ReflectionClass( $ability );
 		$prop       = $reflection->getProperty( 'meta' );
-		$prop->setAccessible( true );
-		$meta = (array) $prop->getValue( $ability );
+		$meta       = (array) $prop->getValue( $ability );
 
 		$this->assertTrue(
 			AbilitiesRegistry::is_mcp_public( $meta ),
@@ -261,8 +260,7 @@ class AbilityContractTest extends TestCase {
 
 		$reflection = new \ReflectionClass( $ability );
 		$prop       = $reflection->getProperty( 'meta' );
-		$prop->setAccessible( true );
-		$meta = (array) $prop->getValue( $ability );
+		$meta       = (array) $prop->getValue( $ability );
 
 		$this->assertTrue(
 			AnnotationPresenter::is_declared( (array) ( $meta['annotations'] ?? [] ) ),
@@ -285,7 +283,6 @@ class AbilityContractTest extends TestCase {
 		// Reach in for the protected schema via a ReflectionProperty.
 		$reflection = new \ReflectionClass( $ability );
 		$prop       = $reflection->getProperty( 'input_schema' );
-		$prop->setAccessible( true );
 
 		$schema = $prop->getValue( $ability );
 
@@ -351,7 +348,6 @@ class AbilityContractTest extends TestCase {
 			}
 
 			$prop = $reflection->getProperty( $property );
-			$prop->setAccessible( true );
 
 			$schema = $prop->getValue( $ability );
 
