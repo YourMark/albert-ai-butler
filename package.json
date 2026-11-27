@@ -1,6 +1,6 @@
 {
   "name": "albert-ai-butler",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "private": true,
   "description": "Build tooling for the Albert AI Butler admin React surfaces (Abilities DataViews screen).",
   "license": "GPL-2.0-or-later",
