@@ -150,7 +150,7 @@ class GetBlockType extends BaseAbility {
 
 		if ( $block === null ) {
 			return new WP_Error(
-				'block_not_registered',
+				'block_type_not_found',
 				sprintf(
 					/* translators: %s: requested block name */
 					__( 'The block "%s" is not registered on this site. Use albert/list-block-types to see available blocks.', 'albert-ai-butler' ),

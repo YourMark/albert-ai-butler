@@ -240,7 +240,7 @@ class Create extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return self::rest_failure( $data, $response->get_status(), __( 'The post could not be created.', 'albert-ai-butler' ), 'albert_post_permission_denied' );
+			return self::rest_failure( $data, $response->get_status(), __( 'The post could not be created.', 'albert-ai-butler' ), 'post_permission_denied' );
 		}
 
 		// Return formatted post data.

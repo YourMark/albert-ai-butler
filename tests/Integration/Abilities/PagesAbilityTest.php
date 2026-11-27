@@ -338,7 +338,7 @@ class PagesAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'page_permission_denied', $result->get_error_code() );
 	}
 
 	// ─── UpdatePage ─────────────────────────────────────────────────

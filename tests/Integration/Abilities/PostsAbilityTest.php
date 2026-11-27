@@ -283,7 +283,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		$this->assertSame( 'invalid_content', $result->get_error_code() );
 		wp_cache_flush();
 		$this->assertSame( $before, wp_count_posts()->draft );
 	}
@@ -302,7 +302,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		$this->assertSame( 'invalid_content', $result->get_error_code() );
 	}
 
 	/**
@@ -321,7 +321,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		$this->assertSame( 'invalid_content', $result->get_error_code() );
 		$this->assertSame( '<p>Original</p>', get_post( $post_id )->post_content );
 	}
 
@@ -371,7 +371,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'post_permission_denied', $result->get_error_code() );
 		$this->assertSame( 403, $result->get_error_data()['status'] );
 	}
 

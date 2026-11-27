@@ -112,7 +112,7 @@ class BlockCatalogAbilityTest extends TestCase {
 		$result = ( new GetBlockType( new BlockCatalog() ) )->execute( [ 'name' => 'foo/bar' ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'block_not_registered', $result->get_error_code() );
+		$this->assertSame( 'block_type_not_found', $result->get_error_code() );
 	}
 
 	public function test_get_block_type_disallowed_name_returns_error(): void {
