@@ -202,7 +202,7 @@ class Create extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return self::rest_failure( $data, $response->get_status(), __( 'The page could not be created.', 'albert-ai-butler' ), 'albert_page_permission_denied' );
+			return self::rest_failure( $data, $response->get_status(), __( 'The page could not be created.', 'albert-ai-butler' ), 'page_permission_denied' );
 		}
 
 		// Return formatted page data.

@@ -104,7 +104,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 
 		if ( ! $post || $post->post_type !== $type ) {
 			return new WP_Error(
-				'albert_' . $type . '_not_found',
+				$type . '_not_found',
 				sprintf(
 					/* translators: 1: post type, 2: post ID, 3: the find ability id. */
 					__( 'No %1$s found with ID %2$d. Use %3$s to look up the ID.', 'albert-ai-butler' ),
@@ -120,7 +120,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 		// text of a post the user may not edit.
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return new WP_Error(
-				'albert_' . $type . '_permission_denied',
+				$type . '_permission_denied',
 				/* translators: 1: post type, 2: post ID. */
 				sprintf( __( 'This account may not edit %1$s %2$d.', 'albert-ai-butler' ), $type, $post_id ),
 				[ 'status' => rest_authorization_required_code() ]
@@ -134,7 +134,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 		// so the replacement would be reported without being saved.
 		if ( ! post_type_supports( $type, $feature ) ) {
 			return new WP_Error(
-				'albert_invalid_field',
+				'invalid_field',
 				/* translators: 1: post type, 2: the field. */
 				sprintf( __( 'A %1$s has no %2$s. Nothing was saved.', 'albert-ai-butler' ), $type, $field ),
 				[ 'status' => 400 ]
@@ -154,7 +154,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 
 		if ( $found !== $expected ) {
 			return new WP_Error(
-				'albert_invalid_expected_count',
+				'invalid_expected_count',
 				sprintf(
 					/* translators: 1: the field, 2: times found, 3: times expected. */
 					__( 'The text occurs %2$d times in the %1$s, not %3$d. Send a longer `search` that occurs once, or set `expected_count` to %2$d to replace every one. Nothing was saved.', 'albert-ai-butler' ),
@@ -216,7 +216,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 
 			if ( $difference !== null ) {
 				return new WP_Error(
-					'albert_invalid_replace',
+					'invalid_replace',
 					sprintf(
 						/* translators: 1: what changed, e.g. "it changes the settings of core/heading at [2]", 2: the block edit ability id. */
 						__( 'This replacement changes blocks, not only text: %1$s. Use %2$s to change a block. Nothing was saved.', 'albert-ai-butler' ),
@@ -249,7 +249,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 				/* translators: %s: the text as stored, e.g. Tom &amp; Jerry. */
 				$message .= ' ' . sprintf( __( 'It is stored as `%s`; search for that.', 'albert-ai-butler' ), $stored_as );
 
-				return new WP_Error( 'albert_invalid_search', $message, [ 'status' => 400 ] );
+				return new WP_Error( 'invalid_search', $message, [ 'status' => 400 ] );
 			}
 		}
 
@@ -257,7 +257,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 			$message .= ' ' . __( 'It occurs with different capitalisation.', 'albert-ai-butler' );
 		}
 
-		return new WP_Error( 'albert_invalid_search', $message, [ 'status' => 400 ] );
+		return new WP_Error( 'invalid_search', $message, [ 'status' => 400 ] );
 	}
 
 	/**
@@ -286,7 +286,7 @@ abstract class AbstractReplaceText extends BaseAbility {
 				$data,
 				$response->get_status(),
 				__( 'An error occurred while saving.', 'albert-ai-butler' ),
-				'albert_' . $this->post_type() . '_permission_denied'
+				$this->post_type() . '_permission_denied'
 			);
 		}
 

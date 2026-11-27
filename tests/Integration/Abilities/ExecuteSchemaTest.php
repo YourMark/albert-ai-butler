@@ -32,9 +32,11 @@ use Albert\Abilities\WordPress\Pages\FindPages;
 use Albert\Abilities\WordPress\Pages\ReplaceText as ReplacePageText;
 use Albert\Abilities\WordPress\Pages\Update as UpdatePage;
 use Albert\Abilities\WordPress\Pages\ViewPage;
+use Albert\Abilities\WordPress\Posts\AddTerms as AddPostTerms;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
 use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
 use Albert\Abilities\WordPress\Posts\FindPosts;
+use Albert\Abilities\WordPress\Posts\RemoveTerms as RemovePostTerms;
 use Albert\Abilities\WordPress\Posts\ReplaceText as ReplacePostText;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
@@ -105,7 +107,6 @@ class ExecuteSchemaTest extends TestCase {
 	private function get_output_schema( BaseAbility $ability ): array {
 		$reflection = new \ReflectionClass( $ability );
 		$prop       = $reflection->getProperty( 'output_schema' );
-		$prop->setAccessible( true );
 
 		return $prop->getValue( $ability );
 	}
@@ -227,6 +228,45 @@ class ExecuteSchemaTest extends TestCase {
 				'title' => 'Updated Title',
 			],
 			'UpdatePost'
+		);
+	}
+
+	/**
+	 * AddPostTerms returns the post's terms matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_add_post_terms_output_matches_schema(): void {
+		$post_id = self::factory()->post->create();
+
+		$this->assert_execute_matches_schema(
+			new AddPostTerms(),
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ 'schema-tag' ],
+			],
+			'AddPostTerms'
+		);
+	}
+
+	/**
+	 * RemovePostTerms returns the post's terms matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_remove_post_terms_output_matches_schema(): void {
+		$post_id = self::factory()->post->create();
+		wp_set_post_tags( $post_id, [ 'schema-tag' ] );
+
+		$this->assert_execute_matches_schema(
+			new RemovePostTerms(),
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ 'schema-tag' ],
+			],
+			'RemovePostTerms'
 		);
 	}
 

@@ -3,7 +3,7 @@ Contributors: albertai, mark-jansen
 Tags: ai assistant, chatgpt, claude, ai, mcp
 Requires at least: 7.1
 Tested up to: 7.1
-Requires PHP: 8.1
+Requires PHP: 8.2
 Stable tag: 1.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -24,7 +24,7 @@ Albert removes that step. Connect your AI assistant to your site once, and it wr
 * **Signed in, never handed a password.** Assistants connect with OAuth: short-lived tokens you can revoke, and no password or API key ever given to an AI company.
 * **No middleman.** Your assistant talks to your site directly. Albert has no servers of its own in between.
 * **No tracking.** Albert sends nothing about your site or your usage anywhere.
-* **Personal data hidden by default.** When an assistant looks up users, customers or orders, names, email addresses, phone numbers and postal addresses are masked. New sites start on Strict.
+* **Personal data hidden by default.** Whatever your assistant looks up, from any plugin, email addresses, phone numbers and IP addresses are masked. Albert's own user, customer and order tools mask names and postal addresses too. New sites start on Strict.
 
 ---
 
@@ -85,9 +85,9 @@ Switched on by default. When your assistant asks to delete a post, create or cha
 
 ### Personal data stays private
 
-When your assistant looks up users, customers or orders, Albert hides their names, email addresses, phone numbers and postal addresses before the answer leaves your site. What other plugins' actions return is up to those plugins.
+Whatever your assistant looks up, Albert hides email addresses, phone numbers and IP addresses before the answer leaves your site. That includes what WordPress itself and your other plugins return. Albert's own user, customer and order tools also hide names and postal addresses. Email addresses inside your content, such as a post, are left as they are.
 
-Choose **Strict**, **Balanced** or **Off**. New sites start on Strict. On Balanced, the real details are shown only when you ask, and only if your own account is allowed to see them.
+Choose **Strict**, **Balanced** or **Off**. New sites start on Strict. On Balanced, anyone allowed to use a tool can ask it for the real details.
 
 ---
 
@@ -183,7 +183,7 @@ Yes. Albert writes real WordPress blocks, headings, lists, images, columns and t
 
 = Does my AI assistant see my visitors' and customers' personal data? =
 
-Not by default. When it looks up users, customers or orders, Albert hides names, email addresses, phone numbers and postal addresses before anything is sent. Choose Strict, Balanced or Off; on Balanced you can reveal the real details when you ask.
+Not by default. Whatever it looks up, from Albert or any other plugin, Albert hides email addresses, phone numbers and IP addresses before anything is sent, and Albert's own user, customer and order tools hide names and postal addresses too. Choose Strict, Balanced or Off; on Balanced, your assistant can ask for the real details when you need them.
 
 = How does Albert know anything about my site? =
 
@@ -243,6 +243,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 **Improvements**
 
+* Albert now requires PHP 8.2 or higher. PHP 8.1 no longer gets security fixes, so a site on it keeps the version of Albert it has.
 * The Abilities screen now labels an ability from another plugin that doesn't say whether it only reads or can change something as Not declared, instead of guessing Write, and explains what that means. Albert still treats it as one that can make changes, so safe mode holds it.
 * The Abilities screen no longer shows a "Required capability" for each ability. It was a guess from the ability's name and was wrong in places. Without Albert Premium's advanced permissions, the ability's own permission check decides, as it always did.
 * When your assistant edits a single block and the new text would lose a tag the block had, such as a ThirstyAffiliates link, Albert refuses the edit and tells the assistant to ask you first. Nothing is saved until you agree.
@@ -256,9 +257,14 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Safe mode no longer asks you to approve moving a post, page or block pattern to the trash, because you can restore it from the trash yourself. Deleting one permanently still waits for your approval.
 * Albert no longer saves a block it can only guess, such as an image without an address, a cover or a block from another plugin without its markup, or blocks nested where the editor would drop them. Your assistant gets a message saying what to send instead, and nothing is saved.
 * The Context screen now says when a saved change takes effect: the next time an assistant asks what your site can do. A conversation that is already open keeps what it started with, so start a new one to use your changes.
+* Your assistant can now place one of your block patterns into a page or post by name, including a new, empty one, so "make a landing page from this pattern" takes one step. Albert inserts the pattern exactly as your site stores it, patterns inside it included, so a hero, call to action or footer section arrives intact instead of being copied block by block.
+* Your assistant can now see which categories and tags a post has, and add or remove one without touching the others.
+* You can now manage the list of people who may connect an assistant from the command line, as well as on the Connections screen: see who is on it and whether they have connected yet, add people and remove them. Adding someone whose invitation expired restarts it, as sending them a setup link does. Removing someone signs out every assistant they connected, as it does on the screen.
 
 **Fixes**
 
+* Privacy mode only covered Albert's own user, customer and order tools, so personal data returned by WordPress's own abilities and by other plugins reached your assistant unmasked. It now applies to everything your assistant calls through Albert: email addresses, phone numbers, IP addresses, passwords and sign-in tokens are masked or removed whichever plugin returns them, and Albert's own tools also mask names, postal addresses and birth dates. Your assistant is told never to write a masked value back. On Balanced, anyone allowed to use a tool can ask it for the real details.
+* Deleting a WordPress user, or on a network removing them from a site, now also takes them off that site's list of people who may connect an assistant, also when your assistant deleted them. Before, they stayed on it, hidden from the Connections screen.
 * Switching an ability off on the Abilities screen removed it from your whole site, so other plugins that used it stopped working too. The switch now only decides what assistants connected through Albert can use, and the screen explains this.
 * Text your assistant wrote in paragraphs, headings, lists, buttons and quotes lost tags that other plugins add, such as ThirstyAffiliates links, even for administrators. Text is now saved the way the WordPress editor saves it, with the same rules for who may store what.
 * Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
@@ -277,9 +283,11 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * When your assistant used an action from another plugin, it did not show in Recent activity, and the Abilities screen said it was never used. These calls are now recorded like Albert's own.
 * When an action's answer did not have the shape it promises, your assistant got an error but Recent activity said it succeeded. It now shows as failed.
 * When your assistant asked for an action it is not allowed to use, the refusal did not show in Recent activity. It now shows as blocked.
-* When a plugin on your site blocked the list of users, choosing who may approve an assistant failed with a message to reload the page, which never helped. It now says that something on the site blocks the user list and what to allow.
+* When a plugin on your site blocked the list of users, choosing who may approve an assistant failed with a message to reload the page, which never helped. It now says that something on the site blocks the user list and what to allow, or, when your role may not list users, that an administrator needs to add them or give the role the list_users capability.
 * When your assistant searched your users, their email addresses and roles always came back empty, and the username shown was not the name they log in with. Both are now filled in correctly. Privacy mode still hides email addresses and usernames as before.
 * Asking for one user by ID in a user search returned a jumbled result instead of that user. It now returns just that user.
+* Asking your assistant to remove categories or tags from a post did nothing, while it was told the change had worked. It can now remove them.
+* A category or tag your assistant put on a post could be left off without a word, for example a category that no longer exists or a tag whose name is part of another tag's name. Albert now picks the right tag, and refuses the change with the reason when a category or tag cannot be used.
 
 **Security**
 
@@ -291,6 +299,10 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 **Developer**
 
+* New filter `albert/privacy/personal_keys` (`$keys`, `$ability_name`) sets which keys are masked in one ability's result, grouped by rule as in `albert/privacy/pii_fields`. Albert's own abilities start from the full list, any other ability only from email, phone, IP address, password hash and token keys.
+* On Balanced, every ability with an object input schema or none gets an optional `reveal_personal_data` input, which Albert removes before the ability's own callbacks run. An ability that declares the input itself still receives it. `albert/privacy/reveal_capability` defaults to `read` on these calls.
+* The `discover-abilities` response carries a `privacy` field while privacy mode is Strict or Balanced.
+* Removed the `NAMESPACE` constants from `OAuthController` and `ClientRegistration`, deprecated since 1.0.1: PHP 8.6 deprecates a class constant called `namespace`. Use `Plugin::rest_namespace()`.
 * Deprecated the `albert/abilities/required_capability` filter and `AbilitiesRegistry::resolve_required_capability()`; neither has any effect now, and the method returns an empty string. The `capability` and `capabilityRoles` keys of an Abilities screen row are always empty and will be removed in a future version.
 * Switching an ability off no longer unregisters it. Albert's MCP server leaves it out of discovery and refuses to describe or run it, and safe mode refuses to approve a held call for it. An Albert ability that an add-on refuses, such as one that needs a licence, is still unregistered.
 * `albert/abilities/disabled_list` now also applies to Albert's own abilities.
@@ -308,18 +320,28 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
 * `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
 * New ability: `albert/view-site-health`.
+* `albert/update-post` and `albert/update-page` refuse a call with only `id`, return `albert_post_not_found` and `albert_page_not_found` instead of `post_not_found` and `page_not_found`, and return `albert_post_permission_denied` or `albert_page_permission_denied` when WordPress refuses the post, where they used to report it as not found. A page ID sent to `albert/update-post`, or a post ID sent to `albert/update-page`, now names the ability to use instead, when the user may read that ID.
 * `albert/delete-post`, `albert/delete-page` and `albert/delete-pattern` return `deleted: false` when they move the item to the trash; `deleted` is `true` only for a permanent delete.
 * `albert/delete-term` always deletes permanently; its `force` input is still accepted and ignored. `albert/delete-user` requires `reassign`.
 * The `blocks` tree from `albert/view-post`, `albert/view-page`, `albert/find-posts`, `albert/find-pages` and the block-edit abilities gives each block without inner blocks its saved markup in `html`. A block spec whose markup-sourced attribute (such as `content` or `url`) differs from the `html` sent with it is refused, as are an image without `url`, children under a block that cannot nest them, and a registered block Albert has no template for unless it comes with `html`; these were warnings in `block_issues`.
-* New abilities `albert/replace-post-text` and `albert/replace-page-text`: `post_id` or `page_id`, `search`, `replace`, `field` (`content`, `title` or `excerpt`), `expected_count` (default 1) and `remove_tags`. Errors: `albert_invalid_search` (text not found), `albert_invalid_expected_count` (with `count`), `albert_invalid_replace` (the change alters blocks), `albert_invalid_field` (the post type has no such field), `albert_post_not_found` or `albert_page_not_found`, `albert_post_permission_denied` or `albert_page_permission_denied`, and `tags_removed`. A `notice` in the result says when WordPress stored something other than what was sent.
-* The post, page and pattern create and update abilities now return an `albert_invalid_content` error when `content` is Markdown, instead of saving it as one paragraph. Send `blocks` instead.
+* New abilities `albert/replace-post-text` and `albert/replace-page-text`: `post_id` or `page_id`, `search`, `replace`, `field` (`content`, `title` or `excerpt`), `expected_count` (default 1) and `remove_tags`. Errors: `invalid_search` (text not found), `invalid_expected_count` (with `count`), `invalid_replace` (the change alters blocks), `invalid_field` (the post type has no such field), `post_not_found` or `page_not_found`, `post_permission_denied` or `page_permission_denied`, and `tags_removed`. A `notice` in the result says when WordPress stored something other than what was sent.
+* The post, page and pattern create and update abilities now return an `invalid_content` error when `content` is Markdown, instead of saving it as one paragraph. Send `blocks` instead.
 * `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
-* `albert/create-post` and `albert/create-page` return `albert_post_permission_denied` and `albert_page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
+* `albert/create-post` and `albert/create-page` return `post_permission_denied` and `page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
 * `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
+* `albert/add-post-block` and `albert/add-page-block` accept `pattern`, a pattern name from `albert/find-patterns`, instead of `block`. Its blocks are inserted as stored, with nested `core/pattern` references expanded (a synced user pattern as a `core/block` reference), and checked against the allowed blocks. An unknown name returns `pattern_not_found`. On a post or page without blocks, `path` and `position` may be left out. The response's `inserted` gives the count and paths of the top-level blocks added.
+* New abilities: `albert/add-post-terms` and `albert/remove-post-terms`. Both take `post_id`, `taxonomy` (`category` or `post_tag`) and up to 50 `terms`, and return the post's terms afterwards. Category IDs may be sent as numbers or as text. `albert/remove-post-terms` also takes tag IDs next to tag names, returns `default_category_applied` when removing the last category put the default category back, and a `note` saying why when the default category was the post's only one and stayed.
+* `albert/view-post` and `albert/view-page` return `categories` and `tags` as `{ id, name }` lists, left out when the post type does not use that taxonomy.
+* Deprecated: the `categories` and `tags` inputs of `albert/update-post`. Use `albert/add-post-terms` or `albert/remove-post-terms`. An empty list is refused as invalid input, with an error that names `albert/remove-post-terms`.
+* `albert/create-post` and `albert/update-post` return `category_not_found` for a category ID that does not exist, and `invalid_tags` or `tag_permission_denied` for a tag WordPress refuses to create, and save nothing, instead of leaving it off.
+* Error codes no longer carry an `albert_` prefix, e.g. `albert_permission_denied` is now `permission_denied` and `albert_already_handled` is now `already_handled`. Not-found errors all end in `_not_found`: `albert/set-featured-image` returns `post_not_found` and `media_not_found` instead of `invalid_post` and `invalid_attachment`, `albert/get-block-type` returns `block_type_not_found` instead of `block_not_registered`, and the page block-edit abilities return `page_not_found`.
+* New WP-CLI command `wp albert allowed-users` with `list`, `add` and `remove`. It takes user IDs, logins or email addresses and changes nothing if any of them is not found, or, for `add`, lacks the capability from `albert/connections/allowed_user_capability`. `remove` also takes the ID of someone on the list whose account no longer exists.
+* New actions `albert/allowed_users/added` `( $user_id, $expires_at )` and `albert/allowed_users/removed` `( $user_id )`. They fire whenever someone is added or removed, by the Connections screen, the command, an add-on, an invitation lapsing or their user being deleted, and only once the change is saved. `AllowedUsers::remove()` now returns whether the person was removed.
+* `albert/connections/allowed_user_capability` now also decides who may be added to the list, on the Connections screen as well as in the picker. Before, it only filtered who the picker offered.
 
 **Credits**
 
-* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting Markdown saved as one paragraph.
+* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting Markdown saved as one paragraph, and that categories and tags could not be read or removed.
 
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
@@ -457,7 +479,7 @@ Initial release. Connect Claude Desktop, ChatGPT, and other MCP-compatible AI as
 
 Albert runs entirely on your own site. It has no servers of its own and sends no data about your site or your usage anywhere. Albert's own Site Health check requests your site's sign-in address. When your assistant asks for the full Site Health check, WordPress runs its background checks, as it does weekly, and these contact WordPress.org and your own site.
 
-**What reaches your assistant.** Only the site context you choose to send, and the results of the actions you have switched on, for the person who approved the connection, within their WordPress permissions. Before a user, customer or order result from Albert's own actions leaves your site, Albert masks personal details according to your privacy mode: Strict, Balanced or Off. Other plugins' actions are not masked by Albert. New sites start on Strict. What your assistant's provider then does with that text is covered by their own privacy policy.
+**What reaches your assistant.** Only the site context you choose to send, and the results of the actions you have switched on, for the person who approved the connection, within their WordPress permissions. Before a result leaves your site, Albert masks the personal details it recognises according to your privacy mode: Strict, Balanced or Off. That includes results from WordPress itself and other plugins' actions. New sites start on Strict. What your assistant's provider then does with that text is covered by their own privacy policy.
 
 **What Albert keeps, in your own database:**
 

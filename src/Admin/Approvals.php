@@ -177,7 +177,7 @@ class Approvals implements Hookable {
 
 		// A lost race (another tab/retry got there first) is not a failure and did
 		// not run anything: show the "no longer waiting" notice, not an error.
-		if ( is_wp_error( $result ) && $result->get_error_code() === 'albert_already_handled' ) {
+		if ( is_wp_error( $result ) && $result->get_error_code() === 'already_handled' ) {
 			$this->redirect_with_notice( 'gone' );
 		}
 

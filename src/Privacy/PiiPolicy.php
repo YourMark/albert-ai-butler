@@ -40,11 +40,8 @@ class PiiPolicy {
 	 *  - authorised reveal (Balanced + opt-in + capability) — same as `Off`.
 	 *  - otherwise  — full anonymisation via {@see Anonymizer::anonymize()}.
 	 *
-	 * This lives inside the ability (where `$args` are the ability's own
-	 * parameters and the payload is the data it produced) rather than in a global
-	 * tool-result filter, because MCP proxies every ability through the
-	 * `mcp-adapter/execute-ability` meta-tool — a tool-name-keyed filter never
-	 * sees the real ability name or its arguments.
+	 * {@see ConnectedResultRedactor} redacts every connected call afterwards,
+	 * so new code should not call this; it stays for add-ons that do.
 	 *
 	 * The top-level keys of an ability payload are always string-keyed, and this
 	 * method never re-indexes that top array, so the return is narrowed to
@@ -82,6 +79,45 @@ class PiiPolicy {
 		 * @var array<string, mixed> $result
 		 */
 		return $result;
+	}
+
+	/**
+	 * Redact personal data in any ability result, whatever its shape.
+	 *
+	 * Only called once core has let the caller run the ability, so on Balanced
+	 * the opt-in reveals for anyone who may use it: the filtered reveal
+	 * capability defaults to `read` here, and a site can raise it as a floor.
+	 * An object is redacted as the JSON it becomes, and comes back as itself
+	 * when nothing in it changed. A bare string is masked when it is an email address.
+	 *
+	 * @since 1.6.0
+	 *
+	 * @param mixed                $data The ability's result.
+	 * @param array<string, mixed> $args The ability's input.
+	 * @param array<string, mixed> $opts Options for {@see Anonymizer::anonymize()}.
+	 *
+	 * @return mixed The redacted result.
+	 */
+	public static function redact_value( mixed $data, array $args = [], array $opts = [] ): mixed {
+		$value = is_object( $data ) ? json_decode( (string) wp_json_encode( $data ), true ) : $data;
+
+		if ( ! is_array( $value ) && ! is_string( $value ) ) {
+			return $data;
+		}
+
+		$mode   = PrivacyMode::resolve();
+		$reveal = $mode === PrivacyMode::Off
+			|| ( $mode === PrivacyMode::Balanced
+				&& ! empty( $args['reveal_personal_data'] )
+				&& current_user_can( self::filtered_reveal_capability( 'read' ) ) );
+
+		if ( is_string( $value ) ) {
+			return $reveal ? $value : Anonymizer::anonymize( [ $value ], $opts )[0];
+		}
+
+		$redacted = $reveal ? Anonymizer::strip_payment_data( $value ) : Anonymizer::anonymize( $value, $opts );
+
+		return $redacted === $value ? $data : $redacted;
 	}
 
 	/**
@@ -130,18 +166,34 @@ class PiiPolicy {
 			return $opts['reveal_capability'];
 		}
 
+		return self::filtered_reveal_capability( 'manage_options' );
+	}
+
+	/**
+	 * The capability a reveal needs, after `albert/privacy/reveal_capability`.
+	 *
+	 * @since 1.6.0
+	 *
+	 * @param string $default_capability `read` for a connected call, `manage_options` for {@see PiiPolicy::redact()}.
+	 *
+	 * @return string The gating capability.
+	 */
+	private static function filtered_reveal_capability( string $default_capability ): string {
 		/**
 		 * Filters the capability required to reveal personal data.
 		 *
-		 * Consulted only when a caller has not passed an explicit
-		 * `reveal_capability` option.
+		 * On a connected call the default is `read`, so whoever may run an
+		 * ability may reveal its result; return a stricter capability to raise
+		 * that floor. In {@see PiiPolicy::redact()} it is consulted only when the
+		 * caller passes no `reveal_capability` option, with `manage_options`.
 		 *
 		 * @since 1.3.0
+		 * @since 1.6.0 Also gates connected calls, defaulting to `read` there.
 		 *
-		 * @param string $capability The gating capability (default `manage_options`).
+		 * @param string $capability The gating capability.
 		 */
-		$capability = apply_filters( 'albert/privacy/reveal_capability', 'manage_options' );
+		$capability = apply_filters( 'albert/privacy/reveal_capability', $default_capability );
 
-		return ( is_string( $capability ) && $capability !== '' ) ? $capability : 'manage_options';
+		return ( is_string( $capability ) && $capability !== '' ) ? $capability : $default_capability;
 	}
 }

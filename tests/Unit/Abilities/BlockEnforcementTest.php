@@ -47,7 +47,14 @@ class BlockEnforcementTest extends TestCase {
 		$GLOBALS['albert_test_rest_calls']     = [];
 		$GLOBALS['albert_test_rest_responses'] = [];
 		$GLOBALS['albert_test_hooks']          = [];
-		$GLOBALS['albert_test_posts']          = [];
+		// The update abilities refuse an id that is not an existing post.
+		$GLOBALS['albert_test_posts'] = [
+			7 => (object) [
+				'ID'           => 7,
+				'post_type'    => 'post',
+				'post_content' => '',
+			],
+		];
 
 		albert_test_register_default_block_types();
 	}
@@ -188,11 +195,7 @@ class BlockEnforcementTest extends TestCase {
 	}
 
 	public function test_update_post_with_disallowed_new_block_returns_wp_error_and_does_not_save(): void {
-		$GLOBALS['albert_test_allowed_block_types']   = [ 'core/paragraph' ];
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 7 ],
-		];
+		$GLOBALS['albert_test_allowed_block_types'] = [ 'core/paragraph' ];
 
 		$ability = new UpdatePost();
 
@@ -261,14 +264,11 @@ class BlockEnforcementTest extends TestCase {
 
 	public function test_update_post_exempts_block_already_present_in_existing_content(): void {
 		// core/heading is no longer allowed, but the existing post already uses it.
-		$GLOBALS['albert_test_allowed_block_types']   = [ 'core/paragraph' ];
-		$GLOBALS['albert_test_posts'][7]              = (object) [
+		$GLOBALS['albert_test_allowed_block_types'] = [ 'core/paragraph' ];
+		$GLOBALS['albert_test_posts'][7]            = (object) [
 			'ID'           => 7,
+			'post_type'    => 'post',
 			'post_content' => '<!-- wp:heading --><h2 class="wp-block-heading">Existing</h2><!-- /wp:heading -->',
-		];
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 7 ],
 		];
 		$this->queue_write_success(
 			[
@@ -309,17 +309,13 @@ class BlockEnforcementTest extends TestCase {
 	public function test_update_post_does_not_exempt_a_new_disallowed_block_alongside_existing(): void {
 		// Existing content uses core/heading; the new submission adds a disallowed
 		// core/quote that is NOT in the existing content, so it is still rejected.
-		$GLOBALS['albert_test_allowed_block_types']   = [ 'core/paragraph' ];
-		$GLOBALS['albert_test_posts'][8]              = (object) [
+		$GLOBALS['albert_test_allowed_block_types'] = [ 'core/paragraph' ];
+		$GLOBALS['albert_test_posts'][8]            = (object) [
 			'ID'           => 8,
+			'post_type'    => 'post',
 			'post_content' => '<!-- wp:heading --><h2 class="wp-block-heading">Existing</h2><!-- /wp:heading -->',
 		];
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 8 ],
-		];
-
-		$ability = new UpdatePost();
+		$ability                                    = new UpdatePost();
 
 		$result = $ability->execute(
 			[
@@ -345,14 +341,11 @@ class BlockEnforcementTest extends TestCase {
 	}
 
 	public function test_update_page_exempts_block_already_present_in_existing_content(): void {
-		$GLOBALS['albert_test_allowed_block_types']   = [ 'core/paragraph' ];
-		$GLOBALS['albert_test_posts'][55]             = (object) [
+		$GLOBALS['albert_test_allowed_block_types'] = [ 'core/paragraph' ];
+		$GLOBALS['albert_test_posts'][55]           = (object) [
 			'ID'           => 55,
+			'post_type'    => 'page',
 			'post_content' => '<!-- wp:heading --><h2 class="wp-block-heading">Existing</h2><!-- /wp:heading -->',
-		];
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 55 ],
 		];
 		$this->queue_write_success(
 			[

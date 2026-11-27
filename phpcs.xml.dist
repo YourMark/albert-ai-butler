@@ -59,6 +59,17 @@
 	<rule ref="WordPress.WP.AlternativeFunctions">
 		<exclude-pattern>*/tests/*</exclude-pattern>
 	</rule>
+	<!-- Tests fake requests on purpose: they set $_POST, the global post and
+	     wp_die() messages, and run CLI scripts. These sniffs guard real requests. -->
+	<rule ref="WordPress.Security">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.PHP.DiscouragedPHPFunctions.system_calls_exec">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
 	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
 		<exclude-pattern>*/tests/*</exclude-pattern>
 	</rule>
