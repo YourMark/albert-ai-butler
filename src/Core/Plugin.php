@@ -54,6 +54,7 @@ use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Skills\GetSkill;
+use Albert\Abilities\WordPress\Search\SearchContent;
 use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
 use Albert\Abilities\WordPress\Taxonomies\FindTerms;
@@ -465,6 +466,9 @@ class Plugin {
 		$this->abilities_manager->add_ability( new CreateTerm() );
 		$this->abilities_manager->add_ability( new UpdateTerm() );
 		$this->abilities_manager->add_ability( new DeleteTerm() );
+
+		// Search across post types.
+		$this->abilities_manager->add_ability( new SearchContent() );
 
 		// Site Health (read only).
 		$this->abilities_manager->add_ability( new ViewSiteHealth() );

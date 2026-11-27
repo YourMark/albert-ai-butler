@@ -40,6 +40,7 @@ use Albert\Abilities\WordPress\Posts\RemoveTerms as RemovePostTerms;
 use Albert\Abilities\WordPress\Posts\ReplaceText as ReplacePostText;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\Search\SearchContent;
 use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
@@ -569,6 +570,17 @@ class ExecuteSchemaTest extends TestCase {
 			[ 'id' => $attachment_id ],
 			'DeleteMedia'
 		);
+	}
+
+	/**
+	 * SearchContent returns results matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_search_content_output_matches_schema(): void {
+		self::factory()->post->create( [ 'post_title' => 'Searchable thing' ] );
+
+		$this->assert_execute_matches_schema( new SearchContent(), [ 'search' => 'Searchable' ], 'SearchContent' );
 	}
 
 	/**

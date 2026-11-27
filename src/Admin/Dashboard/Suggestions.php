@@ -186,6 +186,10 @@ class Suggestions {
 				'requires' => [ 'albert/find-media', 'albert/update-media' ],
 			],
 			[
+				'text'     => __( 'Find every page, post, pattern, header and footer that mentions our opening hours.', 'albert-ai-butler' ),
+				'requires' => [ 'albert/search-content' ],
+			],
+			[
 				'text'     => __( 'Does Site Health flag anything I should fix?', 'albert-ai-butler' ),
 				'requires' => [ 'albert/view-site-health' ],
 			],
