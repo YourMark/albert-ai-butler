@@ -129,9 +129,9 @@ class DirectCapabilityTest extends TestCase {
 			'view-site-health'       => [ ViewSiteHealth::class, 'view_site_health_checks' ],
 
 			// Revisions (the per-post edit_post check runs in execute()).
-			'find-revisions'     => [ FindRevisions::class, 'edit_posts' ],
-			'view-revision'      => [ ViewRevision::class, 'edit_posts' ],
-			'restore-revision'   => [ RestoreRevision::class, 'edit_posts' ],
+			'find-revisions'         => [ FindRevisions::class, 'edit_posts' ],
+			'view-revision'          => [ ViewRevision::class, 'edit_posts' ],
+			'restore-revision'       => [ RestoreRevision::class, 'edit_posts' ],
 
 			// Users.
 			'view-user'              => [ ViewUser::class, 'list_users' ],
