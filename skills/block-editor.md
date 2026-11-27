@@ -198,13 +198,20 @@ pattern's markup is known-valid.
 
 - **Discover:** `albert/find-patterns` (filter by `search` or `category`) lists
   summaries; `albert/view-pattern` returns one pattern's block markup by `name`.
-- **Reuse as a copy (default):** pass the returned `content` as your `content`
-  (block markup is stored exactly as sent), or adapt it. The copy is independent; editing it never changes the
-  source. Works for any pattern.
-- **Reuse synced (shared):** only user patterns with `syncStatus: "synced"`.
-  Insert by reference with `<!-- wp:block {"ref":ID} /-->` using the pattern's
-  `id`. There is one source, so editing the pattern updates every place it is
-  used. Use it for a block repeated across the site, such as a CTA or a footer note.
+- **Place a pattern (best):** `albert/add-post-block` (or `add-page-block`) with
+  `pattern` set to the pattern's `name`. The server inserts the pattern exactly as
+  stored, so you never copy its markup and nothing can go wrong in the copy. On an
+  empty post or page, leave out `path` and `position`: "make a landing page from
+  pattern X" is a new page plus this one call. `inserted` in the response gives the
+  paths of the blocks added.
+- **Synced (shared) patterns:** user patterns with `syncStatus: "synced"`. Sent as
+  `pattern`, one is inserted as a reference: there is one source, so editing the
+  pattern updates every place it is used. Use it for a block repeated across the
+  site, such as a CTA or a footer note.
+- **Adapt a pattern:** read its `content` with `albert/view-pattern`, change it, and
+  send it as your `content` (block markup is stored exactly as sent) or as a block's
+  `html`. The copy is independent; editing it never changes the source. Do this too
+  when add-block refuses a pattern because it holds a block you may not use.
 - **`source`:** `registered` patterns (theme or plugin) are always copies and
   read-only; `user` patterns are the ones an owner can edit.
 

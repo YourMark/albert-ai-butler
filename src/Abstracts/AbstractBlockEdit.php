@@ -192,6 +192,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 		$batched      = array_key_exists( self::EDITS, $args );
 		$stored       = (string) $post->post_content;
 		$tree         = array_values( parse_blocks( $stored ) );
+		$before       = $tree;
 		$block_issues = [];
 
 		foreach ( $operations as $index => $op_args ) {
@@ -214,7 +215,23 @@ abstract class AbstractBlockEdit extends BaseAbility {
 			return $persisted;
 		}
 
-		return $this->build_result( $post_id, $markup, $persisted, $block_issues );
+		return array_merge(
+			$this->build_result( $post_id, $markup, $persisted, $block_issues ),
+			$batched ? [] : $this->result_fields( $before, $tree, $args )
+		);
+	}
+
+	/**
+	 * Extra result fields that describe what one operation changed.
+	 *
+	 * @param array<int, mixed>    $before Tree before the operation.
+	 * @param array<int, mixed>    $after  Tree after the operation.
+	 * @param array<string, mixed> $args   Ability input.
+	 * @return array<string, mixed>
+	 * @since 1.6.0
+	 */
+	protected function result_fields( array $before, array $after, array $args ): array {
+		return [];
 	}
 
 	/**
