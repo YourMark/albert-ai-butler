@@ -54,6 +54,8 @@ class RiskPolicy {
 		'albert/reply-to-comment',
 		// Approving publishes a visitor's text on the site.
 		'albert/moderate-comment',
+		// Undoable through a new revision, but it replaces live content in one call.
+		'albert/restore-revision',
 	];
 
 	/**
