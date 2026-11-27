@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Media;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -105,7 +107,9 @@ class ViewMedia extends BaseAbility {
 		$media_id = absint( $args['id'] );
 		$media    = get_post( $media_id );
 
-		if ( ! $media || $media->post_type !== 'attachment' ) {
+		// read_post follows an attached file to its parent's status. Refused
+		// reads answer as not found, so they do not reveal the file exists.
+		if ( ! $media || $media->post_type !== 'attachment' || ! current_user_can( 'read_post', $media_id ) ) {
 			return new WP_Error(
 				'media_not_found',
 				sprintf(

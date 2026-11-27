@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WooCommerce;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -147,7 +149,11 @@ class FindOrders extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'edit_shop_orders' );
+		$allowed = $this->require_capability( 'edit_shop_orders' );
+
+		// WooCommerce's own order REST asks for this one as well; only a custom
+		// role can hold the first without it.
+		return $allowed === true ? $this->require_capability( 'read_private_shop_orders' ) : $allowed;
 	}
 
 	/**

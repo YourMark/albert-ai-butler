@@ -17,6 +17,8 @@ use Albert\Core\Annotations;
 use WP_Error;
 use WP_REST_Request;
 
+defined( 'ABSPATH' ) || exit;
+
 /**
  * Create Page Ability class
  *

@@ -424,6 +424,26 @@ class RepositoryTest extends TestCase {
 	}
 
 	/**
+	 * Names are bound, not interpolated: quotes match literally and inject nothing.
+	 *
+	 * @return void
+	 */
+	public function test_latest_bulk_binds_every_name(): void {
+		$this->repository->insert( "acme/it's", 3 );
+		$this->repository->insert( 'albert/one', 1 );
+
+		$map = $this->repository->latest_bulk(
+			[
+				5 => "acme/it's",
+				9 => "x') OR ('1'='1",
+			]
+		);
+
+		$this->assertSame( [ "acme/it's" ], array_keys( $map ) );
+		$this->assertSame( 3, (int) $map["acme/it's"]->user_id );
+	}
+
+	/**
 	 * Abilities without any logged rows are omitted from the result map.
 	 *
 	 * @return void

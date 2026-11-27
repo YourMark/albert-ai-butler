@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Media;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use Albert\Media\UploadLinks\UploadLinkService;

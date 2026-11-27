@@ -16,12 +16,14 @@ use Albert\Admin\AbilitiesPage;
 use Albert\Core\AbilitiesManager;
 use Albert\Tests\Unit\StubAbility;
 use WP_Error;
+use Albert\OAuth\Server\ConnectionContext;
 use PHPUnit\Framework\TestCase;
 
 /**
  * AbilitiesManager enforcement tests.
  *
  * @covers \Albert\Core\AbilitiesManager::enforce_disabled
+ * @covers \Albert\Core\AbilitiesManager::refuse_disabled_execution
  */
 class AbilitiesEnforceTest extends TestCase {
 
@@ -42,6 +44,16 @@ class AbilitiesEnforceTest extends TestCase {
 		$GLOBALS['albert_test_filter_returns']         = [];
 		$GLOBALS['albert_test_filter_callbacks']       = [];
 		unset( $_GET['page'] );
+	}
+
+	/**
+	 * Clear the connection a test set.
+	 *
+	 * @return void
+	 */
+	protected function tearDown(): void {
+		ConnectionContext::reset();
+		parent::tearDown();
 	}
 
 	/**
@@ -121,5 +133,29 @@ class AbilitiesEnforceTest extends TestCase {
 		$manager->enforce_disabled();
 
 		$this->assertSame( [ 'albert/licensed' ], $GLOBALS['albert_test_unregistered_abilities'] );
+	}
+
+	/**
+	 * A disabled ability is refused at execution over a connection; others and the transport proceed.
+	 *
+	 * @return void
+	 */
+	public function test_refuses_executing_a_disabled_ability(): void {
+		$GLOBALS['albert_test_options']['albert_abilities_saved']                   = true;
+		$GLOBALS['albert_test_options'][ AbilitiesPage::DISABLED_ABILITIES_OPTION ] = [ 'albert/create-post', 'mcp-adapter/execute-ability' ];
+
+		$manager  = new AbilitiesManager();
+		$sentinel = new \stdClass();
+
+		$this->assertSame( $sentinel, $manager->refuse_disabled_execution( $sentinel, 'albert/create-post' ), 'Outside a connection, other plugins may still run it.' );
+
+		ConnectionContext::set( 'client-1' );
+		$refused = $manager->refuse_disabled_execution( $sentinel, 'albert/create-post' );
+		$this->assertInstanceOf( \WP_Error::class, $refused );
+		$this->assertSame( 'ability_disabled', $refused->get_error_code() );
+
+		$this->assertSame( $sentinel, $manager->refuse_disabled_execution( $sentinel, 'albert/find-posts' ) );
+		$this->assertSame( $sentinel, $manager->refuse_disabled_execution( $sentinel, 'mcp-adapter/execute-ability' ) );
+		ConnectionContext::reset();
 	}
 }

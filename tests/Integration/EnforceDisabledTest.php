@@ -89,7 +89,7 @@ class EnforceDisabledTest extends TestCase {
 		remove_all_filters( 'albert/abilities/is_management_context' );
 		remove_all_filters( 'albert/abilities/disabled_list' );
 
-		unset( $_GET['page'] );
+		unset( $_GET['page'], $_GET['rest_route'], $_SERVER['HTTP_AUTHORIZATION'] );
 
 		parent::tear_down();
 	}
@@ -408,6 +408,26 @@ class EnforceDisabledTest extends TestCase {
 		$this->manager->enforce_disabled();
 
 		$this->assertTrue( wp_has_ability( 'albert/test-filter-target' ) );
+	}
+
+	/**
+	 * Over a connection a switched-off ability is refused however it is run, even when
+	 * an add-on calls the request a management context.
+	 *
+	 * @return void
+	 */
+	public function test_a_connection_cannot_run_a_switched_off_ability(): void {
+		$this->register_albert_ability( 'albert/test-bypass-target' );
+		update_option( AbilitiesPage::DISABLED_ABILITIES_OPTION, [ 'albert/test-bypass-target' ] );
+		add_filter( 'albert/abilities/is_management_context', '__return_true' );
+		ConnectionContext::set( 'client-1' );
+
+		$result = wp_get_ability( 'albert/test-bypass-target' )->execute( [] );
+
+		ConnectionContext::reset();
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'ability_disabled', $result->get_error_code() );
 	}
 
 	// ─── disabled_list filter ───────────────────────────────────────

@@ -17,6 +17,9 @@ use Albert\Blocks\WriteContentResolver;
 use Albert\Core\Annotations;
 use WP_Error;
 use WP_REST_Request;
+use WP_Term;
+
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Create Post Ability class
@@ -208,12 +211,25 @@ class Create extends BaseAbility {
 			}
 		}
 
+		// Existing tags go in with the post. New ones are created only once it is
+		// saved, so a refused save leaves no stray tags.
+		$new_tags = [];
 		if ( ! empty( $args['tags'] ) && is_array( $args['tags'] ) ) {
-			$tag_ids = PostTerms::tag_ids( $args['tags'] );
+			$tag_ids = PostTerms::tag_ids( $args['tags'], false );
 			if ( is_wp_error( $tag_ids ) ) {
 				return $tag_ids;
 			}
 			$request_data['tags'] = $tag_ids;
+
+			$new_tags = array_values( array_filter( $args['tags'], static fn( $name ): bool => ! get_term_by( 'name', (string) $name, 'post_tag' ) instanceof WP_Term ) );
+			$taxonomy = get_taxonomy( 'post_tag' );
+			if ( $new_tags !== [] && ( ! $taxonomy || ! current_user_can( $taxonomy->cap->assign_terms ) ) ) {
+				return new WP_Error(
+					'tag_permission_denied',
+					__( 'You may not create new tags, so the post was not created. Use existing tags only.', 'albert-ai-butler' ),
+					[ 'status' => 403 ]
+				);
+			}
 		}
 
 		// Create REST request.
@@ -234,6 +250,19 @@ class Create extends BaseAbility {
 
 		if ( $response->is_error() ) {
 			return self::rest_failure( $data, $response->get_status(), __( 'The post could not be created.', 'albert-ai-butler' ), 'post_permission_denied' );
+		}
+
+		if ( $new_tags !== [] ) {
+			$created = PostTerms::tag_ids( $new_tags );
+			if ( is_wp_error( $created ) ) {
+				return new WP_Error(
+					$created->get_error_code(),
+					/* translators: %d: post ID */
+					sprintf( __( 'The post was created as ID %d, without its new tags: WordPress refused to create one of them. Add tags with albert/add-post-terms.', 'albert-ai-butler' ), (int) $data['id'] ),
+					$created->get_error_data()
+				);
+			}
+			wp_set_post_terms( (int) $data['id'], $created, 'post_tag', true );
 		}
 
 		// Return formatted post data.

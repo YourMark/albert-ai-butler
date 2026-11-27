@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WooCommerce;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -95,6 +97,34 @@ class ViewProduct extends BaseAbility {
 	}
 
 	/**
+	 * Whether the current user may see this product.
+	 *
+	 * A variation needs both its own status (a disabled variation is private)
+	 * and its parent product's to allow it.
+	 *
+	 * @param \WC_Product $product The product.
+	 *
+	 * @return bool
+	 * @since 1.5.1
+	 */
+	private function can_view( $product ): bool {
+		$parent_id = $product->get_parent_id();
+
+		if ( $parent_id && ! current_user_can( 'read_post', $product->get_id() ) ) {
+			return false;
+		}
+
+		$post_id = $parent_id ? $parent_id : $product->get_id();
+
+		// read_post covers status (draft, pending, private) but ignores the password.
+		if ( ! current_user_can( 'read_post', $post_id ) ) {
+			return false;
+		}
+
+		return ! post_password_required( $post_id ) || current_user_can( 'edit_post', $post_id );
+	}
+
+	/**
 	 * Execute the ability.
 	 *
 	 * @param array<string, mixed> $args Input parameters.
@@ -106,7 +136,9 @@ class ViewProduct extends BaseAbility {
 		$product_id = absint( $args['id'] );
 		$product    = wc_get_product( $product_id );
 
-		if ( ! $product ) {
+		// The permission check only asks for `read`, so drafts, private and
+		// password-protected products are refused here, as not found.
+		if ( ! $product || ! $this->can_view( $product ) ) {
 			return new WP_Error(
 				'product_not_found',
 				sprintf(

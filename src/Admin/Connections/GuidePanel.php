@@ -244,7 +244,8 @@ class GuidePanel {
 	private static function render_code( string $code, string $id, string $label = '', string $described_by = '' ): void {
 		$name_id = $label !== '' ? $id . '-label' : $described_by;
 		// Both kinds can scroll sideways (a long URL never breaks), so both take focus.
-		$region = 'tabindex="0" role="region" ' . ( $name_id !== '' ? 'aria-labelledby="' . esc_attr( $name_id ) . '"' : 'aria-label="' . esc_attr__( 'Code', 'albert-ai-butler' ) . '"' );
+		$name_attr  = $name_id !== '' ? 'aria-labelledby' : 'aria-label';
+		$name_value = $name_id !== '' ? $name_id : __( 'Code', 'albert-ai-butler' );
 		?>
 		<div class="albert-guide-panel__code">
 			<?php if ( $label !== '' ) { ?>
@@ -252,9 +253,9 @@ class GuidePanel {
 			<?php } ?>
 			<?php if ( str_contains( $code, "\n" ) ) { ?>
 				<?php // A config block keeps its indentation and scrolls rather than rewrapping. ?>
-				<pre class="albert-guide-panel__block" id="<?php echo esc_attr( $id ); ?>" <?php echo $region; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts above. ?>><?php echo esc_html( $code ); ?></pre>
+				<pre class="albert-guide-panel__block" id="<?php echo esc_attr( $id ); ?>" tabindex="0" role="region" <?php echo esc_attr( $name_attr ); ?>="<?php echo esc_attr( $name_value ); ?>"><?php echo esc_html( $code ); ?></pre>
 			<?php } else { ?>
-				<pre id="<?php echo esc_attr( $id ); ?>" <?php echo $region; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts above. ?>><?php echo self::wrap_at_spaces( $code ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every token is escaped inside. ?></pre>
+				<pre id="<?php echo esc_attr( $id ); ?>" tabindex="0" role="region" <?php echo esc_attr( $name_attr ); ?>="<?php echo esc_attr( $name_value ); ?>"><?php echo wp_kses( self::wrap_at_spaces( $code ), [ 'span' => [ 'class' => true ] ] ); ?></pre>
 			<?php } ?>
 			<button type="button" class="button button-secondary albert-copy-button" data-copy-target="<?php echo esc_attr( $id ); ?>"<?php echo $name_id !== '' ? ' aria-describedby="' . esc_attr( $name_id ) . '"' : ''; ?>>
 				<?php esc_html_e( 'Copy', 'albert-ai-butler' ); ?>

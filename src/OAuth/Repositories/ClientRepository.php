@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Repositories;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Database\Tables;
 use Albert\OAuth\Entities\ClientEntity;
 use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
@@ -355,24 +357,18 @@ class ClientRepository implements ClientRepositoryInterface {
 	}
 
 	/**
-	 * Count the clients that hold a place under the registration cap.
+	 * Count the clients that hold a place under the registration cap: those
+	 * with a live access or refresh token, so connected ones.
 	 *
-	 * Live clients, by the same test as {@see self::getLiveConnections()}, plus
-	 * any registered in the last `$grace_hours`. Counting every row let clients
-	 * that never authorised, or were disconnected long ago, fill the cap until
-	 * no new assistant could connect. The grace window keeps a registration
-	 * nobody completes counting for a while, so the cap still bounds abuse: one
-	 * address can fill it within the registration rate limit, but only for a day.
-	 *
-	 * Client `created_at` is stamped in the database's own time zone, so it is
-	 * compared with NOW(); token expiry is written as UTC, so with UTC_TIMESTAMP().
-	 *
-	 * @param int $grace_hours How long a new client counts without a token.
+	 * Registration is anonymous, so a client that never authorised must not
+	 * count, or anybody could fill the cap and lock every assistant out.
+	 * Unfinished registrations are bounded by {@see self::count_pending_clients()}.
 	 *
 	 * @return int
 	 * @since 1.5.0
+	 * @since 1.5.1 Recent clients without a token no longer count.
 	 */
-	public function count_live_clients( int $grace_hours = 24 ): int {
+	public function count_live_clients(): int {
 		global $wpdb;
 
 		$tables = Tables::oauth();
@@ -381,18 +377,16 @@ class ClientRepository implements ClientRepositoryInterface {
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i c
-				WHERE c.created_at >= DATE_SUB( NOW(), INTERVAL %d HOUR )
-					OR EXISTS (
-						SELECT 1 FROM %i t
-						LEFT JOIN %i r
-							ON r.access_token_id = t.token_id
-							AND r.revoked = 0
-							AND r.expires_at > UTC_TIMESTAMP()
-						WHERE t.client_id = c.client_id
-							AND ( ( t.revoked = 0 AND t.expires_at > UTC_TIMESTAMP() ) OR r.id IS NOT NULL )
-					)',
+				WHERE EXISTS (
+					SELECT 1 FROM %i t
+					LEFT JOIN %i r
+						ON r.access_token_id = t.token_id
+						AND r.revoked = 0
+						AND r.expires_at > UTC_TIMESTAMP()
+					WHERE t.client_id = c.client_id
+						AND ( ( t.revoked = 0 AND t.expires_at > UTC_TIMESTAMP() ) OR r.id IS NOT NULL )
+				)',
 				$tables['clients'],
-				$grace_hours,
 				$tables['access_tokens'],
 				$tables['refresh_tokens']
 			)
@@ -400,49 +394,56 @@ class ClientRepository implements ClientRepositoryInterface {
 	}
 
 	/**
-	 * The oldest client that holds a place under the cap without ever connecting.
+	 * Count the clients that never got a token: unfinished registrations.
 	 *
-	 * Inside the grace window of {@see self::count_live_clients()}, older than
-	 * `$min_age_minutes` so a sign-in in progress keeps its place, with no token
-	 * row and no unexpired authorization code.
-	 *
-	 * @param int $min_age_minutes Minimum age in minutes.
-	 * @param int $grace_hours     The grace window count_live_clients() uses.
-	 *
-	 * @return array{client_id: string, name: string}|null
-	 * @since 1.6.0
+	 * @return int
+	 * @since 1.5.1
 	 */
-	public function find_evictable_client( int $min_age_minutes = 10, int $grace_hours = 24 ): ?array {
+	public function count_pending_clients(): int {
 		global $wpdb;
 
 		$tables = Tables::oauth();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, cap enforcement.
-		$row = $wpdb->get_row(
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, bound on registrations.
+		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT c.client_id, c.name FROM %i c
-				WHERE c.created_at >= DATE_SUB( NOW(), INTERVAL %d HOUR )
-					AND c.created_at < DATE_SUB( NOW(), INTERVAL %d MINUTE )
-					AND NOT EXISTS ( SELECT 1 FROM %i t WHERE t.client_id = c.client_id )
-					AND NOT EXISTS (
-						SELECT 1 FROM %i a
-						WHERE a.client_id = c.client_id AND a.revoked = 0 AND a.expires_at > UTC_TIMESTAMP()
+				'SELECT COUNT(*) FROM %i WHERE client_id NOT IN ( SELECT t.client_id FROM %i t )',
+				$tables['clients'],
+				$tables['access_tokens']
+			)
+		);
+	}
+
+	/**
+	 * Delete the oldest client that never got a token, to make room for a new one.
+	 *
+	 * A client holding a live authorization code is mid sign-in and kept.
+	 *
+	 * @return bool Whether a client was deleted.
+	 * @since 1.5.1
+	 */
+	public function evict_oldest_pending_client(): bool {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, bound on registrations.
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i
+				WHERE client_id NOT IN ( SELECT t.client_id FROM %i t )
+					AND client_id NOT IN (
+						SELECT a.client_id FROM %i a WHERE a.revoked = 0 AND a.expires_at > UTC_TIMESTAMP()
 					)
-				ORDER BY c.created_at ASC, c.id ASC
+				ORDER BY created_at ASC, id ASC
 				LIMIT 1',
 				$tables['clients'],
-				$grace_hours,
-				$min_age_minutes,
 				$tables['access_tokens'],
 				$tables['auth_codes']
-			),
-			ARRAY_A
+			)
 		);
 
-		return is_array( $row ) ? [
-			'client_id' => (string) $row['client_id'],
-			'name'      => (string) $row['name'],
-		] : null;
+		return (int) $result > 0;
 	}
 
 	/**

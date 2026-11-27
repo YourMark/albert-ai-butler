@@ -40,6 +40,30 @@ defined( 'ABSPATH' ) || exit;
 class InfoTip {
 
 	/**
+	 * The markup an info tip is made of, for wp_kses() at output.
+	 *
+	 * @since 1.5.1
+	 * @var array<string, array<string, bool>>
+	 */
+	public const ALLOWED_HTML = [
+		'span'   => [
+			'class'       => true,
+			'id'          => true,
+			'role'        => true,
+			'hidden'      => true,
+			'aria-hidden' => true,
+		],
+		'button' => [
+			'type'          => true,
+			'class'         => true,
+			'aria-expanded' => true,
+			'aria-controls' => true,
+			'aria-label'    => true,
+		],
+		'code'   => [],
+	];
+
+	/**
 	 * Counter guaranteeing a unique id per tip within one request.
 	 *
 	 * The popover needs an id so the trigger can point `aria-controls` at it.
@@ -70,7 +94,7 @@ class InfoTip {
 	 * @return void
 	 */
 	public static function render( string $text, string $label, string $id = '' ): void {
-		echo self::get( $text, $label, $id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get() escapes every part.
+		echo wp_kses( self::get( $text, $label, $id ), self::ALLOWED_HTML );
 	}
 
 	/**

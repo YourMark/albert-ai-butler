@@ -26,6 +26,8 @@ use WP_REST_Request;
  * @covers \Albert\OAuth\Repositories\ClientRepository::count_live_clients
  * @covers \Albert\OAuth\Repositories\ClientRepository::delete_stale_clients
  * @covers \Albert\OAuth\Endpoints\ClientRegistration::limit_reached
+ * @covers \Albert\OAuth\Repositories\ClientRepository::count_pending_clients
+ * @covers \Albert\OAuth\Repositories\ClientRepository::evict_oldest_pending_client
  */
 class ClientCapTest extends TestCase {
 
@@ -46,7 +48,7 @@ class ClientCapTest extends TestCase {
 
 		global $wpdb;
 
-		foreach ( [ 'clients', 'access_tokens', 'refresh_tokens' ] as $key ) {
+		foreach ( [ 'clients', 'access_tokens', 'refresh_tokens', 'auth_codes' ] as $key ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test reset.
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', Tables::oauth()[ $key ] ) );
 		}
@@ -74,27 +76,26 @@ class ClientCapTest extends TestCase {
 	}
 
 	/**
-	 * Insert a client registered `$hours_ago` hours (plus `$minutes_ago` minutes) ago.
+	 * Insert a client registered `$hours_ago` hours ago.
 	 *
-	 * @param string $client_id   Client id.
-	 * @param int    $hours_ago   Age in hours.
-	 * @param int    $minutes_ago Extra age in minutes.
+	 * @param string $client_id Client id.
+	 * @param int    $hours_ago Age in hours.
 	 *
 	 * @return string
 	 */
-	private function client( string $client_id, int $hours_ago, int $minutes_ago = 0 ): string {
+	private function client( string $client_id, int $hours_ago ): string {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture; created_at in the database's own time zone, as the column default writes it.
 		$wpdb->query(
 			$wpdb->prepare(
 				'INSERT INTO %i ( client_id, name, redirect_uri, is_confidential, created_at )
-				VALUES ( %s, %s, %s, 0, DATE_SUB( NOW(), INTERVAL %d MINUTE ) )',
+				VALUES ( %s, %s, %s, 0, DATE_SUB( NOW(), INTERVAL %d HOUR ) )',
 				Tables::oauth()['clients'],
 				$client_id,
 				'Client ' . $client_id,
 				'http://localhost:5000/callback',
-				$hours_ago * 60 + $minutes_ago
+				$hours_ago
 			)
 		);
 
@@ -189,7 +190,7 @@ class ClientCapTest extends TestCase {
 	 *
 	 * @return mixed
 	 */
-	private function register() {
+	private function register( string $redirect_uri = 'http://localhost:5000/callback' ) {
 		delete_transient( 'albert_dcr_' . md5( '127.0.0.1' ) );
 		$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 
@@ -199,7 +200,7 @@ class ClientCapTest extends TestCase {
 			wp_json_encode(
 				[
 					'client_name'   => 'New assistant',
-					'redirect_uris' => [ 'http://localhost:5000/callback' ],
+					'redirect_uris' => [ $redirect_uri ],
 				]
 			)
 		);
@@ -234,87 +235,71 @@ class ClientCapTest extends TestCase {
 	}
 
 	/**
-	 * A registration nobody completed holds its place for ten minutes, so the cap
-	 * still bounds abuse.
+	 * Registrations nobody completed never fill the cap, however recent:
+	 * registration is anonymous, so anybody could otherwise lock assistants out.
 	 *
 	 * @return void
 	 */
-	public function test_a_fresh_unauthorised_client_keeps_its_place(): void {
+	public function test_unfinished_registrations_do_not_fill_the_cap(): void {
 		$this->client( 'fresh-1', 0 );
 		$this->client( 'fresh-2', 0 );
 		$this->client( 'fresh-3', 0 );
 
-		$result = $this->register();
-
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'client_limit_reached', $result->get_error_code() );
-	}
-
-	/**
-	 * At the cap, the oldest client that never connected makes room, and is reported.
-	 *
-	 * @return void
-	 */
-	public function test_at_the_cap_the_oldest_unused_client_makes_room(): void {
-		$this->client( 'unused-newer', 2 );
-		$this->client( 'unused-oldest', 5 );
-		$this->token( $this->client( 'live', 240 ), 'live' );
-
-		$evicted = [];
-		add_action(
-			'albert/oauth/client_evicted',
-			static function ( string $client_id, string $client_name ) use ( &$evicted ): void {
-				$evicted[] = [ $client_id, $client_name ];
-			},
-			10,
-			2
-		);
-
-		$this->assertFalse( ClientRegistration::limit_reached() );
+		$this->assertSame( 0, ( new ClientRepository() )->count_live_clients() );
 		$this->assertNotInstanceOf( WP_Error::class, $this->register() );
-		$this->assertSame( [ [ 'unused-oldest', 'Client unused-oldest' ] ], $evicted );
-		$this->assertFalse( $this->exists( 'unused-oldest' ) );
-		$this->assertTrue( $this->exists( 'unused-newer' ) );
-		$this->assertTrue( $this->exists( 'live' ) );
 	}
 
 	/**
-	 * Nothing that connected, is connecting, or started in the last ten minutes is evicted.
+	 * Connected clients fill the cap and a new registration is refused.
 	 *
 	 * @return void
 	 */
-	public function test_eviction_spares_clients_that_connected_or_are_connecting(): void {
-		$this->token( $this->client( 'connected-once', 2 ), 'expired' );
-		$this->auth_code( $this->client( 'signing-in', 2 ) );
-		$this->client( 'just-started', 0, 9 );
+	public function test_connected_clients_fill_the_cap(): void {
+		$this->token( $this->client( 'a', 0 ), 'live' );
+		$this->token( $this->client( 'b', 0 ), 'live' );
+		$this->token( $this->client( 'c', 0 ), 'live' );
 
 		$result = $this->register();
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'client_limit_reached', $result->get_error_code() );
-		$this->assertTrue( ClientRegistration::limit_reached() );
-		foreach ( [ 'connected-once', 'signing-in', 'just-started' ] as $client_id ) {
-			$this->assertTrue( $this->exists( $client_id ), "$client_id must not be evicted." );
-		}
 	}
 
 	/**
-	 * A request refused for another reason evicts nothing.
+	 * At the bound on unfinished registrations the oldest goes, unless it is
+	 * mid sign-in; connected clients are never touched.
 	 *
 	 * @return void
 	 */
-	public function test_an_invalid_request_evicts_nothing(): void {
-		$this->client( 'unused-1', 2 );
-		$this->client( 'unused-2', 2 );
-		$this->client( 'unused-3', 2 );
-		$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+	public function test_the_oldest_unfinished_registration_makes_room(): void {
+		add_filter( 'albert/oauth/max_pending_clients', fn(): int => 3 );
 
-		$request = new WP_REST_Request( 'POST', '/albert/v1/oauth/register' );
-		$request->set_header( 'content-type', 'application/json' );
-		$request->set_body( (string) wp_json_encode( [ 'client_name' => 'Broken' ] ) );
+		$this->auth_code( $this->client( 'signing-in', 10 ) );
+		$this->client( 'oldest', 5 );
+		$this->client( 'middle', 3 );
+		$this->token( $this->client( 'connected', 20 ), 'live' );
 
-		$this->assertInstanceOf( WP_Error::class, ( new ClientRegistration() )->handle_registration( $request ) );
-		$this->assertSame( 3, ( new ClientRepository() )->count_live_clients() );
+		$this->assertSame( 3, ( new ClientRepository() )->count_pending_clients() );
+		$this->assertNotInstanceOf( WP_Error::class, $this->register() );
+
+		$this->assertFalse( $this->exists( 'oldest' ) );
+		$this->assertTrue( $this->exists( 'signing-in' ) );
+		$this->assertTrue( $this->exists( 'middle' ) );
+		$this->assertTrue( $this->exists( 'connected' ) );
+		$this->assertSame( 3, ( new ClientRepository() )->count_pending_clients() );
+	}
+
+	/**
+	 * An invalid registration deletes nothing: room is only made for a valid one.
+	 *
+	 * @return void
+	 */
+	public function test_an_invalid_registration_evicts_nothing(): void {
+		add_filter( 'albert/oauth/max_pending_clients', fn(): int => 1 );
+		$this->client( 'waiting', 5 );
+
+		$this->assertInstanceOf( WP_Error::class, $this->register( 'http://evil.example/cb' ) );
+		$this->assertTrue( $this->exists( 'waiting' ) );
 	}
 
 	/**
@@ -378,18 +363,6 @@ class ClientCapTest extends TestCase {
 	}
 
 	/**
-	 * The grace window is 24 hours.
-	 *
-	 * @return void
-	 */
-	public function test_the_grace_window_ends_after_a_day(): void {
-		$this->client( 'just-inside', 23 );
-		$this->client( 'just-outside', 25 );
-
-		$this->assertSame( 1, ( new ClientRepository() )->count_live_clients() );
-	}
-
-	/**
 	 * A client somebody is signing in with right now is not cleaned up.
 	 *
 	 * @return void
@@ -408,9 +381,9 @@ class ClientCapTest extends TestCase {
 	 * @return void
 	 */
 	public function test_a_refusal_fires_registration_rejected(): void {
-		$this->client( 'fresh-1', 0 );
-		$this->client( 'fresh-2', 0 );
-		$this->client( 'fresh-3', 0 );
+		$this->token( $this->client( 'a', 0 ), 'live' );
+		$this->token( $this->client( 'b', 0 ), 'live' );
+		$this->token( $this->client( 'c', 0 ), 'live' );
 
 		$seen = [];
 		add_action(
@@ -434,9 +407,9 @@ class ClientCapTest extends TestCase {
 	 */
 	public function test_no_cap_means_no_refusal_and_no_item(): void {
 		add_filter( 'albert/oauth/max_clients', '__return_zero', 20 );
-		$this->client( 'fresh-1', 0 );
-		$this->client( 'fresh-2', 0 );
-		$this->client( 'fresh-3', 0 );
+		$this->token( $this->client( 'a', 0 ), 'live' );
+		$this->token( $this->client( 'b', 0 ), 'live' );
+		$this->token( $this->client( 'c', 0 ), 'live' );
 
 		$this->assertNotInstanceOf( WP_Error::class, $this->register() );
 		$this->assertNotContains( 'client-limit-reached', array_column( ( new Attention() )->items( 1 ), 'id' ) );
