@@ -258,6 +258,30 @@ class PagesAbilityTest extends TestCase {
 		$this->assertSame( 'page_not_found', $result->get_error_code() );
 	}
 
+	/**
+	 * ViewPage returns tags only once a site enables them on pages.
+	 *
+	 * @return void
+	 */
+	public function test_view_page_returns_terms_only_when_pages_use_them(): void {
+		$page_id = self::factory()->post->create( [ 'post_type' => 'page' ] );
+
+		$page = ( new ViewPage() )->execute( [ 'id' => $page_id ] )['page'];
+		$this->assertArrayNotHasKey( 'categories', $page );
+		$this->assertArrayNotHasKey( 'tags', $page );
+
+		register_taxonomy_for_object_type( 'post_tag', 'page' );
+		try {
+			wp_set_post_tags( $page_id, [ 'page-tag' ] );
+			$page = ( new ViewPage() )->execute( [ 'id' => $page_id ] )['page'];
+		} finally {
+			unregister_taxonomy_for_object_type( 'post_tag', 'page' );
+		}
+
+		$this->assertSame( 'page-tag', $page['tags'][0]['name'] );
+		$this->assertArrayNotHasKey( 'categories', $page );
+	}
+
 	// ─── CreatePage ─────────────────────────────────────────────────
 
 	/**

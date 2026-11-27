@@ -256,6 +256,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * Safe mode no longer asks you to approve moving a post, page or block pattern to the trash, because you can restore it from the trash yourself. Deleting one permanently still waits for your approval.
 * Albert no longer saves a block it can only guess, such as an image without an address, a cover or a block from another plugin without its markup, or blocks nested where the editor would drop them. Your assistant gets a message saying what to send instead, and nothing is saved.
 * The Context screen now says when a saved change takes effect: the next time an assistant asks what your site can do. A conversation that is already open keeps what it started with, so start a new one to use your changes.
+* Your assistant can now see which categories and tags a post has, and add or remove one without touching the others.
 
 **Fixes**
 
@@ -281,6 +282,8 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * When a plugin on your site blocked the list of users, choosing who may approve an assistant failed with a message to reload the page, which never helped. It now says that something on the site blocks the user list and what to allow, or, when your role may not list users, that an administrator needs to add them or give the role the list_users capability.
 * When your assistant searched your users, their email addresses and roles always came back empty, and the username shown was not the name they log in with. Both are now filled in correctly. Privacy mode still hides email addresses and usernames as before.
 * Asking for one user by ID in a user search returned a jumbled result instead of that user. It now returns just that user.
+* Asking your assistant to remove categories or tags from a post did nothing, while it was told the change had worked. It can now remove them.
+* A category or tag your assistant put on a post could be left off without a word, for example a category that no longer exists or a tag whose name is part of another tag's name. Albert now picks the right tag, and refuses the change with the reason when a category or tag cannot be used.
 
 **Security**
 
@@ -321,11 +324,15 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
 * `albert/create-post` and `albert/create-page` return `post_permission_denied` and `page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
 * `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
+* New abilities: `albert/add-post-terms` and `albert/remove-post-terms`. Both take `post_id`, `taxonomy` (`category` or `post_tag`) and up to 50 `terms`, and return the post's terms afterwards. Category IDs may be sent as numbers or as text. `albert/remove-post-terms` also takes tag IDs next to tag names, returns `default_category_applied` when removing the last category put the default category back, and a `note` saying why when the default category was the post's only one and stayed.
+* `albert/view-post` and `albert/view-page` return `categories` and `tags` as `{ id, name }` lists, left out when the post type does not use that taxonomy.
+* Deprecated: the `categories` and `tags` inputs of `albert/update-post`. Use `albert/add-post-terms` or `albert/remove-post-terms`. An empty list is refused as invalid input, with an error that names `albert/remove-post-terms`.
+* `albert/create-post` and `albert/update-post` return `category_not_found` for a category ID that does not exist, and `invalid_tags` or `tag_permission_denied` for a tag WordPress refuses to create, and save nothing, instead of leaving it off.
 * Error codes no longer carry an `albert_` prefix, e.g. `albert_permission_denied` is now `permission_denied` and `albert_already_handled` is now `already_handled`. Not-found errors all end in `_not_found`: `albert/set-featured-image` returns `post_not_found` and `media_not_found` instead of `invalid_post` and `invalid_attachment`, `albert/get-block-type` returns `block_type_not_found` instead of `block_not_registered`, and the page block-edit abilities return `page_not_found`.
 
 **Credits**
 
-* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting Markdown saved as one paragraph.
+* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting Markdown saved as one paragraph, and that categories and tags could not be read or removed.
 
 = 1.5.0 =
 Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
