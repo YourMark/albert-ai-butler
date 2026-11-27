@@ -132,6 +132,7 @@ final class UserPickerModal {
 					'noResults'               => __( 'Nobody matched that.', 'albert-ai-butler' ),
 					'failed'                  => __( 'Could not search users. Reload the page and try again.', 'albert-ai-butler' ),
 					'blocked'                 => __( 'Your site blocks the list of users this search reads, often through a security plugin that hides users from the REST API. Allow administrators to see users there, then reload this page.', 'albert-ai-butler' ),
+					'roleCannotList'          => __( "Your account's role can't list users. Ask an administrator to add users, or give this role the list_users capability.", 'albert-ai-butler' ),
 					'prompt'                  => __( 'Type a name, email address or user ID to search.', 'albert-ai-butler' ),
 					'loadingDefaults'         => __( 'Loading…', 'albert-ai-butler' ),
 					// Both plural forms, chosen in the browser: the count is only

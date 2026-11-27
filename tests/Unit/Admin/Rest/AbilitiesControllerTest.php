@@ -66,7 +66,7 @@ class AbilitiesControllerTest extends TestCase {
 		$result = ( new AbilitiesController() )->update_ability( $request );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_ability_protected', $result->get_error_code() );
+		$this->assertSame( 'ability_protected', $result->get_error_code() );
 		$this->assertSame( 403, $result->get_error_data()['status'] ?? null );
 		$this->assertNotContains( 'mcp-adapter/execute-ability', $this->disabled_option() );
 	}

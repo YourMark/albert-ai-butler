@@ -177,9 +177,9 @@ class ExecutionObserverTest extends TestCase {
 	 */
 	public function test_records_the_real_permission_error(): void {
 		$this->observer->open( self::ABILITY );
-		$this->observer->on_permission_result( new WP_Error( 'albert_permission_denied', 'No.' ), self::ABILITY );
+		$this->observer->on_permission_result( new WP_Error( 'permission_denied', 'No.' ), self::ABILITY );
 
-		$this->assertSame( 'albert_permission_denied', $this->records[0][2]->get_error_code() );
+		$this->assertSame( 'permission_denied', $this->records[0][2]->get_error_code() );
 		$this->assertSame( 'permission', $this->records[0][4] );
 	}
 
@@ -201,7 +201,7 @@ class ExecutionObserverTest extends TestCase {
 	 * @return void
 	 */
 	public function test_records_a_short_circuit(): void {
-		$held = new WP_Error( 'albert_awaiting_approval', 'Held.' );
+		$held = new WP_Error( 'awaiting_approval', 'Held.' );
 
 		$this->observer->open( self::ABILITY );
 		$this->assertSame( $held, $this->observer->on_pre_execute( $held, self::ABILITY ) );

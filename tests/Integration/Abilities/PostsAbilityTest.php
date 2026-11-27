@@ -326,7 +326,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		$this->assertSame( 'invalid_content', $result->get_error_code() );
 		wp_cache_flush();
 		$this->assertSame( $before, wp_count_posts()->draft );
 	}
@@ -345,7 +345,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		$this->assertSame( 'invalid_content', $result->get_error_code() );
 	}
 
 	/**
@@ -364,7 +364,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		$this->assertSame( 'invalid_content', $result->get_error_code() );
 		$this->assertSame( '<p>Original</p>', get_post( $post_id )->post_content );
 	}
 
@@ -414,7 +414,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'post_permission_denied', $result->get_error_code() );
 		$this->assertSame( 403, $result->get_error_data()['status'] );
 	}
 
@@ -610,7 +610,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'albert_category_not_found', $result->get_error_code() );
+		$this->assertSame( 'category_not_found', $result->get_error_code() );
 		$this->assertSame( [ $cat_id ], wp_get_post_categories( $post_id ) );
 	}
 
@@ -694,7 +694,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'albert_invalid_tags', $result->get_error_code() );
+		$this->assertSame( 'invalid_tags', $result->get_error_code() );
 		$this->assertSame( 'keep-me', wp_get_post_tags( $post_id )[0]->name );
 	}
 
@@ -712,6 +712,106 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * A bad id is refused before tags are resolved, so no tag is created.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_not_found_creates_no_tag(): void {
+		$result = ( new UpdatePost() )->execute(
+			[
+				'id'   => 99999,
+				'tags' => [ 'orphan-tag' ],
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertEmpty( term_exists( 'orphan-tag', 'post_tag' ) );
+	}
+
+	/**
+	 * A page id names the ability that updates it, so the assistant does not go looking for a post.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_with_a_page_id_points_to_update_page(): void {
+		$ability = wp_get_ability( 'albert/update-post' );
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-post is not registered.' );
+		}
+
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'  => 'page',
+				'post_title' => 'Original',
+			]
+		);
+
+		$result = $ability->execute(
+			[
+				'id'    => $page_id,
+				'title' => 'Changed',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertStringContainsString( 'albert/update-page', $result->get_error_message() );
+		$this->assertSame( 'Original', get_post( $page_id )->post_title );
+	}
+
+	/**
+	 * A page the user may not read gets the plain not-found error, so the hint does not reveal it exists.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_with_an_unreadable_page_id_says_not_found(): void {
+		$ability = wp_get_ability( 'albert/update-post' );
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-post is not registered.' );
+		}
+
+		$private_id = self::factory()->post->create(
+			[
+				'post_type'   => 'page',
+				'post_status' => 'private',
+				'post_author' => get_current_user_id(),
+			]
+		);
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'author' ] ) );
+
+		$result = $ability->execute(
+			[
+				'id'    => $private_id,
+				'title' => 'Changed',
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertStringNotContainsString( 'albert/update-page', $result->get_error_message() );
+		$this->assertStringNotContainsString( 'is a page', $result->get_error_message() );
+	}
+
+	/**
+	 * The schema refuses an update that sends only the id, before anything runs.
+	 *
+	 * @return void
+	 */
+	public function test_update_post_needs_a_field_besides_the_id(): void {
+		$ability = wp_get_ability( 'albert/update-post' );
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-post is not registered.' );
+		}
+
+		$result = $ability->execute( [ 'id' => self::factory()->post->create( [ 'post_type' => 'post' ] ) ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
 	}
 
 	/**
@@ -788,7 +888,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'albert_category_not_found', $result->get_error_code() );
+		$this->assertSame( 'category_not_found', $result->get_error_code() );
 		$this->assertSame( [ $cat_id ], wp_get_post_categories( $post_id ) );
 	}
 
@@ -809,11 +909,11 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'albert_invalid_terms', $result->get_error_code() );
+		$this->assertSame( 'invalid_terms', $result->get_error_code() );
 	}
 
 	/**
-	 * AddPostTerms answers albert_post_not_found for a page ID.
+	 * AddPostTerms answers post_not_found for a page ID.
 	 *
 	 * @return void
 	 */
@@ -829,7 +929,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -850,7 +950,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'post_permission_denied', $result->get_error_code() );
 		$this->assertSame( [], wp_get_post_tags( $post_id ) );
 	}
 
@@ -1034,7 +1134,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'albert_invalid_terms', $result->get_error_code() );
+		$this->assertSame( 'invalid_terms', $result->get_error_code() );
 		$this->assertSame( [], wp_get_post_tags( $post_id ) );
 	}
 

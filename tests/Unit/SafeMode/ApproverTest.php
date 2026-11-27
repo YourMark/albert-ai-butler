@@ -101,7 +101,7 @@ class ApproverTest extends TestCase {
 		$result = $approver->approve( $this->action(), 1 );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_already_handled', $result->get_error_code() );
+		$this->assertSame( 'already_handled', $result->get_error_code() );
 		$this->assertFalse( $repository->recorded, 'A lost race must not run the ability or record an outcome.' );
 	}
 }

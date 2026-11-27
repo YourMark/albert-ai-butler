@@ -189,7 +189,6 @@ class SettingsOverrideTest extends TestCase {
 
 		$service    = new UploadLinkService();
 		$reflection = new \ReflectionMethod( $service, 'default_max_bytes' );
-		$reflection->setAccessible( true );
 
 		$this->assertSame( 500 * 1024, $reflection->invoke( $service ) );
 	}

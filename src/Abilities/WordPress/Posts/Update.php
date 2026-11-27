@@ -34,7 +34,7 @@ class Update extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/update-post';
 		$this->label       = __( 'Update Post', 'albert-ai-butler' );
-		$this->description = __( 'Update an existing WordPress post with new title, content, and metadata.', 'albert-ai-butler' );
+		$this->description = __( 'Update an existing post: only the fields you send change. Read it first with albert/view-post before replacing content or blocks; to change one block use albert/edit-post-block, and for a new post use albert/create-post.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
@@ -46,11 +46,11 @@ class Update extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::update(
-				'This replaces the whole post body. Read the post first with `albert/view-post` and '
-				. '`"format": ["blocks"]`, edit that tree, and send it back, writing without reading '
-				. 'silently discards everything you did not include. Keep every existing image block\'s `id` '
-				. 'and `url` exactly as they were unless you were asked to change the image. To change one '
-				. 'block, use `albert/edit-post-block` instead: it is cheaper and leaves every other block '
+				'Only the fields you send change. `content` and `blocks` replace the whole post body: before sending either, '
+				. 'read the post with `albert/view-post` and `"format": ["blocks"]`, edit that tree, and send it back, '
+				. 'writing without reading silently discards everything you did not include. Keep every existing '
+				. 'image block\'s `id` and `url` exactly as they were unless you were asked to change the image. To '
+				. 'change one block, use `albert/edit-post-block` instead: it is cheaper and leaves every other block '
 				. 'byte-for-byte intact.'
 			),
 		];
@@ -110,9 +110,11 @@ class Update extends BaseAbility {
 		];
 
 		return [
-			'type'       => 'object',
-			'properties' => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ),
-			'required'   => [ 'id' ],
+			'type'          => 'object',
+			'properties'    => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ),
+			'required'      => [ 'id' ],
+			// Refuses a call that sends nothing but `id`.
+			'minProperties' => 2,
 		];
 	}
 
@@ -200,16 +202,11 @@ class Update extends BaseAbility {
 	public function execute( array $args ): array|WP_Error {
 		$post_id = absint( $args['id'] );
 
-		// Check if post exists using REST API.
-		$check_request  = new WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );
-		$check_response = rest_do_request( $check_request );
-
-		if ( $check_response->is_error() ) {
-			return new WP_Error(
-				'post_not_found',
-				__( 'Post not found.', 'albert-ai-butler' ),
-				[ 'status' => 404 ]
-			);
+		// Checked before anything is written: resolving tags creates terms, so a
+		// bad id or a refused post must stop the call first.
+		$refused = $this->refuse_unless_editable( $post_id );
+		if ( $refused ) {
+			return $refused;
 		}
 
 		$request_data = PostFields::to_rest( $args, PostFields::POST, 'post', $post_id );
@@ -283,11 +280,11 @@ class Update extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return new WP_Error(
-				$data['code'] ?? 'rest_error',
-				self::rest_error_message( $data ) ?? __( 'An error occurred while updating the post.', 'albert-ai-butler' ),
-				[ 'status' => $response->get_status() ]
-			);
+			if ( is_array( $data ) && ( $data['code'] ?? '' ) === 'rest_post_invalid_id' ) {
+				return self::not_found( $post_id );
+			}
+
+			return self::rest_failure( $data, $response->get_status(), __( 'The post could not be updated.', 'albert-ai-butler' ), 'albert_post_permission_denied' );
 		}
 
 		// Return formatted post data.
@@ -308,5 +305,57 @@ class Update extends BaseAbility {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Refuse an id that is not an editable post, before any side effect runs.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return WP_Error|null Null when the post exists and the user may edit it.
+	 * @since 1.6.0
+	 */
+	private function refuse_unless_editable( int $post_id ): ?WP_Error {
+		// get_post( 0 ) returns the global post.
+		$post = $post_id > 0 ? get_post( $post_id ) : null;
+		// Name the other type only to a user who may read it, so the hint leaks nothing.
+		if ( $post && $post->post_type === 'page' && current_user_can( 'read_post', $post_id ) ) {
+			return new WP_Error(
+				'albert_post_not_found',
+				/* translators: %d: page ID */
+				sprintf( __( 'ID %d is a page, not a post. Use albert/update-page.', 'albert-ai-butler' ), $post_id ),
+				[ 'status' => 404 ]
+			);
+		}
+
+		if ( ! $post || $post->post_type !== 'post' ) {
+			return self::not_found( $post_id );
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return new WP_Error(
+				'albert_post_permission_denied',
+				/* translators: %d: post ID */
+				sprintf( __( 'This account may not edit post %d.', 'albert-ai-butler' ), $post_id ),
+				[ 'status' => rest_authorization_required_code() ]
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * The error for an id that is not a post.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return WP_Error
+	 * @since 1.6.0
+	 */
+	private static function not_found( int $post_id ): WP_Error {
+		return new WP_Error(
+			'albert_post_not_found',
+			/* translators: %d: post ID */
+			sprintf( __( 'No post with ID %d. Find it with albert/find-posts.', 'albert-ai-butler' ), $post_id ),
+			[ 'status' => 404 ]
+		);
 	}
 }

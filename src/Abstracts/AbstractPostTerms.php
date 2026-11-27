@@ -136,7 +136,7 @@ abstract class AbstractPostTerms extends BaseAbility {
 		$post = get_post( $post_id );
 		if ( ! $post instanceof WP_Post || $post->post_type !== 'post' ) {
 			return new WP_Error(
-				'albert_post_not_found',
+				'post_not_found',
 				sprintf(
 					/* translators: %d: Post ID */
 					__( 'No post exists with ID %d. Find the post with albert/find-posts.', 'albert-ai-butler' ),
@@ -148,7 +148,7 @@ abstract class AbstractPostTerms extends BaseAbility {
 
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return new WP_Error(
-				'albert_post_permission_denied',
+				'post_permission_denied',
 				__( 'You do not have permission to edit this post. Ask the site owner for access.', 'albert-ai-butler' ),
 				[ 'status' => 403 ]
 			);
@@ -278,18 +278,18 @@ abstract class AbstractPostTerms extends BaseAbility {
 			rest_get_server()->response_to_data( $response, false ),
 			$response->get_status(),
 			__( 'The post\'s terms could not be saved.', 'albert-ai-butler' ),
-			'albert_post_permission_denied'
+			'post_permission_denied'
 		);
 	}
 
 	/**
-	 * An `albert_invalid_terms` error.
+	 * An `invalid_terms` error.
 	 *
 	 * @param string $message What to send instead.
 	 * @return WP_Error
 	 * @since 1.6.0
 	 */
 	private function invalid_terms( string $message ): WP_Error {
-		return new WP_Error( 'albert_invalid_terms', $message, [ 'status' => 400 ] );
+		return new WP_Error( 'invalid_terms', $message, [ 'status' => 400 ] );
 	}
 }

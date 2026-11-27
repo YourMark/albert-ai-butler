@@ -141,7 +141,7 @@ class PostTerms {
 		}
 
 		return new WP_Error(
-			'albert_category_not_found',
+			'category_not_found',
 			sprintf(
 				/* translators: %s: comma-separated category IDs. */
 				__( 'No category exists with ID %s, so nothing was saved. Look up category IDs with albert/find-terms.', 'albert-ai-butler' ),
@@ -196,7 +196,7 @@ class PostTerms {
 			$status = $response->get_status();
 
 			return new WP_Error(
-				$status === 401 || $status === 403 ? 'albert_tag_permission_denied' : 'albert_invalid_' . $field,
+				$status === 401 || $status === 403 ? 'tag_permission_denied' : 'invalid_' . $field,
 				sprintf(
 					/* translators: 1: tag name, 2: reason from WordPress. */
 					__( 'The tag "%1$s" could not be created, so the post was not changed: %2$s', 'albert-ai-butler' ),

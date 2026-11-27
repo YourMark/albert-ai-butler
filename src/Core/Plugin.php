@@ -100,6 +100,7 @@ use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
 use Albert\OAuth\DiscoveryHealth;
 use Albert\OAuth\PasswordChange;
+use Albert\Privacy\ConnectedResultRedactor;
 use Albert\Privacy\PrivacyMode;
 use Albert\Execution\InterceptorDecision;
 use Albert\SafeMode\Gate as SafeModeGate;
@@ -211,6 +212,9 @@ class Plugin {
 		// Logs every call over a connection once core has decided its outcome,
 		// whichever plugin owns the ability.
 		( new ExecutionObserver( $logger ) )->register_hooks();
+
+		// Privacy mode for every ability an assistant calls, whichever plugin owns it.
+		( new ConnectedResultRedactor() )->register_hooks();
 
 		// Relay WP 7.1's wp_ability_invoked onto albert/abilities/invoked. No
 		// consumers in Free; this is the seam Premium's activity log binds to.

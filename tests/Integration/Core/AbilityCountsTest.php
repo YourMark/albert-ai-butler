@@ -69,7 +69,6 @@ class AbilityCountsTest extends TestCase {
 		$manager = new \Albert\Core\AbilitiesManager();
 
 		$count = new \ReflectionMethod( $manager, 'count_registry' );
-		$count->setAccessible( true );
 
 		$counts = $count->invoke( $manager, $off );
 
@@ -89,7 +88,6 @@ class AbilityCountsTest extends TestCase {
 		$manager = new \Albert\Core\AbilitiesManager();
 
 		$snapshot = new \ReflectionProperty( $manager, 'ability_counts' );
-		$snapshot->setAccessible( true );
 
 		$this->assertNull( $snapshot->getValue( $manager ), 'Nothing should be counted before enforcement runs.' );
 
@@ -111,7 +109,6 @@ class AbilityCountsTest extends TestCase {
 		$dashboard = new \Albert\Admin\Dashboard( new \Albert\Logging\Repository() );
 
 		$method = new \ReflectionMethod( $dashboard, 'get_ability_counts' );
-		$method->setAccessible( true );
 
 		$this->assertSame(
 			Plugin::get_instance()->get_abilities_manager()->get_ability_counts(),
