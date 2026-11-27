@@ -45,6 +45,25 @@ class ClassicEditorWriteTest extends TestCase {
 		$GLOBALS['albert_test_rest_calls']     = [];
 		$GLOBALS['albert_test_rest_responses'] = [];
 
+		// The update abilities refuse an id that is not an existing post or page.
+		$GLOBALS['albert_test_posts'] = [
+			7  => (object) [
+				'ID'           => 7,
+				'post_type'    => 'post',
+				'post_content' => '',
+			],
+			9  => (object) [
+				'ID'           => 9,
+				'post_type'    => 'page',
+				'post_content' => '',
+			],
+			55 => (object) [
+				'ID'           => 55,
+				'post_type'    => 'page',
+				'post_content' => '',
+			],
+		];
+
 		// Both post types use the classic editor for these tests.
 		$GLOBALS['albert_test_block_editor_post_types'] = [
 			'post' => false,
@@ -66,6 +85,7 @@ class ClassicEditorWriteTest extends TestCase {
 			$GLOBALS['albert_test_block_types'],
 			$GLOBALS['albert_test_rest_calls'],
 			$GLOBALS['albert_test_rest_responses'],
+			$GLOBALS['albert_test_posts'],
 			$GLOBALS['albert_test_block_editor_post_types'],
 			$GLOBALS['albert_test_block_editor_posts']
 		);
@@ -161,11 +181,6 @@ class ClassicEditorWriteTest extends TestCase {
 	}
 
 	public function test_update_post_classic_with_blocks_returns_error_and_does_not_save(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 7 ],
-		];
-
 		$result = ( new UpdatePost() )->execute(
 			[
 				'id'     => 7,
@@ -184,11 +199,6 @@ class ClassicEditorWriteTest extends TestCase {
 	}
 
 	public function test_update_page_classic_with_blocks_returns_error_and_does_not_save(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 9 ],
-		];
-
 		$result = ( new UpdatePage() )->execute(
 			[
 				'id'     => 9,
@@ -261,10 +271,6 @@ class ClassicEditorWriteTest extends TestCase {
 	}
 
 	public function test_update_post_classic_with_content_saves_raw_html(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 7 ],
-		];
 		$this->queue_write_success(
 			[
 				'id'     => 7,
@@ -288,10 +294,6 @@ class ClassicEditorWriteTest extends TestCase {
 	}
 
 	public function test_update_page_classic_with_content_saves_raw_html(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 9 ],
-		];
 		$this->queue_write_success(
 			[
 				'id'     => 9,
