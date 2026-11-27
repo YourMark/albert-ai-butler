@@ -163,15 +163,36 @@ class RevisionDiff {
 	}
 
 	/**
+	 * The IDs of a post's stored revisions, newest first, autosaves included.
+	 *
+	 * Also when revisions are now turned off: those saved before stay readable, as in wp-admin.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array<int, int>
+	 * @since 1.6.0
+	 */
+	public static function revision_ids( int $post_id ): array {
+		$ids = wp_get_post_revisions(
+			$post_id,
+			[
+				'fields'        => 'ids',
+				'check_enabled' => false,
+			]
+		);
+
+		return array_map( static fn( int|WP_Post $id ): int => $id instanceof WP_Post ? (int) $id->ID : $id, array_values( $ids ) );
+	}
+
+	/**
 	 * The revision saved just before this one, skipping autosaves.
 	 *
-	 * @param WP_Post            $revision     The revision.
-	 * @param array<int|WP_Post> $revision_ids The post's revision IDs, newest first, from `wp_get_post_revisions()` with `fields` `ids`.
+	 * @param WP_Post         $revision     The revision.
+	 * @param array<int, int> $revision_ids The post's revision IDs, newest first, from revision_ids().
 	 * @return WP_Post|null Null for the oldest revision.
 	 * @since 1.6.0
 	 */
 	public static function previous_revision( WP_Post $revision, array $revision_ids ): ?WP_Post {
-		$ids      = array_map( static fn( $id ): int => $id instanceof WP_Post ? (int) $id->ID : (int) $id, array_values( $revision_ids ) );
+		$ids      = array_values( $revision_ids );
 		$position = array_search( (int) $revision->ID, $ids, true );
 		if ( $position === false ) {
 			return null;
@@ -338,12 +359,15 @@ class RevisionDiff {
 	/**
 	 * The fields core copies into a revision (title, content, excerpt by default).
 	 *
-	 * @param WP_Post $post The post, so a filter can vary them per type.
+	 * The filter gets the parent, as when core saves a revision, so a per-type filter applies.
+	 *
+	 * @param WP_Post $post The post or one of its revisions.
 	 * @return array<string, string> Field name to label.
 	 * @since 1.6.0
 	 */
 	private static function revision_fields( WP_Post $post ): array {
-		$fields = _wp_post_revision_fields( $post );
+		$parent = $post->post_type === 'revision' ? get_post( (int) $post->post_parent ) : null;
+		$fields = _wp_post_revision_fields( $parent instanceof WP_Post ? $parent : $post );
 		$result = [];
 		foreach ( $fields as $field => $label ) {
 			$result[ (string) $field ] = (string) $label;

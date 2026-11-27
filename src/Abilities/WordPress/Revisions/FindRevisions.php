@@ -105,7 +105,7 @@ class FindRevisions extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'post'        => [
+				'post'              => [
 					'type'       => 'object',
 					'properties' => [
 						'id'       => [ 'type' => 'integer' ],
@@ -114,14 +114,18 @@ class FindRevisions extends BaseAbility {
 						'modified' => [ 'type' => 'string' ],
 					],
 				],
-				'revisions'   => [
+				'revisions'         => [
 					'type'  => 'array',
 					'items' => $item,
 				],
-				'total'       => [ 'type' => 'integer' ],
-				'total_pages' => [ 'type' => 'integer' ],
+				'total'             => [ 'type' => 'integer' ],
+				'total_pages'       => [ 'type' => 'integer' ],
+				'revisions_enabled' => [
+					'type'        => 'boolean',
+					'description' => 'False when this site no longer saves revisions for this content: earlier ones are listed, but none can be restored.',
+				],
 			],
-			'required'   => [ 'post', 'revisions', 'total' ],
+			'required'   => [ 'post', 'revisions', 'total', 'revisions_enabled' ],
 		];
 	}
 
@@ -153,13 +157,14 @@ class FindRevisions extends BaseAbility {
 		$page     = max( 1, absint( $args['page'] ?? 1 ) );
 		$per_page = min( 50, max( 1, absint( $args['per_page'] ?? 10 ) ) );
 
-		$all_ids   = wp_get_post_revisions( $post->ID, [ 'fields' => 'ids' ] );
+		$all_ids   = RevisionDiff::revision_ids( (int) $post->ID );
 		$total     = count( $all_ids );
 		$revisions = wp_get_post_revisions(
 			$post->ID,
 			[
 				'posts_per_page' => $per_page,
 				'paged'          => $page,
+				'check_enabled'  => false,
 			]
 		);
 
@@ -175,15 +180,16 @@ class FindRevisions extends BaseAbility {
 		}
 
 		return [
-			'post'        => [
+			'post'              => [
 				'id'       => (int) $post->ID,
 				'type'     => (string) $post->post_type,
 				'title'    => (string) $post->post_title,
 				'modified' => (string) mysql_to_rfc3339( $post->post_modified ),
 			],
-			'revisions'   => $items,
-			'total'       => $total,
-			'total_pages' => (int) ceil( $total / $per_page ),
+			'revisions'         => $items,
+			'total'             => $total,
+			'total_pages'       => (int) ceil( $total / $per_page ),
+			'revisions_enabled' => wp_revisions_enabled( $post ),
 		];
 	}
 }

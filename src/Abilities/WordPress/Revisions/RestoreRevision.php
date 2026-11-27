@@ -156,7 +156,7 @@ class RestoreRevision extends BaseAbility {
 		}
 
 		$changed = RevisionDiff::changed_fields( $revision, $post );
-		$before  = $this->latest_revision_id( $post->ID );
+		$before  = RevisionDiff::revision_ids( (int) $post->ID );
 
 		// Through core, so `wp_restore_post_revision` fires and a new revision records the restore.
 		$restored = wp_restore_post_revision( $revision->ID );
@@ -168,31 +168,16 @@ class RestoreRevision extends BaseAbility {
 			);
 		}
 
-		$after   = $this->latest_revision_id( $post->ID );
+		// Compared by ID, not position: saving the restore may also prune the oldest revision.
+		$added   = array_diff( RevisionDiff::revision_ids( (int) $post->ID ), $before );
 		$current = get_post( $post->ID );
 
 		return [
 			'post'            => RevisionDiff::post_reference( $current instanceof WP_Post ? $current : $post ),
 			'restored_from'   => (int) $revision->ID,
-			'new_revision_id' => $after !== $before ? $after : null,
+			'new_revision_id' => $added ? max( $added ) : null,
 			'changed_fields'  => $changed,
 			'edit_link'       => (string) get_edit_post_link( $post->ID, 'raw' ),
 		];
-	}
-
-	/**
-	 * The newest revision of a post, autosaves excluded.
-	 *
-	 * @param int $post_id Post ID.
-	 * @return int|null
-	 * @since 1.6.0
-	 */
-	private function latest_revision_id( int $post_id ): ?int {
-		foreach ( wp_get_post_revisions( $post_id ) as $revision ) {
-			if ( $revision instanceof WP_Post && ! wp_is_post_autosave( $revision ) ) {
-				return (int) $revision->ID;
-			}
-		}
-		return null;
 	}
 }

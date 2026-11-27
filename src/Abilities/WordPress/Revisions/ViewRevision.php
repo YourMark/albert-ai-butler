@@ -154,7 +154,7 @@ class ViewRevision extends BaseAbility {
 		$compare_to = ( $args['compare_to'] ?? 'current' ) === 'previous' ? 'previous' : 'current';
 
 		if ( $compare_to === 'previous' ) {
-			$previous = RevisionDiff::previous_revision( $revision, wp_get_post_revisions( $post->ID, [ 'fields' => 'ids' ] ) );
+			$previous = RevisionDiff::previous_revision( $revision, RevisionDiff::revision_ids( (int) $post->ID ) );
 			if ( ! $previous instanceof WP_Post ) {
 				return new WP_Error(
 					'invalid_compare_to',

@@ -452,6 +452,75 @@ class RevisionsAbilityTest extends TestCase {
 	}
 
 	/**
+	 * With revisions turned off, the ones saved before stay readable, and the listing says they are off.
+	 *
+	 * @return void
+	 */
+	public function test_revisions_stay_readable_when_turned_off(): void {
+		add_filter( 'wp_revisions_to_keep', '__return_zero' );
+
+		$find = ( new FindRevisions() )->execute( [ 'post_id' => $this->post_id ] );
+		$view = ( new ViewRevision() )->execute(
+			[
+				'revision_id' => $this->second_revision,
+				'compare_to'  => 'previous',
+			]
+		);
+
+		remove_filter( 'wp_revisions_to_keep', '__return_zero' );
+
+		$this->assertIsArray( $find );
+		$this->assertFalse( $find['revisions_enabled'] );
+		$this->assertContains( $this->first_revision, array_column( $find['revisions'], 'id' ) );
+		$this->assertIsArray( $view, 'The revision before it is found, not reported as missing.' );
+		$this->assertSame( $this->first_revision, $view['from']['id'] );
+	}
+
+	/**
+	 * The restore's new revision is reported even when saving it prunes the oldest one.
+	 *
+	 * @return void
+	 */
+	public function test_restore_reports_the_new_revision_when_the_oldest_is_pruned(): void {
+		$keep = static fn(): int => 2;
+		add_filter( 'wp_revisions_to_keep', $keep );
+
+		$result = ( new RestoreRevision() )->execute( [ 'revision_id' => $this->first_revision ] );
+
+		remove_filter( 'wp_revisions_to_keep', $keep );
+
+		$this->assertIsArray( $result );
+		$this->assertIsInt( $result['new_revision_id'] );
+		$this->assertSame( 'Opening hours', get_post( $result['new_revision_id'] )->post_title );
+	}
+
+	/**
+	 * Core's revision field filter gets the parent post, as when core saves a revision.
+	 *
+	 * @return void
+	 */
+	public function test_revision_fields_filter_gets_the_parent(): void {
+		$types  = [];
+		$record = static function ( array $fields, $post ) use ( &$types ): array {
+			$types[] = is_array( $post ) ? ( $post['post_type'] ?? '' ) : '';
+			return $fields;
+		};
+		add_filter( '_wp_post_revision_fields', $record, 10, 2 );
+
+		( new ViewRevision() )->execute(
+			[
+				'revision_id' => $this->second_revision,
+				'compare_to'  => 'previous',
+			]
+		);
+
+		remove_filter( '_wp_post_revision_fields', $record, 10 );
+
+		$this->assertNotEmpty( $types );
+		$this->assertSame( [ 'post' ], array_values( array_unique( $types ) ) );
+	}
+
+	/**
 	 * Unknown revisions and posts are reported as not found; a post ID is not a revision ID.
 	 *
 	 * @return void
