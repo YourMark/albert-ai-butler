@@ -232,6 +232,7 @@ Website: https://yourmark.nl
 
 **Developer**
 
+- Removed the `NAMESPACE` constants from `OAuthController` and `ClientRegistration`, deprecated since 1.0.1: PHP 8.6 deprecates a class constant called `namespace`. Use `Plugin::rest_namespace()`.
 - Deprecated the `albert/abilities/required_capability` filter and `AbilitiesRegistry::resolve_required_capability()`; neither has any effect now, and the method returns an empty string. The `capability` and `capabilityRoles` keys of an Abilities screen row are always empty and will be removed in a future version.
 - Switching an ability off no longer unregisters it. Albert's MCP server leaves it out of discovery and refuses to describe or run it, and safe mode refuses to approve a held call for it. An Albert ability that an add-on refuses, such as one that needs a licence, is still unregistered.
 - `albert/abilities/disabled_list` now also applies to Albert's own abilities.
