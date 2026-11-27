@@ -303,10 +303,11 @@ class ApprovalPolicyTest extends TestCase {
 	 */
 	public function test_the_view_gate_is_filterable(): void {
 		$subscriber = self::factory()->user->create( [ 'role' => 'subscriber' ] );
+		$owner      = self::factory()->user->create( [ 'role' => 'editor' ] );
 
 		add_filter( 'albert/approvals/view_capability', static fn(): string => 'read' );
 
 		$this->assertTrue( $this->policy->can_view( $subscriber ) );
-		$this->assertFalse( $this->policy->can_decide( $this->action( 999 ), $subscriber ) );
+		$this->assertFalse( $this->policy->can_decide( $this->action( $owner ), $subscriber ) );
 	}
 }
