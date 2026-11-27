@@ -32,7 +32,7 @@ class Delete extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/delete-post';
 		$this->label       = __( 'Delete Post', 'albert-ai-butler' );
-		$this->description = __( 'Delete a WordPress post permanently or move it to trash.', 'albert-ai-butler' );
+		$this->description = __( 'Move a WordPress post to the trash, or delete it permanently with "force".', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
@@ -44,9 +44,9 @@ class Delete extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::delete(
-				'This is not reversible through Albert. Confirm which post you have, with `albert/view-post` '
-				. 'on the id, before calling it, because an id from a stale list may now be a different '
-				. 'post.'
+				'Without `force` the post goes to the trash; `force: true` deletes it permanently. Confirm which '
+				. 'post you have, with `albert/view-post` on the id, before calling it, because an id from a '
+				. 'stale list may now be a different post.'
 			),
 		];
 
@@ -66,10 +66,11 @@ class Delete extends BaseAbility {
 				'id'    => [
 					'type'        => 'integer',
 					'description' => 'The post ID to delete',
+					'minimum'     => 1,
 				],
 				'force' => [
 					'type'        => 'boolean',
-					'description' => 'Whether to bypass trash and force deletion',
+					'description' => 'Delete the post permanently instead of moving it to the trash. Default false.',
 					'default'     => false,
 				],
 			],
@@ -88,7 +89,10 @@ class Delete extends BaseAbility {
 			'type'       => 'object',
 			'properties' => [
 				'id'      => [ 'type' => 'integer' ],
-				'deleted' => [ 'type' => 'boolean' ],
+				'deleted' => [
+					'type'        => 'boolean',
+					'description' => 'True only when the post was deleted permanently.',
+				],
 				'status'  => [ 'type' => 'string' ],
 			],
 			'required'   => [ 'id', 'deleted' ],
@@ -159,7 +163,7 @@ class Delete extends BaseAbility {
 		// Return deletion result.
 		return [
 			'id'      => $post_id,
-			'deleted' => true,
+			'deleted' => $force,
 			'status'  => $force ? 'deleted' : 'trashed',
 		];
 	}

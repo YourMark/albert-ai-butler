@@ -8,6 +8,8 @@
 namespace Albert\Tests\Integration\OAuth;
 
 use Albert\OAuth\AllowedUsers;
+use Albert\OAuth\Server\ConnectionContext;
+use Albert\OAuth\UserDeletion;
 use Albert\Tests\TestCase;
 
 /**
@@ -27,6 +29,18 @@ class AllowedUsersTest extends TestCase {
 
 		delete_option( AllowedUsers::OPTION );
 		delete_option( AllowedUsers::EXPIRY_OPTION );
+	}
+
+	/**
+	 * No connection or deferred removal leaks into the next test.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		ConnectionContext::reset();
+		UserDeletion::unschedule();
+
+		parent::tear_down();
 	}
 
 	/**
@@ -357,5 +371,192 @@ class AllowedUsersTest extends TestCase {
 		$this->assertFalse( AllowedUsers::renew_invitation( $forever ) );
 		$this->assertNull( AllowedUsers::expires_at( $forever ) );
 		$this->assertFalse( AllowedUsers::renew_invitation( self::factory()->user->create() ) );
+	}
+
+	/**
+	 * Each new entry fires `added` once, with its stored expiry.
+	 *
+	 * @return void
+	 */
+	public function test_add_fires_added(): void {
+		$fired = [];
+		add_action(
+			'albert/allowed_users/added',
+			static function ( int $user_id, ?int $expires_at ) use ( &$fired ): void {
+				$fired[] = [ $user_id, $expires_at ];
+			},
+			10,
+			2
+		);
+
+		$one = self::factory()->user->create();
+
+		$this->assertTrue( AllowedUsers::add( $one ) );
+		$this->assertFalse( AllowedUsers::add( $one ) );
+
+		$this->assertSame( [ [ $one, AllowedUsers::expires_at( $one ) ] ], $fired );
+	}
+
+	/**
+	 * A save that a sanitize filter refuses (as `ConnectionGuard` does) reports false and fires nothing.
+	 *
+	 * @return void
+	 */
+	public function test_a_refused_save_fires_nothing(): void {
+		$listed = self::factory()->user->create();
+		AllowedUsers::add( $listed );
+
+		$fired = 0;
+		$count = static function () use ( &$fired ): void {
+			++$fired;
+		};
+		add_action( 'albert/allowed_users/added', $count );
+		add_action( 'albert/allowed_users/removed', $count );
+		add_filter(
+			'sanitize_option_' . AllowedUsers::OPTION,
+			static fn() => get_option( AllowedUsers::OPTION )
+		);
+
+		$this->assertFalse( AllowedUsers::add( self::factory()->user->create() ) );
+		$this->assertFalse( AllowedUsers::remove( $listed ) );
+		$this->assertSame( [ $listed ], AllowedUsers::ids() );
+		$this->assertSame( 0, $fired );
+	}
+
+	/**
+	 * `removed` fires only for someone who was on the list.
+	 *
+	 * @return void
+	 */
+	public function test_remove_fires_removed_only_when_listed(): void {
+		$fired = [];
+		add_action(
+			'albert/allowed_users/removed',
+			static function ( int $user_id ) use ( &$fired ): void {
+				$fired[] = $user_id;
+			}
+		);
+
+		$listed   = self::factory()->user->create();
+		$unlisted = self::factory()->user->create();
+		AllowedUsers::add( $listed );
+
+		$this->assertTrue( AllowedUsers::remove( $listed ) );
+		$this->assertFalse( AllowedUsers::remove( $unlisted ) );
+
+		$this->assertFalse( AllowedUsers::is_allowed( $listed ) );
+		$this->assertSame( [ $listed ], $fired );
+	}
+
+	/**
+	 * Deleting a user takes them off the list and fires `removed`.
+	 *
+	 * @return void
+	 */
+	public function test_deleting_a_user_removes_them(): void {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+
+		$fired = [];
+		add_action(
+			'albert/allowed_users/removed',
+			static function ( int $user_id ) use ( &$fired ): void {
+				$fired[] = $user_id;
+			}
+		);
+
+		$user_id = self::factory()->user->create();
+		AllowedUsers::add( $user_id );
+
+		wp_delete_user( $user_id );
+
+		$this->assertSame( [], AllowedUsers::ids() );
+		$this->assertSame( [ $user_id ], $fired );
+	}
+
+	/**
+	 * Renewing twice within one second saves nothing new, and still reports success.
+	 *
+	 * @return void
+	 */
+	public function test_renewing_twice_in_a_second_succeeds(): void {
+		$user_id = self::factory()->user->create();
+		$this->seed( $user_id, time() - 3 * DAY_IN_SECONDS, null, time() - DAY_IN_SECONDS );
+
+		// Retry until both renewals land in the same second, the case update_option() reports as false.
+		do {
+			$second = time();
+			$first  = AllowedUsers::renew_invitation( $user_id );
+			$again  = AllowedUsers::renew_invitation( $user_id );
+		} while ( time() !== $second );
+
+		$this->assertTrue( $first );
+		$this->assertTrue( $again );
+	}
+
+	/**
+	 * An assistant deleting a user cannot write the list, so the user leaves it on the next cron run.
+	 *
+	 * @return void
+	 */
+	public function test_deleting_a_user_over_a_connection_removes_them_from_cron(): void {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+
+		$user_id = self::factory()->user->create();
+		AllowedUsers::add( $user_id );
+
+		ConnectionContext::set( 'test-client' );
+		wp_delete_user( $user_id );
+		ConnectionContext::reset();
+
+		$this->assertSame( [ $user_id ], AllowedUsers::ids() );
+		$this->assertNotFalse( wp_next_scheduled( UserDeletion::DEFERRED_HOOK, [ $user_id ] ) );
+
+		do_action( UserDeletion::DEFERRED_HOOK, $user_id );
+
+		$this->assertSame( [], AllowedUsers::ids() );
+	}
+
+	/**
+	 * A deferred removal leaves alone someone who is still on the site.
+	 *
+	 * @return void
+	 */
+	public function test_a_deferred_removal_keeps_a_user_still_on_the_site(): void {
+		$user_id = self::factory()->user->create();
+		AllowedUsers::add( $user_id );
+
+		do_action( UserDeletion::DEFERRED_HOOK, $user_id );
+
+		$this->assertSame( [ $user_id ], AllowedUsers::ids() );
+	}
+
+	/**
+	 * On multisite, deleting a user from the network takes them off every site's list.
+	 *
+	 * @return void
+	 */
+	public function test_deleting_a_network_user_removes_them_from_every_site(): void {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/ms.php';
+
+		$user_id = self::factory()->user->create();
+		$site_id = self::factory()->blog->create();
+		add_user_to_blog( $site_id, $user_id, 'editor' );
+		AllowedUsers::add( $user_id );
+
+		switch_to_blog( $site_id );
+		AllowedUsers::add( $user_id );
+		restore_current_blog();
+
+		wpmu_delete_user( $user_id );
+
+		$this->assertSame( [], AllowedUsers::ids() );
+
+		switch_to_blog( $site_id );
+		$this->assertSame( [], AllowedUsers::ids() );
+		restore_current_blog();
 	}
 }

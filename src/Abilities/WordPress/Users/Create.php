@@ -44,7 +44,7 @@ class Create extends BaseAbility {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => Annotations::create(
+			'annotations' => Annotations::destructive(
 				'Do not supply a password; this ability does not accept one. The site generates it, and WordPress '
 				. 'emails the new user a link to set their own. When `invitation_sent` is false, '
 				. '`invitation_note` says why: the account exists but nobody can sign in to it yet, so report '

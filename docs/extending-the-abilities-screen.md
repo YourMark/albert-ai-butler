@@ -9,7 +9,6 @@ indicators, without Core depending on the add-on.
 | `albert.abilities.permissions_section` | JS filter (`@wordpress/hooks`) | The fly-in "Permissions" section (replace) |
 | `albert.abilities.panel_sections` | JS filter (`@wordpress/hooks`) | The fly-in body (append generic sections) |
 | `albert/abilities/payload_row` | PHP filter | Each row, as the screen payload is built |
-| `albert/abilities/required_capability` | PHP filter | When the screen resolves an ability's capability |
 
 The two JS seams need the add-on script enqueued on the abilities page; see
 [Enqueuing the add-on script](#enqueuing-the-add-on-script).
@@ -18,7 +17,7 @@ The two JS seams need the add-on script enqueued on the abilities page; see
 
 ## 1. Replace the Permissions section — `albert.abilities.permissions_section`
 
-The fly-in renders one **Permissions** section. Free's default shows the required capability; an
+The fly-in renders one **Permissions** section. Free's default offers Albert Premium's advanced permissions; an
 add-on can replace it with its own UI (this is how Premium adds the per-role/per-user rule builder).
 The filter receives Free's default node and returns the node to render in its place; returning the
 default unchanged keeps Free's behaviour.
@@ -43,9 +42,9 @@ addFilter(
   - **`ability`** — the normalized row (see the shape under [payload_row](#3-surface-a-row-indicator--albertabilitiespayload_row)).
   - **`roles`** — `[ { value: <slug>, label } ]` for every site role (use for a role picker). For
     per-user pickers, query users via core REST `/wp/v2/users`.
-  - **`capabilityContent`** — Free's required-capability block (a React node). Render it inside your
-    own UI (e.g. a "Capability only" tab) so the capability is shown identically with or without the
-    add-on.
+  - **`capabilityContent`** — deprecated since 1.6.0. It held the guessed required-capability
+    block; it now holds one neutral sentence so an add-on that still renders it shows no empty
+    space. Don't use it in new code.
   - **`registerCloseGuard( fn )`** — see [Confirming on close](#confirming-on-close).
 
 ### Confirming on close
@@ -158,9 +157,15 @@ add_filter(
 
 - **`$row`** — `{ id, label, description, category, categoryLabel, source, sourceLabel,
   operation, enabled, capability, capabilityRoles, lastUsed, badges, inputs, output, annotations }`.
+  `capability` and `capabilityRoles` are always `''` and `[]` since 1.6.0: a permission check is
+  code, so no capability can be read from it. Both keys are deprecated and will be removed.
+  `operation` is `read`, `write` or `destructive` (`delete` before 1.6.0).
   Free always sets `badges` to `[]`. `supplier`/`supplierLabel` are still present too, holding the
   same values as `source`/`sourceLabel` — deprecated since 1.4.0 in favour of the latter, kept for
   any add-on already reading them, and scheduled for removal in a future major version.
+- **`operation`**: `read`, `write` or `destructive` (`delete` before 1.6.0), or (since 1.6.0) `undeclared` for an ability
+  whose annotations set neither `readonly` nor `destructive`; before 1.6.0 such an ability came
+  through as `write`. Treat an unknown value like `undeclared`, since new values may be added.
 - **Badge shape** — `{ id, label, tone, title? }`; `tone` maps to the `albert-badge--{tone}` pill.
   Since 1.4.0 that pill is the shared `.albert-badge` primitive in
   `assets/css/albert-primitives.css` — there is one definition, not one per screen. Its size,
@@ -176,17 +181,9 @@ it *means* is the add-on's concern.
 
 ---
 
-## 4. Correct the displayed capability — `albert/abilities/required_capability`
+## 4. The required capability (removed in 1.6.0)
 
-The screen shows a best-effort "Required capability". Override it precisely:
-
-```php
-add_filter(
-	'albert/abilities/required_capability',
-	function ( string $cap, string $ability_id, \WP_Ability $ability ) {
-		return $ability_id === 'my/ability' ? 'manage_my_thing' : $cap;
-	},
-	10,
-	3
-);
-```
+The screen used to show a guessed "Required capability", which `albert/abilities/required_capability`
+could correct. A permission check is code, so no capability can be read from it reliably. Since
+1.6.0 the screen shows none and the filter is deprecated: hooking it triggers a deprecation notice
+and has no effect.

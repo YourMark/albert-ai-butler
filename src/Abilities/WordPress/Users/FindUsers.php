@@ -13,7 +13,6 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use Albert\Privacy\PiiPolicy;
 use WP_Error;
 use WP_REST_Request;
 
@@ -64,37 +63,33 @@ class FindUsers extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'                   => [
+				'id'       => [
 					'type'        => 'integer',
-					'description' => 'User id for direct querying.',
+					'description' => 'Return only the user with this ID, as a one-item list. For all of one user\'s details use albert/view-user.',
+					'minimum'     => 1,
 				],
-				'page'                 => [
+				'page'     => [
 					'type'        => 'integer',
 					'description' => 'Page number for pagination',
 					'default'     => 1,
 					'minimum'     => 1,
 				],
-				'per_page'             => [
+				'per_page' => [
 					'type'        => 'integer',
 					'description' => 'Number of users per page',
 					'default'     => 10,
 					'minimum'     => 1,
 					'maximum'     => 100,
 				],
-				'search'               => [
+				'search'   => [
 					'type'        => 'string',
 					'description' => 'Search users by name or email',
 					'default'     => '',
 				],
-				'role'                 => [
+				'role'     => [
 					'type'        => 'string',
 					'description' => 'Filter users by role',
 					'enum'        => $role_names,
-				],
-				'reveal_personal_data' => [
-					'type'        => 'boolean',
-					'description' => "Return real personal data instead of anonymised placeholders. Requires the ability's own capability; ignored unless privacy mode is Balanced.",
-					'default'     => false,
 				],
 			],
 		];
@@ -153,6 +148,7 @@ class FindUsers extends BaseAbility {
 	 * @param array<string, mixed> $args {
 	 *     Input parameters.
 	 *
+	 *     @type int    $id       Only this user.
 	 *     @type int    $page     Page number for pagination.
 	 *     @type int    $per_page Number of users per page.
 	 *     @type string $search   Search query.
@@ -162,14 +158,17 @@ class FindUsers extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
-		$route = '/wp/v2/users';
+		$request = new WP_REST_Request( 'GET', '/wp/v2/users' );
 
-		// absint() so the id can never add a path segment of its own.
-		if ( ! empty( $args['id'] ) ) {
-			$route .= '/' . absint( $args['id'] );
+		// The collection with `include`, not /users/{id}: that route returns one object, not a list.
+		if ( isset( $args['id'] ) ) {
+			$request->set_param( 'include', [ (int) $args['id'] ] );
 		}
 
-		$request = new WP_REST_Request( 'GET', $route );
+		// Email, roles and the login are only in the edit context, which core allows with list_users.
+		if ( current_user_can( 'list_users' ) ) {
+			$request->set_param( 'context', 'edit' );
+		}
 
 		// Set pagination parameters.
 		$request->set_param( 'page', absint( $args['page'] ?? 1 ) );
@@ -208,7 +207,7 @@ class FindUsers extends BaseAbility {
 		foreach ( $data as $user_data ) {
 			$users[] = [
 				'id'          => $user_data['id'],
-				'username'    => $user_data['slug'] ?? '',
+				'username'    => $user_data['username'] ?? $user_data['slug'] ?? '',
 				'name'        => $user_data['name'] ?? '',
 				'email'       => $user_data['email'] ?? '',
 				'roles'       => $user_data['roles'] ?? [],
@@ -222,17 +221,10 @@ class FindUsers extends BaseAbility {
 		$total       = isset( $headers['X-WP-Total'] ) ? (int) $headers['X-WP-Total'] : count( $users );
 		$total_pages = isset( $headers['X-WP-TotalPages'] ) ? (int) $headers['X-WP-TotalPages'] : 1;
 
-		return PiiPolicy::redact(
-			[
-				'users'       => $users,
-				'total'       => $total,
-				'total_pages' => $total_pages,
-			],
-			$args,
-			[
-				'mask_context_names' => true,
-				'reveal_capability'  => 'list_users',
-			]
-		);
+		return [
+			'users'       => $users,
+			'total'       => $total,
+			'total_pages' => $total_pages,
+		];
 	}
 }

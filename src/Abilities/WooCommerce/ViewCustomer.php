@@ -13,7 +13,6 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use Albert\Privacy\PiiPolicy;
 use WC_Customer;
 use WP_Error;
 
@@ -60,15 +59,10 @@ class ViewCustomer extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'                   => [
+				'id' => [
 					'type'        => 'integer',
 					'description' => 'The customer user ID to retrieve.',
 					'minimum'     => 1,
-				],
-				'reveal_personal_data' => [
-					'type'        => 'boolean',
-					'description' => "Return real customer PII instead of anonymised placeholders. Requires the ability's own capability; ignored unless privacy mode is Balanced.",
-					'default'     => false,
 				],
 			],
 			'required'   => [ 'id' ],
@@ -139,46 +133,39 @@ class ViewCustomer extends BaseAbility {
 			);
 		}
 
-		return PiiPolicy::redact(
-			[
-				'customer' => [
-					'id'           => $customer->get_id(),
-					'email'        => $customer->get_email(),
-					'first_name'   => $customer->get_first_name(),
-					'last_name'    => $customer->get_last_name(),
-					'display_name' => $customer->get_display_name(),
-					'date_created' => $customer->get_date_created() ? $customer->get_date_created()->date( 'Y-m-d H:i:s' ) : '',
-					'order_count'  => $customer->get_order_count(),
-					'total_spent'  => $customer->get_total_spent(),
-					'billing'      => [
-						'first_name' => $customer->get_billing_first_name(),
-						'last_name'  => $customer->get_billing_last_name(),
-						'email'      => $customer->get_billing_email(),
-						'phone'      => $customer->get_billing_phone(),
-						'address_1'  => $customer->get_billing_address_1(),
-						'address_2'  => $customer->get_billing_address_2(),
-						'city'       => $customer->get_billing_city(),
-						'state'      => $customer->get_billing_state(),
-						'postcode'   => $customer->get_billing_postcode(),
-						'country'    => $customer->get_billing_country(),
-					],
-					'shipping'     => [
-						'first_name' => $customer->get_shipping_first_name(),
-						'last_name'  => $customer->get_shipping_last_name(),
-						'address_1'  => $customer->get_shipping_address_1(),
-						'address_2'  => $customer->get_shipping_address_2(),
-						'city'       => $customer->get_shipping_city(),
-						'state'      => $customer->get_shipping_state(),
-						'postcode'   => $customer->get_shipping_postcode(),
-						'country'    => $customer->get_shipping_country(),
-					],
+		return [
+			'customer' => [
+				'id'           => $customer->get_id(),
+				'email'        => $customer->get_email(),
+				'first_name'   => $customer->get_first_name(),
+				'last_name'    => $customer->get_last_name(),
+				'display_name' => $customer->get_display_name(),
+				'date_created' => $customer->get_date_created() ? $customer->get_date_created()->date( 'Y-m-d H:i:s' ) : '',
+				'order_count'  => $customer->get_order_count(),
+				'total_spent'  => $customer->get_total_spent(),
+				'billing'      => [
+					'first_name' => $customer->get_billing_first_name(),
+					'last_name'  => $customer->get_billing_last_name(),
+					'email'      => $customer->get_billing_email(),
+					'phone'      => $customer->get_billing_phone(),
+					'address_1'  => $customer->get_billing_address_1(),
+					'address_2'  => $customer->get_billing_address_2(),
+					'city'       => $customer->get_billing_city(),
+					'state'      => $customer->get_billing_state(),
+					'postcode'   => $customer->get_billing_postcode(),
+					'country'    => $customer->get_billing_country(),
+				],
+				'shipping'     => [
+					'first_name' => $customer->get_shipping_first_name(),
+					'last_name'  => $customer->get_shipping_last_name(),
+					'address_1'  => $customer->get_shipping_address_1(),
+					'address_2'  => $customer->get_shipping_address_2(),
+					'city'       => $customer->get_shipping_city(),
+					'state'      => $customer->get_shipping_state(),
+					'postcode'   => $customer->get_shipping_postcode(),
+					'country'    => $customer->get_shipping_country(),
 				],
 			],
-			$args,
-			[
-				'mask_context_names' => true,
-				'reveal_capability'  => 'list_users',
-			]
-		);
+		];
 	}
 }

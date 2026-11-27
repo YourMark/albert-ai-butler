@@ -2,9 +2,8 @@
 /**
  * Unit tests for AbilitiesManager::enforce_disabled().
  *
- * Focuses on the guarantee that the MCP transport meta-tools are never
- * unregistered — even when their IDs are present in the disabled option — so the
- * transport is always available.
+ * Switching an ability off never unregisters it; only an add-on's refusal
+ * through `albert/abilities/is_executable` does.
  *
  * @package Albert
  */
@@ -15,6 +14,8 @@ require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 
 use Albert\Admin\AbilitiesPage;
 use Albert\Core\AbilitiesManager;
+use Albert\Tests\Unit\StubAbility;
+use WP_Error;
 use Albert\OAuth\Server\ConnectionContext;
 use PHPUnit\Framework\TestCase;
 
@@ -40,6 +41,8 @@ class AbilitiesEnforceTest extends TestCase {
 		$GLOBALS['albert_test_hooks']                  = [];
 		$GLOBALS['albert_test_unregistered_abilities'] = [];
 		$GLOBALS['albert_test_is_admin']               = false;
+		$GLOBALS['albert_test_filter_returns']         = [];
+		$GLOBALS['albert_test_filter_callbacks']       = [];
 		unset( $_GET['page'] );
 	}
 
@@ -82,45 +85,58 @@ class AbilitiesEnforceTest extends TestCase {
 	}
 
 	/**
-	 * All three transport meta-tools stay registered even when every one of them
-	 * is present in the disabled option, while a genuinely disabled non-meta
-	 * ability is still unregistered.
+	 * A switched-off ability, Albert's or another plugin's, stays registered,
+	 * so other plugins relying on it keep working.
 	 *
 	 * @return void
 	 */
-	public function test_never_unregisters_transport_meta_tools_even_when_disabled(): void {
+	public function test_switched_off_abilities_stay_registered(): void {
 		$GLOBALS['albert_test_options']['albert_abilities_saved']                   = true;
 		$GLOBALS['albert_test_options'][ AbilitiesPage::DISABLED_ABILITIES_OPTION ] = [
-			'mcp-adapter/discover-abilities',
-			'mcp-adapter/get-ability-info',
-			'mcp-adapter/execute-ability',
 			'albert/create-post',
+			'other/do-thing',
 		];
 
 		$GLOBALS['albert_test_abilities'] = [
-			$this->ability( 'mcp-adapter/discover-abilities' ),
-			$this->ability( 'mcp-adapter/get-ability-info' ),
-			$this->ability( 'mcp-adapter/execute-ability' ),
 			$this->ability( 'albert/create-post' ),
-			$this->ability( 'albert/find-posts' ),
+			$this->ability( 'other/do-thing' ),
 		];
 
-		( new AbilitiesManager() )->enforce_disabled();
+		$manager = new AbilitiesManager();
+		$manager->add_ability( new StubAbility( 'albert/create-post' ) );
+		$manager->enforce_disabled();
 
-		$unregistered = $GLOBALS['albert_test_unregistered_abilities'];
-
-		// The genuinely disabled non-meta ability is removed…
-		$this->assertContains( 'albert/create-post', $unregistered );
-		// …but none of the transport meta-tools ever are.
-		$this->assertNotContains( 'mcp-adapter/discover-abilities', $unregistered );
-		$this->assertNotContains( 'mcp-adapter/get-ability-info', $unregistered );
-		$this->assertNotContains( 'mcp-adapter/execute-ability', $unregistered );
-		// An enabled ability is left alone.
-		$this->assertNotContains( 'albert/find-posts', $unregistered );
+		$this->assertSame( [], $GLOBALS['albert_test_unregistered_abilities'] );
 	}
 
 	/**
-	 * A disabled ability is refused at execution; others and the transport proceed.
+	 * An Albert ability an add-on refuses (a lapsed licence) is unregistered;
+	 * the others are left alone.
+	 *
+	 * @return void
+	 */
+	public function test_unregisters_abilities_an_add_on_refuses(): void {
+		$GLOBALS['albert_test_options']['albert_abilities_saved'] = true;
+
+		$GLOBALS['albert_test_abilities'] = [
+			$this->ability( 'albert/licensed' ),
+			$this->ability( 'albert/free' ),
+		];
+
+		$GLOBALS['albert_test_filter_callbacks']['albert/abilities/is_executable'] = static fn( $result, $ability ) => $ability->get_id() === 'albert/licensed'
+			? new WP_Error( 'license_expired', 'Plan expired.' )
+			: $result;
+
+		$manager = new AbilitiesManager();
+		$manager->add_ability( new StubAbility( 'albert/licensed' ) );
+		$manager->add_ability( new StubAbility( 'albert/free' ) );
+		$manager->enforce_disabled();
+
+		$this->assertSame( [ 'albert/licensed' ], $GLOBALS['albert_test_unregistered_abilities'] );
+	}
+
+	/**
+	 * A disabled ability is refused at execution over a connection; others and the transport proceed.
 	 *
 	 * @return void
 	 */
@@ -131,59 +147,15 @@ class AbilitiesEnforceTest extends TestCase {
 		$manager  = new AbilitiesManager();
 		$sentinel = new \stdClass();
 
+		$this->assertSame( $sentinel, $manager->refuse_disabled_execution( $sentinel, 'albert/create-post' ), 'Outside a connection, other plugins may still run it.' );
+
+		ConnectionContext::set( 'client-1' );
 		$refused = $manager->refuse_disabled_execution( $sentinel, 'albert/create-post' );
 		$this->assertInstanceOf( \WP_Error::class, $refused );
-		$this->assertSame( 'albert_ability_disabled', $refused->get_error_code() );
+		$this->assertSame( 'ability_disabled', $refused->get_error_code() );
 
 		$this->assertSame( $sentinel, $manager->refuse_disabled_execution( $sentinel, 'albert/find-posts' ) );
 		$this->assertSame( $sentinel, $manager->refuse_disabled_execution( $sentinel, 'mcp-adapter/execute-ability' ) );
-	}
-
-	/**
-	 * A management context never keeps disabled abilities for a connection.
-	 *
-	 * @return void
-	 */
-	public function test_management_context_does_not_apply_over_a_connection(): void {
-		$GLOBALS['albert_test_options']['albert_abilities_saved']                   = true;
-		$GLOBALS['albert_test_options'][ AbilitiesPage::DISABLED_ABILITIES_OPTION ] = [ 'albert/create-post' ];
-		$GLOBALS['albert_test_abilities'] = [ $this->ability( 'albert/create-post' ) ];
-		$GLOBALS['albert_test_is_admin']  = true;
-		$_GET['page']                     = AbilitiesPage::PAGE_SLUG;
-		ConnectionContext::set( 'client-1' );
-
-		( new AbilitiesManager() )->enforce_disabled();
-
-		$this->assertContains( 'albert/create-post', $GLOBALS['albert_test_unregistered_abilities'] );
-	}
-
-	/**
-	 * A Bearer token or the MCP route overrides any filter, before the token is validated.
-	 *
-	 * The reported bypass: an add-on's path-matching filter says "management"
-	 * for a request whose rest_route is the MCP endpoint.
-	 *
-	 * @return void
-	 */
-	public function test_assistant_request_overrides_a_management_filter(): void {
-		$GLOBALS['albert_test_options']['albert_abilities_saved']                        = true;
-		$GLOBALS['albert_test_options'][ AbilitiesPage::DISABLED_ABILITIES_OPTION ]      = [ 'albert/create-post' ];
-		$GLOBALS['albert_test_filter_returns']['albert/abilities/is_management_context'] = true;
-
-		$_SERVER['REQUEST_URI']        = '/wp-json/albert-premium/v1/abilities/x/y/permissions';
-		$_GET['rest_route']            = '/albert/v1/mcp';
-		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer token';
-
-		$GLOBALS['albert_test_abilities'] = [ $this->ability( 'albert/create-post' ) ];
-		( new AbilitiesManager() )->enforce_disabled();
-		$this->assertContains( 'albert/create-post', $GLOBALS['albert_test_unregistered_abilities'] );
-
-		unset( $_SERVER['HTTP_AUTHORIZATION'] );
-		$GLOBALS['albert_test_unregistered_abilities'] = [];
-		$GLOBALS['albert_test_abilities']              = [ $this->ability( 'albert/create-post' ) ];
-		( new AbilitiesManager() )->enforce_disabled();
-		$this->assertContains( 'albert/create-post', $GLOBALS['albert_test_unregistered_abilities'] );
-
-		unset( $_SERVER['REQUEST_URI'], $_GET['rest_route'], $GLOBALS['albert_test_filter_returns'] );
+		ConnectionContext::reset();
 	}
 }

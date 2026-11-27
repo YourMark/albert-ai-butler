@@ -9,14 +9,16 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
-defined( 'ABSPATH' ) || exit;
-
+use Albert\Abilities\WordPress\PostFields;
+use Albert\Abilities\WordPress\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
 use Albert\Core\Annotations;
 use WP_Error;
 use WP_REST_Request;
+
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Update Post Ability class
@@ -34,7 +36,7 @@ class Update extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/update-post';
 		$this->label       = __( 'Update Post', 'albert-ai-butler' );
-		$this->description = __( 'Update an existing WordPress post with new title, content, and metadata.', 'albert-ai-butler' );
+		$this->description = __( 'Update an existing post: only the fields you send change. Read it first with albert/view-post before replacing content or blocks; to change one block use albert/edit-post-block, and for a new post use albert/create-post.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
@@ -46,11 +48,11 @@ class Update extends BaseAbility {
 				'public' => true,
 			],
 			'annotations' => Annotations::update(
-				'This replaces the whole post body. Read the post first with `albert/view-post` and '
-				. '`"format": ["blocks"]`, edit that tree, and send it back, writing without reading '
-				. 'silently discards everything you did not include. Keep every existing image block\'s `id` '
-				. 'and `url` exactly as they were unless you were asked to change the image. To change one '
-				. 'block, use `albert/edit-post-block` instead: it is cheaper and leaves every other block '
+				'Only the fields you send change. `content` and `blocks` replace the whole post body: before sending either, '
+				. 'read the post with `albert/view-post` and `"format": ["blocks"]`, edit that tree, and send it back, '
+				. 'writing without reading silently discards everything you did not include. Keep every existing '
+				. 'image block\'s `id` and `url` exactly as they were unless you were asked to change the image. To '
+				. 'change one block, use `albert/edit-post-block` instead: it is cheaper and leaves every other block '
 				. 'byte-for-byte intact.'
 			),
 		];
@@ -68,47 +70,70 @@ class Update extends BaseAbility {
 		// Get all available post statuses dynamically.
 		$post_statuses = array_keys( get_post_statuses() );
 
-		return [
-			'type'       => 'object',
-			'properties' => [
-				'id'         => [
-					'type'        => 'integer',
-					'description' => 'The post ID to update',
-				],
-				'title'      => [
-					'type'        => 'string',
-					'description' => 'The post title',
-				],
-				'content'    => [
-					'type'        => 'string',
-					'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown — converted to blocks automatically. For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire post body when set.',
-				],
-				'blocks'     => [
-					'type'        => 'array',
-					'description' => 'Structured block specs (preferred over "content"). Replaces the entire post body. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
-					'items'       => BlockSpecSchema::spec(),
-				],
-				'status'     => [
-					'type'        => 'string',
-					'enum'        => $post_statuses,
-					'description' => 'Post status',
-				],
-				'excerpt'    => [
-					'type'        => 'string',
-					'description' => 'Optional post excerpt',
-				],
-				'categories' => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'integer' ],
-					'description' => 'Array of category IDs',
-				],
-				'tags'       => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'string' ],
-					'description' => 'Array of tag names',
-				],
+		$properties = [
+			'id'         => [
+				'type'        => 'integer',
+				'description' => 'The post ID to update',
+				'minimum'     => 1,
 			],
-			'required'   => [ 'id' ],
+			'title'      => [
+				'type'        => 'string',
+				'description' => 'The post title',
+			],
+			'content'    => [
+				'type'        => 'string',
+				'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided. Replaces the entire post body when set.',
+			],
+			'blocks'     => [
+				'type'        => 'array',
+				'description' => 'Structured block specs (preferred over "content"). Replaces the entire post body. Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'items'       => BlockSpecSchema::spec(),
+			],
+			'status'     => [
+				'type'        => 'string',
+				'enum'        => $post_statuses,
+				'description' => 'Post status',
+			],
+			'excerpt'    => [
+				'type'        => 'string',
+				'description' => 'Optional post excerpt',
+			],
+			// The anyOf title is the only schema text core puts in its error, so it carries the pointer to remove-post-terms.
+			'categories' => [
+				'type'        => 'array',
+				'anyOf'       => [ self::non_empty_list( 'integer', 'categories' ) ],
+				'description' => 'Deprecated: use albert/add-post-terms or albert/remove-post-terms. Category IDs that replace the post\'s categories. To take categories off, use albert/remove-post-terms.',
+			],
+			'tags'       => [
+				'type'        => 'array',
+				'anyOf'       => [ self::non_empty_list( 'string', 'tags' ) ],
+				'description' => 'Deprecated: use albert/add-post-terms or albert/remove-post-terms. Tag names, created when missing, that replace the post\'s tags. To take tags off, use albert/remove-post-terms.',
+			],
+		];
+
+		return [
+			'type'          => 'object',
+			'properties'    => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ),
+			'required'      => [ 'id' ],
+			// Refuses a call that sends nothing but `id`.
+			'minProperties' => 2,
+		];
+	}
+
+	/**
+	 * A list of at least one item, whose title names albert/remove-post-terms for an empty one.
+	 *
+	 * @param string $type What the list holds.
+	 * @param string $what "categories" or "tags".
+	 * @return array<string, mixed>
+	 * @since 1.6.0
+	 */
+	private static function non_empty_list( string $type, string $what ): array {
+		return [
+			'title'    => 'list with at least one item (to take ' . $what . ' off, use albert/remove-post-terms)',
+			'type'     => 'array',
+			'items'    => [ 'type' => $type ],
+			'minItems' => 1,
 		];
 	}
 
@@ -127,9 +152,17 @@ class Update extends BaseAbility {
 				'status'       => [ 'type' => 'string' ],
 				'permalink'    => [ 'type' => 'string' ],
 				'edit_url'     => [ 'type' => 'string' ],
+				'slug'         => [
+					'type'        => 'string',
+					'description' => 'The slug that was saved, which may carry a number WordPress added to keep it unique.',
+				],
+				'date'         => [
+					'type'        => 'string',
+					'description' => 'The publish date in the site\'s timezone. With status "future" this is when it will be published.',
+				],
 				'block_issues' => [
 					'type'        => 'array',
-					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here — they come back as a WP_Error with code "block_validation_failed" and the post is not updated.',
+					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.level must be between 1 and 6 (got 9). Defaulting to 2.". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the post is not updated.',
 					'items'       => [ 'type' => 'string' ],
 				],
 			],
@@ -162,6 +195,8 @@ class Update extends BaseAbility {
 	 *     @type string $excerpt    Post excerpt.
 	 *     @type array  $categories Category IDs.
 	 *     @type array  $tags       Tag names.
+	 *
+	 *     Plus the fields in PostFields::POST.
 	 * }
 	 * @return array<string, mixed>|WP_Error Post data on success, WP_Error on failure.
 	 * @since 1.0.0
@@ -169,20 +204,18 @@ class Update extends BaseAbility {
 	public function execute( array $args ): array|WP_Error {
 		$post_id = absint( $args['id'] );
 
-		// Check if post exists using REST API.
-		$check_request  = new WP_REST_Request( 'GET', '/wp/v2/posts/' . $post_id );
-		$check_response = rest_do_request( $check_request );
-
-		if ( $check_response->is_error() ) {
-			return new WP_Error(
-				'post_not_found',
-				__( 'Post not found.', 'albert-ai-butler' ),
-				[ 'status' => 404 ]
-			);
+		// Checked before anything is written: resolving tags creates terms, so a
+		// bad id or a refused post must stop the call first.
+		$refused = $this->refuse_unless_editable( $post_id );
+		if ( $refused ) {
+			return $refused;
 		}
 
-		// Prepare REST API request data (only include provided fields).
-		$request_data = [];
+		$request_data = PostFields::to_rest( $args, PostFields::POST, 'post', $post_id );
+		if ( is_wp_error( $request_data ) ) {
+			return $request_data;
+		}
+
 		$block_issues = [];
 
 		if ( isset( $args['title'] ) ) {
@@ -215,17 +248,21 @@ class Update extends BaseAbility {
 			$request_data['excerpt'] = sanitize_textarea_field( $args['excerpt'] );
 		}
 
-		// Add categories if provided.
+		// An empty list never clears: removing terms is albert/remove-post-terms.
 		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
-			$request_data['categories'] = array_map( 'absint', $args['categories'] );
+			$request_data['categories'] = array_map( 'intval', $args['categories'] );
+			$unknown                    = PostTerms::check_category_ids( $request_data['categories'] );
+			if ( $unknown ) {
+				return $unknown;
+			}
 		}
 
-		// Add tags if provided (convert tag names to IDs using REST API).
 		if ( ! empty( $args['tags'] ) && is_array( $args['tags'] ) ) {
-			$tag_ids = $this->get_or_create_tag_ids( $args['tags'] );
-			if ( ! empty( $tag_ids ) ) {
-				$request_data['tags'] = $tag_ids;
+			$tag_ids = PostTerms::tag_ids( $args['tags'] );
+			if ( is_wp_error( $tag_ids ) ) {
+				return $tag_ids;
 			}
+			$request_data['tags'] = $tag_ids;
 		}
 
 		// Create REST request.
@@ -245,11 +282,11 @@ class Update extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return new WP_Error(
-				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while updating the post.', 'albert-ai-butler' ),
-				[ 'status' => $response->get_status() ]
-			);
+			if ( is_array( $data ) && ( $data['code'] ?? '' ) === 'rest_post_invalid_id' ) {
+				return self::not_found( $post_id );
+			}
+
+			return self::rest_failure( $data, $response->get_status(), __( 'The post could not be updated.', 'albert-ai-butler' ), 'post_permission_denied' );
 		}
 
 		// Return formatted post data.
@@ -261,6 +298,8 @@ class Update extends BaseAbility {
 			'status'    => $data['status'],
 			'permalink' => $data['link'] ?? '',
 			'edit_url'  => admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
+			'slug'      => $data['slug'] ?? '',
+			'date'      => $data['date'] ?? '',
 		];
 
 		if ( ! empty( $block_issues ) ) {
@@ -271,49 +310,54 @@ class Update extends BaseAbility {
 	}
 
 	/**
-	 * Get or create tag IDs from tag names using REST API.
+	 * Refuse an id that is not an editable post, before any side effect runs.
 	 *
-	 * @param array<int, string> $tag_names Array of tag names.
-	 * @return array<int, int> Array of tag IDs.
-	 * @since 1.0.0
+	 * @param int $post_id Post ID.
+	 * @return WP_Error|null Null when the post exists and the user may edit it.
+	 * @since 1.6.0
 	 */
-	private function get_or_create_tag_ids( array $tag_names ): array {
-		$tag_ids = [];
-
-		foreach ( $tag_names as $tag_name ) {
-			$tag_name = sanitize_text_field( $tag_name );
-
-			// Search for existing tag using REST API.
-			$search_request = new WP_REST_Request( 'GET', '/wp/v2/tags' );
-			$search_request->set_param( 'search', $tag_name );
-			$search_request->set_param( 'per_page', 1 );
-
-			$search_response = rest_do_request( $search_request );
-			$server          = rest_get_server();
-			$search_data     = $server->response_to_data( $search_response, false );
-
-			// Check if exact match exists.
-			if ( ! is_wp_error( $search_data ) && ! empty( $search_data ) ) {
-				foreach ( $search_data as $tag ) {
-					if ( strtolower( $tag['name'] ) === strtolower( $tag_name ) ) {
-						$tag_ids[] = $tag['id'];
-						continue 2;
-					}
-				}
-			}
-
-			// Create new tag using REST API if not found.
-			$create_request = new WP_REST_Request( 'POST', '/wp/v2/tags' );
-			$create_request->set_param( 'name', $tag_name );
-
-			$create_response = rest_do_request( $create_request );
-			$create_data     = $server->response_to_data( $create_response, false );
-
-			if ( ! is_wp_error( $create_data ) && ! empty( $create_data['id'] ) ) {
-				$tag_ids[] = $create_data['id'];
-			}
+	private function refuse_unless_editable( int $post_id ): ?WP_Error {
+		// get_post( 0 ) returns the global post.
+		$post = $post_id > 0 ? get_post( $post_id ) : null;
+		// Name the other type only to a user who may read it, so the hint leaks nothing.
+		if ( $post && $post->post_type === 'page' && current_user_can( 'read_post', $post_id ) ) {
+			return new WP_Error(
+				'post_not_found',
+				/* translators: %d: page ID */
+				sprintf( __( 'ID %d is a page, not a post. Use albert/update-page.', 'albert-ai-butler' ), $post_id ),
+				[ 'status' => 404 ]
+			);
 		}
 
-		return $tag_ids;
+		if ( ! $post || $post->post_type !== 'post' ) {
+			return self::not_found( $post_id );
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return new WP_Error(
+				'post_permission_denied',
+				/* translators: %d: post ID */
+				sprintf( __( 'This account may not edit post %d.', 'albert-ai-butler' ), $post_id ),
+				[ 'status' => rest_authorization_required_code() ]
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * The error for an id that is not a post.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return WP_Error
+	 * @since 1.6.0
+	 */
+	private static function not_found( int $post_id ): WP_Error {
+		return new WP_Error(
+			'post_not_found',
+			/* translators: %d: post ID */
+			sprintf( __( 'No post with ID %d. Find it with albert/find-posts.', 'albert-ai-butler' ), $post_id ),
+			[ 'status' => 404 ]
+		);
 	}
 }

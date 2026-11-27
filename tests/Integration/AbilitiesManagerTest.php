@@ -62,8 +62,8 @@ class AbilitiesManagerTest extends TestCase {
 
 		// Verify the manager registered its hooks.
 		$this->assertNotFalse(
-			has_action( 'abilities_api_init', [ $this->manager, 'register_abilities' ] ),
-			'register_abilities should be hooked to abilities_api_init'
+			has_action( 'wp_abilities_api_init', [ $this->manager, 'register_abilities' ] ),
+			'register_abilities should be hooked to wp_abilities_api_init'
 		);
 	}
 }

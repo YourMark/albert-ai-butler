@@ -31,15 +31,6 @@ use WP_REST_Server;
 class ClientRegistration implements Hookable {
 
 	/**
-	 * REST API namespace.
-	 *
-	 * @deprecated 1.0.1 Use {@see Plugin::rest_namespace()} instead.
-	 * @since      1.0.0
-	 * @var string
-	 */
-	const NAMESPACE = 'albert/v1';
-
-	/**
 	 * Schemes that must never appear in a stored, rendered redirect URI.
 	 *
 	 * Stable and client-independent — these never belong in a redirect

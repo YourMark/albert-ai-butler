@@ -1,0 +1,25 @@
+name: Em dashes
+
+on:
+  pull_request:
+    branches:
+      - main
+      - development
+
+jobs:
+  em-dashes:
+    name: No em dashes in readable text
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Check for em dashes
+        run: php bin/check-em-dashes.php

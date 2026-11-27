@@ -25,6 +25,7 @@ defined( 'ABSPATH' ) || exit;
  *     'innerBlocks' => array<int, array>,       // recursive list of the same shape
  *     'plaintext'   => string,                  // human-readable text derived from innerHTML
  *     'path'        => array<int, int>,         // logical position over the separator-filtered tree
+ *     'html'        => string,                  // saved markup; leaf blocks only, absent when empty
  *   ]
  *
  * The `path` is the address the granular block-edit abilities use: `[0]` is the
@@ -142,13 +143,23 @@ class BlockReader {
 			? $block['innerBlocks']
 			: [];
 
-		return [
+		$shaped = [
 			'name'        => $block['blockName'] ?? null,
 			'attributes'  => isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [],
 			'innerBlocks' => $this->shape_blocks( $inner, $path ),
 			'plaintext'   => $this->plaintext( (string) ( $block['innerHTML'] ?? '' ) ),
 			'path'        => $path,
 		];
+
+		// Text, links and image sources live in the saved HTML, not the comment
+		// attributes, so a leaf without its markup cannot be written back intact.
+		// A container's markup is its children's, which carry their own.
+		$html = trim( (string) ( $block['innerHTML'] ?? '' ) );
+		if ( $inner === [] && $html !== '' ) {
+			$shaped['html'] = $html;
+		}
+
+		return $shaped;
 	}
 
 	/**

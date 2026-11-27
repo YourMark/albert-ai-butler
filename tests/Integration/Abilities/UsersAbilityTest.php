@@ -15,6 +15,7 @@ use Albert\Abilities\WordPress\Users\Delete as DeleteUser;
 use Albert\Abilities\WordPress\Users\FindUsers;
 use Albert\Abilities\WordPress\Users\Update as UpdateUser;
 use Albert\Abilities\WordPress\Users\ViewUser;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
 use WP_Error;
 
@@ -115,6 +116,95 @@ class UsersAbilityTest extends TestCase {
 		$this->assertNotSame( $page1['users'][0]['id'], $page2['users'][0]['id'] );
 	}
 
+	/**
+	 * Email, roles and the login come back: the request runs in the edit context.
+	 *
+	 * @return void
+	 */
+	public function test_find_users_returns_email_roles_and_login(): void {
+		$user_id = self::factory()->user->create(
+			[
+				'user_login'    => 'login_differs',
+				'user_nicename' => 'nice-slug',
+				'user_email'    => 'differs@albert.test',
+				'role'          => 'editor',
+			]
+		);
+
+		$result = ( new FindUsers() )->execute( [ 'search' => 'differs@albert.test' ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( $user_id, $result['users'][0]['id'] );
+		$this->assertSame( 'login_differs', $result['users'][0]['username'] );
+		$this->assertSame( 'differs@albert.test', $result['users'][0]['email'] );
+		$this->assertSame( [ 'editor' ], $result['users'][0]['roles'] );
+	}
+
+	/**
+	 * With `id`, the one user comes back as a one-item list.
+	 *
+	 * @return void
+	 */
+	public function test_find_users_by_id_returns_one_user(): void {
+		self::factory()->user->create();
+		$user_id = self::factory()->user->create(
+			[
+				'user_login' => 'the_one',
+				'user_email' => 'one@albert.test',
+			]
+		);
+
+		$result = ( new FindUsers() )->execute( [ 'id' => $user_id ] );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 1, $result['total'] );
+		$this->assertCount( 1, $result['users'] );
+		$this->assertSame( $user_id, $result['users'][0]['id'] );
+		$this->assertSame( 'the_one', $result['users'][0]['username'] );
+		$this->assertSame( 'one@albert.test', $result['users'][0]['email'] );
+	}
+
+	/**
+	 * An `id` below 1 is refused rather than dropped.
+	 *
+	 * @return void
+	 */
+	public function test_find_users_refuses_an_invalid_id(): void {
+		$ability = wp_get_ability( 'albert/find-users' );
+		$this->assertNotNull( $ability );
+
+		$result = $ability->execute( [ 'id' => -5 ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+	}
+
+	/**
+	 * Privacy mode still masks the email and login.
+	 *
+	 * @return void
+	 */
+	public function test_find_users_anonymises_with_privacy_mode_on(): void {
+		update_option( 'albert_privacy_mode', 'strict' );
+		$user_id = self::factory()->user->create(
+			[
+				'user_login' => 'private_login',
+				'user_email' => 'private@albert.test',
+			]
+		);
+
+		ConnectionContext::set( 'client-1' );
+		try {
+			$result = wp_get_ability( 'albert/find-users' )->execute( [ 'id' => $user_id ] );
+		} finally {
+			ConnectionContext::reset();
+		}
+
+		$this->assertIsArray( $result );
+		$this->assertNotSame( 'private@albert.test', $result['users'][0]['email'] );
+		$this->assertNotSame( 'private_login', $result['users'][0]['username'] );
+	}
+
 	// ─── ViewUser ───────────────────────────────────────────────────
 
 	/**
@@ -149,7 +239,7 @@ class UsersAbilityTest extends TestCase {
 	}
 
 	/**
-	 * ViewUser anonymises personal data under the default (Balanced) privacy mode.
+	 * An assistant's call to ViewUser is anonymised under Balanced, through core's execution path.
 	 *
 	 * @return void
 	 */
@@ -167,14 +257,19 @@ class UsersAbilityTest extends TestCase {
 			]
 		);
 
-		$result = ( new ViewUser() )->execute( [ 'id' => $user_id ] );
+		ConnectionContext::set( 'client-1' );
+		try {
+			$result = wp_get_ability( 'albert/view-user' )->execute( [ 'id' => $user_id ] );
+		} finally {
+			ConnectionContext::reset();
+		}
 
 		$this->assertIsArray( $result );
 		$this->assertNotSame( 'masked@albert.test', $result['user']['email'] );
 		$this->assertStringContainsString( '***', $result['user']['email'] );
 
 		// Previously-leaked account fields are now masked, not raw.
-		$this->assertNotSame( 'maskeduser', $result['user']['username'] );
+		$this->assertSame( 'User #' . $user_id, $result['user']['username'] );
 		$this->assertNotSame( 'https://maskeduser.example', $result['user']['url'] );
 		$this->assertSame( '', $result['user']['url'] );
 		$this->assertNotSame( 'A personal bio that must not reach the LLM.', $result['user']['description'] );
@@ -561,45 +656,60 @@ class UsersAbilityTest extends TestCase {
 	}
 
 	/**
-	 * DeleteUser removes a user without content when no reassign is given.
-	 *
-	 * @return void
-	 */
-	public function test_delete_user_without_content_needs_no_reassign(): void {
-		$victim = self::factory()->user->create( [ 'role' => 'subscriber' ] );
-
-		$result = ( new DeleteUser() )->execute( [ 'id' => $victim ] );
-
-		$this->assertIsArray( $result );
-		$this->assertFalse( get_userdata( $victim ) );
-	}
-
-	/**
-	 * DeleteUser never deletes a user's content by leaving reassign out.
-	 *
-	 * @return void
-	 */
-	public function test_delete_user_with_content_requires_reassign(): void {
-		$victim  = self::factory()->user->create( [ 'role' => 'author' ] );
-		$post_id = self::factory()->post->create( [ 'post_author' => $victim ] );
-
-		$result = ( new DeleteUser() )->execute( [ 'id' => $victim ] );
-
-		$this->assertWPError( $result );
-		$this->assertSame( 'reassign_required', $result->get_error_code() );
-		$this->assertInstanceOf( \WP_User::class, get_userdata( $victim ) );
-		$this->assertInstanceOf( \WP_Post::class, get_post( $post_id ) );
-	}
-
-	/**
 	 * DeleteUser returns error for non-existent user.
 	 *
 	 * @return void
 	 */
 	public function test_delete_user_not_found(): void {
-		$result = ( new DeleteUser() )->execute( [ 'id' => 99999 ] );
+		$result = ( new DeleteUser() )->execute(
+			[
+				'id'       => 99999,
+				'reassign' => get_current_user_id(),
+			]
+		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'user_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * The schema refuses a delete without a valid user to receive the content.
+	 *
+	 * @return void
+	 */
+	public function test_delete_user_requires_reassign(): void {
+		$victim  = self::factory()->user->create( [ 'role' => 'author' ] );
+		$ability = wp_get_ability( 'albert/delete-user' );
+		$this->assertNotNull( $ability );
+
+		foreach ( [ [], [ 'reassign' => -5 ] ] as $extra ) {
+			$result = $ability->execute( array_merge( [ 'id' => $victim ], $extra ) );
+
+			$this->assertInstanceOf( WP_Error::class, $result );
+			$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+		}
+
+		$this->assertNotFalse( get_userdata( $victim ) );
+	}
+
+	/**
+	 * DeleteUser refuses to delete the current user, which core's REST route would allow.
+	 *
+	 * @return void
+	 */
+	public function test_delete_user_refuses_self(): void {
+		$self      = get_current_user_id();
+		$inheritor = self::factory()->user->create( [ 'role' => 'administrator' ] );
+
+		$result = ( new DeleteUser() )->execute(
+			[
+				'id'       => $self,
+				'reassign' => $inheritor,
+			]
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'cannot_delete_self', $result->get_error_code() );
+		$this->assertNotFalse( get_userdata( $self ) );
 	}
 }

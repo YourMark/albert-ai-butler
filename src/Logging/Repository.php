@@ -37,8 +37,9 @@ class Repository {
 	 * Insert a log entry and prune old entries for the ability/status partition.
 	 *
 	 * Accepts an optional $context array whose keys map to the richer columns
-	 * added in 1.2.0. Unknown keys are silently ignored. Free always passes an
-	 * empty array; Premium populates the full set.
+	 * added in 1.2.0. Unknown keys are silently ignored. Free passes
+	 * `error_message` and, when it saw one, `failure_stage`; Premium populates
+	 * the full set.
 	 *
 	 * Context keys → columns:
 	 *   duration_ms   (int|null)    → duration_ms

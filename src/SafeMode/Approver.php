@@ -11,6 +11,7 @@ namespace Albert\SafeMode;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Core\AbilitiesState;
 use Albert\OAuth\Server\ConnectionContext;
 use WP_Error;
 
@@ -63,16 +64,18 @@ class Approver {
 		// here without ever running the ability a second time.
 		if ( ! $this->repository->claim( $action->id, $decided_by ) ) {
 			return new WP_Error(
-				'albert_already_handled',
+				'already_handled',
 				__( 'This request has already been handled.', 'albert-ai-butler' )
 			);
 		}
 
 		$ability = wp_get_ability( $action->ability_name );
 
-		if ( $ability === null ) {
+		// Switched off while it waited: still registered, but no longer the
+		// assistant's to use.
+		if ( $ability === null || ! AbilitiesState::is_enabled( $action->ability_name ) ) {
 			$error = new WP_Error(
-				'albert_pending_ability_missing',
+				'pending_ability_missing',
 				/* translators: %s: ability name. */
 				sprintf( __( 'The ability "%s" is no longer available, so this action cannot run.', 'albert-ai-butler' ), $action->ability_name )
 			);

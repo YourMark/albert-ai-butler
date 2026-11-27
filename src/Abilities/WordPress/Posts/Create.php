@@ -9,14 +9,17 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
-defined( 'ABSPATH' ) || exit;
-
+use Albert\Abilities\WordPress\PostFields;
+use Albert\Abilities\WordPress\PostTerms;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
 use Albert\Core\Annotations;
 use WP_Error;
 use WP_REST_Request;
+use WP_Term;
+
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Create Post Ability class
@@ -34,7 +37,7 @@ class Create extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/create-post';
 		$this->label       = __( 'Create Post', 'albert-ai-butler' );
-		$this->description = __( 'Create a new WordPress post with specified title, content, and metadata.', 'albert-ai-butler' );
+		$this->description = __( 'Create a new blog post, saved as a draft unless you set a status. To change an existing post use albert/update-post; for a page use albert/create-page.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'posts';
 
@@ -66,48 +69,50 @@ class Create extends BaseAbility {
 		// Get all available post statuses dynamically.
 		$post_statuses = array_keys( get_post_statuses() );
 
+		$properties = [
+			'title'      => [
+				'type'        => 'string',
+				'description' => 'The post title, as plain text.',
+			],
+			'content'    => [
+				'type'        => 'string',
+				'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
+				'default'     => '',
+			],
+			'blocks'     => [
+				'type'        => 'array',
+				'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'items'       => BlockSpecSchema::spec(),
+				'default'     => [],
+			],
+			'status'     => [
+				'type'        => 'string',
+				'enum'        => $post_statuses,
+				'description' => 'Publication status: "draft" (the default) saves without publishing, "pending" waits for review, "private" is visible only to editors and administrators, "publish" makes it public. To schedule, send "publish" with a future "date".',
+				'default'     => 'draft',
+			],
+			'excerpt'    => [
+				'type'        => 'string',
+				'description' => 'Short plain-text summary shown in archives and search results instead of the start of the post.',
+				'default'     => '',
+			],
+			'categories' => [
+				'type'        => 'array',
+				'items'       => [ 'type' => 'integer' ],
+				'description' => 'IDs of the categories to file the post under. Find them with albert/find-terms.',
+				'default'     => [],
+			],
+			'tags'       => [
+				'type'        => 'array',
+				'items'       => [ 'type' => 'string' ],
+				'description' => 'Tag names to add to the post. A tag that does not exist yet is created.',
+				'default'     => [],
+			],
+		];
+
 		return [
 			'type'       => 'object',
-			'properties' => [
-				'title'      => [
-					'type'        => 'string',
-					'description' => 'The post title',
-				],
-				'content'    => [
-					'type'        => 'string',
-					'description' => 'The post content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown — converted to blocks automatically. For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
-					'default'     => '',
-				],
-				'blocks'     => [
-					'type'        => 'array',
-					'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
-					'items'       => BlockSpecSchema::spec(),
-					'default'     => [],
-				],
-				'status'     => [
-					'type'        => 'string',
-					'enum'        => $post_statuses,
-					'description' => 'Post status',
-					'default'     => 'draft',
-				],
-				'excerpt'    => [
-					'type'        => 'string',
-					'description' => 'Optional post excerpt',
-					'default'     => '',
-				],
-				'categories' => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'integer' ],
-					'description' => 'Array of category IDs',
-					'default'     => [],
-				],
-				'tags'       => [
-					'type'        => 'array',
-					'items'       => [ 'type' => 'string' ],
-					'description' => 'Array of tag names',
-					'default'     => [],
-				],
-			],
+			'properties' => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ),
 			'required'   => [ 'title' ],
 		];
 	}
@@ -127,9 +132,17 @@ class Create extends BaseAbility {
 				'status'       => [ 'type' => 'string' ],
 				'permalink'    => [ 'type' => 'string' ],
 				'edit_url'     => [ 'type' => 'string' ],
+				'slug'         => [
+					'type'        => 'string',
+					'description' => 'The slug that was saved, which may carry a number WordPress added to keep it unique.',
+				],
+				'date'         => [
+					'type'        => 'string',
+					'description' => 'The publish date in the site\'s timezone. With status "future" this is when it will be published.',
+				],
 				'block_issues' => [
 					'type'        => 'array',
-					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here — they come back as a WP_Error with code "block_validation_failed" and the post is not created.',
+					'description' => 'Optional, non-fatal block validation warnings (the post was still saved). Each is an actionable message such as "content[0].attributes.level must be between 1 and 6 (got 9). Defaulting to 2.". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the post is not created.',
 					'items'       => [ 'type' => 'string' ],
 				],
 			],
@@ -161,11 +174,18 @@ class Create extends BaseAbility {
 	 *     @type string $excerpt    Post excerpt.
 	 *     @type array  $categories Category IDs.
 	 *     @type array  $tags       Tag names.
+	 *
+	 *     Plus the fields in PostFields::POST.
 	 * }
 	 * @return array<string, mixed>|WP_Error Post data on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
+		$fields = PostFields::to_rest( $args, PostFields::POST, 'post' );
+		if ( is_wp_error( $fields ) ) {
+			return $fields;
+		}
+
 		// Resolve the content to store from the content/blocks input (classic
 		// rejection, block serialization, allowed-block enforcement, issues).
 		$resolved = ( new WriteContentResolver() )->resolve( $args, 'post' );
@@ -181,27 +201,35 @@ class Create extends BaseAbility {
 			'content' => $resolved['content'],
 			'status'  => sanitize_key( $args['status'] ?? 'draft' ),
 			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
-		];
+		] + $fields;
 
-		// Add categories if provided.
 		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
-			$request_data['categories'] = array_map( 'absint', $args['categories'] );
+			$request_data['categories'] = array_map( 'intval', $args['categories'] );
+			$unknown                    = PostTerms::check_category_ids( $request_data['categories'] );
+			if ( $unknown ) {
+				return $unknown;
+			}
 		}
 
-		// REST takes tag IDs. Existing names go in with the post; new ones are
-		// created only once the post exists, so a refused save leaves no tags.
+		// Existing tags go in with the post. New ones are created only once it is
+		// saved, so a refused save leaves no stray tags.
 		$new_tags = [];
 		if ( ! empty( $args['tags'] ) && is_array( $args['tags'] ) ) {
-			$tag_ids = [];
-			foreach ( $args['tags'] as $tag_name ) {
-				$tag = get_term_by( 'name', (string) $tag_name, 'post_tag' );
-				if ( $tag ) {
-					$tag_ids[] = $tag->term_id;
-				} else {
-					$new_tags[] = sanitize_text_field( (string) $tag_name );
-				}
+			$tag_ids = PostTerms::tag_ids( $args['tags'], false );
+			if ( is_wp_error( $tag_ids ) ) {
+				return $tag_ids;
 			}
 			$request_data['tags'] = $tag_ids;
+
+			$new_tags = array_values( array_filter( $args['tags'], static fn( $name ): bool => ! get_term_by( 'name', (string) $name, 'post_tag' ) instanceof WP_Term ) );
+			$taxonomy = get_taxonomy( 'post_tag' );
+			if ( $new_tags !== [] && ( ! $taxonomy || ! current_user_can( $taxonomy->cap->assign_terms ) ) ) {
+				return new WP_Error(
+					'tag_permission_denied',
+					__( 'You may not create new tags, so the post was not created. Use existing tags only.', 'albert-ai-butler' ),
+					[ 'status' => 403 ]
+				);
+			}
 		}
 
 		// Create REST request.
@@ -221,20 +249,20 @@ class Create extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return new WP_Error(
-				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while creating the post.', 'albert-ai-butler' ),
-				[ 'status' => $response->get_status() ]
-			);
+			return self::rest_failure( $data, $response->get_status(), __( 'The post could not be created.', 'albert-ai-butler' ), 'post_permission_denied' );
 		}
 
-		// What the post editor allows: anyone who may assign tags may add new
-		// ones by name.
 		if ( $new_tags !== [] ) {
-			$tag_taxonomy = get_taxonomy( 'post_tag' );
-			if ( $tag_taxonomy && current_user_can( $tag_taxonomy->cap->assign_terms ) ) {
-				wp_set_post_tags( (int) $data['id'], $new_tags, true );
+			$created = PostTerms::tag_ids( $new_tags );
+			if ( is_wp_error( $created ) ) {
+				return new WP_Error(
+					$created->get_error_code(),
+					/* translators: %d: post ID */
+					sprintf( __( 'The post was created as ID %d, without its new tags: WordPress refused to create one of them. Add tags with albert/add-post-terms.', 'albert-ai-butler' ), (int) $data['id'] ),
+					$created->get_error_data()
+				);
 			}
+			wp_set_post_terms( (int) $data['id'], $created, 'post_tag', true );
 		}
 
 		// Return formatted post data.
@@ -244,6 +272,8 @@ class Create extends BaseAbility {
 			'status'    => $data['status'],
 			'permalink' => $data['link'] ?? get_permalink( $data['id'] ),
 			'edit_url'  => admin_url( 'post.php?post=' . $data['id'] . '&action=edit' ),
+			'slug'      => $data['slug'] ?? '',
+			'date'      => $data['date'] ?? '',
 		];
 
 		if ( ! empty( $block_issues ) ) {

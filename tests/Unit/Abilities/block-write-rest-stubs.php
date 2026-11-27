@@ -5,7 +5,7 @@
  * Records every WP_REST_Request the abilities dispatch into
  * $GLOBALS['albert_test_rest_calls'] (each entry: method, route) and returns
  * canned responses driven by $GLOBALS['albert_test_rest_responses']:
- *   - ['get']   → response for GET existence checks (Update abilities)
+ *   - ['get']   → response for GET reads
  *   - ['write'] → response for the mutating POST create/update
  * A response entry is [ 'is_error' => bool, 'data' => array, 'status' => int ].
  *
@@ -27,6 +27,21 @@ if ( ! function_exists( 'get_post_statuses' ) ) {
 			'publish' => 'Publish',
 			'pending' => 'Pending',
 			'private' => 'Private',
+		];
+	}
+}
+
+if ( ! function_exists( 'get_post_format_slugs' ) ) {
+	/**
+	 * Stub get_post_format_slugs().
+	 *
+	 * @return array<string, string>
+	 */
+	function get_post_format_slugs() {
+		return [
+			'standard' => 'standard',
+			'aside'    => 'aside',
+			'gallery'  => 'gallery',
 		];
 	}
 }
@@ -168,6 +183,15 @@ if ( ! class_exists( 'Albert_Test_REST_Server' ) ) {
 		 */
 		public function response_to_data( $response, $embed = false ) {
 			return $response->data;
+		}
+
+		/**
+		 * No routes, so a REST permission check falls back to its capability.
+		 *
+		 * @return array<string, mixed>
+		 */
+		public function get_routes() {
+			return [];
 		}
 	}
 }

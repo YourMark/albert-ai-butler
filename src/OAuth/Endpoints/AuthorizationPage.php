@@ -242,34 +242,18 @@ class AuthorizationPage implements Hookable {
 	}
 
 	/**
-	 * Header lines every page this endpoint renders sends, besides no-cache.
-	 *
-	 * DENY rather than SAMEORIGIN: nothing frames these pages, and a framed
-	 * Authorize button is a clickjack.
-	 *
-	 * @return string[] Raw header lines, for header().
-	 * @since 1.5.1
-	 */
-	public static function page_headers(): array {
-		return [
-			'Content-Type: text/html; charset=utf-8',
-			'X-Frame-Options: DENY',
-			"Content-Security-Policy: frame-ancestors 'none'",
-		];
-	}
-
-	/**
 	 * Why a request's PKCE parameters are refused, or '' when they are fine.
 	 *
-	 * Required for every client, confidential ones too (OAuth 2.1, RFC 9700):
-	 * every https client registered through DCR is confidential, so a secret
-	 * alone would otherwise protect most connections.
+	 * Every client must send an S256 challenge, confidential ones included. PKCE
+	 * binds the code to the request that asked for it, which a client secret
+	 * does not (RFC 9700 §2.1.1), and MCP's authorization spec requires it of all
+	 * clients. Checked here because league only demands it of public clients.
 	 *
-	 * @param string $code_challenge        The code challenge.
-	 * @param string $code_challenge_method The challenge method.
+	 * @param string $code_challenge        The code_challenge parameter.
+	 * @param string $code_challenge_method The code_challenge_method parameter.
 	 *
-	 * @return string The reason, translated, or ''.
-	 * @since 1.5.1
+	 * @return string
+	 * @since 1.6.0
 	 */
 	public static function pkce_problem( string $code_challenge, string $code_challenge_method ): string {
 		if ( $code_challenge === '' ) {
@@ -280,12 +264,60 @@ class AuthorizationPage implements Hookable {
 			return __( 'This site requires PKCE using the S256 code challenge method.', 'albert-ai-butler' );
 		}
 
-		// RFC 7636 §4.2.
+		// RFC 7636 §4.2. League checks this too, but only once the person has consented.
 		if ( preg_match( '/^[A-Za-z0-9\-._~]{43,128}$/', $code_challenge ) !== 1 ) {
 			return __( 'The code challenge is not valid.', 'albert-ai-butler' );
 		}
 
 		return '';
+	}
+
+	/**
+	 * Issue an authorization code for an approved request.
+	 *
+	 * The PKCE rule is checked again on what league parsed, so it holds here
+	 * whatever the caller checked: league itself accepts a confidential client
+	 * with no challenge, or with `plain`.
+	 *
+	 * @param \Albert\OAuth\Entities\ClientEntity $client                The client entity.
+	 * @param string                              $redirect_uri          The redirect URI.
+	 * @param string                              $state                 The state parameter.
+	 * @param string                              $scope                 The requested scope.
+	 * @param string                              $code_challenge        PKCE code challenge.
+	 * @param string                              $code_challenge_method PKCE challenge method.
+	 * @param int                                 $user_id               The approving user.
+	 *
+	 * @return \Psr\Http\Message\ResponseInterface The redirect carrying the code.
+	 * @throws OAuthServerException When the request is invalid or its PKCE parameters are refused.
+	 * @since 1.6.0
+	 */
+	public static function issue_code( $client, string $redirect_uri, string $state, string $scope, string $code_challenge, string $code_challenge_method, int $user_id ): \Psr\Http\Message\ResponseInterface {
+		$server = AuthorizationServerFactory::create();
+
+		$psr_request = Psr7Bridge::create_server_request( 'GET', home_url( '/oauth/authorize' ) )
+			->withQueryParams(
+				[
+					'response_type'         => 'code',
+					'client_id'             => $client->getIdentifier(),
+					'redirect_uri'          => $redirect_uri,
+					'scope'                 => $scope,
+					'state'                 => $state,
+					'code_challenge'        => $code_challenge,
+					'code_challenge_method' => $code_challenge_method,
+				]
+			);
+
+		$auth_request = $server->validateAuthorizationRequest( $psr_request );
+
+		$pkce_problem = self::pkce_problem( (string) $auth_request->getCodeChallenge(), (string) $auth_request->getCodeChallengeMethod() );
+		if ( $pkce_problem !== '' ) {
+			throw OAuthServerException::invalidRequest( 'code_challenge', $pkce_problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Escaped where it is rendered.
+		}
+
+		$auth_request->setUser( new UserEntity( $user_id ) );
+		$auth_request->setAuthorizationApproved( true );
+
+		return $server->completeAuthorizationRequest( $auth_request, Psr7Bridge::create_response() );
 	}
 
 	/**
@@ -396,31 +428,7 @@ class AuthorizationPage implements Hookable {
 
 		// User approved - generate authorization code.
 		try {
-			$server = AuthorizationServerFactory::create();
-
-			// Create a PSR-7 request with the OAuth parameters.
-			$query_params = [
-				'response_type'         => 'code',
-				'client_id'             => $client->getIdentifier(),
-				'redirect_uri'          => $redirect_uri,
-				'scope'                 => $scope,
-				'state'                 => $state,
-				'code_challenge'        => $code_challenge,
-				'code_challenge_method' => $code_challenge_method,
-			];
-
-			$psr_request = Psr7Bridge::create_server_request( 'GET', home_url( '/oauth/authorize' ) )
-				->withQueryParams( $query_params );
-
-			// Validate and complete the authorization request.
-			$auth_request = $server->validateAuthorizationRequest( $psr_request );
-			$auth_request->setUser( new UserEntity( get_current_user_id() ) );
-			$auth_request->setAuthorizationApproved( true );
-
-			$psr_response = $server->completeAuthorizationRequest(
-				$auth_request,
-				Psr7Bridge::create_response()
-			);
+			$psr_response = self::issue_code( $client, $redirect_uri, $state, $scope, $code_challenge, $code_challenge_method, get_current_user_id() );
 
 			// Record the address this connection was authorised against.
 			// Recording only: suspending a connection when the site's address
@@ -466,6 +474,41 @@ class AuthorizationPage implements Hookable {
 	}
 
 	/**
+	 * Header lines every page this endpoint renders sends, besides no-cache.
+	 *
+	 * DENY rather than core's send_frame_options_header() (SAMEORIGIN): nothing
+	 * frames the consent page, and a framed Authorize button is a clickjack.
+	 *
+	 * @return string[] Raw header lines, for header().
+	 * @since 1.6.0
+	 */
+	public static function page_headers(): array {
+		return [
+			'Content-Type: text/html; charset=utf-8',
+			'X-Frame-Options: DENY',
+			"Content-Security-Policy: frame-ancestors 'none'",
+		];
+	}
+
+	/**
+	 * Send page_headers(), no-cache and the status. Call before any output.
+	 *
+	 * @param int $status HTTP status code. Default 200.
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	private function send_page_headers( int $status = 200 ): void {
+		nocache_headers();
+
+		foreach ( self::page_headers() as $header ) {
+			header( $header );
+		}
+
+		status_header( $status );
+	}
+
+	/**
 	 * Render the consent page.
 	 *
 	 * @param \Albert\OAuth\Entities\ClientEntity $client                The client entity.
@@ -486,11 +529,7 @@ class AuthorizationPage implements Hookable {
 		$destination  = self::destination_host( $redirect_uri );
 		$age_notice   = $this->format_client_age_notice( $client );
 
-		// Start output.
-		nocache_headers();
-		foreach ( self::page_headers() as $page_header ) {
-			header( $page_header );
-		}
+		$this->send_page_headers();
 
 		$this->enqueue_oauth_styles();
 
@@ -593,11 +632,7 @@ class AuthorizationPage implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function render_error_page( string $title, string $message ): void {
-		nocache_headers();
-		foreach ( self::page_headers() as $page_header ) {
-			header( $page_header );
-		}
-		status_header( 400 );
+		$this->send_page_headers( 400 );
 
 		$this->enqueue_oauth_styles();
 
@@ -637,11 +672,7 @@ class AuthorizationPage implements Hookable {
 	 * @since 1.5.0 Takes the client, names it, and offers a way back to it.
 	 */
 	private function render_access_denied_page( \WP_User $user, $client, string $redirect_uri, string $state ): void {
-		nocache_headers();
-		foreach ( self::page_headers() as $page_header ) {
-			header( $page_header );
-		}
-		status_header( 403 );
+		$this->send_page_headers( 403 );
 
 		$this->enqueue_oauth_styles();
 
@@ -841,10 +872,7 @@ class AuthorizationPage implements Hookable {
 	 * @since 1.0.0
 	 */
 	private function render_success_page( string $redirect_url, string $client_name ): void {
-		nocache_headers();
-		foreach ( self::page_headers() as $page_header ) {
-			header( $page_header );
-		}
+		$this->send_page_headers();
 
 		$this->enqueue_oauth_styles();
 

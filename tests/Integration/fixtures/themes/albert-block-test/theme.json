@@ -1,0 +1,7 @@
+{
+	"version": 3,
+	"templateParts": [
+		{ "name": "header", "title": "Header", "area": "header" },
+		{ "name": "unused", "title": "Unused", "area": "header" }
+	]
+}

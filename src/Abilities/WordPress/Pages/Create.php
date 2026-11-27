@@ -9,14 +9,15 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
-defined( 'ABSPATH' ) || exit;
-
+use Albert\Abilities\WordPress\PostFields;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\BlockSpecSchema;
 use Albert\Blocks\WriteContentResolver;
 use Albert\Core\Annotations;
 use WP_Error;
 use WP_REST_Request;
+
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Create Page Ability class
@@ -34,7 +35,7 @@ class Create extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/create-page';
 		$this->label       = __( 'Create Page', 'albert-ai-butler' );
-		$this->description = __( 'Create a new WordPress page with specified title and content.', 'albert-ai-butler' );
+		$this->description = __( 'Create a new page (standalone content such as About or Contact, not a dated blog post), saved as a draft unless you set a status. To change an existing page use albert/update-page; for a blog post use albert/create-post.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'pages';
 
@@ -66,41 +67,38 @@ class Create extends BaseAbility {
 		// Get all available post statuses dynamically.
 		$post_statuses = array_keys( get_post_statuses() );
 
+		$properties = [
+			'title'   => [
+				'type'        => 'string',
+				'description' => 'The page title, as plain text.',
+			],
+			'content' => [
+				'type'        => 'string',
+				'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), stored as sent, or HTML (converted to blocks automatically). For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
+				'default'     => '',
+			],
+			'blocks'  => [
+				'type'        => 'array',
+				'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
+				'items'       => BlockSpecSchema::spec(),
+				'default'     => [],
+			],
+			'status'  => [
+				'type'        => 'string',
+				'enum'        => $post_statuses,
+				'description' => 'Publication status: "draft" (the default) saves without publishing, "pending" waits for review, "private" is visible only to editors and administrators, "publish" makes it public. To schedule, send "publish" with a future "date".',
+				'default'     => 'draft',
+			],
+			'excerpt' => [
+				'type'        => 'string',
+				'description' => 'Short plain-text summary shown in archives and search results instead of the start of the page.',
+				'default'     => '',
+			],
+		];
+
 		return [
 			'type'       => 'object',
-			'properties' => [
-				'title'   => [
-					'type'        => 'string',
-					'description' => 'The page title',
-				],
-				'content' => [
-					'type'        => 'string',
-					'description' => 'The page content as a string. Accepts WordPress block markup (<!-- wp:... -->), HTML, or Markdown — converted to blocks automatically. For multi-block, nested layouts prefer the structured "blocks" field instead. Ignored when "blocks" is provided.',
-					'default'     => '',
-				],
-				'blocks'  => [
-					'type'        => 'array',
-					'description' => 'Structured block specs (preferred over "content"). Each item is { "name": "core/paragraph", "attributes": { ... }, "innerBlocks": [ ... ] }; innerBlocks is the same shape recursively for layout blocks (e.g. core/columns > core/column). Put text in attributes (content/text/value) or in "plaintext". Example: [ { "name": "core/heading", "attributes": { "level": 2, "content": "Intro" } }, { "name": "core/paragraph", "attributes": { "content": "Hello world." } } ]',
-					'items'       => BlockSpecSchema::spec(),
-					'default'     => [],
-				],
-				'status'  => [
-					'type'        => 'string',
-					'enum'        => $post_statuses,
-					'description' => 'Page status',
-					'default'     => 'draft',
-				],
-				'excerpt' => [
-					'type'        => 'string',
-					'description' => 'Optional page excerpt',
-					'default'     => '',
-				],
-				'parent'  => [
-					'type'        => 'integer',
-					'description' => 'Parent page ID for hierarchical pages',
-					'default'     => 0,
-				],
-			],
+			'properties' => array_merge( $properties, PostFields::input_schema( PostFields::PAGE ) ),
 			'required'   => [ 'title' ],
 		];
 	}
@@ -120,9 +118,17 @@ class Create extends BaseAbility {
 				'status'       => [ 'type' => 'string' ],
 				'permalink'    => [ 'type' => 'string' ],
 				'edit_url'     => [ 'type' => 'string' ],
+				'slug'         => [
+					'type'        => 'string',
+					'description' => 'The slug that was saved, which may carry a number WordPress added to keep it unique.',
+				],
+				'date'         => [
+					'type'        => 'string',
+					'description' => 'The publish date in the site\'s timezone. With status "future" this is when it will be published.',
+				],
 				'block_issues' => [
 					'type'        => 'array',
-					'description' => 'Optional, non-fatal block validation warnings (the page was still saved). Each is an actionable message such as "content[0].attributes.url is required for core/image". Fatal block problems are not returned here — they come back as a WP_Error with code "block_validation_failed" and the page is not created.',
+					'description' => 'Optional, non-fatal block validation warnings (the page was still saved). Each is an actionable message such as "content[0].attributes.level must be between 1 and 6 (got 9). Defaulting to 2.". Fatal block problems are not returned here: they come back as a WP_Error with code "block_validation_failed" and the page is not created.',
 					'items'       => [ 'type' => 'string' ],
 				],
 			],
@@ -152,12 +158,18 @@ class Create extends BaseAbility {
 	 *     @type string $content Page content.
 	 *     @type string $status  Page status.
 	 *     @type string $excerpt Page excerpt.
-	 *     @type int    $parent  Parent page ID.
+	 *
+	 *     Plus the fields in PostFields::PAGE.
 	 * }
 	 * @return array<string, mixed>|WP_Error Page data on success, WP_Error on failure.
 	 * @since 1.0.0
 	 */
 	public function execute( array $args ): array|WP_Error {
+		$fields = PostFields::to_rest( $args, PostFields::PAGE, 'page' );
+		if ( is_wp_error( $fields ) ) {
+			return $fields;
+		}
+
 		// Resolve the content to store from the content/blocks input (classic
 		// rejection, block serialization, allowed-block enforcement, issues).
 		$resolved = ( new WriteContentResolver() )->resolve( $args, 'page' );
@@ -173,12 +185,7 @@ class Create extends BaseAbility {
 			'content' => $resolved['content'],
 			'status'  => sanitize_key( $args['status'] ?? 'draft' ),
 			'excerpt' => sanitize_textarea_field( $args['excerpt'] ?? '' ),
-		];
-
-		// Add parent if provided.
-		if ( ! empty( $args['parent'] ) ) {
-			$request_data['parent'] = absint( $args['parent'] );
-		}
+		] + $fields;
 
 		// Create REST request.
 		$request = new WP_REST_Request( 'POST', '/wp/v2/pages' );
@@ -197,11 +204,7 @@ class Create extends BaseAbility {
 		}
 
 		if ( $response->is_error() ) {
-			return new WP_Error(
-				$data['code'] ?? 'rest_error',
-				$data['message'] ?? __( 'An error occurred while creating the page.', 'albert-ai-butler' ),
-				[ 'status' => $response->get_status() ]
-			);
+			return self::rest_failure( $data, $response->get_status(), __( 'The page could not be created.', 'albert-ai-butler' ), 'page_permission_denied' );
 		}
 
 		// Return formatted page data.
@@ -213,6 +216,8 @@ class Create extends BaseAbility {
 			'status'    => $data['status'],
 			'permalink' => $data['link'] ?? '',
 			'edit_url'  => admin_url( 'post.php?post=' . $page_id . '&action=edit' ),
+			'slug'      => $data['slug'] ?? '',
+			'date'      => $data['date'] ?? '',
 		];
 
 		if ( ! empty( $block_issues ) ) {

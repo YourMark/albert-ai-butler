@@ -639,7 +639,7 @@ class Repository {
 				PendingAction::STATUS_FAILED,
 				(string) wp_json_encode(
 					[
-						'code'    => 'albert_run_abandoned',
+						'code'    => 'run_abandoned',
 						'message' => __( 'Approved, but the run never reported back. It may or may not have completed.', 'albert-ai-butler' ),
 					]
 				),

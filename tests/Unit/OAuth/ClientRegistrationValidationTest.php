@@ -68,7 +68,6 @@ class ClientRegistrationValidationTest extends TestCase {
 	 */
 	private function validate( string $uri ): string {
 		$method = new ReflectionMethod( ClientRegistration::class, 'validate_redirect_uri' );
-		$method->setAccessible( true );
 
 		return $method->invoke( $this->registration, $uri );
 	}
@@ -82,7 +81,6 @@ class ClientRegistrationValidationTest extends TestCase {
 	 */
 	private function requires_public( array $uris ): bool {
 		$method = new ReflectionMethod( ClientRegistration::class, 'requires_public_client' );
-		$method->setAccessible( true );
 
 		return $method->invoke( $this->registration, $uris );
 	}

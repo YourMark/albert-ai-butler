@@ -33,7 +33,7 @@ use WP_Error;
  * run directly in PHP, by WP-CLI, or by another plugin's own code is not an
  * assistant triggering it through Albert, and is left alone — that matches issue
  * 04's scope boundary and avoids blocking non-AI flows that were never the
- * threat. Below WordPress 7.1 the filter never fires, so this is inert.
+ * threat.
  *
  * @since 1.5.0
  */
@@ -101,10 +101,6 @@ class Interceptor implements Hookable {
 	/**
 	 * Bind the interceptor to the pre-execute short-circuit filter.
 	 *
-	 * Registered unconditionally: below WordPress 7.1 the filter never fires, so
-	 * this costs one array entry and stays correct, exactly like
-	 * {@see \Albert\Core\InvocationRelay}.
-	 *
 	 * @return void
 	 * @since 1.5.0
 	 */
@@ -124,6 +120,11 @@ class Interceptor implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function intercept( $pre, string $ability_name, $input, $ability ) {
+		// An earlier refusal, such as a switched-off ability, stands: approving it would run it.
+		if ( is_wp_error( $pre ) ) {
+			return $pre;
+		}
+
 		// The wrapper fires first and the real ability fires next; act on that one.
 		if ( ! $this->decision->should_intercept( $ability_name ) ) {
 			return $pre;
@@ -155,7 +156,7 @@ class Interceptor implements Hookable {
 			ConnectionGuard::announce_blocked( $protected, 'write' );
 
 			return new WP_Error(
-				'albert_protected_option',
+				'protected_option',
 				__( 'This action was not performed. It would change one of Albert\'s own safety settings, which an assistant can never change, and it cannot be approved. Only a person can change these settings, in wp-admin.', 'albert-ai-butler' )
 			);
 		}
@@ -175,7 +176,7 @@ class Interceptor implements Hookable {
 		// call is refused, never executed unattended.
 		if ( $ability->check_permissions( $resolved ) !== true ) {
 			return new WP_Error(
-				'albert_permission_denied',
+				'permission_denied',
 				__( 'You do not have permission to perform this action, so it was not queued for approval. This is a permanent denial, not a pending request.', 'albert-ai-butler' )
 			);
 		}
@@ -192,7 +193,7 @@ class Interceptor implements Hookable {
 
 		if ( ! $pending->is_stored() ) {
 			return new WP_Error(
-				'albert_hold_failed',
+				'hold_failed',
 				__( 'This action was not performed. This site holds destructive changes for a person to approve first, but the request could not be recorded, so nothing is waiting for approval. Ask the site owner to check that Albert is installed correctly; retrying will not help until then.', 'albert-ai-butler' ),
 				[ 'status' => 500 ]
 			);

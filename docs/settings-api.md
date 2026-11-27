@@ -125,7 +125,7 @@ wp_enqueue_style( 'my-screen', $url, [ 'albert-primitives' ], $version );
 Use the literal handle, not `Albert\Admin\Assets::PRIMITIVES_HANDLE`, so an
 older Albert without that class cannot fatal your plugin. Every token and
 primitive is listed in `docs/design-system.md`; the add-on contract, including
-menu ordering, is in `.claude/CLAUDE.md`.
+menu ordering, is in `.claude/skills/albert-hooks/SKILL.md`.
 
 Rendering your own `add_settings_error()` notices on a custom admin page under
 the Albert menu? Use `Albert\Admin\Notices::render( $group )` rather than

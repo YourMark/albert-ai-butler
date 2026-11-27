@@ -62,7 +62,6 @@ class AuthorizationPageTest extends TestCase {
 	 */
 	private function read( string $key, string $default_value = '', bool $verbatim = false ): string {
 		$method = new ReflectionMethod( AuthorizationPage::class, 'read_oauth_param' );
-		$method->setAccessible( true );
 
 		return $method->invoke( new AuthorizationPage(), $key, $default_value, $verbatim );
 	}
@@ -177,17 +176,17 @@ class AuthorizationPageTest extends TestCase {
 	}
 
 	/**
-	 * PKCE with S256 and a well-formed challenge is required for every client.
+	 * A missing challenge is refused whatever the client type; only S256 passes.
 	 *
 	 * @return void
 	 */
 	public function test_pkce_is_required_with_s256(): void {
-		$challenge = str_repeat( 'a', 43 );
-
-		$this->assertSame( '', AuthorizationPage::pkce_problem( $challenge, 'S256' ) );
-		$this->assertNotSame( '', AuthorizationPage::pkce_problem( '', '' ) );
-		$this->assertNotSame( '', AuthorizationPage::pkce_problem( $challenge, 'plain' ) );
-		$this->assertNotSame( '', AuthorizationPage::pkce_problem( 'short', 'S256' ) );
+		$this->assertSame( '', AuthorizationPage::pkce_problem( 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM', 'S256' ) );
+		$this->assertStringContainsString( 'must use PKCE', AuthorizationPage::pkce_problem( '', '' ) );
+		$this->assertStringContainsString( 'must use PKCE', AuthorizationPage::pkce_problem( '', 'S256' ) );
+		$this->assertStringContainsString( 'S256', AuthorizationPage::pkce_problem( 'challenge', 'plain' ) );
+		$this->assertStringContainsString( 'S256', AuthorizationPage::pkce_problem( 'challenge', '' ) );
+		$this->assertStringContainsString( 'not valid', AuthorizationPage::pkce_problem( 'too-short', 'S256' ) );
 	}
 
 	/**

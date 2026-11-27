@@ -19,7 +19,6 @@ use Albert\SafeMode\InputPresenter;
 use Albert\SafeMode\PendingAction;
 use Albert\SafeMode\Repository;
 use Albert\SafeMode\TargetResolver;
-use Albert\Support\WpCompat;
 
 /**
  * The wp-admin queue where a person approves or rejects the destructive actions
@@ -178,7 +177,7 @@ class Approvals implements Hookable {
 
 		// A lost race (another tab/retry got there first) is not a failure and did
 		// not run anything: show the "no longer waiting" notice, not an error.
-		if ( is_wp_error( $result ) && $result->get_error_code() === 'albert_already_handled' ) {
+		if ( is_wp_error( $result ) && $result->get_error_code() === 'already_handled' ) {
 			$this->redirect_with_notice( 'gone' );
 		}
 
@@ -234,7 +233,6 @@ class Approvals implements Hookable {
 		echo '<hr class="wp-header-end">';
 
 		$this->render_notice( $just );
-		$this->render_unenforceable_notice();
 
 		if ( $focus !== '' && ! $this->has_open_action( $open, $focus ) ) {
 			echo '<div class="notice notice-info"><p>'
@@ -822,37 +820,6 @@ class Approvals implements Hookable {
 	}
 
 	/**
-	 * Say plainly when nothing can be held, whatever the setting says.
-	 *
-	 * Without this, a site below WordPress 7.1 shows "Nothing is waiting for
-	 * approval" while every destructive call runs unattended. An empty queue is
-	 * the most convincing false reassurance this screen can give, because it
-	 * reads as proof the gate is working.
-	 *
-	 * @return void
-	 * @since 1.5.0
-	 */
-	private function render_unenforceable_notice(): void {
-		if ( WpCompat::supports_execution_lifecycle() ) {
-			return;
-		}
-
-		echo '<div class="notice notice-error"><p><strong>'
-			. esc_html__( 'Nothing can be held on this site yet.', 'albert-ai-butler' )
-			. '</strong> '
-			. esc_html(
-				sprintf(
-					/* translators: %s: the WordPress version this site is running. */
-					__( 'Safe mode needs WordPress 7.1, which added the check it relies on. This site runs %s, so destructive actions an assistant requests are carried out immediately and this queue stays empty.', 'albert-ai-butler' ),
-					get_bloginfo( 'version' )
-				)
-			)
-			. ' <a href="' . esc_url( admin_url( 'update-core.php' ) ) . '">'
-			. esc_html__( 'Update WordPress', 'albert-ai-butler' )
-			. '</a></p></div>';
-	}
-
-	/**
 	 * Whether a given action id is present among the open actions.
 	 *
 	 * @param list<PendingAction> $open      Open actions.
@@ -948,7 +915,7 @@ class Approvals implements Hookable {
 
 	/**
 	 * A `<time>` element for a stored UTC datetime, machine-readable and relative,
-	 * or a plain dash when there is none. Escapes its own output.
+	 * or nothing when there is none. Escapes its own output.
 	 *
 	 * @param string|null $mysql_datetime UTC MySQL datetime, or null.
 	 *
@@ -957,7 +924,7 @@ class Approvals implements Hookable {
 	 */
 	private function time_tag( ?string $mysql_datetime ): string {
 		if ( $mysql_datetime === null ) {
-			return '—';
+			return '';
 		}
 
 		$timestamp = strtotime( $mysql_datetime . ' UTC' );

@@ -238,7 +238,7 @@ class BlockMarkdown {
 		}
 		if ( $citation !== '' ) {
 			$lines[] = '>';
-			$lines[] = '> — ' . $citation;
+			$lines[] = '> ' . $citation;
 		}
 
 		return implode( "\n", $lines );

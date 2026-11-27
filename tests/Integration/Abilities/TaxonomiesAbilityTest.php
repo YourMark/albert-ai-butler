@@ -884,6 +884,31 @@ class TaxonomiesAbilityTest extends TestCase {
 	}
 
 	/**
+	 * DeleteTerm deletes without `force`: terms have no trash, so core would refuse a soft delete.
+	 *
+	 * @return void
+	 */
+	public function test_delete_term_without_force_deletes(): void {
+		foreach ( [ [], [ 'force' => false ] ] as $extra ) {
+			$term_id = self::factory()->term->create( [ 'taxonomy' => 'post_tag' ] );
+
+			$result = ( new DeleteTerm() )->execute(
+				array_merge(
+					[
+						'taxonomy' => 'post_tag',
+						'id'       => $term_id,
+					],
+					$extra
+				)
+			);
+
+			$this->assertIsArray( $result );
+			$this->assertTrue( $result['deleted'] );
+			$this->assertNull( get_term( $term_id, 'post_tag' ) );
+		}
+	}
+
+	/**
 	 * ViewTerm reaches only taxonomies core exposes over REST.
 	 *
 	 * @return void

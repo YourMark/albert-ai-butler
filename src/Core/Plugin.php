@@ -11,21 +11,26 @@ namespace Albert\Core;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\CLI\Commands;
 use Albert\Abilities\WordPress\Posts\FindPosts;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
 use Albert\Abilities\WordPress\Posts\EditBlock as EditPostBlock;
+use Albert\Abilities\WordPress\Posts\ReplaceText as ReplacePostText;
 use Albert\Abilities\WordPress\Posts\AddBlock as AddPostBlock;
 use Albert\Abilities\WordPress\Posts\RemoveBlock as RemovePostBlock;
 use Albert\Abilities\WordPress\Posts\MoveBlock as MovePostBlock;
+use Albert\Abilities\WordPress\Posts\AddTerms as AddPostTerms;
+use Albert\Abilities\WordPress\Posts\RemoveTerms as RemovePostTerms;
 use Albert\Abilities\WordPress\Pages\FindPages;
 use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Pages\Create as CreatePage;
 use Albert\Abilities\WordPress\Pages\Update as UpdatePage;
 use Albert\Abilities\WordPress\Pages\Delete as DeletePage;
 use Albert\Abilities\WordPress\Pages\EditBlock as EditPageBlock;
+use Albert\Abilities\WordPress\Pages\ReplaceText as ReplacePageText;
 use Albert\Abilities\WordPress\Pages\AddBlock as AddPageBlock;
 use Albert\Abilities\WordPress\Pages\RemoveBlock as RemovePageBlock;
 use Albert\Abilities\WordPress\Pages\MoveBlock as MovePageBlock;
@@ -39,6 +44,8 @@ use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
 use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
+use Albert\Abilities\WordPress\Media\UpdateMedia;
+use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Blocks\GetBlockType;
 use Albert\Abilities\WordPress\Blocks\ListBlockTypes;
 use Albert\Abilities\WordPress\Blocks\FindPatterns;
@@ -47,6 +54,26 @@ use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
 use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Skills\GetSkill;
+use Albert\Abilities\WordPress\Menus\FindMenus;
+use Albert\Abilities\WordPress\Menus\ViewMenu;
+use Albert\Abilities\WordPress\Menus\CreateMenu;
+use Albert\Abilities\WordPress\Menus\DeleteMenu;
+use Albert\Abilities\WordPress\Menus\AddMenuItem;
+use Albert\Abilities\WordPress\Menus\UpdateMenuItem;
+use Albert\Abilities\WordPress\Menus\MoveMenuItem;
+use Albert\Abilities\WordPress\Menus\RemoveMenuItem;
+use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
+use Albert\Abilities\WordPress\Menus\UnassignMenuLocation;
+use Albert\Abilities\WordPress\Comments\FindComments;
+use Albert\Abilities\WordPress\Comments\ViewComment;
+use Albert\Abilities\WordPress\Comments\ReplyToComment;
+use Albert\Abilities\WordPress\Comments\ModerateComment;
+use Albert\Abilities\WordPress\Comments\DeleteComment;
+use Albert\Abilities\WordPress\Search\SearchContent;
+use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
+use Albert\Abilities\WordPress\Revisions\FindRevisions;
+use Albert\Abilities\WordPress\Revisions\ViewRevision;
+use Albert\Abilities\WordPress\Revisions\RestoreRevision;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
 use Albert\Abilities\WordPress\Taxonomies\FindTerms;
 use Albert\Abilities\WordPress\Taxonomies\ViewTerm;
@@ -79,6 +106,7 @@ use Albert\Cron\PendingActionSweep;
 use Albert\Cron\TokenCleanup;
 use Albert\Database\Installer as DatabaseInstaller;
 use Albert\Logging\Logger;
+use Albert\Logging\ExecutionObserver;
 use Albert\Logging\Repository as LoggingRepository;
 use Albert\MCP\AdapterHealth as McpAdapterHealth;
 use Albert\MCP\Server as McpServer;
@@ -92,6 +120,9 @@ use Albert\Admin\Rest\ConnectController;
 use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
 use Albert\OAuth\DiscoveryHealth;
+use Albert\OAuth\PasswordChange;
+use Albert\OAuth\UserDeletion;
+use Albert\Privacy\ConnectedResultRedactor;
 use Albert\Privacy\PrivacyMode;
 use Albert\Execution\InterceptorDecision;
 use Albert\SafeMode\Gate as SafeModeGate;
@@ -195,19 +226,25 @@ class Plugin {
 		// One-time cleanup of legacy options on upgrade from pre-1.1.0 installs.
 		$this->maybe_cleanup_legacy_options();
 
-		// Initialize the logging system (hooks wp_after_execute_ability).
+		// Initialize the logging system.
 		$logging_repository = new LoggingRepository();
 		$logger             = new Logger( $logging_repository );
 		$logger->register_hooks();
+
+		// Logs every call over a connection once core has decided its outcome,
+		// whichever plugin owns the ability.
+		( new ExecutionObserver( $logger ) )->register_hooks();
+
+		// Privacy mode for every ability an assistant calls, whichever plugin owns it.
+		( new ConnectedResultRedactor() )->register_hooks();
 
 		// Relay WP 7.1's wp_ability_invoked onto albert/abilities/invoked. No
 		// consumers in Free; this is the seam Premium's activity log binds to.
 		( new InvocationRelay() )->register_hooks();
 
 		// Safe mode: hold assistant-initiated destructive (or unannotated) ability
-		// calls for a person to approve. Bound to WP 7.1's wp_pre_execute_ability;
-		// inert below 7.1, where that filter never fires. Not admin-only — the
-		// gate runs on MCP requests.
+		// calls for a person to approve. Bound to wp_pre_execute_ability. Not
+		// admin-only: the gate runs on MCP requests.
 		$safe_mode_repository = new SafeModeRepository();
 		( new SafeModeInterceptor(
 			new InterceptorDecision(),
@@ -228,6 +265,11 @@ class Plugin {
 		// Albert active before this cron was introduced and never re-activate.
 		( new AllowedUserExpiry() )->register_hooks();
 		AllowedUserExpiry::schedule();
+
+		( new PasswordChange() )->register_hooks();
+		( new UserDeletion() )->register_hooks();
+
+		Commands::register();
 
 		// Daily cleanup of expired OAuth token rows. Same self-healing reason.
 		( new TokenCleanup() )->register_hooks();
@@ -356,15 +398,39 @@ class Plugin {
 	}
 
 	/**
-	 * Register built-in abilities.
+	 * Set up the abilities manager; the abilities themselves wait for the Abilities API.
+	 *
+	 * Autoloading some 50 ability classes is the cost, so they are built on
+	 * `wp_abilities_api_init`, which WordPress fires once, on the first read of
+	 * the registry. A plain frontend request never reads it.
 	 *
 	 * @return void
 	 * @since 1.0.0
+	 * @since 1.6.0 Builds no abilities; see {@see self::build_abilities()}.
 	 */
 	public function register_abilities(): void {
-		// Initialize abilities manager.
 		$this->abilities_manager = new AbilitiesManager();
+		$this->abilities_manager->register_hooks();
 
+		// Something read the registry earlier in `init`. WordPress no longer
+		// accepts registrations, but the manager still needs its instances
+		// for labels and counts.
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$this->build_abilities();
+			return;
+		}
+
+		// Before the manager hands them to WordPress at 10.
+		add_action( 'wp_abilities_api_init', [ $this, 'build_abilities' ], 5 );
+	}
+
+	/**
+	 * Build the built-in abilities and let add-ons add theirs.
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	public function build_abilities(): void {
 		// Posts abilities.
 		$this->abilities_manager->add_ability( new FindPosts() );
 		$this->abilities_manager->add_ability( new ViewPost() );
@@ -377,6 +443,9 @@ class Plugin {
 		$this->abilities_manager->add_ability( new AddPostBlock() );
 		$this->abilities_manager->add_ability( new RemovePostBlock() );
 		$this->abilities_manager->add_ability( new MovePostBlock() );
+		$this->abilities_manager->add_ability( new AddPostTerms() );
+		$this->abilities_manager->add_ability( new RemovePostTerms() );
+		$this->abilities_manager->add_ability( new ReplacePostText() );
 
 		// Pages abilities.
 		$this->abilities_manager->add_ability( new FindPages() );
@@ -390,6 +459,7 @@ class Plugin {
 		$this->abilities_manager->add_ability( new AddPageBlock() );
 		$this->abilities_manager->add_ability( new RemovePageBlock() );
 		$this->abilities_manager->add_ability( new MovePageBlock() );
+		$this->abilities_manager->add_ability( new ReplacePageText() );
 
 		// Users abilities.
 		$this->abilities_manager->add_ability( new FindUsers() );
@@ -402,6 +472,8 @@ class Plugin {
 		$this->abilities_manager->add_ability( new FindMedia() );
 		$this->abilities_manager->add_ability( new ViewMedia() );
 		$this->abilities_manager->add_ability( new UploadMedia() );
+		$this->abilities_manager->add_ability( new UpdateMedia() );
+		$this->abilities_manager->add_ability( new DeleteMedia() );
 		$this->abilities_manager->add_ability( new CreateUploadLink() );
 		$this->abilities_manager->add_ability( new SetFeaturedImage() );
 
@@ -413,6 +485,24 @@ class Plugin {
 		$this->abilities_manager->add_ability( new UpdateTerm() );
 		$this->abilities_manager->add_ability( new DeleteTerm() );
 
+		// Comment abilities.
+		$this->abilities_manager->add_ability( new FindComments() );
+		$this->abilities_manager->add_ability( new ViewComment() );
+		$this->abilities_manager->add_ability( new ReplyToComment() );
+		$this->abilities_manager->add_ability( new ModerateComment() );
+		$this->abilities_manager->add_ability( new DeleteComment() );
+
+		// Search across post types.
+		$this->abilities_manager->add_ability( new SearchContent() );
+
+		// Site Health (read only).
+		$this->abilities_manager->add_ability( new ViewSiteHealth() );
+
+		// Revision abilities.
+		$this->abilities_manager->add_ability( new FindRevisions() );
+		$this->abilities_manager->add_ability( new ViewRevision() );
+		$this->abilities_manager->add_ability( new RestoreRevision() );
+
 		// Block abilities (block type discovery).
 		$this->abilities_manager->add_ability( new ListBlockTypes() );
 		$this->abilities_manager->add_ability( new GetBlockType() );
@@ -423,6 +513,18 @@ class Plugin {
 		$this->abilities_manager->add_ability( new CreatePattern() );
 		$this->abilities_manager->add_ability( new UpdatePattern() );
 		$this->abilities_manager->add_ability( new DeletePattern() );
+
+		// Menu abilities: classic menus and the navigation menus a block theme shows.
+		$this->abilities_manager->add_ability( new FindMenus() );
+		$this->abilities_manager->add_ability( new ViewMenu() );
+		$this->abilities_manager->add_ability( new CreateMenu() );
+		$this->abilities_manager->add_ability( new DeleteMenu() );
+		$this->abilities_manager->add_ability( new AddMenuItem() );
+		$this->abilities_manager->add_ability( new UpdateMenuItem() );
+		$this->abilities_manager->add_ability( new MoveMenuItem() );
+		$this->abilities_manager->add_ability( new RemoveMenuItem() );
+		$this->abilities_manager->add_ability( new AssignMenuLocation() );
+		$this->abilities_manager->add_ability( new UnassignMenuLocation() );
 
 		// Returns the full text of one task guide, by slug.
 		$this->abilities_manager->add_ability( new GetSkill() );
@@ -438,34 +540,38 @@ class Plugin {
 		}
 
 		/**
-		 * Fires after built-in abilities are registered.
+		 * Fires after built-in abilities are added to the manager.
 		 *
 		 * Addon plugins hook here to register their own abilities by calling
-		 * $manager->add_ability() with a BaseAbility subclass.
+		 * $manager->add_ability() with a BaseAbility subclass. Fires on
+		 * `wp_abilities_api_init`, so not on a request that never reads the
+		 * abilities registry.
 		 *
 		 * @since 1.1.0
+		 * @since 1.6.0 Fires on `wp_abilities_api_init` instead of `init`.
 		 *
 		 * @param AbilitiesManager $manager The abilities manager instance.
 		 */
 		do_action( 'albert/abilities/register', $this->abilities_manager );
-
-		// Register abilities manager hooks.
-		$this->abilities_manager->register_hooks();
 	}
 
 	/**
-	 * Get the abilities manager instance.
+	 * Get the abilities manager, populated with every ability.
 	 *
-	 * Returns null until built-in abilities have been registered on the `init`
-	 * hook (see {@see self::register_abilities()}). Callers that run during
-	 * admin page render — well after `init` — can rely on the manager being
-	 * populated, and use it to resolve ability labels without touching the
-	 * WordPress Abilities API.
+	 * Starts the abilities registry first, which fires `wp_abilities_api_init`
+	 * if it has not fired yet and so builds the abilities.
 	 *
-	 * @return AbilitiesManager|null The abilities manager, or null if not yet built.
+	 * @return AbilitiesManager|null The abilities manager, or null before `init`.
 	 * @since 1.2.0
+	 * @since 1.6.0 Initialises the Abilities API if it has not run yet.
 	 */
 	public function get_abilities_manager(): ?AbilitiesManager {
+		// get_instance(), not wp_get_abilities(): this runs once per log row,
+		// and only the init side effect is wanted.
+		if ( $this->abilities_manager !== null ) {
+			\WP_Abilities_Registry::get_instance();
+		}
+
 		return $this->abilities_manager;
 	}
 
@@ -660,6 +766,7 @@ class Plugin {
 
 		// Unschedule the daily invitation-expiry sweep.
 		AllowedUserExpiry::unschedule();
+		UserDeletion::unschedule();
 
 		// Unschedule the daily expired-token cleanup.
 		TokenCleanup::unschedule();

@@ -9,6 +9,7 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+use Albert\Abilities\WordPress\PostTerms;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Abilities\WordPress\ProtectedContent;
@@ -109,7 +110,7 @@ class ViewPage extends BaseAbility {
 						],
 						'blocks'     => [
 							'type'        => 'array',
-							'description' => 'The page content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path }; innerBlocks is the same shape recursively. "path" (e.g. [2], [2,0]) is the block\'s address — pass it to the edit/add/remove/move-page-block abilities. Included when "blocks" is requested (default).',
+							'description' => 'The page content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path, html }; innerBlocks is the same shape recursively. "path" (e.g. [2], [2,0]) is the block\'s address: pass it to the edit/add/remove/move-page-block abilities. "html" is the saved markup of a block without inner blocks; send it back unchanged to keep the block exactly. Included when "blocks" is requested (default).',
 							'items'       => [ 'type' => 'object' ],
 						],
 						'plaintext'  => [
@@ -118,7 +119,7 @@ class ViewPage extends BaseAbility {
 						],
 						'html'       => [
 							'type'        => 'string',
-							'description' => 'Rendered HTML produced by do_blocks() — reflects dynamic/server-rendered block output. Only included when "html" is requested.',
+							'description' => 'Rendered HTML produced by do_blocks(), so it reflects dynamic/server-rendered block output. Only included when "html" is requested.',
 						],
 						'markdown'   => [
 							'type'        => 'string',
@@ -168,6 +169,7 @@ class ViewPage extends BaseAbility {
 								],
 							],
 						],
+						...PostTerms::schema(),
 					],
 				],
 			],
@@ -241,8 +243,11 @@ class ViewPage extends BaseAbility {
 					'permalink'      => get_permalink( $page ),
 					'parent_id'      => (int) $page->post_parent,
 					'menu_order'     => (int) $page->menu_order,
+					'template'       => get_page_template_slug( $page ),
+					'comment_status' => $page->comment_status,
 					'featured_image' => get_post_thumbnail_id( $page ) ? get_post_thumbnail_id( $page ) : null,
-				]
+				],
+				PostTerms::for_post( $page )
 			),
 		];
 	}

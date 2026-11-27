@@ -132,7 +132,7 @@ class FindPages extends BaseAbility {
 							],
 							'blocks'     => [
 								'type'        => 'array',
-								'description' => 'The page content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path }. "path" (e.g. [2], [2,0]) is the block\'s address — pass it to the edit/add/remove/move-page-block abilities. Included when "blocks" is requested (default).',
+								'description' => 'The page content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path, html }. "path" (e.g. [2], [2,0]) is the block\'s address: pass it to the edit/add/remove/move-page-block abilities. "html" is the saved markup of a block without inner blocks; send it back unchanged to keep the block exactly. Included when "blocks" is requested (default).',
 								'items'       => [ 'type' => 'object' ],
 							],
 							'plaintext'  => [
@@ -141,7 +141,7 @@ class FindPages extends BaseAbility {
 							],
 							'html'       => [
 								'type'        => 'string',
-								'description' => 'Rendered HTML produced by do_blocks() — reflects dynamic/server-rendered block output. Only included when "html" is requested.',
+								'description' => 'Rendered HTML produced by do_blocks(), so it reflects dynamic/server-rendered block output. Only included when "html" is requested.',
 							],
 							'markdown'   => [
 								'type'        => 'string',

@@ -41,16 +41,17 @@ class ReadAbilityFormatTest extends TestCase {
 
 		$GLOBALS['albert_test_posts'] = [
 			5 => (object) [
-				'ID'            => 5,
-				'post_type'     => 'post',
-				'post_title'    => 'Hello',
-				'post_content'  => self::MARKUP,
-				'post_excerpt'  => '',
-				'post_status'   => 'publish',
-				'post_author'   => 1,
-				'post_date'     => '2026-01-01 00:00:00',
-				'post_modified' => '2026-01-02 00:00:00',
-				'post_name'     => 'hello',
+				'ID'             => 5,
+				'post_type'      => 'post',
+				'post_title'     => 'Hello',
+				'post_content'   => self::MARKUP,
+				'post_excerpt'   => '',
+				'post_status'    => 'publish',
+				'post_author'    => 1,
+				'post_date'      => '2026-01-01 00:00:00',
+				'post_modified'  => '2026-01-02 00:00:00',
+				'post_name'      => 'hello',
+				'comment_status' => 'open',
 			],
 		];
 

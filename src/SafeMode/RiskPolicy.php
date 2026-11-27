@@ -19,9 +19,9 @@ use WP_Ability;
  * The annotation catches deletes but misses what actually compromises a
  * WordPress site: changing an administrator's email or role (account takeover),
  * creating an administrator, or writing a foundational option like `siteurl`.
- * Several of those ride on abilities annotated `destructive: false` — Albert's
- * own `update-user`/`create-user`, and any third-party ability that reuses the
- * "update"/"create" annotation preset for something that grants privileges.
+ * Several of those ride on abilities annotated `destructive: false`: any
+ * third-party ability that reuses the "update"/"create" annotation preset for
+ * something that grants privileges.
  *
  * Two layers, because a name list alone cannot see abilities it has never heard
  * of:
@@ -50,6 +50,12 @@ class RiskPolicy {
 		'albert/update-user',
 		'albert/create-user',
 		'albert/delete-user',
+		// Public the moment it is saved, and it speaks for the site.
+		'albert/reply-to-comment',
+		// Approving publishes a visitor's text on the site.
+		'albert/moderate-comment',
+		// Undoable through a new revision, but it replaces live content in one call.
+		'albert/restore-revision',
 	];
 
 	/**
@@ -137,7 +143,7 @@ class RiskPolicy {
 	 * @since 1.5.0
 	 */
 	public function must_hold( WP_Ability $ability, array $input ): bool {
-		return $this->is_held_ability( $ability->get_name() )
+		return self::is_high_risk_ability( $ability->get_name() )
 			|| $this->grants_admin_role( $input )
 			|| $this->writes_high_risk_option( $input );
 	}
@@ -171,9 +177,9 @@ class RiskPolicy {
 	 * @param string $ability_name The ability id.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.6.0
 	 */
-	private function is_held_ability( string $ability_name ): bool {
+	public static function is_high_risk_ability( string $ability_name ): bool {
 		/**
 		 * Filters the abilities safe mode always holds, regardless of annotation.
 		 *

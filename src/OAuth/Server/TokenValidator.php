@@ -12,8 +12,8 @@ namespace Albert\OAuth\Server;
 defined( 'ABSPATH' ) || exit;
 
 use Exception;
-use Albert\OAuth\Endpoints\Psr7Bridge;
 use Albert\OAuth\AllowedUsers;
+use Albert\OAuth\Endpoints\Psr7Bridge;
 use Albert\OAuth\Repositories\AccessTokenRepository;
 use Albert\OAuth\Repositories\ClientRepository;
 use League\OAuth2\Server\Exception\OAuthServerException;

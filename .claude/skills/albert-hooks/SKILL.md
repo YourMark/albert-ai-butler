@@ -1,10 +1,87 @@
-# Hooks & extension reference
+---
+name: albert-hooks
+description: Albert's public extension surface. Every albert/* action and filter, the admin asset and menu contracts, and the agent-context model. Use when adding, changing, renaming or deprecating a hook, or when building or reviewing an add-on against Albert.
+---
 
-On-demand reference for Albert Free's public extension surface. Moved out of
-CLAUDE.md to keep the always-loaded surface lean; open it when working on hooks,
-the admin asset/menu contracts, or agent context.
+# Hooks and extension reference
 
-## Extensibility Hooks
+## Registering and observing abilities
+
+Albert provides hooks for addon plugins or themes to register custom abilities, add admin pages, and observe ability execution.
+
+### Registering Custom Abilities (`albert/abilities/register`)
+
+**Action**: Fires after built-in abilities are added to the manager, on `wp_abilities_api_init` (since 1.6.0; `init` before). A request that never reads the abilities registry, such as a plain frontend view, never fires it. Addons (or themes via `functions.php`) hook here to register their own abilities by extending `BaseAbility` directly, the same pattern built-in abilities use.
+
+```php
+// In an addon plugin or theme functions.php:
+add_action( 'albert/abilities/register', function ( $manager ) {
+    $manager->add_ability( new MyCustomAbility() );
+} );
+```
+
+The `$manager` parameter is the `AbilitiesManager` instance. Custom abilities extend `Albert\Abstracts\BaseAbility` and implement `execute()` and `check_permission()`. They flow through the same admin UI, enabled/disabled toggle, and `guarded_execute()` pipeline as built-in abilities.
+
+This works from any context that adds the callback before the Abilities API initialises (at the earliest, during `init`):
+- **Addon plugins**: The recommended approach for distributing abilities.
+- **Theme `functions.php`**: Works because themes load before `init`.
+- **Must-use plugins**: Also supported.
+
+### Execution Hooks
+
+All execution hooks are wrapped in try/catch: observer errors never break ability execution.
+
+**`albert/abilities/before_execute`** (action): Fires before any ability executes. Useful for logging, rate limiting, or audit trails.
+
+```php
+add_action( 'albert/abilities/before_execute', function ( string $ability_id, array $args, int $user_id ) {
+    // Log, validate, track, etc.
+}, 10, 3 );
+```
+
+**`albert/abilities/before_execute/{ability_id}`** (action): Fires before a specific ability executes. The ability ID is appended to the hook name (e.g. `albert/abilities/before_execute/albert/create-post`).
+
+```php
+add_action( 'albert/abilities/before_execute/albert/create-post', function ( array $args, int $user_id ) {
+    // Runs only before the albert/create-post ability.
+}, 10, 2 );
+```
+
+**`albert/abilities/after_execute`** (action): Fires after any of Albert's own abilities executes, from inside its callback (before core validates the output). Receives the result (array or WP_Error).
+
+```php
+add_action( 'albert/abilities/after_execute', function ( string $ability_id, array $args, $result, int $user_id ) {
+    // Log result, send notifications, etc.
+}, 10, 4 );
+```
+
+**`albert/abilities/after_execute/{ability_id}`** (action): Fires after a specific ability executes. The ability ID is appended to the hook name (e.g. `albert/abilities/after_execute/albert/woo-find-products`).
+
+```php
+add_action( 'albert/abilities/after_execute/albert/create-post', function ( array $args, $result, int $user_id ) {
+    // Runs only after the albert/create-post ability.
+}, 10, 3 );
+```
+
+### Admin Submenu Pages (`albert/admin/submenu_pages`)
+
+**Filter**: Addon plugins can add pages to the Albert admin menu. Fires at `admin_menu` priority 15 (after abilities pages, before Settings at priority 20).
+
+```php
+add_filter( 'albert/admin/submenu_pages', function ( array $pages ) {
+    $pages[] = [
+        'slug'       => 'my-addon-settings',  // Required.
+        'callback'   => 'render_my_page',      // Required, callable.
+        'page_title' => 'My Addon',            // Optional (defaults to slug).
+        'menu_title' => 'My Addon',            // Optional (defaults to slug).
+        'capability' => 'manage_options',       // Optional (default: manage_options).
+        'position'   => 100,                   // Optional (default: 100).
+    ];
+    return $pages;
+} );
+```
+
+## Hook table
 
 All hooks follow `albert/{location}/{hook_name}` convention:
 
@@ -18,15 +95,17 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/context/skills` | filter | The skills index entries, after preconditions have been applied |
 | `albert/skills/registry` | filter | Register a skill: `slug`, `summary`, and either `file` or `body`, plus optional `requires` / `when` preconditions |
 | `albert/abilities/payload_row` | filter | Augment a normalized ability row before it reaches the Abilities screen (e.g. append `badges`). Fires on both the bulk build and single-row paths. See `docs/extending-the-abilities-screen.md` |
-| `albert/abilities/required_capability` | filter | Override the best-effort capability shown on the Abilities screen |
+| `albert/abilities/environment_policy` | filter | `( string $policy, string $environment )`, @since 1.6.0. The ability policy for this site's `WP_ENVIRONMENT_TYPE`: `toggles` (default), `read-write` (switch on every ability that declares itself read or write, not destructive) or `all`. Widens `AbilitiesState::effective()` without writing the toggles; safe mode still holds. Not called when the `ALBERT_ENVIRONMENT_ABILITIES` constant (environment type => policy) names this environment. The environment comes from `wp_get_environment_type()`, so Bedrock's `WP_ENV` works, and a value outside core's four types reads as `production`. An unknown policy from either source is ignored with a `_doing_it_wrong()` |
+| `albert/abilities/required_capability` | filter | Deprecated in 1.6.0, no effect: the Abilities screen no longer shows a capability |
 | `albert/abilities/before_execute` | action | Before any ability runs |
 | `BaseAbility::$sensitive_output_keys` | property | Not a hook, but part of the ability contract (1.4.0). Top-level result keys holding a credential. The caller receives them intact; every `after_execute` observer is handed a copy with them replaced by `[redacted]`. Observers are loggers (Albert's own writes a DB row, Premium captures the whole success payload), so a short-lived secret would otherwise outlive its own expiry in plaintext. Masks rather than drops, so a log still records the field was returned. Top-level keys only |
-| `albert/abilities/after_execute` | action | After any ability runs |
+| `albert/abilities/after_execute` | action | After any Albert ability runs (not other plugins'); the log uses `ExecutionObserver` instead |
 | `albert/abilities/before_execute/{id}` | action | Before a specific ability |
 | `albert/abilities/after_execute/{id}` | action | After a specific ability |
 | `albert/abilities/invoked` | action | Relayed from WP 7.1's `wp_ability_invoked`. Fires for EVERY invocation whatever the outcome (denied, invalid, short-circuited) and for abilities Albert does not own, which is wider than `after_execute` can see. Inert below 7.1; ask `WpCompat::supports_execution_lifecycle()`. Observer Throwables are swallowed |
 | `albert/safe_mode/high_risk_abilities` | filter | Ability ids safe mode always holds, whatever their annotation. Add-ons append their own high-risk surface |
 | `albert/safe_mode/exempt_abilities` | filter | Ability ids safe mode never holds. Wins over the high-risk list: naming an ability here is a statement about *this* site, where the risk list is a general default. A filter and not a checkbox on purpose, a deliberate act by somebody who went looking beats a click next to the thing protecting them. Excuses staging only: permissions still run and `ConnectionGuard` still refuses control-option writes |
+| `albert/safe_mode/should_hold` | filter | `( bool $hold, string $ability, array $input, int $user_id )`, since 1.6.0. Hold a call on its input, after Albert's annotation and risk axes have decided. Can add a hold, never release one: the result is OR-ed with Albert's own decision. Not called when safe mode is off or the ability is exempt |
 | `albert/safe_mode/high_risk_options` | filter | Option names treated as high-risk to *write*, so the call is held for approval. Distinct from `protected_options`, which are refused outright |
 | `albert/safe_mode/protected_options` | filter | Albert's own gate-controlling options, refused over a connection rather than held. Approving "turn safe mode off" is self-defeating, so there is no coherent way to consent to it |
 | `albert/safe_mode/retention_days` | filter | How long a decided action is kept before deletion (default 30). These rows hold each call's captured input, so keeping them forever keeps request payloads in every backup |
@@ -43,11 +122,13 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/abilities_icons` | filter | Customize category icons |
 | `albert/developer_mode` | filter | Toggle developer mode |
 | `albert/logging/enabled` | filter | Disable Free's ability log (Premium uses this) |
-| `albert/logging/outcome` | filter | `( string $status, string $ability_name, WP_Error $error ): string` — the outcome recorded for a *failed* invocation, one of `success`, `warning`, `error`. Albert classifies by its own conventions: anything ending `_not_found` (plus `not_found` / `invalid_post` / `invalid_attachment`) is a `success` — the ability ran correctly and the answer is legitimately negative; anything ending `_permission_denied` (plus `ability_invalid_permissions` / `ability_disabled` / `capability_revoked` / `rest_forbidden` / `forbidden`), or any row whose `failure_stage` is `permission`, is a `warning` — blocked by policy, nothing broke. Third-party abilities do not follow those conventions, and this is their way out. Neither `success` nor `warning` fires `albert/logging/ability_failed`; only `success` has `failure_stage` forced to NULL. See `Logging\Outcome`. Since 1.5.0 `Outcome::HELD_CODE` (`albert_awaiting_approval`, safe mode holding a call) classifies as `warning` on its own branch rather than joining `POLICY_CODES`: that set means "you may not" and "this is switched off", both final, where a hold means *not yet decided* |
+| `albert/logging/outcome` | filter | `( string $status, string $ability_name, WP_Error $error ): string`, fired only for a failed invocation. Return `success`, `warning` or `error` to correct how Albert classified a third-party code; any other value is ignored. How Albert classifies: `.claude/rules/logging.md` and `Logging\Outcome` |
 | `albert/blocks/read_block_limit` | filter | Default top-level blocks per read window (default 200; 0 = unlimited) |
 | `albert/blocks/read_max_bytes` | filter | Per-field byte cap on read text representations (default 50000) |
 | `albert/media/upload_link_max_bytes` | filter | Default byte cap for a media upload link when a caller doesn't request one; accepts an int, a float, or a php.ini-shorthand string (`"10M"`, `"2G"`) via `wp_convert_hr_to_bytes()`, clamped to `MAX_SETTABLE_MB` (2 GB); return `null` to defer to the `albert_upload_link_max_mb` option/default (10 MB). See `UploadLinkService::get_default_max_bytes_filter_state()`. Not deprecated. Since 1.4.0 `Settings\Overrides` bridges it onto the generic settings chain, so the Settings screen renders the field read-only and names this filter while it is active; the limit *enforced* still comes from here in exact bytes, not the megabyte figure the screen shows |
-| `albert/connections/allowed_user_capability` | filter | The capability a user must hold to be *offered* in the Connections screen's allowed-users picker (default `edit_posts`; `''` offers everyone). Changes who is suggested, never who may authorise: that stays the stored `albert_allowed_users` list. See `Admin\Connections::allowed_user_capability()` |
+| `albert/allowed_users/added` | action | `( int $user_id, ?int $expires_at )`. Since 1.6.0. A person was added to the allowed list, from the Connections screen, `wp albert allowed-users add` or `AllowedUsers::add()`. `$expires_at` is when the invitation lapses if unused, null for never. Fires only once the change is saved. Albert never adds anyone on its own |
+| `albert/allowed_users/removed` | action | `( int $user_id )`. Since 1.6.0. A person was removed from the allowed list: by the screen, `wp albert allowed-users remove`, `AllowedUsers::remove()`, the expiry sweep or the user being deleted. Fires only when they were on it and the change is saved. Their tokens may not be revoked yet when it fires; callers revoke after |
+| `albert/connections/allowed_user_capability` | filter | The capability a user must hold to be offered in the Connections screen's allowed-users picker and, since 1.6.0, to be added at all, by the screen or `wp albert allowed-users add` (default `edit_posts`; `''` allows everyone). Never decides who may authorise: that stays the stored `albert_allowed_users` list. See `Admin\Connections::allowed_user_capability()` |
 | `albert/mcp/adapter_notice` | filter | The message `discover-abilities` asks the assistant to pass on while the MCP Adapter plugin is missing or inactive, sent only to users who can act on it. Return `''` to send none |
 | `albert/mcp/hide_unauthorized_tools` | filter | Hide MCP tools the connected user can't execute from `tools/list`, so discovery matches what's callable (default true; false = list all, deny on call) |
 | `albert/dashboard/stats` | filter | Append tiles to the Dashboard's stat row. A tile is `[ 'label' => string, 'value' => string, 'meta' => string, 'indicator' => string ]`; `label` and `value` are escaped as text, `meta` is `wp_kses`'d down to `<a href>`, and `indicator` names a status dot (`strict`/`balanced`/`off`) rather than passing markup. Free contributes three (abilities, connections, privacy) and the grid is auto-fit, so an add-on tile becomes a fourth rather than overflowing a fixed row. See `Dashboard::render_stat_row()` |
@@ -58,21 +139,24 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/settings/value/{option_name}` | filter | The value in force for one setting, ahead of the stored option; return `null` to defer. A constant named after the option in upper case (`ALBERT_PRIVACY_MODE`) beats it. An overridden setting renders read-only on the Settings screen with a note naming the source. See `Settings\Value` and `docs/settings-api.md` |
 | `albert/settings/value_source/{option_name}` | filter | The hook or constant name reported on screen as the source of an override. For code answering the value filter on another hook's behalf, so an owner is shown the hook they actually wrote |
 | `albert/settings/validator/{option_name}` | filter | Returns `fn( $value ): bool` deciding whether an override of this setting is usable. One rejected is skipped and resolution falls through to the next layer. Declared against the OPTION, never at a call site: the Settings screen and the code reading the setting both consult it, and that is what stops the screen locking a field to a value the site is not using. See `Settings\Validators` |
-| `albert/privacy/pii_fields` | filter | Extend the anonymiser's PII allow-list, grouped by rule (`email`/`phone`/`name`/`context_name`/`postcode`/`empty`/`strip`/`redact`). A returned category REPLACES that category: read the incoming value and append to extend. See `Anonymizer` |
+| `albert/privacy/pii_fields` | filter | Extend the anonymiser's PII allow-list, grouped by rule (`email`/`phone`/`name`/`postcode`/`empty`/`strip`/`redact`, their `context_*` variants that apply only on a person record, and `person_markers`). Applies to Albert's own abilities and to `PiiPolicy::redact()`; other plugins' abilities start from the narrow `Anonymizer::essential_fields()` instead. A returned category REPLACES that category: read the incoming value and append to extend. See `Anonymizer` |
+| `albert/privacy/personal_keys` | filter | `( $keys, $ability_name )`: the keys masked in one ability's result on a connected call, grouped by rule as `pii_fields`. Albert's own (`albert/`) abilities start from the full filtered list, every other ability from email, phone, IP address, password hash and token keys only. Return the map to add keys or rules for one ability. See `ConnectedResultRedactor` |
 | `albert/privacy/payment_keys` | filter | Register payment/card keys hard-removed from every result at any depth and in every mode. Shape `[ 'keys' => [], 'prefixes' => [] ]`; empty in Free (add-ons own gateway keys). See `Anonymizer` |
-| `albert/privacy/reveal_capability` | filter | Capability gating a `reveal_personal_data` request (default `manage_options`). Consulted only when an ability passes no explicit `reveal_capability` option. See `PiiPolicy` |
+| `albert/privacy/reveal_capability` | filter | Capability a `reveal_personal_data` request needs on Balanced. On a connected call the default is `read`, so whoever may run the ability may reveal; return a stricter capability to raise that floor. In `PiiPolicy::redact()` it defaults to `manage_options` and applies only when the caller passes no `reveal_capability` option. See `PiiPolicy` |
 | `albert/activated` | action | Plugin activated |
 | `albert/deactivated` | action | Plugin deactivated |
 
-### Admin asset and menu contracts (1.4.0+)
+## Admin asset and menu contracts (1.4.0+)
 
-Add-ons that render a screen under the Albert menu depend on two published
-handles and one set of constants. All three are part of the public contract.
+Add-ons that render a screen under the Albert menu, or extend one, depend on
+these published handles and constants. All are part of the public contract.
 
 | Handle / constant | What it is |
 |---|---|
 | `albert-tokens` (`Admin\Assets::TOKENS_HANDLE`) | The design tokens. Colour, spacing, type, radius, motion. |
 | `albert-primitives` (`Admin\Assets::PRIMITIVES_HANDLE`) | The shared components. Depends on the tokens, so naming this one alone is enough. |
+| `albert-abilities-app`, `albert-skills-app`, `albert-context-app` | Each React screen's script. Depend on `albert-abilities-app` to run before the Abilities screen renders (the JS seams below). |
+| `albert-dataviews` (`Admin\Assets::DATAVIEWS_HANDLE`, 1.6.0+) | Script and stylesheet: the one shared @wordpress/dataviews build, loaded ahead of the Abilities and Skills scripts. The script is a chunk of Albert's webpack build that runs only under the `albert-runtime` script, so an add-on cannot import DataViews from it; depend on the screen script instead. The stylesheet handle predates 1.6.0. |
 | `Admin\Menu::POSITION_*` | `admin_menu` priorities that fix submenu order. Add-ons use `POSITION_ADDONS` or later so a future core screen cannot be pushed below third-party entries. |
 
 ```php
@@ -97,20 +181,9 @@ what guarantees load order for the add-on's own stylesheet.
 
 Full token and primitive reference: `docs/design-system.md`.
 
-### Agent context: array in, text out
+## Agent context
 
-`site` is **built** as a structured array and **rendered** to a compact labeled
-text block at the MCP boundary. The array is the API, filters run on it, tests
-assert its keys, the screen prices its sections. The text is the wire format,
-and it is what the Context screen's payload preview shows, byte for byte: the
-preview is `Payload::segments()`, and the wire fields are the join of those same
-segments. Never emit the array as nested JSON, and never render the payload a
-second time for display, a screen with its own opinion of what gets sent stops
-being a preview.
-
-The token estimate is script-aware, not characters ÷ 4; that shortcut was
-measured at −67% on Japanese. See `docs/context-token-budget.md` and re-check any
-change with `php bin/calibrate-token-estimator.php`.
+Filters run on the structured array; the wire text and the Context screen's preview are both built from `Payload::segments()`. The rules are in `.claude/rules/agent-context.md`.
 
 JS (client-side) seams for the Abilities DataViews screen (`@wordpress/hooks` filters):
 `albert.abilities.permissions_section` replaces the fly-in's Permissions section (its `api` exposes

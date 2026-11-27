@@ -3,13 +3,13 @@
  * Plugin Name: Albert - The AI Butler
  * Plugin URI: https://wordpress.org/plugins/albert-ai-butler/
  * Description: The easiest, safest way to connect Claude, ChatGPT and other AI assistants to WordPress, built on WordPress's own MCP Adapter.
- * Version: 1.5.1
+ * Version: 1.6.0
  * Author: Albert
  * Author URI: https://yourmark.nl
  * Text Domain: albert-ai-butler
  * Domain Path: /languages
- * Requires at least: 6.9
- * Requires PHP: 8.1
+ * Requires at least: 7.1
+ * Requires PHP: 8.2
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  *
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants.
-define( 'ALBERT_VERSION', '1.5.1' );
+define( 'ALBERT_VERSION', '1.6.0' );
 define( 'ALBERT_PLUGIN_FILE', __FILE__ );
 define( 'ALBERT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ALBERT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

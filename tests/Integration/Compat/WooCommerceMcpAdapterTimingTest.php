@@ -2,7 +2,7 @@
 /**
  * Regression test for the documented mcp-adapter / WooCommerce timing bug.
  *
- * See the root CLAUDE.md "WooCommerce mcp-adapter timing bug" section for
+ * See the "WooCommerce mcp-adapter timing bug" section of .claude/rules/mcp-adapter.md for
  * the full story. Symptom: _doing_it_wrong notices on Albert admin pages
  * when WooCommerce is active, for mcp-adapter/discover-abilities,
  * mcp-adapter/get-ability-info and mcp-adapter/execute-ability.

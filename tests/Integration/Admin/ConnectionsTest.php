@@ -584,6 +584,20 @@ class ConnectionsTest extends TestCase {
 	}
 
 	/**
+	 * Someone without the picker's capability is not added, even by a crafted request.
+	 *
+	 * @return void
+	 */
+	public function test_the_picker_does_not_add_a_user_it_would_not_offer(): void {
+		$editor     = self::factory()->user->create( [ 'role' => 'editor' ] );
+		$subscriber = self::factory()->user->create( [ 'role' => 'subscriber' ] );
+
+		$this->submit_picker( $editor . ',' . $subscriber );
+
+		$this->assertSame( [ $editor ], AllowedUsers::ids() );
+	}
+
+	/**
 	 * An id nobody owns is ignored rather than stored.
 	 *
 	 * @return void

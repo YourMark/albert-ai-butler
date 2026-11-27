@@ -383,9 +383,24 @@ class Connections implements Hookable {
 		}
 
 		$added_ids = [];
+		$already   = 0;
+		$refused   = 0;
+		$listed    = AllowedUsers::ids();
 
 		foreach ( $ids as $user_id ) {
-			if ( ! get_user_by( 'id', $user_id ) ) {
+			$user = get_user_by( 'id', $user_id );
+
+			if ( ! $user ) {
+				continue;
+			}
+
+			if ( ! self::can_be_allowed( $user ) ) {
+				++$refused;
+				continue;
+			}
+
+			if ( in_array( $user_id, $listed, true ) ) {
+				++$already;
 				continue;
 			}
 
@@ -394,18 +409,45 @@ class Connections implements Hookable {
 			}
 		}
 
-		$added   = count( $added_ids );
-		$message = $added === 0
-			? __( 'Everyone you chose could already approve an assistant, so nothing changed.', 'albert-ai-butler' )
-			: sprintf(
+		$added = count( $added_ids );
+		$parts = [];
+
+		if ( $added > 0 ) {
+			$parts[] = sprintf(
 				/* translators: %d: number of users added. */
 				_n( '%d person can now approve an assistant.', '%d people can now approve an assistant.', $added, 'albert-ai-butler' ),
 				$added
 			);
+		}
+
+		if ( $already > 0 && $added === 0 && $refused === 0 ) {
+			$parts[] = __( 'Everyone you chose could already approve an assistant, so nothing changed.', 'albert-ai-butler' );
+		} elseif ( $already > 0 ) {
+			$parts[] = sprintf(
+				/* translators: %d: number of chosen users already on the list. */
+				_n( '%d person could already approve an assistant.', '%d people could already approve an assistant.', $already, 'albert-ai-butler' ),
+				$already
+			);
+		}
+
+		if ( $refused > 0 ) {
+			$parts[] = sprintf(
+				/* translators: %d: number of users not added. */
+				_n(
+					'%d person was not added: they do not have the role needed to approve an assistant.',
+					'%d people were not added: they do not have the role needed to approve an assistant.',
+					$refused,
+					'albert-ai-butler'
+				),
+				$refused
+			);
+		}
 
 		if ( $added > 0 && ! empty( $_POST['albert_email_setup'] ) ) {
-			$message .= ' ' . $this->email_setup_links( $added_ids );
+			$parts[] = $this->email_setup_links( $added_ids );
 		}
+
+		$message = implode( ' ', $parts );
 
 		if ( $is_ajax ) {
 			if ( $added === 0 ) {
@@ -1709,7 +1751,11 @@ class Connections implements Hookable {
 						<div class="albert-setup-menu__popover" id="<?php echo esc_attr( $menu_id ); ?>-popover" popover style="position-anchor: --<?php echo esc_attr( $menu_id ); ?>">
 							<p class="albert-setup-menu__help" id="<?php echo esc_attr( $menu_id ); ?>-help"><?php esc_html_e( 'Opens the steps to connect their assistant.', 'albert-ai-butler' ); ?></p>
 							<div class="albert-setup-menu__list" id="<?php echo esc_attr( $menu_id ); ?>-menu" role="menu" aria-labelledby="<?php echo esc_attr( $menu_id ); ?>-toggle">
-								<?php if ( SetupInvite::can_send_to( $user ) ) { ?>
+								<?php
+								// Not can_send_to(): an expired invitation is when resending matters
+								// most, and the handler restarts it before sending.
+								if ( $user->user_email !== '' ) {
+									?>
 									<button type="button" class="albert-setup-menu__item albert-setup-menu__item--email" role="menuitem" tabindex="-1" data-albert-setup-email data-nonce="<?php echo esc_attr( wp_create_nonce( self::EMAIL_SETUP_ACTION . '_' . $user_id ) ); ?>">
 										<span class="dashicons dashicons-email-alt" aria-hidden="true"></span>
 										<span data-albert-setup-label>
@@ -2266,6 +2312,23 @@ class Connections implements Hookable {
 	 */
 	public static function allowed_user_capability(): string {
 		return UserPickerModal::candidate_capability();
+	}
+
+	/**
+	 * Whether a user may be put on the allowed list.
+	 *
+	 * The screen and `wp albert allowed-users add` both check this, so neither
+	 * allows someone the picker would not offer.
+	 *
+	 * @param \WP_User $user The user.
+	 *
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	public static function can_be_allowed( \WP_User $user ): bool {
+		$capability = self::allowed_user_capability();
+
+		return $capability === '' || user_can( $user, $capability );
 	}
 
 	/**

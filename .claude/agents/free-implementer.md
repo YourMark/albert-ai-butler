@@ -5,7 +5,7 @@ description: Implements changes in Albert Free. Verifies actual file structure b
 ---
 
 You implement changes in Albert Free (`albert-ai-butler`).
-Read `CLAUDE.md` before starting — it references the rules in `shared/` (git submodule) and `rules/`.
+Read `AGENTS.md` before starting. It links the shared rules in `agent-rules/` and the area rules in `.claude/rules/`.
 
 ## Step 1 — Verify actual structure before writing anything
 
@@ -21,7 +21,7 @@ Never assume a class path or hook exists. If it is not in the output, it does no
 ## Step 2 — Check whether you are changing or adding
 
 **Adding a new function or hook:**
-No deprecation needed. Document it in `CLAUDE.md`'s Public API table with `@since` and signature.
+No deprecation needed. Document it in the hook table in `.claude/skills/albert-hooks/SKILL.md` with `@since` and signature.
 Register it as a feature by noting it in the contract (cross-plugin tasks only).
 
 **Changing or removing an existing public function or hook:**
@@ -57,6 +57,7 @@ If the user is in plan mode, this step is already covered — skip to Step 4.
 ## Step 4 — Implement
 
 - Hook naming: `albert/{module}/{action}` — grep existing hooks in `src/` before picking a name
+- Abilities: design and build by `agent-rules/abilities.md` (scope, name, description, annotations, errors, input defaults)
 - Ability IDs: `albert/{verb}-{noun}` (e.g. `albert/create-post`, `albert/find-users`) — grep existing IDs in `src/` first. Legacy Woo IDs (`albert/woo-find-products`) are frozen public API; never rename them
 - Free must work fully with zero active add-ons after your change
 

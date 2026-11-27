@@ -32,15 +32,6 @@ use WP_REST_Server;
 class OAuthController implements Hookable {
 
 	/**
-	 * REST API namespace.
-	 *
-	 * @deprecated 1.0.1 Use {@see Plugin::rest_namespace()} instead.
-	 * @since      1.0.0
-	 * @var string
-	 */
-	const NAMESPACE = 'albert/v1';
-
-	/**
 	 * Register WordPress hooks.
 	 *
 	 * @return void
@@ -189,7 +180,7 @@ class OAuthController implements Hookable {
 					'[Albert] Token request rejected (%s): %s%s',
 					$e->getErrorType(),
 					$e->getMessage(),
-					$e->getHint() !== null ? ' — ' . $e->getHint() : ''
+					$e->getHint() !== null ? ' (' . $e->getHint() . ')' : ''
 				)
 			);
 		}
