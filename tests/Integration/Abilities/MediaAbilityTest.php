@@ -380,7 +380,7 @@ class MediaAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_media_not_found', $result->get_error_code() );
+		$this->assertSame( 'media_not_found', $result->get_error_code() );
 		$this->assertSame( 'Untouched', get_post_field( 'post_title', $post_id ) );
 	}
 
@@ -440,7 +440,7 @@ class MediaAbilityTest extends TestCase {
 			$this->assertInstanceOf( WP_Error::class, $refused, "{$name}: another user's file." );
 			$this->assertSame( 'media_permission_denied', $refused->get_error_code() );
 
-			// Core rewrites a permission error to "no permission", so these pass on to albert_media_not_found.
+			// Core rewrites a permission error to "no permission", so these pass on to media_not_found.
 			$this->assertTrue( $ability->check_permissions( [ 'id' => PHP_INT_MAX ] ), "{$name}: missing ID." );
 			$this->assertTrue( $ability->check_permissions( [ 'id' => self::factory()->post->create() ] ), "{$name}: post ID." );
 		}
@@ -494,7 +494,7 @@ class MediaAbilityTest extends TestCase {
 		$result = ( new DeleteMedia() )->execute( [ 'id' => $post_id ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_media_not_found', $result->get_error_code() );
+		$this->assertSame( 'media_not_found', $result->get_error_code() );
 		$this->assertNotNull( get_post( $post_id ) );
 	}
 
@@ -545,7 +545,7 @@ class MediaAbilityTest extends TestCase {
 		$result = ( new ViewMedia() )->execute( [ 'id' => 99999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_media_not_found', $result->get_error_code() );
+		$this->assertSame( 'media_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -559,7 +559,7 @@ class MediaAbilityTest extends TestCase {
 		$result = ( new ViewMedia() )->execute( [ 'id' => $post_id ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_media_not_found', $result->get_error_code() );
+		$this->assertSame( 'media_not_found', $result->get_error_code() );
 	}
 
 	// ─── SetFeaturedImage ───────────────────────────────────────────
@@ -624,7 +624,7 @@ class MediaAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -643,6 +643,6 @@ class MediaAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_media_not_found', $result->get_error_code() );
+		$this->assertSame( 'media_not_found', $result->get_error_code() );
 	}
 }

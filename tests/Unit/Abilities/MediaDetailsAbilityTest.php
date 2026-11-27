@@ -187,7 +187,7 @@ class MediaDetailsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_media_not_found', $result->get_error_code() );
+		$this->assertSame( 'media_not_found', $result->get_error_code() );
 		$this->assertSame( [], $GLOBALS['albert_test_rest_calls'] );
 	}
 
@@ -281,7 +281,7 @@ class MediaDetailsAbilityTest extends TestCase {
 		$result = ( new DeleteMedia() )->execute( [ 'id' => 8 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_media_not_found', $result->get_error_code() );
+		$this->assertSame( 'media_not_found', $result->get_error_code() );
 		$this->assertSame( [], $GLOBALS['albert_test_rest_calls'] );
 	}
 

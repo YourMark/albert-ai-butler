@@ -193,13 +193,13 @@ class LoggerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_not_found_error_inserts_with_status_success(): void {
-		$error = new WP_Error( 'albert_term_not_found', 'No such term.' );
+		$error = new WP_Error( 'term_not_found', 'No such term.' );
 
 		$this->logger->log_execution( 'albert/view-term', [ 'term_id' => 999 ], $error, 42 );
 
 		$this->assertCount( 1, $this->inserts );
 		$this->assertSame( 'success', $this->inserts[0]['status'] );
-		$this->assertSame( 'albert_term_not_found', $this->inserts[0]['error_code'] );
+		$this->assertSame( 'term_not_found', $this->inserts[0]['error_code'] );
 		$this->assertSame( 'No such term.', $this->inserts[0]['context']['error_message'] );
 	}
 
@@ -211,7 +211,7 @@ class LoggerTest extends TestCase {
 	 * @return void
 	 */
 	public function test_not_found_does_not_fire_ability_failed_action(): void {
-		$error = new WP_Error( 'albert_term_not_found', 'No such term.' );
+		$error = new WP_Error( 'term_not_found', 'No such term.' );
 
 		$this->logger->log_execution( 'albert/view-term', [ 'term_id' => 999 ], $error, 42 );
 

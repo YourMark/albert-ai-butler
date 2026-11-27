@@ -204,7 +204,7 @@ class WriteContentResolverTest extends TestCase {
 		$result = ( new WriteContentResolver() )->resolve( [ 'content' => "## Intro\n\n- one\n- two" ], 'post' );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		$this->assertSame( 'invalid_content', $result->get_error_code() );
 		$this->assertStringContainsString( '`blocks`', $result->get_error_message() );
 	}
 
@@ -212,7 +212,7 @@ class WriteContentResolverTest extends TestCase {
 		$result = ( new WriteContentResolver() )->resolve_pattern( [ 'content' => '# Pattern title' ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_content', $result->get_error_code() );
+		$this->assertSame( 'invalid_content', $result->get_error_code() );
 	}
 
 	public function test_blocks_input_skips_the_markdown_check(): void {

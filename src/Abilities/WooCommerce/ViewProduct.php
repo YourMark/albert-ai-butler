@@ -108,7 +108,7 @@ class ViewProduct extends BaseAbility {
 
 		if ( ! $product ) {
 			return new WP_Error(
-				'albert_product_not_found',
+				'product_not_found',
 				sprintf(
 					/* translators: %d: Product ID */
 					__( 'Product with ID %d not found.', 'albert-ai-butler' ),

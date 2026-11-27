@@ -119,7 +119,7 @@ class PatternAbilityTest extends TestCase {
 		$result = ( new ViewPattern( $this->catalog() ) )->execute( [ 'name' => 'no/such' ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_pattern_not_found', $result->get_error_code() );
+		$this->assertSame( 'pattern_not_found', $result->get_error_code() );
 	}
 
 	public function test_view_requires_a_name(): void {
@@ -164,6 +164,6 @@ class PatternAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_pattern_not_found', $result->get_error_code() );
+		$this->assertSame( 'pattern_not_found', $result->get_error_code() );
 	}
 }

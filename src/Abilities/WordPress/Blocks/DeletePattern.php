@@ -145,7 +145,7 @@ class DeletePattern extends BaseAbility {
 
 		if ( $pattern === null ) {
 			return new WP_Error(
-				'albert_pattern_not_found',
+				'pattern_not_found',
 				/* translators: %s: pattern name. */
 				sprintf( __( 'No pattern named "%s" is registered on this site.', 'albert-ai-butler' ), $name ),
 				[ 'status' => 404 ]

@@ -159,7 +159,7 @@ abstract class AbstractBlockEdit extends BaseAbility {
 
 		if ( ! $post || $post->post_type !== $this->post_type() ) {
 			return new WP_Error(
-				'albert_' . $this->post_type() . '_not_found',
+				$this->post_type() . '_not_found',
 				sprintf(
 					/* translators: 1: post type, 2: post ID. */
 					__( 'No %1$s found with ID %2$d.', 'albert-ai-butler' ),

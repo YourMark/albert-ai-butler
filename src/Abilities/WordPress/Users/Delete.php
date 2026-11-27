@@ -124,7 +124,7 @@ class Delete extends BaseAbility {
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
 			return new WP_Error(
-				'albert_user_not_found',
+				'user_not_found',
 				__( 'User not found.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);

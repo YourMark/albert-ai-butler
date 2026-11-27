@@ -149,7 +149,7 @@ class GetSkill extends BaseAbility {
 
 		if ( ! $skill instanceof Skill ) {
 			return new WP_Error(
-				'albert_skill_not_found',
+				'skill_not_found',
 				sprintf(
 					/* translators: 1: requested skill slug, 2: comma-separated list of available slugs, or a fallback phrase. */
 					__( 'There is no skill called "%1$s" on this site. Available: %2$s.', 'albert-ai-butler' ),

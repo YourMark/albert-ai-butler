@@ -127,7 +127,7 @@ class Logger implements Hookable {
 				 *
 				 * Does NOT fire when {@see Outcome} classifies the error as
 				 * `success` — a legitimately negative answer such as
-				 * `albert_term_not_found` — or as `warning`, a request the site refused
+				 * `term_not_found` — or as `warning`, a request the site refused
 				 * on purpose. Use `albert/logging/outcome` to change how a code
 				 * is classified.
 				 *

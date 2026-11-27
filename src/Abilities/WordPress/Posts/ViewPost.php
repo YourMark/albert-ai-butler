@@ -194,7 +194,7 @@ class ViewPost extends BaseAbility {
 
 		if ( ! $post || $post->post_type !== 'post' ) {
 			return new WP_Error(
-				'albert_post_not_found',
+				'post_not_found',
 				sprintf(
 					/* translators: %d: Post ID */
 					__( 'Post with ID %d not found.', 'albert-ai-butler' ),

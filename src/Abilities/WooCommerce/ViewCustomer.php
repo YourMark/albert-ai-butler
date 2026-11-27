@@ -116,7 +116,7 @@ class ViewCustomer extends BaseAbility {
 			$customer = new WC_Customer( $customer_id );
 		} catch ( \Exception $e ) {
 			return new WP_Error(
-				'albert_customer_not_found',
+				'customer_not_found',
 				sprintf(
 					/* translators: %d: Customer ID */
 					__( 'Customer with ID %d not found.', 'albert-ai-butler' ),
@@ -127,7 +127,7 @@ class ViewCustomer extends BaseAbility {
 
 		if ( ! $customer->get_id() ) {
 			return new WP_Error(
-				'albert_customer_not_found',
+				'customer_not_found',
 				sprintf(
 					/* translators: %d: Customer ID */
 					__( 'Customer with ID %d not found.', 'albert-ai-butler' ),

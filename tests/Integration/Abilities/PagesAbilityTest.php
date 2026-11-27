@@ -241,7 +241,7 @@ class PagesAbilityTest extends TestCase {
 		$result = ( new ViewPage() )->execute( [ 'id' => 99999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+		$this->assertSame( 'page_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -255,7 +255,7 @@ class PagesAbilityTest extends TestCase {
 		$result = ( new ViewPage() )->execute( [ 'id' => $post_id ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+		$this->assertSame( 'page_not_found', $result->get_error_code() );
 	}
 
 	// ─── CreatePage ─────────────────────────────────────────────────
@@ -338,7 +338,7 @@ class PagesAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'page_permission_denied', $result->get_error_code() );
 	}
 
 	// ─── UpdatePage ─────────────────────────────────────────────────
@@ -454,7 +454,7 @@ class PagesAbilityTest extends TestCase {
 		$result = ( new DeletePage() )->execute( [ 'id' => 99999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+		$this->assertSame( 'page_not_found', $result->get_error_code() );
 	}
 
 	/**

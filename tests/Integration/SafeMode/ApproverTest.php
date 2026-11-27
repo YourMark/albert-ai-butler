@@ -280,7 +280,7 @@ class ApproverTest extends TestCase {
 		$result = ( new Approver( $this->repository ) )->approve( $action, $approver );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_pending_ability_missing', $result->get_error_code() );
+		$this->assertSame( 'pending_ability_missing', $result->get_error_code() );
 
 		$stored = $this->repository->find( $action->action_id );
 		$this->assertInstanceOf( PendingAction::class, $stored );
@@ -305,7 +305,7 @@ class ApproverTest extends TestCase {
 		$result = ( new Approver( $this->repository ) )->approve( $action, $approver );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_pending_ability_missing', $result->get_error_code() );
+		$this->assertSame( 'pending_ability_missing', $result->get_error_code() );
 		$this->assertSame( [], $this->observed, 'The ability must not run.' );
 	}
 
@@ -384,7 +384,7 @@ class ApproverTest extends TestCase {
 		$second = $approver_service->approve( $action, $approver );
 
 		$this->assertInstanceOf( WP_Error::class, $second );
-		$this->assertSame( 'albert_already_handled', $second->get_error_code() );
+		$this->assertSame( 'already_handled', $second->get_error_code() );
 		$this->assertSame( [], $this->observed, 'The ability must not run a second time.' );
 	}
 

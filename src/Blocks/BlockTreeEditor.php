@@ -33,7 +33,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * Every public method returns the NEW tree array (the original is never mutated)
  * or a WP_Error describing why the path could not be resolved:
- *   - albert_block_path_not_found — the path is out of range or unreachable.
+ *   - block_path_not_found — the path is out of range or unreachable.
  *   - block_path_mismatch  — an `$expect`ed block name did not match the node at
  *                            the path (the post changed since it was read).
  *
@@ -441,7 +441,7 @@ class BlockTreeEditor {
 	 */
 	private function path_not_found( array $path ): WP_Error {
 		return new WP_Error(
-			'albert_block_path_not_found',
+			'block_path_not_found',
 			sprintf(
 				/* translators: %s: the path, e.g. [2,0]. */
 				__( 'No block at path %s. Re-read the post for current paths.', 'albert-ai-butler' ),

@@ -194,7 +194,7 @@ class ViewPage extends BaseAbility {
 
 		if ( ! $page || $page->post_type !== 'page' ) {
 			return new WP_Error(
-				'albert_page_not_found',
+				'page_not_found',
 				sprintf(
 					/* translators: %d: Page ID */
 					__( 'Page with ID %d not found.', 'albert-ai-butler' ),
