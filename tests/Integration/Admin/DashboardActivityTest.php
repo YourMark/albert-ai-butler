@@ -66,11 +66,9 @@ class DashboardActivityTest extends TestCase {
 		$dashboard = new Dashboard( new LoggingRepository() );
 
 		$activity = new \ReflectionMethod( $dashboard, 'get_recent_activity' );
-		$activity->setAccessible( true );
 		$activity->invoke( $dashboard );
 
 		$flag = new \ReflectionProperty( $dashboard, 'activity_truncated' );
-		$flag->setAccessible( true );
 
 		return (bool) $flag->getValue( $dashboard );
 	}

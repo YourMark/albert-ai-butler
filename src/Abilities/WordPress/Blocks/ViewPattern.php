@@ -46,7 +46,7 @@ class ViewPattern extends BaseAbility {
 
 		$this->id          = 'albert/view-pattern';
 		$this->label       = __( 'View Pattern', 'albert-ai-butler' );
-		$this->description = __( 'Read one block pattern by name, including its block markup. Reuse the markup as the basis for new content. Find pattern names with find-patterns.', 'albert-ai-butler' );
+		$this->description = __( 'Read one block pattern by name, including its block markup, to adapt it into new content. To place a pattern unchanged, send its name as `pattern` to add-post-block or add-page-block instead. Find pattern names with find-patterns.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'patterns';
 
@@ -56,10 +56,10 @@ class ViewPattern extends BaseAbility {
 		$this->meta = [
 			'mcp'         => [ 'public' => true ],
 			'annotations' => Annotations::read(
-				'The `content` is valid block markup. To reuse it as an independent copy, pass it straight to '
-				. 'create/update as the `content` field, or adapt it. If `syncStatus` is `synced` (user patterns only), '
-				. 'you can instead insert it by reference so later edits to the pattern propagate everywhere: use '
-				. '`<!-- wp:block {"ref":ID} /-->` with the pattern\'s `id`. A `registered` pattern is always a copy.'
+				'To insert this pattern unchanged, do not copy `content`: send its `name` as `pattern` to '
+				. 'albert/add-post-block or albert/add-page-block, which inserts it exactly as stored (a `synced` pattern as '
+				. 'a reference). Use `content`, valid block markup, only to adapt the pattern: change it and send it as '
+				. 'the `content` of a create or update, or as a block\'s `html`.'
 			),
 		];
 

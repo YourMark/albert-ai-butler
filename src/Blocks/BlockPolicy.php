@@ -91,6 +91,35 @@ class BlockPolicy {
 	 * @since 1.2.0
 	 */
 	public function enforce( $blocks, ?string $post_type = null, ?int $post_id = null, array $exempt_names = [] ): array {
+		$issues = [];
+
+		foreach ( $this->disallowed_names( $blocks, $post_type, $post_id, $exempt_names ) as $name ) {
+			$issues[] = [
+				'severity' => BlockSerializer::SEVERITY_ERROR,
+				'message'  => sprintf(
+					/* translators: %s: block type name, e.g. core/cover. */
+					__( "Block '%s' is not available to you on this site. Call albert/list-block-types to see the blocks you may use, then replace it.", 'albert-ai-butler' ),
+					$name
+				),
+			];
+		}
+
+		return $issues;
+	}
+
+	/**
+	 * The distinct block names in the specs the current user may not use, for a
+	 * caller that words its own refusal. Same rules as {@see enforce()}.
+	 *
+	 * @param array<int, array<string, mixed>>|mixed $blocks       Submitted block specs or parsed blocks.
+	 * @param string|null                            $post_type    Post type for the editor context.
+	 * @param int|null                               $post_id      Target post ID, null on Create.
+	 * @param array<int, string>                     $exempt_names Block names to exempt from enforcement.
+	 *
+	 * @return array<int, string> Disallowed block names (empty when all allowed or enforcement is off).
+	 * @since 1.6.0
+	 */
+	public function disallowed_names( $blocks, ?string $post_type = null, ?int $post_id = null, array $exempt_names = [] ): array {
 		/**
 		 * Filters whether write-time block enforcement is active.
 		 *
@@ -108,30 +137,16 @@ class BlockPolicy {
 			return [];
 		}
 
-		$names  = $this->collect_names( $blocks );
-		$exempt = array_flip( array_map( 'strval', $exempt_names ) );
-		$issues = [];
+		$exempt     = array_flip( array_map( 'strval', $exempt_names ) );
+		$disallowed = [];
 
-		foreach ( $names as $name ) {
-			if ( isset( $exempt[ $name ] ) ) {
-				continue;
+		foreach ( $this->collect_names( $blocks ) as $name ) {
+			if ( ! isset( $exempt[ $name ] ) && ! $this->catalog->is_allowed( $name, $post_type, $post_id ) ) {
+				$disallowed[] = $name;
 			}
-
-			if ( $this->catalog->is_allowed( $name, $post_type, $post_id ) ) {
-				continue;
-			}
-
-			$issues[] = [
-				'severity' => BlockSerializer::SEVERITY_ERROR,
-				'message'  => sprintf(
-					/* translators: %s: block type name, e.g. core/cover. */
-					__( "Block '%s' is not available to you on this site. Call albert/list-block-types to see the blocks you may use, then replace it.", 'albert-ai-butler' ),
-					$name
-				),
-			];
 		}
 
-		return $issues;
+		return $disallowed;
 	}
 
 	/**

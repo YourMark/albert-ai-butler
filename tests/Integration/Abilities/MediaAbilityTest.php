@@ -624,6 +624,7 @@ class MediaAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -642,5 +643,6 @@ class MediaAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'media_not_found', $result->get_error_code() );
 	}
 }

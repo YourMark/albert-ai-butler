@@ -11,6 +11,7 @@ namespace Albert\Core;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\CLI\Commands;
 use Albert\Abilities\WordPress\Posts\FindPosts;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
@@ -21,6 +22,8 @@ use Albert\Abilities\WordPress\Posts\ReplaceText as ReplacePostText;
 use Albert\Abilities\WordPress\Posts\AddBlock as AddPostBlock;
 use Albert\Abilities\WordPress\Posts\RemoveBlock as RemovePostBlock;
 use Albert\Abilities\WordPress\Posts\MoveBlock as MovePostBlock;
+use Albert\Abilities\WordPress\Posts\AddTerms as AddPostTerms;
+use Albert\Abilities\WordPress\Posts\RemoveTerms as RemovePostTerms;
 use Albert\Abilities\WordPress\Pages\FindPages;
 use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Pages\Create as CreatePage;
@@ -56,6 +59,8 @@ use Albert\Abilities\WordPress\Comments\ViewComment;
 use Albert\Abilities\WordPress\Comments\ReplyToComment;
 use Albert\Abilities\WordPress\Comments\ModerateComment;
 use Albert\Abilities\WordPress\Comments\DeleteComment;
+use Albert\Abilities\WordPress\Search\SearchContent;
+use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
 use Albert\Abilities\WordPress\Taxonomies\FindTerms;
 use Albert\Abilities\WordPress\Taxonomies\ViewTerm;
@@ -103,6 +108,8 @@ use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
 use Albert\OAuth\DiscoveryHealth;
 use Albert\OAuth\PasswordChange;
+use Albert\OAuth\UserDeletion;
+use Albert\Privacy\ConnectedResultRedactor;
 use Albert\Privacy\PrivacyMode;
 use Albert\Execution\InterceptorDecision;
 use Albert\SafeMode\Gate as SafeModeGate;
@@ -215,6 +222,9 @@ class Plugin {
 		// whichever plugin owns the ability.
 		( new ExecutionObserver( $logger ) )->register_hooks();
 
+		// Privacy mode for every ability an assistant calls, whichever plugin owns it.
+		( new ConnectedResultRedactor() )->register_hooks();
+
 		// Relay WP 7.1's wp_ability_invoked onto albert/abilities/invoked. No
 		// consumers in Free; this is the seam Premium's activity log binds to.
 		( new InvocationRelay() )->register_hooks();
@@ -244,6 +254,9 @@ class Plugin {
 		AllowedUserExpiry::schedule();
 
 		( new PasswordChange() )->register_hooks();
+		( new UserDeletion() )->register_hooks();
+
+		Commands::register();
 
 		// Daily cleanup of expired OAuth token rows. Same self-healing reason.
 		( new TokenCleanup() )->register_hooks();
@@ -417,6 +430,8 @@ class Plugin {
 		$this->abilities_manager->add_ability( new AddPostBlock() );
 		$this->abilities_manager->add_ability( new RemovePostBlock() );
 		$this->abilities_manager->add_ability( new MovePostBlock() );
+		$this->abilities_manager->add_ability( new AddPostTerms() );
+		$this->abilities_manager->add_ability( new RemovePostTerms() );
 		$this->abilities_manager->add_ability( new ReplacePostText() );
 
 		// Pages abilities.
@@ -463,6 +478,12 @@ class Plugin {
 		$this->abilities_manager->add_ability( new ReplyToComment() );
 		$this->abilities_manager->add_ability( new ModerateComment() );
 		$this->abilities_manager->add_ability( new DeleteComment() );
+
+		// Search across post types.
+		$this->abilities_manager->add_ability( new SearchContent() );
+
+		// Site Health (read only).
+		$this->abilities_manager->add_ability( new ViewSiteHealth() );
 
 		// Block abilities (block type discovery).
 		$this->abilities_manager->add_ability( new ListBlockTypes() );
@@ -715,6 +736,7 @@ class Plugin {
 
 		// Unschedule the daily invitation-expiry sweep.
 		AllowedUserExpiry::unschedule();
+		UserDeletion::unschedule();
 
 		// Unschedule the daily expired-token cleanup.
 		TokenCleanup::unschedule();
