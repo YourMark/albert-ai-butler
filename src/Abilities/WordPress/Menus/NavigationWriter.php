@@ -87,7 +87,7 @@ class NavigationWriter {
 				$link      = $post_type === null ? false : get_post_type_archive_link( $post_type->name );
 				if ( $post_type === null || $link === false ) {
 					return new WP_Error(
-						'albert_invalid_object_type',
+						'invalid_object_type',
 						__( 'That post type has no archive page. Send the slug of a post type with an archive, such as "post".', 'albert-ai-butler' ),
 						[ 'status' => 400 ]
 					);
@@ -148,7 +148,7 @@ class NavigationWriter {
 			$original = self::linked_title( $attrs );
 			if ( $original === null ) {
 				return new WP_Error(
-					'albert_invalid_use_original_title',
+					'invalid_use_original_title',
 					__( 'This link points at an address, not at a page or term, so it has no title of its own to use. Send "title" instead.', 'albert-ai-butler' ),
 					[ 'status' => 400 ]
 				);
@@ -217,7 +217,7 @@ class NavigationWriter {
 
 		if ( $items !== NavigationTree::items( $tree ) ) {
 			return new WP_Error(
-				'albert_menu_saved_differently',
+				'menu_saved_differently',
 				__( 'The navigation menu was saved, but it reads back differently from the change sent: WordPress altered it while saving. Call albert/view-menu to see what it holds now.', 'albert-ai-butler' ),
 				[ 'status' => 500 ]
 			);
@@ -262,7 +262,7 @@ class NavigationWriter {
 		// Core renders nothing for a link without a label.
 		if ( $label === '' ) {
 			return new WP_Error(
-				'albert_invalid_title',
+				'invalid_title',
 				isset( $args['title'] )
 					? __( 'The "title" is empty once HTML and extra spaces are removed. Send the label as plain text.', 'albert-ai-butler' )
 					: __( 'The linked item has no title, and a navigation link without a label is not shown. Send "title".', 'albert-ai-butler' ),

@@ -53,7 +53,7 @@ class MenuSupport {
 
 		if ( ! $menu instanceof WP_Term ) {
 			return new WP_Error(
-				'albert_menu_not_found',
+				'menu_not_found',
 				__( 'No classic menu has that ID. Call albert/find-menus to list them.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
@@ -75,7 +75,7 @@ class MenuSupport {
 
 		if ( ! $post instanceof WP_Post || $post->post_type !== 'wp_navigation' || $post->post_status === 'trash' ) {
 			return new WP_Error(
-				'albert_menu_not_found',
+				'menu_not_found',
 				__( 'No navigation menu has that ID. Call albert/find-menus to list them.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
@@ -97,7 +97,7 @@ class MenuSupport {
 
 		if ( ! $post instanceof WP_Post || $post->post_type !== 'nav_menu_item' ) {
 			return new WP_Error(
-				'albert_menu_item_not_found',
+				'menu_item_not_found',
 				__( 'No menu item has that ID. Call albert/view-menu to see a menu\'s items.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
@@ -122,7 +122,7 @@ class MenuSupport {
 
 		if ( $clean === '' ) {
 			return new WP_Error(
-				'albert_invalid_url',
+				'invalid_url',
 				__( 'The "url" is not an address WordPress allows in a link. Send a web address such as https://example.com/page, a path such as /contact, or a mailto: or tel: link.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -148,7 +148,7 @@ class MenuSupport {
 
 		if ( ! $post instanceof WP_Post || ( $post_type !== '' && $post->post_type !== $post_type ) || ! is_post_type_viewable( $post->post_type ) ) {
 			return new WP_Error(
-				'albert_invalid_object_id',
+				'invalid_object_id',
 				__( 'No page or post visitors can open has that "object_id". Find it with albert/find-pages or albert/find-posts.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -156,7 +156,7 @@ class MenuSupport {
 
 		if ( $post->post_status !== 'publish' ) {
 			return new WP_Error(
-				'albert_invalid_object_id',
+				'invalid_object_id',
 				__( 'That page or post is not published, so visitors cannot open it. Publish it first, then add it to the menu.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -179,7 +179,7 @@ class MenuSupport {
 
 		if ( ! $term instanceof WP_Term || ! is_taxonomy_viewable( $term->taxonomy ) ) {
 			return new WP_Error(
-				'albert_invalid_object_id',
+				'invalid_object_id',
 				__( 'No category or term visitors can open has that "object_id". Find it with albert/find-terms.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -286,7 +286,7 @@ class MenuSupport {
 				implode( ', ', array_map( 'strval', array_keys( $registered ) ) )
 			);
 
-		return new WP_Error( 'albert_menu_location_not_found', $message, [ 'status' => 404 ] );
+		return new WP_Error( 'menu_location_not_found', $message, [ 'status' => 404 ] );
 	}
 
 	/**
@@ -311,7 +311,7 @@ class MenuSupport {
 		$data     = rest_get_server()->response_to_data( $response, false );
 
 		if ( $response->is_error() ) {
-			return BaseAbility::rest_failure( $data, $response->get_status(), $failure, 'albert_menu_permission_denied' );
+			return BaseAbility::rest_failure( $data, $response->get_status(), $failure, 'menu_permission_denied' );
 		}
 
 		return (array) $data;

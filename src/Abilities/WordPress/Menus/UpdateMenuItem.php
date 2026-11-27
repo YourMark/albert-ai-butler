@@ -175,7 +175,7 @@ class UpdateMenuItem extends BaseAbility {
 	public function execute( array $args ): array|WP_Error {
 		if ( isset( $args['title'] ) && ! empty( $args['use_original_title'] ) ) {
 			return new WP_Error(
-				'albert_invalid_use_original_title',
+				'invalid_use_original_title',
 				__( 'Send "title" or "use_original_title", not both.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -197,7 +197,7 @@ class UpdateMenuItem extends BaseAbility {
 			$params['title'] = sanitize_text_field( (string) $args['title'] );
 			if ( $params['title'] === '' ) {
 				return new WP_Error(
-					'albert_invalid_title',
+					'invalid_title',
 					__( 'The "title" is empty once HTML and extra spaces are removed. Send the label as plain text.', 'albert-ai-butler' ),
 					[ 'status' => 400 ]
 				);

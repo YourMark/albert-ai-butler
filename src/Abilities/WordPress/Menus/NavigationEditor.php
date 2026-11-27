@@ -81,7 +81,7 @@ class NavigationEditor {
 			$links = NavigationTree::page_list_links( (array) ( $this->blocks->find( $tree, $list_path )['attrs'] ?? [] ) );
 			if ( $links === null ) {
 				return new WP_Error(
-					'albert_page_list_too_long',
+					'page_list_too_long',
 					/* translators: %d: most pages */
 					sprintf( __( 'This page list shows more than %d pages, too many to turn into separate links. Remove the page list with albert/remove-menu-item and add the pages that matter with albert/add-menu-item.', 'albert-ai-butler' ), NavigationTree::MAX_PAGE_LIST ),
 					[ 'status' => 400 ]
@@ -193,7 +193,7 @@ class NavigationEditor {
 
 		if ( array_slice( $parent_path, 0, count( $path ) ) === $path ) {
 			return new WP_Error(
-				'albert_invalid_parent_path',
+				'invalid_parent_path',
 				__( 'An item cannot move under itself or one of its own sub-items. Choose another "parent_path".', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -280,7 +280,7 @@ class NavigationEditor {
 
 		if ( ! in_array( $node['blockName'] ?? '', [ NavigationTree::LINK, NavigationTree::SUBMENU ], true ) ) {
 			return new WP_Error(
-				'albert_invalid_path',
+				'invalid_path',
 				/* translators: %s: block name */
 				sprintf( __( 'The item at "path" is a %s block, not a link or submenu, so it has no label or link to change. The person can change it in Appearance > Editor > Navigation.', 'albert-ai-butler' ), (string) ( $node['blockName'] ?? 'freeform' ) ),
 				[ 'status' => 400 ]
@@ -304,7 +304,7 @@ class NavigationEditor {
 
 		if ( $node === null ) {
 			return new WP_Error(
-				'albert_invalid_path',
+				'invalid_path',
 				__( 'No menu item has that "path". Call albert/view-menu for the current paths.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -332,7 +332,7 @@ class NavigationEditor {
 
 		if ( $node === null || ! in_array( $name, [ NavigationTree::LINK, NavigationTree::SUBMENU ], true ) ) {
 			return new WP_Error(
-				'albert_invalid_parent_path',
+				'invalid_parent_path',
 				$name === NavigationTree::PAGE_LIST
 					? __( 'A page list adds its pages by itself and cannot hold other items. Use the path of one of its pages, or of another link, as "parent_path".', 'albert-ai-butler' )
 					: __( 'The "parent_path" must be a link or submenu in this menu, or [] for the top level. Call albert/view-menu for the current paths.', 'albert-ai-butler' ),

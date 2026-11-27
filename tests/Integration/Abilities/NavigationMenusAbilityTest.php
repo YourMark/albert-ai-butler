@@ -427,7 +427,7 @@ class NavigationMenusAbilityTest extends TestCase {
 				'parent_path' => [ 1, 0 ],
 			]
 		);
-		$this->assertSame( 'albert_invalid_parent_path', $loop->get_error_code() );
+		$this->assertSame( 'invalid_parent_path', $loop->get_error_code() );
 	}
 
 	/**
@@ -549,7 +549,7 @@ class NavigationMenusAbilityTest extends TestCase {
 				'parent_path' => [ 0 ],
 			]
 		);
-		$this->assertSame( 'albert_invalid_parent_path', $into->get_error_code() );
+		$this->assertSame( 'invalid_parent_path', $into->get_error_code() );
 	}
 
 	/**
@@ -604,7 +604,7 @@ class NavigationMenusAbilityTest extends TestCase {
 				'use_original_title' => true,
 			]
 		);
-		$this->assertSame( 'albert_invalid_use_original_title', $no_original->get_error_code() );
+		$this->assertSame( 'invalid_use_original_title', $no_original->get_error_code() );
 
 		$missing = $this->call(
 			'albert/update-menu-item',
@@ -615,7 +615,7 @@ class NavigationMenusAbilityTest extends TestCase {
 				'title'     => 'X',
 			]
 		);
-		$this->assertSame( 'albert_invalid_path', $missing->get_error_code() );
+		$this->assertSame( 'invalid_path', $missing->get_error_code() );
 	}
 
 	/**
@@ -780,10 +780,10 @@ class NavigationMenusAbilityTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'albert_invalid_url', $script->get_error_code() );
+		$this->assertSame( 'invalid_url', $script->get_error_code() );
 		$this->assertStringContainsString( 'not published', $page->get_error_message() );
-		$this->assertSame( 'albert_invalid_object_id', $itself->get_error_code(), 'A navigation menu is not a page visitors open.' );
-		$this->assertSame( 'albert_invalid_url', $retarget->get_error_code() );
+		$this->assertSame( 'invalid_object_id', $itself->get_error_code(), 'A navigation menu is not a page visitors open.' );
+		$this->assertSame( 'invalid_url', $retarget->get_error_code() );
 		$this->assertSame( $before, get_post( $main )->post_content );
 	}
 
@@ -970,7 +970,7 @@ class NavigationMenusAbilityTest extends TestCase {
 
 		remove_filter( 'rest_pre_dispatch', $refuse, 10 );
 
-		$this->assertSame( 'albert_menu_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'menu_permission_denied', $result->get_error_code() );
 		$this->assertSame( $before, get_post( $main )->post_content );
 	}
 }

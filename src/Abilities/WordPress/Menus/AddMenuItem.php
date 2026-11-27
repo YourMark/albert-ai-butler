@@ -220,7 +220,7 @@ class AddMenuItem extends BaseAbility {
 
 		if ( $parent > 0 && MenuSupport::menu_of_item( $parent ) !== $menu_id ) {
 			return new WP_Error(
-				'albert_invalid_parent_item_id',
+				'invalid_parent_item_id',
 				__( 'The "parent_item_id" must be an item in the same menu. Call albert/view-menu to see its items, or leave it out for the top level.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);
@@ -260,7 +260,7 @@ class AddMenuItem extends BaseAbility {
 			$params['title'] = sanitize_text_field( (string) $args['title'] );
 			if ( $params['title'] === '' ) {
 				return new WP_Error(
-					'albert_invalid_title',
+					'invalid_title',
 					__( 'The "title" is empty once HTML and extra spaces are removed. Send the label as plain text.', 'albert-ai-butler' ),
 					[ 'status' => 400 ]
 				);

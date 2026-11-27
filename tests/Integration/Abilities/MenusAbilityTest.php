@@ -684,8 +684,8 @@ class MenusAbilityTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'albert_invalid_title', $added->get_error_code() );
-		$this->assertSame( 'albert_invalid_title', $updated->get_error_code() );
+		$this->assertSame( 'invalid_title', $added->get_error_code() );
+		$this->assertSame( 'invalid_title', $updated->get_error_code() );
 		$this->assertSame( [ 'Keep' ], $this->titles( $this->view( $menu )['items'] ) );
 	}
 
@@ -733,10 +733,10 @@ class MenusAbilityTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'albert_invalid_url', $script->get_error_code() );
+		$this->assertSame( 'invalid_url', $script->get_error_code() );
 		$this->assertStringContainsString( 'not published', $page->get_error_message() );
-		$this->assertSame( 'albert_invalid_object_id', $term->get_error_code(), 'A menu is a term, but not one visitors can open.' );
-		$this->assertSame( 'albert_invalid_url', $update->get_error_code() );
+		$this->assertSame( 'invalid_object_id', $term->get_error_code(), 'A menu is a term, but not one visitors can open.' );
+		$this->assertSame( 'invalid_url', $update->get_error_code() );
 		$this->assertSame( [ 'Keep' ], $this->titles( $this->view( $menu )['items'] ) );
 		$this->assertSame( 'https://example.com/keep', $this->view( $menu )['items'][0]['url'] );
 	}
@@ -783,7 +783,7 @@ class MenusAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_parent_item_id', $result->get_error_code() );
+		$this->assertSame( 'invalid_parent_item_id', $result->get_error_code() );
 	}
 
 	/**
@@ -835,8 +835,8 @@ class MenusAbilityTest extends TestCase {
 				'menu_id'  => $first,
 			]
 		);
-		$this->assertSame( 'albert_menu_location_not_found', $missing->get_error_code() );
-		$this->assertSame( 'albert_menu_location_not_found', ( new UnassignMenuLocation() )->execute( [ 'location' => 'sidebar' ] )->get_error_code() );
+		$this->assertSame( 'menu_location_not_found', $missing->get_error_code() );
+		$this->assertSame( 'menu_location_not_found', ( new UnassignMenuLocation() )->execute( [ 'location' => 'sidebar' ] )->get_error_code() );
 	}
 
 	/**
@@ -866,7 +866,7 @@ class MenusAbilityTest extends TestCase {
 	 */
 	public function test_missing_menus_and_items_are_not_found(): void {
 		$this->assertSame(
-			'albert_menu_not_found',
+			'menu_not_found',
 			( new ViewMenu() )->execute(
 				[
 					'menu_id'   => 999999,
@@ -874,7 +874,7 @@ class MenusAbilityTest extends TestCase {
 				]
 			)->get_error_code()
 		);
-		$this->assertSame( 'albert_menu_item_not_found', ( new RemoveMenuItem() )->execute( [ 'menu_item_id' => 999999 ] )->get_error_code() );
+		$this->assertSame( 'menu_item_not_found', ( new RemoveMenuItem() )->execute( [ 'menu_item_id' => 999999 ] )->get_error_code() );
 	}
 
 	/**
@@ -948,7 +948,7 @@ class MenusAbilityTest extends TestCase {
 		remove_filter( 'rest_pre_dispatch', $refuse, 10 );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_menu_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'menu_permission_denied', $result->get_error_code() );
 		$this->assertStringContainsString( 'albert/move-menu-item', $result->get_error_message() );
 		$this->assertSame( [ 'First', 'Second' ], $this->titles( $this->view( $menu )['items'] ) );
 	}
