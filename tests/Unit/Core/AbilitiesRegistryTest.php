@@ -45,7 +45,6 @@ class AbilitiesRegistryTest extends TestCase {
 
 		$reflection = new ReflectionClass( AbilitiesRegistry::class );
 		$cache      = $reflection->getProperty( 'sources_cache' );
-		$cache->setAccessible( true );
 		$cache->setValue( null, null );
 	}
 

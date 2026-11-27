@@ -1,6 +1,6 @@
 # Albert
 
-![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.1+-blue)
+![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.2+-blue)
 ![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-7.1+-blue)
 ![Tested up to](https://img.shields.io/badge/Tested%20up%20to-7.1-blue)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
@@ -95,7 +95,7 @@ What an assistant can do with each plugin is decided by that plugin. Albert adds
 ## Requirements
 
 - **WordPress**: 7.1 or higher
-- **PHP**: 8.1 or higher (8.3+ recommended)
+- **PHP**: 8.2 or higher (8.3+ recommended)
 - **WooCommerce**: 11.0 or higher (if WooCommerce integration is used)
 - **MySQL**: 8.0+ or MariaDB 10.5+
 - **HTTPS**: required for OAuth
@@ -184,6 +184,7 @@ Website: https://yourmark.nl
 
 **Improvements**
 
+- Albert now requires PHP 8.2 or higher. PHP 8.1 no longer gets security fixes, so a site on it keeps the version of Albert it has.
 - The Abilities screen now labels an ability from another plugin that doesn't say whether it only reads or can change something as Not declared, instead of guessing Write, and explains what that means. Albert still treats it as one that can make changes, so safe mode holds it.
 - The Abilities screen no longer shows a "Required capability" for each ability. It was a guess from the ability's name and was wrong in places. Without Albert Premium's advanced permissions, the ability's own permission check decides, as it always did.
 - When your assistant edits a single block and the new text would lose a tag the block had, such as a ThirstyAffiliates link, Albert refuses the edit and tells the assistant to ask you first. Nothing is saved until you agree.
@@ -232,6 +233,7 @@ Website: https://yourmark.nl
 
 **Developer**
 
+- Removed the `NAMESPACE` constants from `OAuthController` and `ClientRegistration`, deprecated since 1.0.1: PHP 8.6 deprecates a class constant called `namespace`. Use `Plugin::rest_namespace()`.
 - Deprecated the `albert/abilities/required_capability` filter and `AbilitiesRegistry::resolve_required_capability()`; neither has any effect now, and the method returns an empty string. The `capability` and `capabilityRoles` keys of an Abilities screen row are always empty and will be removed in a future version.
 - Switching an ability off no longer unregisters it. Albert's MCP server leaves it out of discovery and refuses to describe or run it, and safe mode refuses to approve a held call for it. An Albert ability that an add-on refuses, such as one that needs a licence, is still unregistered.
 - `albert/abilities/disabled_list` now also applies to Albert's own abilities.

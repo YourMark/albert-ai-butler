@@ -62,7 +62,6 @@ class AuthorizationPageTest extends TestCase {
 	 */
 	private function read( string $key, string $default_value = '', bool $verbatim = false ): string {
 		$method = new ReflectionMethod( AuthorizationPage::class, 'read_oauth_param' );
-		$method->setAccessible( true );
 
 		return $method->invoke( new AuthorizationPage(), $key, $default_value, $verbatim );
 	}

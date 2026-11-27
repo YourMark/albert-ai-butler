@@ -142,7 +142,6 @@ class BlockCatalogAbilityTest extends TestCase {
 	 */
 	private function read_meta( object $ability ): array {
 		$property = new \ReflectionProperty( $ability, 'meta' );
-		$property->setAccessible( true );
 
 		return (array) $property->getValue( $ability );
 	}
