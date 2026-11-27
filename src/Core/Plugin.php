@@ -716,6 +716,7 @@ class Plugin {
 
 		// Unschedule the daily invitation-expiry sweep.
 		AllowedUserExpiry::unschedule();
+		UserDeletion::unschedule();
 
 		// Unschedule the daily expired-token cleanup.
 		TokenCleanup::unschedule();

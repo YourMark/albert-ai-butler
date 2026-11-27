@@ -8,6 +8,8 @@
 namespace Albert\Tests\Integration\OAuth;
 
 use Albert\OAuth\AllowedUsers;
+use Albert\OAuth\Server\ConnectionContext;
+use Albert\OAuth\UserDeletion;
 use Albert\Tests\TestCase;
 
 /**
@@ -27,6 +29,18 @@ class AllowedUsersTest extends TestCase {
 
 		delete_option( AllowedUsers::OPTION );
 		delete_option( AllowedUsers::EXPIRY_OPTION );
+	}
+
+	/**
+	 * No connection or deferred removal leaks into the next test.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		ConnectionContext::reset();
+		UserDeletion::unschedule();
+
+		parent::tear_down();
 	}
 
 	/**
@@ -457,5 +471,72 @@ class AllowedUsersTest extends TestCase {
 
 		$this->assertSame( [], AllowedUsers::ids() );
 		$this->assertSame( [ $user_id ], $fired );
+	}
+
+	/**
+	 * An assistant deleting a user cannot write the list, so the user leaves it on the next cron run.
+	 *
+	 * @return void
+	 */
+	public function test_deleting_a_user_over_a_connection_removes_them_from_cron(): void {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+
+		$user_id = self::factory()->user->create();
+		AllowedUsers::add( $user_id );
+
+		ConnectionContext::set( 'test-client' );
+		wp_delete_user( $user_id );
+		ConnectionContext::reset();
+
+		$this->assertSame( [ $user_id ], AllowedUsers::ids() );
+		$this->assertNotFalse( wp_next_scheduled( UserDeletion::DEFERRED_HOOK, [ $user_id ] ) );
+
+		do_action( UserDeletion::DEFERRED_HOOK, $user_id );
+
+		$this->assertSame( [], AllowedUsers::ids() );
+	}
+
+	/**
+	 * A deferred removal leaves alone someone who is still on the site.
+	 *
+	 * @return void
+	 */
+	public function test_a_deferred_removal_keeps_a_user_still_on_the_site(): void {
+		$user_id = self::factory()->user->create();
+		AllowedUsers::add( $user_id );
+
+		do_action( UserDeletion::DEFERRED_HOOK, $user_id );
+
+		$this->assertSame( [ $user_id ], AllowedUsers::ids() );
+	}
+
+	/**
+	 * On multisite, deleting a user from the network takes them off every site's list.
+	 *
+	 * @return void
+	 */
+	public function test_deleting_a_network_user_removes_them_from_every_site(): void {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite only.' );
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/ms.php';
+
+		$user_id = self::factory()->user->create();
+		$site_id = self::factory()->blog->create();
+		add_user_to_blog( $site_id, $user_id, 'editor' );
+		AllowedUsers::add( $user_id );
+
+		switch_to_blog( $site_id );
+		AllowedUsers::add( $user_id );
+		restore_current_blog();
+
+		wpmu_delete_user( $user_id );
+
+		$this->assertSame( [], AllowedUsers::ids() );
+
+		switch_to_blog( $site_id );
+		$this->assertSame( [], AllowedUsers::ids() );
+		restore_current_blog();
 	}
 }
