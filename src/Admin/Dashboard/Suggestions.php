@@ -186,6 +186,18 @@ class Suggestions {
 				'requires' => [ 'albert/find-media', 'albert/update-media' ],
 			],
 			[
+				'text'     => __( 'Are any comments waiting for approval? Tell me which look like spam.', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-comments' ],
+			],
+			[
+				'text'     => __( 'Find every page, post, pattern, header and footer that mentions our opening hours.', 'albert-ai-butler' ),
+				'requires' => [ 'albert/search-content' ],
+			],
+			[
+				'text'     => __( 'Does Site Health flag anything I should fix?', 'albert-ai-butler' ),
+				'requires' => [ 'albert/view-site-health' ],
+			],
+			[
 				'text'     => __( 'Who has administrator access to this site?', 'albert-ai-butler' ),
 				'requires' => [ 'albert/find-users' ],
 			],

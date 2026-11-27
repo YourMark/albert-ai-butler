@@ -11,6 +11,8 @@ paths:
   - "src/OAuth/AllowedUsers.php"
   - "src/OAuth/Server/DomainGuard.php"
   - "src/Cron/AllowedUserExpiry.php"
+  - "src/CLI/AllowedUsersCommand.php"
+  - "src/OAuth/UserDeletion.php"
 ---
 
 # Connections
@@ -46,3 +48,4 @@ paths:
 - The picker never lists the whole user table. It searches `/wp/v2/users` with explicit `search_columns[]` (otherwise `WP_User_Query` picks columns from what the term looks like), `capabilities[]` from `albert/connections/allowed_user_capability`, and `per_page`. Suggestions before typing are two bounded requests, administrators first, leaving out people already allowed.
 - Those parameters need `list_users`. Fine while the screen is `manage_options`; revisit if that ever narrows.
 - Removing a person revokes all their tokens. `TokenValidator` also checks the list on every request, and a password change or reset revokes too (`OAuth\PasswordChange`). A login rehash must not: core calls `wp_set_password()` for it, so never hook that.
+- `wp albert allowed-users` writes through `AllowedUsers::add()` / `remove()` like the screen, so the `albert/allowed_users/*` actions fire from every path. `remove` revokes tokens as the screen does. The CLI can do nothing the screen cannot: no per-person invitation length, `Connections::can_be_allowed()` gates both, and `add` on an expired invitation restarts it through `AllowedUsers::renew_invitation()` like "Send setup link". Nobody is ever added automatically, not even the installing administrator. Deleting a user removes them (`OAuth\UserDeletion`).

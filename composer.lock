@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c4f9447f462e6c8fae4a5f0345b5770f",
+    "content-hash": "a43d753254ae9e80f96b5af7d7a23aba",
     "packages": [
         {
             "name": "automattic/jetpack-autoloader",
@@ -1842,7 +1842,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-31T19:09:43+00:00"
+            "time": "2026-08-31T19:09:43+00:00",
+            "published-time": "2026-08-31T19:09:59+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -3597,11 +3598,11 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=8.1"
+        "php": ">=8.2"
     },
     "platform-dev": {},
     "platform-overrides": {
-        "php": "8.1"
+        "php": "8.2"
     },
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.11.0"
 }

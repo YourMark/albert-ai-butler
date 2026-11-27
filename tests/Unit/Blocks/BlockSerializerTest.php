@@ -1199,7 +1199,15 @@ class BlockSerializerTest extends TestCase {
 	}
 
 	public function test_a_supported_attribute_passes_the_guard(): void {
-		albert_test_register_block_type( 'core/paragraph', false, [], [ 'className' => false, 'color' => [ 'background' => true ] ] );
+		albert_test_register_block_type(
+			'core/paragraph',
+			false,
+			[],
+			[
+				'className' => false,
+				'color'     => [ 'background' => true ],
+			]
+		);
 
 		$result = $this->serializer->serialize_with_issues(
 			[
@@ -1217,7 +1225,17 @@ class BlockSerializerTest extends TestCase {
 	}
 
 	public function test_a_skipped_support_the_template_does_not_write_fails_the_write(): void {
-		albert_test_register_block_type( 'core/spacer', false, [], [ 'spacing' => [ 'margin' => true, '__experimentalSkipSerialization' => true ] ] );
+		albert_test_register_block_type(
+			'core/spacer',
+			false,
+			[],
+			[
+				'spacing' => [
+					'margin'                          => true,
+					'__experimentalSkipSerialization' => true,
+				],
+			]
+		);
 
 		$result = $this->serializer->serialize_with_issues(
 			[
@@ -1348,7 +1366,16 @@ class BlockSerializerTest extends TestCase {
 	}
 
 	public function test_a_text_change_next_to_unchanged_html_is_refused(): void {
-		albert_test_register_block_type( 'core/paragraph', false, [ 'content' => [ 'source' => 'rich-text', 'type' => 'rich-text' ] ] );
+		albert_test_register_block_type(
+			'core/paragraph',
+			false,
+			[
+				'content' => [
+					'source' => 'rich-text',
+					'type'   => 'rich-text',
+				],
+			]
+		);
 
 		$result = $this->serializer->serialize_with_issues(
 			[
@@ -1366,7 +1393,16 @@ class BlockSerializerTest extends TestCase {
 	}
 
 	public function test_a_sourced_attribute_matching_its_html_is_accepted(): void {
-		albert_test_register_block_type( 'core/image', false, [ 'url' => [ 'source' => 'attribute', 'type' => 'string' ] ] );
+		albert_test_register_block_type(
+			'core/image',
+			false,
+			[
+				'url' => [
+					'source' => 'attribute',
+					'type'   => 'string',
+				],
+			]
+		);
 
 		$result = $this->serializer->serialize_with_issues(
 			[
@@ -1382,13 +1418,28 @@ class BlockSerializerTest extends TestCase {
 	}
 
 	public function test_text_escaped_the_editors_way_and_a_boolean_are_accepted(): void {
-		albert_test_register_block_type( 'core/paragraph', false, [ 'content' => [ 'source' => 'rich-text', 'type' => 'rich-text' ] ] );
+		albert_test_register_block_type(
+			'core/paragraph',
+			false,
+			[
+				'content' => [
+					'source' => 'rich-text',
+					'type'   => 'rich-text',
+				],
+			]
+		);
 		albert_test_register_block_type(
 			'core/video',
 			false,
 			[
-				'src'      => [ 'source' => 'attribute', 'type' => 'string' ],
-				'controls' => [ 'source' => 'attribute', 'type' => 'boolean' ],
+				'src'      => [
+					'source' => 'attribute',
+					'type'   => 'string',
+				],
+				'controls' => [
+					'source' => 'attribute',
+					'type'   => 'boolean',
+				],
 			]
 		);
 

@@ -19,6 +19,11 @@ namespace Albert\Tests\Integration\Abilities;
 use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
+use Albert\Abilities\WordPress\Comments\DeleteComment;
+use Albert\Abilities\WordPress\Comments\FindComments;
+use Albert\Abilities\WordPress\Comments\ViewComment;
+use Albert\Abilities\WordPress\Comments\ModerateComment;
+use Albert\Abilities\WordPress\Comments\ReplyToComment;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
 use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Menus\AddMenuItem;
@@ -42,12 +47,16 @@ use Albert\Abilities\WordPress\Pages\FindPages;
 use Albert\Abilities\WordPress\Pages\ReplaceText as ReplacePageText;
 use Albert\Abilities\WordPress\Pages\Update as UpdatePage;
 use Albert\Abilities\WordPress\Pages\ViewPage;
+use Albert\Abilities\WordPress\Posts\AddTerms as AddPostTerms;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
 use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
 use Albert\Abilities\WordPress\Posts\FindPosts;
+use Albert\Abilities\WordPress\Posts\RemoveTerms as RemovePostTerms;
 use Albert\Abilities\WordPress\Posts\ReplaceText as ReplacePostText;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\Search\SearchContent;
+use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
@@ -114,7 +123,6 @@ class ExecuteSchemaTest extends TestCase {
 	private function get_output_schema( BaseAbility $ability ): array {
 		$reflection = new \ReflectionClass( $ability );
 		$prop       = $reflection->getProperty( 'output_schema' );
-		$prop->setAccessible( true );
 
 		return $prop->getValue( $ability );
 	}
@@ -236,6 +244,45 @@ class ExecuteSchemaTest extends TestCase {
 				'title' => 'Updated Title',
 			],
 			'UpdatePost'
+		);
+	}
+
+	/**
+	 * AddPostTerms returns the post's terms matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_add_post_terms_output_matches_schema(): void {
+		$post_id = self::factory()->post->create();
+
+		$this->assert_execute_matches_schema(
+			new AddPostTerms(),
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ 'schema-tag' ],
+			],
+			'AddPostTerms'
+		);
+	}
+
+	/**
+	 * RemovePostTerms returns the post's terms matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_remove_post_terms_output_matches_schema(): void {
+		$post_id = self::factory()->post->create();
+		wp_set_post_tags( $post_id, [ 'schema-tag' ] );
+
+		$this->assert_execute_matches_schema(
+			new RemovePostTerms(),
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ 'schema-tag' ],
+			],
+			'RemovePostTerms'
 		);
 	}
 
@@ -608,6 +655,88 @@ class ExecuteSchemaTest extends TestCase {
 		$this->assert_execute_matches_schema( new DeleteMenu(), [ 'menu_id' => $menu['id'] ], 'DeleteMenu' );
 
 		$_wp_registered_nav_menus = $registered;
+	}
+
+	/**
+	 * The comment abilities return results matching their output schemas.
+	 *
+	 * @return void
+	 */
+	public function test_comment_abilities_output_matches_schema(): void {
+		$post_id    = self::factory()->post->create();
+		$comment_id = (int) self::factory()->comment->create(
+			[
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '0',
+			]
+		);
+
+		$this->assert_execute_matches_schema( new FindComments(), [], 'FindComments' );
+		$this->assert_execute_matches_schema( new ViewComment(), [ 'comment_id' => $comment_id ], 'ViewComment' );
+		$this->assert_execute_matches_schema(
+			new ReplyToComment(),
+			[
+				'comment_id' => $comment_id,
+				'content'    => 'Thanks.',
+			],
+			'ReplyToComment'
+		);
+		$this->assert_execute_matches_schema(
+			new ModerateComment(),
+			[
+				'comment_ids' => [ $comment_id ],
+				'status'      => 'spam',
+			],
+			'ModerateComment'
+		);
+		$this->assert_execute_matches_schema( new DeleteComment(), [ 'comment_ids' => [ $comment_id ] ], 'DeleteComment' );
+	}
+
+	/**
+	 * SearchContent returns results matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_search_content_output_matches_schema(): void {
+		self::factory()->post->create( [ 'post_title' => 'Searchable thing' ] );
+
+		$this->assert_execute_matches_schema( new SearchContent(), [ 'search' => 'Searchable' ], 'SearchContent' );
+	}
+
+	/**
+	 * ViewSiteHealth returns results matching the output schema.
+	 *
+	 * Limited to one cheap core test and two that end up in not_run, so the suite makes no HTTP requests.
+	 *
+	 * @return void
+	 */
+	public function test_view_site_health_output_matches_schema(): void {
+		$only_timezone = static function (): array {
+			return [
+				'direct' => [
+					'php_default_timezone' => [
+						'label' => 'PHP Default Timezone',
+						'test'  => 'php_default_timezone',
+					],
+					'broken'               => [
+						'label' => 'Broken',
+						'test'  => 'no_such_test_method',
+					],
+				],
+				'async'  => [
+					'background' => [
+						'label'             => 'Background',
+						'test'              => 'https://example.com/background',
+						'async_direct_test' => static fn(): array => [],
+					],
+				],
+			];
+		};
+		add_filter( 'site_status_tests', $only_timezone, 999 );
+
+		$this->assert_execute_matches_schema( new ViewSiteHealth(), [], 'ViewSiteHealth' );
+
+		remove_filter( 'site_status_tests', $only_timezone, 999 );
 	}
 
 	/**

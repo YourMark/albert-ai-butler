@@ -136,7 +136,7 @@ class AbilitiesController implements Hookable {
 		// that does not exist would log a notice on its way to an honest 404.
 		if ( ! function_exists( 'wp_has_ability' ) || ! wp_has_ability( $ability_id ) ) {
 			return new WP_Error(
-				'albert_ability_not_found',
+				'ability_not_found',
 				__( 'Ability not found.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);
@@ -145,7 +145,7 @@ class AbilitiesController implements Hookable {
 		// The MCP adapter's own tools are protected — they can never be disabled.
 		if ( in_array( $ability_id, AbilitiesRegistry::get_protected_abilities(), true ) ) {
 			return new WP_Error(
-				'albert_ability_protected',
+				'ability_protected',
 				__( 'This ability is required by the MCP adapter and can’t be toggled.', 'albert-ai-butler' ),
 				[ 'status' => 403 ]
 			);

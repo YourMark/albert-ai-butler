@@ -162,14 +162,14 @@ class MenusAbilityTest extends TestCase {
 	/**
 	 * A custom link in a classic menu.
 	 *
-	 * @param int    $menu_id  Menu.
-	 * @param string $title    Label.
-	 * @param int    $parent   Parent item.
-	 * @param int    $position Menu order.
+	 * @param int    $menu_id   Menu.
+	 * @param string $title     Label.
+	 * @param int    $parent_id Parent item.
+	 * @param int    $position  Menu order.
 	 *
 	 * @return int
 	 */
-	private function link( int $menu_id, string $title, int $parent = 0, int $position = 0 ): int {
+	private function link( int $menu_id, string $title, int $parent_id = 0, int $position = 0 ): int {
 		return (int) wp_update_nav_menu_item(
 			$menu_id,
 			0,
@@ -178,7 +178,7 @@ class MenusAbilityTest extends TestCase {
 				'menu-item-url'       => 'https://example.com/' . sanitize_title( $title ),
 				'menu-item-type'      => 'custom',
 				'menu-item-status'    => 'publish',
-				'menu-item-parent-id' => $parent,
+				'menu-item-parent-id' => $parent_id,
 				'menu-item-position'  => $position,
 			]
 		);

@@ -258,21 +258,36 @@ class GateTest extends TestCase {
 	/**
 	 * The permanent call is held, and so is any value that is not exactly false.
 	 *
+	 * @dataProvider not_exactly_false
+	 *
+	 * @param mixed $force The `force` value sent.
 	 * @return void
 	 */
-	public function test_a_permanent_call_is_held(): void {
-		foreach ( [ true, 'false', 0, null, 'true' ] as $force ) {
-			$this->assertTrue(
-				$this->gate->must_gate(
-					$this->trash_ability(),
-					[
-						'id'    => 5,
-						'force' => $force,
-					]
-				),
-				var_export( $force, true )
-			);
-		}
+	public function test_a_permanent_call_is_held( mixed $force ): void {
+		$this->assertTrue(
+			$this->gate->must_gate(
+				$this->trash_ability(),
+				[
+					'id'    => 5,
+					'force' => $force,
+				]
+			)
+		);
+	}
+
+	/**
+	 * `force` values that are not exactly false.
+	 *
+	 * @return array<string, array{0: mixed}>
+	 */
+	public static function not_exactly_false(): array {
+		return [
+			'true'           => [ true ],
+			'string "false"' => [ 'false' ],
+			'zero'           => [ 0 ],
+			'null'           => [ null ],
+			'string "true"'  => [ 'true' ],
+		];
 	}
 
 	/**

@@ -13,6 +13,11 @@ namespace Albert\Tests\Unit\Abilities;
 
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 
+use Albert\Abilities\WordPress\Comments\DeleteComment;
+use Albert\Abilities\WordPress\Comments\FindComments;
+use Albert\Abilities\WordPress\Comments\ViewComment;
+use Albert\Abilities\WordPress\Comments\ModerateComment;
+use Albert\Abilities\WordPress\Comments\ReplyToComment;
 use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\UpdateMedia;
@@ -30,6 +35,8 @@ use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\Search\SearchContent;
+use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
@@ -94,35 +101,48 @@ class DirectCapabilityTest extends TestCase {
 			'assign-menu-location'   => [ AssignMenuLocation::class, 'edit_theme_options' ],
 			'unassign-menu-location' => [ UnassignMenuLocation::class, 'edit_theme_options' ],
 
+			// Comments.
+			'find-comments'          => [ FindComments::class, 'moderate_comments' ],
+			'view-comment'           => [ ViewComment::class, 'moderate_comments' ],
+			'reply-to-comment'       => [ ReplyToComment::class, 'moderate_comments' ],
+			'moderate-comment'       => [ ModerateComment::class, 'moderate_comments' ],
+			'delete-comment'         => [ DeleteComment::class, 'moderate_comments' ],
+
 			// Media.
-			'find-media'         => [ FindMedia::class, 'upload_files' ],
-			'view-media'         => [ ViewMedia::class, 'upload_files' ],
-			'upload-media'       => [ UploadMedia::class, 'upload_files' ],
-			'update-media'       => [ UpdateMedia::class, 'upload_files' ],
-			'delete-media'       => [ DeleteMedia::class, 'upload_files' ],
+			'find-media'             => [ FindMedia::class, 'upload_files' ],
+			'view-media'             => [ ViewMedia::class, 'upload_files' ],
+			'upload-media'           => [ UploadMedia::class, 'upload_files' ],
+			'update-media'           => [ UpdateMedia::class, 'upload_files' ],
+			'delete-media'           => [ DeleteMedia::class, 'upload_files' ],
 
 			// Posts/Pages (read-only).
-			'view-post'          => [ ViewPost::class, 'read' ],
-			'view-page'          => [ ViewPage::class, 'read' ],
+			'view-post'              => [ ViewPost::class, 'read' ],
+			'view-page'              => [ ViewPage::class, 'read' ],
+
+			// Search (core's search route is public).
+			'search-content'         => [ SearchContent::class, 'read' ],
+
+			// Site Health.
+			'view-site-health'       => [ ViewSiteHealth::class, 'view_site_health_checks' ],
 
 			// Users.
-			'view-user'          => [ ViewUser::class, 'list_users' ],
+			'view-user'              => [ ViewUser::class, 'list_users' ],
 
 			// Taxonomies.
-			'find-taxonomies'    => [ FindTaxonomies::class, 'manage_categories' ],
-			'find-terms'         => [ FindTerms::class, 'manage_categories' ],
-			'view-term'          => [ ViewTerm::class, 'manage_categories' ],
-			'create-term'        => [ CreateTerm::class, 'manage_categories' ],
-			'update-term'        => [ UpdateTerm::class, 'manage_categories' ],
-			'delete-term'        => [ DeleteTerm::class, 'manage_categories' ],
+			'find-taxonomies'        => [ FindTaxonomies::class, 'manage_categories' ],
+			'find-terms'             => [ FindTerms::class, 'manage_categories' ],
+			'view-term'              => [ ViewTerm::class, 'manage_categories' ],
+			'create-term'            => [ CreateTerm::class, 'manage_categories' ],
+			'update-term'            => [ UpdateTerm::class, 'manage_categories' ],
+			'delete-term'            => [ DeleteTerm::class, 'manage_categories' ],
 
 			// WooCommerce.
-			'woo-find-products'  => [ FindProducts::class, 'edit_products' ],
-			'woo-view-product'   => [ ViewProduct::class, 'edit_products' ],
-			'woo-find-orders'    => [ FindOrders::class, 'edit_shop_orders' ],
-			'woo-view-order'     => [ ViewOrder::class, 'edit_shop_orders' ],
-			'woo-find-customers' => [ FindCustomers::class, 'list_users' ],
-			'woo-view-customer'  => [ ViewCustomer::class, 'list_users' ],
+			'woo-find-products'      => [ FindProducts::class, 'edit_products' ],
+			'woo-view-product'       => [ ViewProduct::class, 'edit_products' ],
+			'woo-find-orders'        => [ FindOrders::class, 'edit_shop_orders' ],
+			'woo-view-order'         => [ ViewOrder::class, 'edit_shop_orders' ],
+			'woo-find-customers'     => [ FindCustomers::class, 'list_users' ],
+			'woo-view-customer'      => [ ViewCustomer::class, 'list_users' ],
 		];
 	}
 

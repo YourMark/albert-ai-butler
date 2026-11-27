@@ -37,7 +37,7 @@ enum PrivacyMode: string {
 	case Strict = 'strict';
 
 	/**
-	 * Anonymised by default; an authorised request may reveal it.
+	 * Anonymised by default; anyone allowed to run an ability may reveal its result.
 	 */
 	case Balanced = 'balanced';
 

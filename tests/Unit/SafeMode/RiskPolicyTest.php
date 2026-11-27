@@ -74,6 +74,8 @@ class RiskPolicyTest extends TestCase {
 	public function test_holds_named_high_risk_abilities(): void {
 		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/update-user' ), [] ) );
 		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/create-user' ), [] ) );
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/reply-to-comment' ), [] ), 'A reply is public the moment it is saved.' );
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/moderate-comment' ), [] ), 'Approving publishes a visitor\'s text.' );
 	}
 
 	/**
