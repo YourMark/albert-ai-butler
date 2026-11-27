@@ -195,7 +195,6 @@ class DashboardConnectionsTest extends TestCase {
 		$dashboard = new Dashboard( new LoggingRepository() );
 
 		$reflection = new \ReflectionMethod( $dashboard, $method );
-		$reflection->setAccessible( true );
 
 		return $reflection->invoke( $dashboard );
 	}

@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.1', '8.2', '8.3', '8.4']
+        php: ['8.1', '8.2', '8.3', '8.4', '8.5', '8.6']
 
     steps:
       - name: Checkout code
@@ -70,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.1', '8.2', '8.3', '8.4']
+        php: ['8.1', '8.2', '8.3', '8.4', '8.5', '8.6']
         # Support policy: the declared floor (`Requires at least`) up to latest.
         #
         # `latest` stays dynamic on purpose: it tracks whatever wordpress.org is
@@ -79,13 +79,18 @@ jobs:
         # `7.1` is the floor. While it is also `latest` the two rows run the
         # same code; once 7.2 ships, they split and the floor stays covered.
         #
-        # `trunk` is early warning for the next one. WordPress 7.1 made the
-        # Abilities API validate ability output against the declared
+        # `rc` is the next release's current beta or RC, resolved at run time
+        # from wordpress.org, so it moves from beta1 to the last RC without
+        # editing this file. With no pre-release on offer it tests `latest`.
+        #
+        # `trunk` is early warning for the release after that. Once a release
+        # branches, trunk moves on and only `rc` still tests it. WordPress 7.1
+        # made the Abilities API validate ability output against the declared
         # output_schema, and this matrix would have met that on release day
         # rather than during beta.
         #
         # WooCommerce coverage is in its own job below.
-        wordpress: ['latest', '7.1', 'trunk']
+        wordpress: ['latest', '7.1', 'rc', 'trunk']
 
     services:
       mysql:
@@ -136,10 +141,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y subversion
 
+      - name: Resolve WordPress version
+        id: wp
+        run: |
+          version='${{ matrix.wordpress }}'
+          if [ "$version" = 'rc' ]; then
+            # The beta channel offers the next release's beta or RC next to the stable branches.
+            version=$(curl -fsS 'https://api.wordpress.org/core/version-check/1.7/?channel=beta' \
+              | jq -r '.offers[].version' | grep -E '^[0-9]+\.[0-9]+-(beta|RC)[0-9]+$' | sort -V | tail -n 1 || true)
+            if [ -z "$version" ]; then
+              echo "::notice::No WordPress beta or RC on offer; the rc row tests latest."
+              version='latest'
+            fi
+          fi
+          echo "Testing WordPress $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Install WordPress test suite
         run: |
           chmod +x bin/install-wp-tests.sh
-          bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 ${{ matrix.wordpress }} true
+          bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 ${{ steps.wp.outputs.version }} true
 
       - name: Run integration tests
         run: ./vendor/bin/phpunit --configuration phpunit.xml.dist --no-coverage
