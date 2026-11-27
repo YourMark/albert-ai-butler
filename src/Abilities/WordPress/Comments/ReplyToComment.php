@@ -140,7 +140,7 @@ class ReplyToComment extends BaseAbility {
 		$status = CommentPresenter::status( $parent );
 		if ( $status === 'spam' || $status === 'trash' ) {
 			return new WP_Error(
-				'albert_invalid_comment_id',
+				'invalid_comment_id',
 				sprintf(
 					/* translators: %s: comment status */
 					__( 'This comment is marked %s. Approve it with albert/moderate-comment before replying.', 'albert-ai-butler' ),
@@ -152,7 +152,7 @@ class ReplyToComment extends BaseAbility {
 
 		if ( $status === 'post-trashed' ) {
 			return new WP_Error(
-				'albert_invalid_comment_id',
+				'invalid_comment_id',
 				__( 'The post this comment is on is in the trash. Restore the post before replying.', 'albert-ai-butler' ),
 				[ 'status' => 400 ]
 			);

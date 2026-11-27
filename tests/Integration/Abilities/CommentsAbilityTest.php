@@ -195,7 +195,7 @@ class CommentsAbilityTest extends TestCase {
 			) {
 				$result = $ability->execute( $input );
 				$this->assertInstanceOf( WP_Error::class, $result, $type );
-				$this->assertSame( 'albert_comment_not_found', $result->get_error_code(), $type );
+				$this->assertSame( 'comment_not_found', $result->get_error_code(), $type );
 			}
 
 			$moderated = ( new ModerateComment() )->execute(
@@ -387,7 +387,7 @@ class CommentsAbilityTest extends TestCase {
 			]
 		);
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_comment_id', $result->get_error_code() );
+		$this->assertSame( 'invalid_comment_id', $result->get_error_code() );
 	}
 
 	/**
@@ -475,7 +475,7 @@ class CommentsAbilityTest extends TestCase {
 		$result = ( new ViewComment() )->execute( [ 'comment_id' => 999999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_comment_not_found', $result->get_error_code() );
+		$this->assertSame( 'comment_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -517,7 +517,7 @@ class CommentsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_comment_id', $result->get_error_code() );
+		$this->assertSame( 'invalid_comment_id', $result->get_error_code() );
 	}
 
 	/**
@@ -574,7 +574,7 @@ class CommentsAbilityTest extends TestCase {
 		$this->assertIsArray( $result );
 		$this->assertSame( [ $this->held_id, $other ], $result['updated'] );
 		$this->assertSame( 999999, $result['failed'][0]['id'] );
-		$this->assertSame( 'albert_comment_not_found', $result['failed'][0]['code'] );
+		$this->assertSame( 'comment_not_found', $result['failed'][0]['code'] );
 		$this->assertSame( 'spam', wp_get_comment_status( $other ) );
 	}
 
@@ -661,11 +661,11 @@ class CommentsAbilityTest extends TestCase {
 		$this->assertIsArray( $result );
 		$this->assertSame( [ $this->held_id ], array_column( $result['trashed'], 'id' ) );
 		$this->assertSame( 999999, $result['failed'][0]['id'] );
-		$this->assertSame( 'albert_comment_not_found', $result['failed'][0]['code'] );
+		$this->assertSame( 'comment_not_found', $result['failed'][0]['code'] );
 
 		$single = wp_get_ability( 'albert/delete-comment' )->execute( [ 'comment_ids' => [ 999999 ] ] );
 		$this->assertInstanceOf( WP_Error::class, $single );
-		$this->assertSame( 'albert_comment_not_found', $single->get_error_code() );
+		$this->assertSame( 'comment_not_found', $single->get_error_code() );
 	}
 
 	/**

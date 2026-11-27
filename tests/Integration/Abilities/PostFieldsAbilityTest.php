@@ -241,7 +241,7 @@ class PostFieldsAbilityTest extends TestCase {
 		wp_set_current_user( $author );
 
 		$this->assertRefused(
-			'albert_post_permission_denied',
+			'post_permission_denied',
 			( new UpdatePost() )->execute(
 				[
 					'id'     => $post_id,
@@ -262,7 +262,7 @@ class PostFieldsAbilityTest extends TestCase {
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'author' ] ) );
 
 		$this->assertRefused(
-			'albert_page_permission_denied',
+			'page_permission_denied',
 			( new UpdatePage() )->execute(
 				[
 					'id'    => $page_id,

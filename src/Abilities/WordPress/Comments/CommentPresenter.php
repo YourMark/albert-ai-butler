@@ -58,7 +58,7 @@ class CommentPresenter {
 	 *
 	 * @since 1.6.0
 	 */
-	public const PERMISSION_DENIED = 'albert_comment_permission_denied';
+	public const PERMISSION_DENIED = 'comment_permission_denied';
 
 	/**
 	 * Input schema property for revealing personal data.
@@ -221,7 +221,7 @@ class CommentPresenter {
 
 		if ( ! $comment instanceof WP_Comment || ! self::can_access( $comment ) ) {
 			return new WP_Error(
-				'albert_comment_not_found',
+				'comment_not_found',
 				sprintf(
 					/* translators: %d: Comment ID */
 					__( 'Comment with ID %d not found. Find comments with albert/find-comments.', 'albert-ai-butler' ),

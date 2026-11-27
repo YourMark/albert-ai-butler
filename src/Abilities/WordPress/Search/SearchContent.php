@@ -203,7 +203,7 @@ class SearchContent extends BaseAbility {
 		$unknown = array_diff( $subtypes, $allowed );
 		if ( $unknown ) {
 			return new WP_Error(
-				'albert_invalid_subtypes',
+				'invalid_subtypes',
 				sprintf(
 					/* translators: 1: type, 2: the unknown subtypes, 3: the allowed subtypes */
 					__( 'For type "%1$s", "subtypes" cannot include: %2$s. Allowed: %3$s.', 'albert-ai-butler' ),

@@ -428,7 +428,7 @@ class PagesAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+		$this->assertSame( 'page_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -457,7 +457,7 @@ class PagesAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+		$this->assertSame( 'page_not_found', $result->get_error_code() );
 		$this->assertStringContainsString( 'albert/update-post', $result->get_error_message() );
 		$this->assertSame( 'Original', get_post( $post_id )->post_title );
 	}
@@ -493,7 +493,7 @@ class PagesAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+		$this->assertSame( 'page_not_found', $result->get_error_code() );
 		$this->assertStringNotContainsString( 'albert/update-post', $result->get_error_message() );
 		$this->assertStringNotContainsString( 'is a post', $result->get_error_message() );
 	}

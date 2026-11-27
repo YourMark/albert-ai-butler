@@ -238,7 +238,7 @@ class Update extends BaseAbility {
 				return self::not_found( $page_id );
 			}
 
-			return self::rest_failure( $data, $response->get_status(), __( 'The page could not be updated.', 'albert-ai-butler' ), 'albert_page_permission_denied' );
+			return self::rest_failure( $data, $response->get_status(), __( 'The page could not be updated.', 'albert-ai-butler' ), 'page_permission_denied' );
 		}
 
 		// Return formatted page data.
@@ -274,7 +274,7 @@ class Update extends BaseAbility {
 		// Name the other type only to a user who may read it, so the hint leaks nothing.
 		if ( $page && $page->post_type === 'post' && current_user_can( 'read_post', $page_id ) ) {
 			return new WP_Error(
-				'albert_page_not_found',
+				'page_not_found',
 				/* translators: %d: post ID */
 				sprintf( __( 'ID %d is a post, not a page. Use albert/update-post.', 'albert-ai-butler' ), $page_id ),
 				[ 'status' => 404 ]
@@ -287,7 +287,7 @@ class Update extends BaseAbility {
 
 		if ( ! current_user_can( 'edit_post', $page_id ) ) {
 			return new WP_Error(
-				'albert_page_permission_denied',
+				'page_permission_denied',
 				/* translators: %d: page ID */
 				sprintf( __( 'This account may not edit page %d.', 'albert-ai-butler' ), $page_id ),
 				[ 'status' => rest_authorization_required_code() ]
@@ -306,7 +306,7 @@ class Update extends BaseAbility {
 	 */
 	private static function not_found( int $page_id ): WP_Error {
 		return new WP_Error(
-			'albert_page_not_found',
+			'page_not_found',
 			/* translators: %d: page ID */
 			sprintf( __( 'No page with ID %d. Find it with albert/find-pages.', 'albert-ai-butler' ), $page_id ),
 			[ 'status' => 404 ]
