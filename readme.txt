@@ -62,7 +62,7 @@ An assistant that does not know your site invents things: brand colours you neve
 
 Not every guest needs a key to every room.
 
-* **Every action listed and labelled** Read, Write or Delete, with its own switch. Changes save instantly.
+* **Every action listed and labelled** Read, Write or Destructive, with its own switch. Changes save instantly.
 * **Write and delete start switched off.** You turn on exactly what you want, and nothing else.
 * **Your WordPress roles still apply.** An assistant can never do more than the person who approved it.
 * **New actions arrive switched off** once you have saved your choices, so a plugin update never quietly widens what an assistant can reach.
@@ -73,7 +73,7 @@ Not every guest needs a key to every room.
 
 ### Deletions wait for you
 
-Switched on by default. When your assistant asks to delete a post, create or change a user account, or rewrite a foundational setting, the action does not run. It waits for you. Ordinary edits to posts and pages go ahead without approval.
+Switched on by default. When your assistant asks to permanently delete a post, create or change a user account, or rewrite a foundational setting, the action does not run. It waits for you. Ordinary edits to posts and pages go ahead without approval.
 
 * **Held, not logged after the fact.** The request is stopped before it happens, not reported once it has.
 * **You see what it would actually change**, resolved as it is now: "Delete the post 'Pricing' (published)", not a line of code. If the page changed since the request, you are told before you approve.
@@ -109,10 +109,15 @@ Connections use OAuth 2.0 with short-lived, self-refreshing tokens. No password 
 
 ### What your assistant can do
 
-* **Posts and pages**: find, view, create, update and delete, block by block.
-* **Media**: browse the library, set featured images, and receive files your assistant sends you directly.
+* **Posts and pages**: find, view, create, schedule, update and delete, block by block, or change one word without rewriting the page.
+* **Search**: everything on your site in one go, including templates, patterns and terms.
+* **Revisions**: see what each save changed, and restore an earlier version.
+* **Menus**: find the menu visitors actually see, on classic and block themes, and change it.
+* **Comments**: find, reply to and moderate comments, in batches.
+* **Media**: browse the library, fill in missing alt text, set featured images, and receive files your assistant sends you directly.
 * **Users and taxonomies**: find and manage users, categories, tags and custom terms.
-* **Block patterns**: find and reuse the patterns from your theme, plugins and library, and save new ones.
+* **Block patterns**: find and reuse the patterns from your theme, plugins and library, insert them by name, and save new ones.
+* **Site Health**: run WordPress's checks and get each result with the link to fix it.
 * **WooCommerce**: look up products, orders and customers when WooCommerce is active.
 * **Anything you build**: register your own actions with the WordPress Abilities API.
 
@@ -215,7 +220,7 @@ Albert is built for single-site installations. Multisite support is on the roadm
 
 = What are the requirements? =
 
-WordPress 7.1 or higher, PHP 8.1 or higher (8.3+ recommended), MySQL 8.0+ or MariaDB 10.5+, HTTPS (OAuth 2.0 requires it), and any permalink setting other than Plain.
+WordPress 7.1 or higher, PHP 8.2 or higher (8.3+ recommended), MySQL 8.0+ or MariaDB 10.5+, HTTPS (OAuth 2.0 requires it), and any permalink setting other than Plain.
 
 = Where do I get support? =
 
@@ -225,127 +230,84 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 1. The Albert dashboard: setup status, how many abilities are switched on, recent AI assistant activity, and anything that needs a decision from you
 2. The Connections screen: your MCP endpoint, who is connected, who may connect, and step-by-step setup for Claude, ChatGPT, Cursor and the rest
-3. The Abilities screen: every action an AI assistant can take, labelled Read, Write or Delete, each with its own instant-save switch
+3. The Abilities screen: every action an AI assistant can take, labelled Read, Write or Destructive, each with its own instant-save switch
 4. The Context screen: write instructions for your assistant and see exactly what Albert tells it about your site, section by section
 5. The Skills screen: the task guides Albert ships, so you can read the exact guidance a connected assistant follows
 
 == Changelog ==
 
 = 1.6.0 =
+Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
 **Features**
 
-* **Abilities that stay on for your staging site.** A setting in your site's code can switch abilities on for assistants on a staging, development or local copy of your site, without changing the switches on the Abilities screen. Copying your live site over a staging copy no longer turns everything back off. You choose to switch on every ability, or every ability that is not marked Destructive; your live site keeps using its own switches. Safe mode still holds what it would hold, and the Abilities screen says when such a setting is in use.
-* **Schedule posts and set their details.** Your assistant can now schedule a post or page to publish later, and set its address (slug), author, parent page, page order, template, whether comments are open, whether a post stays at the top of the blog, and its post format. If a request would not work, such as an author who cannot edit that content or a template your theme does not offer, Albert refuses it and says what to send instead.
-* **Fill in missing alt text.** Your assistant can now find the images in your media library that have no alt text, and write the alt text, title, caption and description of any media file. It can also delete a media file; deleting is permanent, so safe mode holds it for your approval. Both new tools are off until you switch them on, and the Dashboard then suggests asking which images are missing alt text.
-* **Menus.** Your assistant can now tell you which menu visitors actually see, on classic and block themes alike, show what is in it, and change it: add, rename, move and remove items, including in the navigation menus a block theme's header shows. Pages and categories stay linked when their address changes. When you change one page in a menu that lists your pages automatically, the list becomes separate links, as in the Site Editor, and new pages are no longer added by themselves; your assistant tells you when that happens. On classic menus it can also create a menu, put it in one of your theme's menu locations or empty one, and delete a menu. If a change lands on a menu visitors do not see, it says so instead of reporting plain success. With safe mode on, removing an item or deleting a menu waits for your approval. The Dashboard suggests asking which menu visitors see.
-* **Comments.** Your assistant can now find comments, read a whole conversation, reply in your name, approve, hold back, mark as spam, trash or permanently delete up to 50 comments at once. As in wp-admin, replying to a comment that is waiting for approval approves it. With safe mode on, replies, moderation and permanent deletions wait for your approval, with one approval for a whole batch; moving comments to the trash does not. The Approvals screen names the comments and their posts, and warns when one was edited, moderated or deleted since. Commenters' names, email addresses, websites and IP addresses are hidden according to your privacy mode, and product reviews are left alone. Only people who can moderate comments can use these actions, and only on comments they could handle in wp-admin. The Dashboard suggests asking whether any comments are waiting for approval.
-* **Search everything at once.** Your assistant can now search your whole site in one go: posts, pages, other public content types, synced patterns and template parts such as the header and footer. It finds drafts, scheduled and private items too, but only those the signed-in user may read, and says what each result is so it knows how to change it. It can search categories, tags and other terms too. Media files are not included.
-* **Ask what Site Health says.** Your assistant can now run WordPress's Site Health checks, as WordPress's weekly check does, and report each result the way the Site Health screen shows it, most urgent first, with the links to fix each one. When a critical issue comes up, or its counts differ from your dashboard, it can also run the slower background checks, as WordPress's weekly check does. Checks that only work from your browser, and checks that break while running, such as a faulty one from another plugin, are listed as not checked, so the assistant never guesses their result. Only people who can open Site Health can ask, and no settings or content are changed.
-* **See what changed, and put it back.** Your assistant can now list the saved revisions of a post, page, template, menu or other content that keeps revisions, say what each save changed, show those changes line by line, and restore an earlier version. Restoring is switched off until you turn it on, waits for your approval in safe mode, and is saved as a new revision, so it can be undone too. A restore waiting for your approval names what it will change, and warns when that was edited since. Only people who can edit the content can see or restore its revisions.
-* **Change a word without rewriting the page.** Your assistant can now replace a piece of text in a post or page, such as a price, a name or a link, without sending the whole page back. It must say how often the text occurs, so a replacement never lands in more places than intended, and it is refused when it would change a block's layout or settings instead of its text. It works on titles, excerpts and classic posts too. Like other new writing tools, it is off until you switch it on.
+* **Menus.** Your assistant finds the menu visitors actually see, on classic and block themes, and adds, renames, moves or removes its items. When a change lands on a menu nobody sees, it says so.
+* **Comments.** Find, read and reply to comments, and approve, hold back, mark as spam, trash or delete up to 50 at once. Product reviews are left alone.
+* **Revisions.** See what each save of a post, page, template or menu changed, and restore an earlier version. A restore is saved as a new revision, so it can be undone.
+* **Search everything.** One search across posts, pages, other content types, synced patterns, template parts and terms, including drafts and private items the signed-in user may read.
+* **Site Health.** Your assistant runs WordPress's Site Health checks and reports each result as the Site Health screen does, most urgent first, with the link to fix it.
+* **Alt text.** Find images without alt text, and write the alt text, title, caption and description of any media file. Media files can also be deleted.
+* **Scheduling and post details.** Schedule a post or page, and set its slug, author, parent, order, template, comments, sticky status and format.
+* **Change a word, not the page.** Replace a price, a name or a link without rewriting the page. Your assistant must say how often the text occurs, so it never changes more than intended.
+* **Insert a pattern by name.** Your assistant places one of your block patterns into a page or post in one step, exactly as your site stores it.
+* **Categories and tags.** See a post's categories and tags, and add or remove one without touching the others.
+* **Staging sites.** A setting in your site's code can switch abilities on for staging, development and local copies, so copying your live site over them no longer turns everything off.
+* **Allowed users from the command line.** `wp albert allowed-users` lists, adds and removes the people who may connect an assistant.
+
+New write and delete actions start switched off. With safe mode on, replies, comment moderation, permanent deletes, menu removals and revision restores wait for your approval.
 
 **Improvements**
 
-* Albert now requires PHP 8.2 or higher. PHP 8.1 no longer gets security fixes, so a site on it keeps the version of Albert it has.
-* The Abilities screen now labels an ability from another plugin that doesn't say whether it only reads or can change something as Not declared, instead of guessing Write, and explains what that means. Albert still treats it as one that can make changes, so safe mode holds it.
-* The Abilities screen no longer shows a "Required capability" for each ability. It was a guess from the ability's name and was wrong in places. Without Albert Premium's advanced permissions, the ability's own permission check decides, as it always did.
-* When your assistant edits a single block and the new text would lose a tag the block had, such as a ThirstyAffiliates link, Albert refuses the edit and tells the assistant to ask you first. Nothing is saved until you agree.
-* Albert is about 2 MB smaller: the Abilities and Skills screens now share one copy of their table instead of each carrying its own.
-* Ordinary page views on your site no longer load Albert's abilities, so the pages your visitors see do a little less work.
-* Albert now requires WordPress 7.1. Safe mode depends on it, so it now works on every site Albert runs on, and the notices saying safe mode could not hold anything are gone. Update WordPress before you update Albert.
-* The Abilities screen now sorts abilities into Read, Write and Destructive. Destructive means an ability can remove or overwrite something in a way that may not be recoverable, or has a wide reach, not only that it deletes. Removing a block from a post or page, and creating or changing users, are now marked Destructive.
-* Safe mode now also holds an assistant's request to remove a block from a post or page until you approve it.
-* When your assistant asks for a block setting Albert cannot save the way the editor expects, the save is now refused with a message naming that setting, instead of saving a block the editor then reports as broken.
-* When your assistant changes several blocks on one post or page, it can now do it in one step that saves once, so you get one revision instead of one per block and your older revisions are kept. If any of the changes fails, nothing is saved.
-* Safe mode no longer asks you to approve moving a post, page or block pattern to the trash, because you can restore it from the trash yourself. Deleting one permanently still waits for your approval.
-* Albert no longer saves a block it can only guess, such as an image without an address, a cover or a block from another plugin without its markup, or blocks nested where the editor would drop them. Your assistant gets a message saying what to send instead, and nothing is saved.
-* The Context screen now says when a saved change takes effect: the next time an assistant asks what your site can do. A conversation that is already open keeps what it started with, so start a new one to use your changes.
-* Your assistant can now place one of your block patterns into a page or post by name, including a new, empty one, so "make a landing page from this pattern" takes one step. Albert inserts the pattern exactly as your site stores it, patterns inside it included, so a hero, call to action or footer section arrives intact instead of being copied block by block.
-* Your assistant can now see which categories and tags a post has, and add or remove one without touching the others.
-* You can now manage the list of people who may connect an assistant from the command line, as well as on the Connections screen: see who is on it and whether they have connected yet, add people and remove them. Adding someone whose invitation expired restarts it, as sending them a setup link does. Removing someone signs out every assistant they connected, as it does on the screen.
+* Albert now requires WordPress 7.1 and PHP 8.2. Sites on older versions keep Albert 1.5.1. Safe mode now works on every site Albert runs on.
+* The Abilities screen sorts actions into Read, Write and Destructive. Removing a block, and creating or changing a user, now count as Destructive and wait for your approval.
+* An action from another plugin that does not say whether it changes anything is labelled Not declared instead of Write. Safe mode still holds it.
+* Moving a post, page or pattern to the trash no longer waits for approval, since you can restore it. Permanent deletes still do.
+* Several block edits on one page are saved together, as one revision. If one fails, nothing is saved.
+* An edit that would drop a tag another plugin added, such as a ThirstyAffiliates link, is refused until you agree.
+* A block Albert can only guess, such as an image without an address, is refused with what to send instead, rather than saved broken.
+* Deleting a user now always asks who receives their content, and an assistant can no longer delete the account it is connected as.
+* The Abilities screen no longer shows a "Required capability". It was a guess, and wrong in places.
+* The Context screen says that changes apply from the next conversation.
+* Albert is about 2 MB smaller, and ordinary page views no longer load its abilities.
 
 **Fixes**
 
-* Privacy mode only covered Albert's own user, customer and order tools, so personal data returned by WordPress's own abilities and by other plugins reached your assistant unmasked. It now applies to everything your assistant calls through Albert: email addresses, phone numbers, IP addresses, passwords and sign-in tokens are masked or removed whichever plugin returns them, and Albert's own tools also mask names, postal addresses and birth dates. Your assistant is told never to write a masked value back. On Balanced, anyone allowed to use a tool can ask it for the real details.
-* Deleting a WordPress user, or on a network removing them from a site, now also takes them off that site's list of people who may connect an assistant, also when your assistant deleted them. Before, they stayed on it, hidden from the Connections screen.
-* Switching an ability off on the Abilities screen removed it from your whole site, so other plugins that used it stopped working too. The switch now only decides what assistants connected through Albert can use, and the screen explains this.
-* Text your assistant wrote in paragraphs, headings, lists, buttons and quotes lost tags that other plugins add, such as ThirstyAffiliates links, even for administrators. Text is now saved the way the WordPress editor saves it, with the same rules for who may store what.
-* Copying a block pattern or another block layout from one site to another lost its structure and settings, while the assistant was told it had worked. Block layouts your assistant sends are now saved exactly as sent.
-* Blocks your assistant gave colours, spacing, borders or extra styling could open in the editor with "This block contains unexpected or invalid content". These settings are now saved the way the editor saves them, so the blocks open cleanly.
-* A group block sent with its contents written out was saved empty. It now keeps them.
-* After moving a post or page to the trash, your assistant was told it had been deleted and that this could not be undone through Albert. It is now told the item is in the trash, where you can restore it.
-* Deleting a category or tag through your assistant always failed. Terms have no trash in WordPress, so Albert now deletes them permanently, and the assistant is told so before it asks.
-* Deleting a user through your assistant always failed unless it named someone to take over their posts, while it was told their content would be deleted with them. It must now name the user who receives everything the deleted user wrote, and it can no longer delete the user it is connected as.
-* Copying a page or post block by block lost its bold text, links and images, and centred headings opened in the editor as broken, while the assistant was told it had worked. Each block now comes with its saved markup when your assistant reads it, so it is written back exactly as it was.
-* The Documentation link on the Dashboard opened a different plugin's page on WordPress.org. It now opens Albert's own page.
-* The translation template included with Albert was named for an old text domain and dated from its first release, so it listed almost none of the current text. It is now named `albert-ai-butler.pot` and covers everything Albert shows, so translation tools can offer the whole plugin.
-* Send setup link only offered Copy link once someone's invitation had expired, exactly when emailing them again matters most. It now offers to email anyone on the list who has an email address, and emailing an expired invitation renews it, with the new expiry date in the email.
-* Searching WooCommerce orders between two dates did not return the orders in that period. Your assistant now gets the orders from the first date up to and including the last.
-* When your assistant wrote a post, page or pattern in Markdown (headings marked with `#`, bold text with `**`), it was saved as one paragraph with those marks left in, and the assistant was told it had worked. Albert now refuses it and asks the assistant to send proper blocks, so nothing broken is saved.
-* An assistant that sent a negative ID, such as -5, could change or delete the item with ID 5 instead. Albert now refuses any ID below 1 and says what it expects.
-* When your assistant used an action from another plugin, it did not show in Recent activity, and the Abilities screen said it was never used. These calls are now recorded like Albert's own.
-* When an action's answer did not have the shape it promises, your assistant got an error but Recent activity said it succeeded. It now shows as failed.
-* When your assistant asked for an action it is not allowed to use, the refusal did not show in Recent activity. It now shows as blocked.
-* When a plugin on your site blocked the list of users, choosing who may approve an assistant failed with a message to reload the page, which never helped. It now says that something on the site blocks the user list and what to allow, or, when your role may not list users, that an administrator needs to add them or give the role the list_users capability.
-* When your assistant searched your users, their email addresses and roles always came back empty, and the username shown was not the name they log in with. Both are now filled in correctly. Privacy mode still hides email addresses and usernames as before.
-* Asking for one user by ID in a user search returned a jumbled result instead of that user. It now returns just that user.
-* Asking your assistant to remove categories or tags from a post did nothing, while it was told the change had worked. It can now remove them.
-* A category or tag your assistant put on a post could be left off without a word, for example a category that no longer exists or a tag whose name is part of another tag's name. Albert now picks the right tag, and refuses the change with the reason when a category or tag cannot be used.
+* Privacy mode covered only Albert's own user, customer and order tools. It now masks personal data in everything your assistant calls through Albert, whichever plugin returns it.
+* Switching an ability off removed it from your whole site, so other plugins using it broke. The switch now applies only to assistants connected through Albert.
+* Paragraphs, headings, lists, buttons and quotes lost tags other plugins add, such as ThirstyAffiliates links. Text is now saved as the editor saves it.
+* Blocks with colours, spacing, borders or extra styling could open with "This block contains unexpected or invalid content". They now open cleanly.
+* Copied blocks lost bold text, links, images and their layout, and a group sent with its contents was saved empty. Blocks are now saved exactly as sent.
+* Markdown was saved as one paragraph with the marks left in. Albert now refuses it and asks for blocks.
+* Deleting a category or tag always failed. It is now deleted permanently, and your assistant is told so first.
+* Moving a post or page to the trash was reported as a permanent delete.
+* A negative ID, such as -5, could change the item with ID 5. IDs below 1 are now refused.
+* Removing categories or tags from a post did nothing, and a category or tag could be left off without a word. Both work now, and one that cannot be used is refused with the reason.
+* User searches returned empty email addresses and roles, the wrong username, and a jumbled result when asked for one user.
+* Searching WooCommerce orders between two dates missed orders in that period.
+* A deleted user stayed on the list of people who may connect an assistant. They are now taken off it.
+* Send setup link now offers to email anyone on the list who has an address, and renews an expired invitation.
+* Recent activity now shows other plugins' actions, shows refusals as Blocked, and shows malformed answers as Failed.
+* The user picker now says why it is empty when a plugin blocks the user list or your role may not list users.
+* The Dashboard's Documentation link opened another plugin's page.
 
 **Security**
 
-* Another site can no longer show Albert's approval page inside its own page to trick you into clicking Authorize.
-* Someone could fill the limit on connected apps with sign-ups they never finished, so a real assistant was refused for a day. Albert now makes room by removing the oldest sign-up that never connected. Apps that have connected are never removed.
-* Every app now has to use the sign-in protection that ties an approval to the app that asked for it, as the MCP standard requires. Apps that registered with a secret could skip it before.
-* Changing or resetting a person's password now disconnects every assistant connected as them. An assistant also stops working as soon as its person is no longer on the list of people who may connect one, however they were taken off it.
-* Anyone allowed to connect an assistant, even a subscriber, could read the full details of a WooCommerce product, including drafts and private products. Reading a product now needs the right to edit products, the same as searching them.
+* Changing or resetting a person's password now disconnects every assistant connected as them.
+* Reading a WooCommerce product now needs the right to edit products, as searching them already did.
 
 **Developer**
 
-* New filter `albert/privacy/personal_keys` (`$keys`, `$ability_name`) sets which keys are masked in one ability's result, grouped by rule as in `albert/privacy/pii_fields`. Albert's own abilities start from the full list, any other ability only from email, phone, IP address, password hash and token keys.
-* On Balanced, every ability with an object input schema or none gets an optional `reveal_personal_data` input, which Albert removes before the ability's own callbacks run. An ability that declares the input itself still receives it. `albert/privacy/reveal_capability` defaults to `read` on these calls.
-* The `discover-abilities` response carries a `privacy` field while privacy mode is Strict or Balanced.
-* Removed the `NAMESPACE` constants from `OAuthController` and `ClientRegistration`, deprecated since 1.0.1: PHP 8.6 deprecates a class constant called `namespace`. Use `Plugin::rest_namespace()`.
-* Deprecated the `albert/abilities/required_capability` filter and `AbilitiesRegistry::resolve_required_capability()`; neither has any effect now, and the method returns an empty string. The `capability` and `capabilityRoles` keys of an Abilities screen row are always empty and will be removed in a future version.
-* Switching an ability off no longer unregisters it. Albert's MCP server leaves it out of discovery and refuses to describe or run it, and safe mode refuses to approve a held call for it. An Albert ability that an add-on refuses, such as one that needs a licence, is still unregistered.
-* `albert/abilities/disabled_list` now also applies to Albert's own abilities.
-* An Abilities screen row's `operation` is now `undeclared` (it was `write`) for an ability whose annotations set neither `readonly` nor `destructive`.
-* Deprecated: `AnnotationPresenter::heuristic_chips()`. An ability's name no longer decides its label.
-* New filter `albert/safe_mode/should_hold` (`$hold`, `$ability`, `$input`, `$user_id`) lets an add-on hold a call for approval based on its input. It can add a hold, never release one, and is not called when safe mode is off or the ability is exempt.
-* New `remove_tags` input on `albert/edit-post-block` and `albert/edit-page-block` confirms that an edit may drop the listed tags.
-* New action `albert/oauth/client_evicted` (`$client_id`, `$client_name`) fires when an unused registration is removed to make room under the client limit.
-* `albert/abilities/register` now fires on `wp_abilities_api_init` instead of `init`, and only on requests that read the abilities registry.
-* New constant `ALBERT_ENVIRONMENT_ABILITIES` (environment type => `toggles`, `read-write` or `all`) and filter `albert/abilities/environment_policy`. The environment comes from `wp_get_environment_type()`, so Bedrock's `WP_ENV` works. An unknown policy is ignored with a `_doing_it_wrong()` notice.
-* New `Annotations::destructive()` preset. `albert/remove-post-block`, `albert/remove-page-block`, `albert/create-user` and `albert/update-user` are annotated `destructive: true`, and abilities on `albert/safe_mode/high_risk_abilities` show as Destructive. The ability row's `operation` value `delete` is now `destructive`, and the badge class `albert-op-badge--delete` is now `albert-op-badge--destructive`.
-* `albert/create-post` and `albert/update-post` accept `slug`, `date`, `author`, `template`, `comment_status`, `sticky` and `format`. `albert/create-page` and `albert/update-page` accept `slug`, `date`, `author`, `parent`, `menu_order`, `template` and `comment_status`. A future `date` with status `publish` schedules the post. All four return the saved `slug` and `date`.
-* `albert/view-post` now returns `template`, `comment_status`, `sticky` and `format`; `albert/view-page` returns `template` and `comment_status`.
-* New abilities: `albert/update-media` and `albert/delete-media`. `albert/find-media` now returns each item's `alt_text` and accepts `missing_alt_text`.
-* Removed: support for WordPress 6.9 and 7.0, including the `abilities_api_init` and `abilities_api_categories_init` hooks of the old Abilities API feature plugin. Albert registers its abilities on WordPress core's hooks only.
-* `albert/edit-post-block` and `albert/edit-page-block` accept `edits`, a list of `{ path, block, expect }` applied in order and saved once. A failed edit saves nothing and its error carries `edit_index`. The single `path`, `block` and `expect` inputs work as before, but not together with `edits`.
-* New abilities: `albert/find-menus`, `albert/view-menu`, `albert/create-menu`, `albert/add-menu-item`, `albert/update-menu-item`, `albert/move-menu-item`, `albert/remove-menu-item`, `albert/assign-menu-location`, `albert/unassign-menu-location` and `albert/delete-menu`. The item abilities take a classic item's `menu_item_id`, or `menu_type: "block"`, `menu_id` and the item's `path` for a navigation menu; `albert/view-menu` and `albert/add-menu-item` take `menu_id` with `menu_type`. Menu writes return `visible`, plus a `notice` when visitors will not see the change, and navigation menu writes return the refreshed `items`.
-* New abilities: `albert/find-comments`, `albert/view-comment`, `albert/reply-to-comment`, `albert/moderate-comment` (takes `comment_ids`) and `albert/delete-comment` (takes `comment_ids`; trashes, `force: true` deletes permanently). All need `moderate_comments`, plus `edit_comment` on each comment. Only comments, pingbacks and trackbacks are listed or acted on; other comment types, such as reviews and notes, are left out. A comment whose post is in the trash has status `post-trashed`.
-* New ability: `albert/search-content`.
-* New ability: `albert/view-site-health`.
-* `albert/update-post` and `albert/update-page` refuse a call with only `id`, return `albert_post_not_found` and `albert_page_not_found` instead of `post_not_found` and `page_not_found`, and return `albert_post_permission_denied` or `albert_page_permission_denied` when WordPress refuses the post, where they used to report it as not found. A page ID sent to `albert/update-post`, or a post ID sent to `albert/update-page`, now names the ability to use instead, when the user may read that ID.
-* `albert/delete-post`, `albert/delete-page` and `albert/delete-pattern` return `deleted: false` when they move the item to the trash; `deleted` is `true` only for a permanent delete.
-* `albert/delete-term` always deletes permanently; its `force` input is still accepted and ignored. `albert/delete-user` requires `reassign`.
-* The `blocks` tree from `albert/view-post`, `albert/view-page`, `albert/find-posts`, `albert/find-pages` and the block-edit abilities gives each block without inner blocks its saved markup in `html`. A block spec whose markup-sourced attribute (such as `content` or `url`) differs from the `html` sent with it is refused, as are an image without `url`, children under a block that cannot nest them, and a registered block Albert has no template for unless it comes with `html`; these were warnings in `block_issues`.
-* New abilities `albert/replace-post-text` and `albert/replace-page-text`: `post_id` or `page_id`, `search`, `replace`, `field` (`content`, `title` or `excerpt`), `expected_count` (default 1) and `remove_tags`. Errors: `invalid_search` (text not found), `invalid_expected_count` (with `count`), `invalid_replace` (the change alters blocks), `invalid_field` (the post type has no such field), `post_not_found` or `page_not_found`, `post_permission_denied` or `page_permission_denied`, and `tags_removed`. A `notice` in the result says when WordPress stored something other than what was sent.
-* The post, page and pattern create and update abilities now return an `invalid_content` error when `content` is Markdown, instead of saving it as one paragraph. Send `blocks` instead.
-* `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
-* `albert/create-post` and `albert/create-page` return `post_permission_denied` and `page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
-* `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
-* `albert/add-post-block` and `albert/add-page-block` accept `pattern`, a pattern name from `albert/find-patterns`, instead of `block`. Its blocks are inserted as stored, with nested `core/pattern` references expanded (a synced user pattern as a `core/block` reference), and checked against the allowed blocks. An unknown name returns `pattern_not_found`. On a post or page without blocks, `path` and `position` may be left out. The response's `inserted` gives the count and paths of the top-level blocks added.
-* New abilities: `albert/add-post-terms` and `albert/remove-post-terms`. Both take `post_id`, `taxonomy` (`category` or `post_tag`) and up to 50 `terms`, and return the post's terms afterwards. Category IDs may be sent as numbers or as text. `albert/remove-post-terms` also takes tag IDs next to tag names, returns `default_category_applied` when removing the last category put the default category back, and a `note` saying why when the default category was the post's only one and stayed.
-* `albert/view-post` and `albert/view-page` return `categories` and `tags` as `{ id, name }` lists, left out when the post type does not use that taxonomy.
-* Deprecated: the `categories` and `tags` inputs of `albert/update-post`. Use `albert/add-post-terms` or `albert/remove-post-terms`. An empty list is refused as invalid input, with an error that names `albert/remove-post-terms`.
-* `albert/create-post` and `albert/update-post` return `category_not_found` for a category ID that does not exist, and `invalid_tags` or `tag_permission_denied` for a tag WordPress refuses to create, and save nothing, instead of leaving it off.
-* Error codes no longer carry an `albert_` prefix, e.g. `albert_permission_denied` is now `permission_denied` and `albert_already_handled` is now `already_handled`. Not-found errors all end in `_not_found`: `albert/set-featured-image` returns `post_not_found` and `media_not_found` instead of `invalid_post` and `invalid_attachment`, `albert/get-block-type` returns `block_type_not_found` instead of `block_not_registered`, and the page block-edit abilities return `page_not_found`.
-* New WP-CLI command `wp albert allowed-users` with `list`, `add` and `remove`. It takes user IDs, logins or email addresses and changes nothing if any of them is not found, or, for `add`, lacks the capability from `albert/connections/allowed_user_capability`. `remove` also takes the ID of someone on the list whose account no longer exists.
-* New actions `albert/allowed_users/added` `( $user_id, $expires_at )` and `albert/allowed_users/removed` `( $user_id )`. They fire whenever someone is added or removed, by the Connections screen, the command, an add-on, an invitation lapsing or their user being deleted, and only once the change is saved. `AllowedUsers::remove()` now returns whether the person was removed.
-* `albert/connections/allowed_user_capability` now also decides who may be added to the list, on the Connections screen as well as in the picker. Before, it only filtered who the picker offered.
-* New abilities: `albert/find-revisions`, `albert/view-revision` and `albert/restore-revision`.
+* Error codes no longer carry an `albert_` prefix, and every not-found error ends in `_not_found`. For example `albert_permission_denied` is now `permission_denied`, and `albert/set-featured-image` returns `post_not_found` and `media_not_found` instead of `invalid_post` and `invalid_attachment`.
+* Removed: support for WordPress 6.9 and 7.0, with the `abilities_api_init` and `abilities_api_categories_init` hooks.
+* Removed: the `NAMESPACE` constants of `OAuthController` and `ClientRegistration`. Use `Plugin::rest_namespace()`.
+* Switching an ability off no longer unregisters it. Albert's MCP server hides and refuses it, and a call over an Albert connection is refused on any route. `albert/abilities/disabled_list` now also applies to Albert's own abilities.
+* `albert/abilities/register` fires on `wp_abilities_api_init` instead of `init`, only on requests that read the abilities registry.
+* New: the `ALBERT_ENVIRONMENT_ABILITIES` constant and `albert/abilities/environment_policy` filter, the `albert/privacy/personal_keys` and `albert/safe_mode/should_hold` filters, and the `albert/allowed_users/added` and `albert/allowed_users/removed` actions. `albert/connections/allowed_user_capability` now also decides who may be added.
+* New `Annotations::destructive()`. An Abilities screen row's `operation` is `destructive` (was `delete`) or `undeclared` (was `write`), and the badge class `albert-op-badge--delete` is now `albert-op-badge--destructive`.
+* On Balanced, every ability gets an optional `reveal_personal_data` input, and `discover-abilities` carries a `privacy` field.
+* Deprecated: the `albert/abilities/required_capability` filter, `AbilitiesRegistry::resolve_required_capability()`, `AnnotationPresenter::heuristic_chips()`, and the `categories` and `tags` inputs of `albert/update-post`.
+* New abilities: `albert/find-menus`, `albert/view-menu`, `albert/create-menu`, `albert/delete-menu`, `albert/add-menu-item`, `albert/update-menu-item`, `albert/move-menu-item`, `albert/remove-menu-item`, `albert/assign-menu-location`, `albert/unassign-menu-location`, `albert/find-comments`, `albert/view-comment`, `albert/reply-to-comment`, `albert/moderate-comment`, `albert/delete-comment`, `albert/find-revisions`, `albert/view-revision`, `albert/restore-revision`, `albert/search-content`, `albert/view-site-health`, `albert/update-media`, `albert/delete-media`, `albert/replace-post-text`, `albert/replace-page-text`, `albert/add-post-terms` and `albert/remove-post-terms`.
+* Changed abilities: post and page create and update accept `slug`, `date`, `author`, `template` and `comment_status`, plus `sticky` and `format` for posts and `parent` and `menu_order` for pages. The block-edit abilities accept `edits` and `remove_tags`, and the add-block abilities accept `pattern`. Block trees include each leaf block's saved `html`. `albert/delete-user` requires `reassign`, `albert/delete-term` always deletes permanently, and the delete abilities return `deleted: false` when they trash.
 
 **Credits**
 
@@ -393,127 +355,17 @@ Security release. Closes a way someone could get an assistant connection to your
 * Removed: `BlockConverter`'s unused image sideloading (`$sideload_images`, `get_created_attachment_ids()`, `assign_parent_to_attachments()`).
 * The translation template is now `languages/albert-ai-butler.pot`.
 
-= 1.5.0 =
-Adds safe mode, which holds destructive actions for your approval, and closes a way an AI assistant could reach your site's tools without going through Albert's approved sign-in.
-
-**Features**
-
-* **Safe mode: nothing destructive happens without you.** Switched on by default. When your assistant asks to delete a post, change someone's role, or rewrite a foundational setting, the action is held and waits for your approval in wp-admin. You see what it would actually change, resolved as it is now rather than as a line of code, and you are warned if the page has been edited since the request was made. Editors approve their own requests, administrators approve anyone's, and nobody can approve something they could not have done themselves. The assistant cannot approve its own work and cannot switch safe mode off. Requests expire if nobody decides, so a stale intent is never applied to today's site. Needs WordPress 7.1; on older versions Albert says plainly that it cannot hold anything instead of letting the switch imply otherwise.
-* **Reuse your block patterns.** Your assistant can now browse the block patterns your theme and plugins provide, and your own saved patterns, and reuse one as the starting point for a new page instead of building the layout from scratch. It can also save a layout as a reusable pattern of its own.
-* **Connect an assistant, step by step.** One button on the Dashboard and on Connections opens a short guide: where your site runs, which app you use, then the exact steps for that app. It tells you the moment the connection really works, because Albert sees it arrive, and then suggests a few first things to ask. If nothing arrives, it lists the usual reasons.
-* **Everyone you allow can connect, whatever their role.** People on your list of who may connect an assistant now get a Connect page under Albert, with the same step-by-step guide and their own connected assistants, which they can disconnect themselves. They see nothing else: no logs, no settings, nobody else's connections. Next to each person on the list, Send setup link emails them a link that opens the guide straight away, or copies it for you to send yourself. When you add people you can tick Email them how to connect.
-
-**Improvements**
-
-* When someone who isn't on the list of people who may connect an assistant tries to connect one, the page now says who can fix it and how. An administrator who isn't on the list gets a button that opens Connections, where they can add themselves.
-* After you approve an assistant, the page now says so and takes you back to your app, with a link in case that doesn't happen.
-* The MCP Adapter, the part Albert uses to talk to AI assistants, is now its own plugin on WordPress.org. Albert uses that plugin when it is active, and asks you to install it with one click on its screens, on the Plugins screen and in Site Health. Albert still includes its own copy for now, but a coming update will rely on the plugin. Where plugin installs are switched off on your site, or you cannot install plugins yourself, Albert tells you who needs to act.
-* The setup steps for each assistant are rewritten as short numbered steps, with the one button or command each step needs right inside it. Claude gets an Add to Claude button that opens Claude with your site already filled in, and there are new steps for Codex, Windsurf, Gemini CLI and Cline, plus a bridge for apps that cannot connect to an address on their own.
-* Albert now recognises a site that only runs on your computer (a local site), lists the apps that work with it first, and explains why Claude on the web and ChatGPT cannot reach it, instead of showing steps that would fail.
-* On a site that only runs on your computer, Claude Desktop now connects with a small install file made for your site: download it, open it, and approve in your browser. Nothing else to install. It needs the site on https or on localhost.
-* The Dashboard's "Connect an AI assistant" step is about you: it ticks off when you have connected an assistant yourself, and a Connect an assistant button stays on the Dashboard after setup.
-
-**Fixes**
-
-* Asking your assistant to build a page with a layout block that holds other content (such as a Cover block wrapped around a heading and text) could silently save the block empty, losing everything inside it. These blocks now keep their contents.
-* In the rare case where a block's content genuinely can't be reproduced, the assistant is now told clearly, instead of the block being saved empty as if it had worked.
-* Pages your assistant builds with blocks no longer raise a WordPress debug notice each time they are shown. Pages built before this update stop once they are saved again in the editor.
-* Asking your assistant to change a layout block's settings, such as a group's background, could remove everything inside it. The contents now stay, unless the assistant explicitly replaces them.
-* Apps that sign in with their own kind of link, such as Cursor, could not connect: every attempt ended in "Invalid Request". They now connect.
-* Long text in the list of people who may connect an assistant now wraps instead of being cut off.
-* The Dashboard's Albert for WooCommerce recommendation now opens the add-on's own page.
-* When another plugin switched off the MCP adapter's built-in tools, assistants could sign in but saw no tools at all. Albert now adds the three tools it needs when they are missing, without replacing anyone else's.
-* Claude Code could not connect on hosts such as SiteGround that answer part of the sign-in discovery themselves: it stopped with "Dynamic Client Registration rejected" before the approval screen. It now connects.
-* After about twenty connection attempts, including ones never finished and apps you had disconnected, no new assistant could connect at all and nothing said why. Only connections that still work count towards the limit now, old unused ones are cleaned up, and the Dashboard tells you if the limit is ever reached.
-
-**Security**
-
-* Albert now closes an unused extra way in. An AI assistant that held a WordPress application password could previously reach your site's tools without going through Albert's sign-in, the list of people you allow to connect, or the approval screen, and it left no record under Connections. That entry point is switched off, so assistants must connect the approved way.
-* Your assistant can no longer pick or change a WordPress password. Creating a user previously meant the assistant invented a password and sent it to your site, which also left it sitting in the AI provider's record of the conversation. Now your site generates the password itself and hands back a one-time link for the new person to set their own. Changing an existing user's password is refused outright: that account's owner can reset it from the login screen, and nobody else needs to.
-* When you deny an app, or its sign-in fails, Albert now sends the app's own reference back to it safely encoded, so a crafted value can no longer add extra parameters to the address the app is sent back to.
-* Albert now refuses to register an app whose return address contains spaces or hidden control characters.
-
-**Developer**
-
-* Safe mode holds destructive calls made over an Albert connection at WordPress 7.1's `wp_pre_execute_ability`. A call is held when the ability's `destructive` annotation is not `false`, when the ability is on the high-risk list, or when its input grants an administrator role or writes a high-risk option. WP-CLI, direct PHP and other plugins are not gated. A held call is logged as `warning`. Settings: `albert_safe_mode` and `albert_safe_mode_ttl_minutes`. New hooks: `albert/safe_mode/high_risk_abilities`, `high_risk_options`, `protected_options`, `exempt_abilities`, `retention_days`, `display_input`, `held`, `approved`, `rejected`, `expired`, `abandoned`, `option_write_blocked`, `option_restored`, and `albert/approvals/view_capability`.
-* When the MCP Adapter plugin is active it supplies the adapter; Albert's bundled copy (0.7.0) is the fallback. New filter `albert/mcp/adapter_notice`.
-* The MCP adapter's default server is emptied so it cannot run abilities outside Albert's sign-in. New filter `albert/mcp/disable_default_server` (default `true`).
-* `albert/create-user` and `albert/update-user` no longer accept a `password`. `albert/create-user` returns a one-time `password_reset_url` instead.
-* New abilities: `albert/find-patterns`, `albert/view-pattern`, `albert/create-pattern`, `albert/update-pattern` and `albert/delete-pattern`.
-* New `albert_connect` capability, held by administrators and everyone on the allowed list.
-* New filter `albert/oauth/stale_client_days` (default 7, `0` keeps unused clients). `albert/oauth/registration_rejected` fires with `client_limit_reached` when the client limit is reached.
-
-**Credits**
-
-* [David Beentjes](https://github.com/unlocdavid) for helping fix the lost block contents.
-* [Rodolfo Melogli](https://profiles.wordpress.org/businessbloomer/) for reporting the Claude Code connection failure on SiteGround.
-* [Sébastien](https://profiles.wordpress.org/seb94100/) for testing a connection that showed no tools.
-
-= 1.4.2 =
-Fixes AI assistants that could not connect to some sites.
-
-**Improvements**
-
-* AI assistants can't connect when your permalinks (Settings &rarr; Permalinks) are set to "Plain". Albert's Dashboard now tells you when that's the case, with a link to change it. Any other permalink setting works.
-
-**Fixes**
-
-* Claude Code and some other AI assistants stopped at the sign-in step with an error about your site's sign-in details. They now find everything they need and connect.
-* AI assistants such as ChatGPT could not connect to sites whose page addresses include /index.php/ (for example example.com/index.php/about/). Albert now uses addresses that work with your permalink setting.
-
-**Developer**
-
-* The authorization server metadata now advertises `jwks_uri`, served from a new `albert/v1/oauth/jwks` REST route that publishes the token signing key's public half as an RFC 7517 JSON Web Key Set. Clients that validate the metadata before authenticating (Claude Code's MCP SDK requires `jwks_uri` to be a string, though RFC 8414 marks it optional) previously failed discovery outright.
-* Discovery now answers the RFC 8414 §3.1 and RFC 9728 §3.1 canonical path-insertion URLs (`/.well-known/oauth-authorization-server/<issuer path>` and `/.well-known/oauth-protected-resource/<resource path>`), not only the OIDC append form. These are root `.well-known` URLs, so on hosts that intercept a root `/.well-known/` the mid-path append form remains the one that works.
-* Every URL Albert advertises (issuer, endpoints, `resource_metadata`, the MCP endpoint under `albert/mcp/external_url`, `ClientRegistration::get_endpoint_url()`) now routes through `index.php` when the permalink structure does, and uses `rest_get_url_prefix()` instead of a hard-coded `wp-json`. New `ServerMetadata::url()`. Pretty-permalink sites get the same URLs as before, so existing connections are unaffected.
-* `ServerMetadata::base_url()` now delegates to `Server::get_base_url()`, so `albert/mcp/external_url` is read once per request and validated in one place.
-
-**Credits**
-
-* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for reporting the Claude Code sign-in problem.
-* [Sébastien](https://wordpress.org/support/users/seb94100/) for reporting the /index.php/ connection problem, with the logs that pinpointed it.
-
 = Earlier versions =
 
-Releases before 1.4.2 are listed in `changelog.txt`, bundled with the plugin.
+Older releases are listed in `changelog.txt`, bundled with the plugin.
 
 == Upgrade Notice ==
 
+= 1.6.0 =
+Requires WordPress 7.1 and PHP 8.2. Error codes lost their albert_ prefix, so check any code that compares them.
+
 = 1.5.1 =
 Security release: closes a way an approval could be sent to someone else, and stops several leaks to connected assistants. Update now.
-
-= 1.5.0 =
-Adds safe mode, which holds destructive actions for your approval, and closes a way an assistant with an application password could reach your site's tools without Albert's sign-in. Recommended for everyone.
-
-= 1.4.2 =
-Fixes Claude Code and other AI assistants that could not connect, including on sites whose page addresses include /index.php/. Recommended if an assistant could not connect.
-
-= 1.4.1 =
-Fixes AI assistants failing to connect, including on managed hosts (such as SiteGround and Servebolt) that were blocking the sign-in step. Recommended if any assistant could not connect.
-
-= 1.4.0 =
-Assistants now know what your site is, can send you files directly, and every admin screen has been rebuilt. Fixes taxonomy reads that were failing outright. Multisite: reconnect your assistants once after updating.
-
-= 1.3.1 =
-A security update. Connecting an AI assistant now requires an exact return address, the approval screen shows where you are being sent, and app connections are checked more strictly. Recommended for all sites.
-
-= 1.3.0 =
-The Abilities screen has been rebuilt from scratch, with search, filter, instant and bulk on/off, and a detail panel for every ability. And personal data (names, emails, phone numbers, addresses) is now hidden from AI assistants automatically, with a setting to control how strict that is.
-
-= 1.2.0 =
-Adds full block-editor support (read, write, and edit individual blocks), classic-editor handling, automatic paging for long posts, and safer defaults: newly added abilities now start switched off. Your existing enabled/disabled settings are preserved.
-
-= 1.1.1 =
-Fixes OAuth discovery endpoints when the request URL has a trailing slash. Recommended for sites where the host or CDN adds a trailing slash to .well-known URLs.
-
-= 1.1.0 =
-Redesigned abilities page, new activity logging, and several reliability fixes. Existing enabled / disabled settings are preserved; no migration needed.
-
-= 1.0.1 =
-Fixes a connection failure caused by mismatched OAuth endpoint namespaces. Recommended for all users.
-
-= 1.0.0 =
-Initial release. Connect Claude Desktop, ChatGPT, and other MCP-compatible AI assistants to your WordPress site.
 
 == Privacy Policy ==
 
