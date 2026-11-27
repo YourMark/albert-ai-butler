@@ -188,7 +188,7 @@ class AllowedUsersCommand {
 		$named   = [];
 
 		foreach ( $args as $arg ) {
-			if ( is_numeric( $arg ) && in_array( (int) $arg, $listed, true ) && ! get_user_by( 'id', (int) $arg ) ) {
+			if ( ctype_digit( $arg ) && in_array( (int) $arg, $listed, true ) && ! get_user_by( 'id', (int) $arg ) ) {
 				$deleted[ (int) $arg ] = 'deleted user';
 			} else {
 				$named[] = $arg;

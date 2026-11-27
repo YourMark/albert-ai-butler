@@ -121,6 +121,25 @@ class AllowedUsersCommandTest extends TestCase {
 	}
 
 	/**
+	 * Only a plain number is read as a deleted user's ID, so `1e3` or `1000.5` is not cast to one.
+	 *
+	 * @return void
+	 */
+	public function test_remove_reads_only_digits_as_a_deleted_users_id(): void {
+		$gone = self::factory()->user->create() + 1000;
+		update_option( AllowedUsers::OPTION, [ $gone => [] ] );
+
+		foreach ( [ $gone . '.5', ' ' . $gone ] as $arg ) {
+			try {
+				( new AllowedUsersCommand() )->remove( [ $arg ] );
+				$this->fail( "Expected {$arg} not to be read as an ID." );
+			} catch ( RuntimeException $e ) {
+				$this->assertSame( [ $gone ], AllowedUsers::ids() );
+			}
+		}
+	}
+
+	/**
 	 * A refused save on add or remove errors, so the command exits non-zero.
 	 *
 	 * @return void
