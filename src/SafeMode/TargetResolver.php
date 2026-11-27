@@ -44,7 +44,7 @@ class TargetResolver {
 		$id = $this->target_id( $input );
 
 		if ( $id <= 0 ) {
-			return $this->describe_comments( $input );
+			return str_contains( strtolower( $ability_name ), 'comment' ) ? $this->describe_comments( $input ) : null;
 		}
 
 		$family = $this->family( $ability_name );

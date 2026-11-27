@@ -273,7 +273,7 @@ class Gate {
 	}
 
 	/**
-	 * Whether this call only moves a post, page, pattern or comments to the trash.
+	 * Whether this call only moves a post, page, pattern or comment to the trash.
 	 *
 	 * Trash is core's own undo, so only the permanent call needs a person. Anything but
 	 * an absent or exactly `false` `force` is held, a string `"false"` included.

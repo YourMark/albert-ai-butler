@@ -97,4 +97,15 @@ class CommentTargetTest extends TestCase {
 	public function test_deleted_comments_resolve_to_null(): void {
 		$this->assertNull( ( new TargetResolver() )->describe( 'albert/delete-comment', [ 'comment_ids' => [ 999999 ] ] ) );
 	}
+
+	/**
+	 * Only comment abilities get a comment label; another ability with a comment ID is not described.
+	 *
+	 * @return void
+	 */
+	public function test_other_abilities_with_a_comment_id_are_not_described(): void {
+		$comment_id = (int) self::factory()->comment->create( [ 'comment_post_ID' => self::factory()->post->create() ] );
+
+		$this->assertNull( ( new TargetResolver() )->describe( 'acme/flag-for-review', [ 'comment_id' => $comment_id ] ) );
+	}
 }
