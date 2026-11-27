@@ -127,7 +127,6 @@ class ServerTest extends TestCase {
 	 */
 	private function response_status( $response ): int {
 		$method = new ReflectionMethod( Server::class, 'response_status' );
-		$method->setAccessible( true );
 
 		return $method->invoke( new Server(), $response );
 	}
@@ -189,7 +188,6 @@ class ServerTest extends TestCase {
 	 */
 	private function build_challenge( bool $token_sent ): string {
 		$method = new ReflectionMethod( Server::class, 'build_challenge' );
-		$method->setAccessible( true );
 
 		return $method->invoke( new Server(), 'https://example.test/wp-json/albert/v1/oauth/resource', $token_sent );
 	}

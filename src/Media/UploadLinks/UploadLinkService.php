@@ -194,7 +194,7 @@ class UploadLinkService {
 		$post_id = max( 0, (int) ( $args['post_id'] ?? 0 ) );
 		if ( $post_id > 0 && ! get_post( $post_id ) ) {
 			return new WP_Error(
-				'invalid_post',
+				'post_not_found',
 				__( 'The specified post does not exist.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);

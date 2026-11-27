@@ -123,7 +123,7 @@ class ReplaceTextTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_expected_count', $result->get_error_code() );
+		$this->assertSame( 'invalid_expected_count', $result->get_error_code() );
 		$this->assertSame( 2, $result->get_error_data()['count'] );
 		$this->assertSame( self::CONTENT, $this->content() );
 
@@ -152,7 +152,7 @@ class ReplaceTextTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_search', $result->get_error_code() );
+		$this->assertSame( 'invalid_search', $result->get_error_code() );
 		$this->assertStringContainsString( 'Tom &amp; Jerry', $result->get_error_message() );
 	}
 
@@ -170,7 +170,7 @@ class ReplaceTextTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_invalid_replace', $result->get_error_code() );
+		$this->assertSame( 'invalid_replace', $result->get_error_code() );
 		$this->assertSame( self::CONTENT, $this->content() );
 	}
 
@@ -193,9 +193,9 @@ class ReplaceTextTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'albert_invalid_replace', $settings->get_error_code() );
+		$this->assertSame( 'invalid_replace', $settings->get_error_code() );
 		$this->assertStringContainsString( 'settings of core/heading at [0]', $settings->get_error_message() );
-		$this->assertSame( 'albert_invalid_replace', $removed->get_error_code() );
+		$this->assertSame( 'invalid_replace', $removed->get_error_code() );
 		$this->assertSame( self::CONTENT, $this->content() );
 	}
 
@@ -211,7 +211,7 @@ class ReplaceTextTest extends TestCase {
 				'replace' => 'Once</p><p>more',
 			]
 		);
-		$this->assertSame( 'albert_invalid_replace', $split->get_error_code() );
+		$this->assertSame( 'invalid_replace', $split->get_error_code() );
 		$this->assertSame( self::CONTENT, $this->content() );
 
 		$bold = $this->replace(
@@ -243,7 +243,7 @@ class ReplaceTextTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'albert_invalid_replace', $result->get_error_code() );
+		$this->assertSame( 'invalid_replace', $result->get_error_code() );
 	}
 
 	/**
@@ -262,7 +262,7 @@ class ReplaceTextTest extends TestCase {
 				]
 			);
 
-			$this->assertSame( 'albert_post_permission_denied', $result->get_error_code() );
+			$this->assertSame( 'post_permission_denied', $result->get_error_code() );
 		}
 		$this->assertSame( self::CONTENT, $this->content() );
 	}
@@ -324,7 +324,7 @@ class ReplaceTextTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'albert_page_not_found', $result->get_error_code() );
+		$this->assertSame( 'page_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -374,7 +374,7 @@ class ReplaceTextTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'albert_invalid_field', $result->get_error_code() );
+		$this->assertSame( 'invalid_field', $result->get_error_code() );
 		$this->assertSame( 'Old summary', get_post( $page_id )->post_excerpt );
 	}
 
@@ -420,7 +420,7 @@ class ReplaceTextTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
 		$this->assertSame( self::CONTENT, $this->content() );
 	}
 

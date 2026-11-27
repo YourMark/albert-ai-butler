@@ -104,7 +104,6 @@ class ExecuteSchemaTest extends TestCase {
 	private function get_output_schema( BaseAbility $ability ): array {
 		$reflection = new \ReflectionClass( $ability );
 		$prop       = $reflection->getProperty( 'output_schema' );
-		$prop->setAccessible( true );
 
 		return $prop->getValue( $ability );
 	}

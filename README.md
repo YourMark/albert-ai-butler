@@ -1,6 +1,6 @@
 # Albert
 
-![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.1+-blue)
+![Requires PHP](https://img.shields.io/badge/Requires%20PHP-8.2+-blue)
 ![Requires WordPress](https://img.shields.io/badge/Requires%20WordPress-7.1+-blue)
 ![Tested up to](https://img.shields.io/badge/Tested%20up%20to-7.1-blue)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
@@ -95,7 +95,7 @@ What an assistant can do with each plugin is decided by that plugin. Albert adds
 ## Requirements
 
 - **WordPress**: 7.1 or higher
-- **PHP**: 8.1 or higher (8.3+ recommended)
+- **PHP**: 8.2 or higher (8.3+ recommended)
 - **WooCommerce**: 11.0 or higher (if WooCommerce integration is used)
 - **MySQL**: 8.0+ or MariaDB 10.5+
 - **HTTPS**: required for OAuth
@@ -184,6 +184,7 @@ Website: https://yourmark.nl
 
 **Improvements**
 
+- Albert now requires PHP 8.2 or higher. PHP 8.1 no longer gets security fixes, so a site on it keeps the version of Albert it has.
 - The Abilities screen now labels an ability from another plugin that doesn't say whether it only reads or can change something as Not declared, instead of guessing Write, and explains what that means. Albert still treats it as one that can make changes, so safe mode holds it.
 - The Abilities screen no longer shows a "Required capability" for each ability. It was a guess from the ability's name and was wrong in places. Without Albert Premium's advanced permissions, the ability's own permission check decides, as it always did.
 - When your assistant edits a single block and the new text would lose a tag the block had, such as a ThirstyAffiliates link, Albert refuses the edit and tells the assistant to ask you first. Nothing is saved until you agree.
@@ -219,7 +220,7 @@ Website: https://yourmark.nl
 - When your assistant used an action from another plugin, it did not show in Recent activity, and the Abilities screen said it was never used. These calls are now recorded like Albert's own.
 - When an action's answer did not have the shape it promises, your assistant got an error but Recent activity said it succeeded. It now shows as failed.
 - When your assistant asked for an action it is not allowed to use, the refusal did not show in Recent activity. It now shows as blocked.
-- When a plugin on your site blocked the list of users, choosing who may approve an assistant failed with a message to reload the page, which never helped. It now says that something on the site blocks the user list and what to allow.
+- When a plugin on your site blocked the list of users, choosing who may approve an assistant failed with a message to reload the page, which never helped. It now says that something on the site blocks the user list and what to allow, or, when your role may not list users, that an administrator needs to add them or give the role the list_users capability.
 - When your assistant searched your users, their email addresses and roles always came back empty, and the username shown was not the name they log in with. Both are now filled in correctly. Privacy mode still hides email addresses and usernames as before.
 - Asking for one user by ID in a user search returned a jumbled result instead of that user. It now returns just that user.
 
@@ -236,6 +237,7 @@ Website: https://yourmark.nl
 - New filter `albert/privacy/personal_keys` (`$keys`, `$ability_name`) sets which keys are masked in one ability's result, grouped by rule as in `albert/privacy/pii_fields`. Albert's own abilities start from the full list, any other ability only from email, phone, IP address, password hash and token keys.
 - On Balanced, every ability with an object input schema or none gets an optional `reveal_personal_data` input, which Albert removes before the ability's own callbacks run. An ability that declares the input itself still receives it. `albert/privacy/reveal_capability` defaults to `read` on these calls.
 - The `discover-abilities` response carries a `privacy` field while privacy mode is Strict or Balanced.
+- Removed the `NAMESPACE` constants from `OAuthController` and `ClientRegistration`, deprecated since 1.0.1: PHP 8.6 deprecates a class constant called `namespace`. Use `Plugin::rest_namespace()`.
 - Deprecated the `albert/abilities/required_capability` filter and `AbilitiesRegistry::resolve_required_capability()`; neither has any effect now, and the method returns an empty string. The `capability` and `capabilityRoles` keys of an Abilities screen row are always empty and will be removed in a future version.
 - Switching an ability off no longer unregisters it. Albert's MCP server leaves it out of discovery and refuses to describe or run it, and safe mode refuses to approve a held call for it. An Albert ability that an add-on refuses, such as one that needs a licence, is still unregistered.
 - `albert/abilities/disabled_list` now also applies to Albert's own abilities.
@@ -255,11 +257,12 @@ Website: https://yourmark.nl
 - `albert/delete-post`, `albert/delete-page` and `albert/delete-pattern` return `deleted: false` when they move the item to the trash; `deleted` is `true` only for a permanent delete.
 - `albert/delete-term` always deletes permanently; its `force` input is still accepted and ignored. `albert/delete-user` requires `reassign`.
 - The `blocks` tree from `albert/view-post`, `albert/view-page`, `albert/find-posts`, `albert/find-pages` and the block-edit abilities gives each block without inner blocks its saved markup in `html`. A block spec whose markup-sourced attribute (such as `content` or `url`) differs from the `html` sent with it is refused, as are an image without `url`, children under a block that cannot nest them, and a registered block Albert has no template for unless it comes with `html`; these were warnings in `block_issues`.
-- New abilities `albert/replace-post-text` and `albert/replace-page-text`: `post_id` or `page_id`, `search`, `replace`, `field` (`content`, `title` or `excerpt`), `expected_count` (default 1) and `remove_tags`. Errors: `albert_invalid_search` (text not found), `albert_invalid_expected_count` (with `count`), `albert_invalid_replace` (the change alters blocks), `albert_invalid_field` (the post type has no such field), `albert_post_not_found` or `albert_page_not_found`, `albert_post_permission_denied` or `albert_page_permission_denied`, and `tags_removed`. A `notice` in the result says when WordPress stored something other than what was sent.
-- The post, page and pattern create and update abilities now return an `albert_invalid_content` error when `content` is Markdown, instead of saving it as one paragraph. Send `blocks` instead.
+- New abilities `albert/replace-post-text` and `albert/replace-page-text`: `post_id` or `page_id`, `search`, `replace`, `field` (`content`, `title` or `excerpt`), `expected_count` (default 1) and `remove_tags`. Errors: `invalid_search` (text not found), `invalid_expected_count` (with `count`), `invalid_replace` (the change alters blocks), `invalid_field` (the post type has no such field), `post_not_found` or `page_not_found`, `post_permission_denied` or `page_permission_denied`, and `tags_removed`. A `notice` in the result says when WordPress stored something other than what was sent.
+- The post, page and pattern create and update abilities now return an `invalid_content` error when `content` is Markdown, instead of saving it as one paragraph. Send `blocks` instead.
 - `albert/woo-view-product` now requires the `edit_products` capability (it required `read`), matching `albert/woo-find-products`.
-- `albert/create-post` and `albert/create-page` return `albert_post_permission_denied` and `albert_page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
+- `albert/create-post` and `albert/create-page` return `post_permission_denied` and `page_permission_denied` when WordPress refuses the write, such as publishing without permission to publish. Other WordPress errors keep their own code.
 - `albert/find-users` asks core for the `edit` context when the user has `list_users`, so `email`, `roles` and `username` (now the login, not the nicename) are filled in. Its `id` input returns that one user as a one-item list.
+- Error codes no longer carry an `albert_` prefix, e.g. `albert_permission_denied` is now `permission_denied` and `albert_already_handled` is now `already_handled`. Not-found errors all end in `_not_found`: `albert/set-featured-image` returns `post_not_found` and `media_not_found` instead of `invalid_post` and `invalid_attachment`, `albert/get-block-type` returns `block_type_not_found` instead of `block_not_registered`, and the page block-edit abilities return `page_not_found`.
 
 **Credits**
 
