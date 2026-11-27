@@ -42,7 +42,7 @@ class AddTerms extends AbstractPostTerms {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => [ 'idempotent' => true ] + Annotations::update(
+			'annotations' => Annotations::update(
 				'Terms already on the post stay, and sending one it already has changes nothing. '
 				. 'Check the result\'s `terms` for the full list afterwards.'
 			),

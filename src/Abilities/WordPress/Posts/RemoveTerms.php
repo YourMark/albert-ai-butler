@@ -67,7 +67,7 @@ class RemoveTerms extends AbstractPostTerms {
 			'mcp'         => [
 				'public' => true,
 			],
-			'annotations' => [ 'idempotent' => true ] + Annotations::update(
+			'annotations' => Annotations::update(
 				'Only the terms you send are removed. Removing a post\'s last category puts the site\'s '
 				. 'default category back, and `default_category_applied` says so.'
 			),
