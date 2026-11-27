@@ -57,7 +57,6 @@ class AuthorizationServerFactoryTest extends TestCase {
 	 */
 	private function ttl( string $filter_name, string $default_value ): DateInterval {
 		$method = new ReflectionMethod( AuthorizationServerFactory::class, 'ttl' );
-		$method->setAccessible( true );
 
 		return $method->invoke( null, $filter_name, $default_value );
 	}

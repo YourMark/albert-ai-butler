@@ -68,7 +68,6 @@ class OAuthControllerTest extends TestCase {
 	 */
 	private function log_failure( OAuthServerException $e ): void {
 		$method = new ReflectionMethod( OAuthController::class, 'log_token_request_failure' );
-		$method->setAccessible( true );
 
 		$method->invoke( new OAuthController(), $e );
 	}

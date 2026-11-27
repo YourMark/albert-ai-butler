@@ -11,7 +11,6 @@ namespace Albert\Abilities\WordPress\Users;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use Albert\Privacy\PiiPolicy;
 use WP_Error;
 use WP_REST_Request;
 
@@ -62,38 +61,33 @@ class FindUsers extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'                   => [
+				'id'       => [
 					'type'        => 'integer',
 					'description' => 'Return only the user with this ID, as a one-item list. For all of one user\'s details use albert/view-user.',
 					'minimum'     => 1,
 				],
-				'page'                 => [
+				'page'     => [
 					'type'        => 'integer',
 					'description' => 'Page number for pagination',
 					'default'     => 1,
 					'minimum'     => 1,
 				],
-				'per_page'             => [
+				'per_page' => [
 					'type'        => 'integer',
 					'description' => 'Number of users per page',
 					'default'     => 10,
 					'minimum'     => 1,
 					'maximum'     => 100,
 				],
-				'search'               => [
+				'search'   => [
 					'type'        => 'string',
 					'description' => 'Search users by name or email',
 					'default'     => '',
 				],
-				'role'                 => [
+				'role'     => [
 					'type'        => 'string',
 					'description' => 'Filter users by role',
 					'enum'        => $role_names,
-				],
-				'reveal_personal_data' => [
-					'type'        => 'boolean',
-					'description' => "Return real personal data instead of anonymised placeholders. Requires the ability's own capability; ignored unless privacy mode is Balanced.",
-					'default'     => false,
 				],
 			],
 		];
@@ -225,17 +219,10 @@ class FindUsers extends BaseAbility {
 		$total       = isset( $headers['X-WP-Total'] ) ? (int) $headers['X-WP-Total'] : count( $users );
 		$total_pages = isset( $headers['X-WP-TotalPages'] ) ? (int) $headers['X-WP-TotalPages'] : 1;
 
-		return PiiPolicy::redact(
-			[
-				'users'       => $users,
-				'total'       => $total,
-				'total_pages' => $total_pages,
-			],
-			$args,
-			[
-				'mask_context_names' => true,
-				'reveal_capability'  => 'list_users',
-			]
-		);
+		return [
+			'users'       => $users,
+			'total'       => $total,
+			'total_pages' => $total_pages,
+		];
 	}
 }

@@ -13,9 +13,10 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Context\Payload;
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\Privacy\PrivacyMode;
 
 /**
- * Adds the `site` and `skills` fields, and Albert's `notice`, to the discovery response.
+ * Adds the `site` and `skills` fields, and Albert's `notice` and `privacy`, to the discovery response.
  *
  * `discover-abilities` answers "what can I do here" and says nothing about where
  * "here" is, so an assistant guesses: English on a Dutch site, invented colours,
@@ -99,6 +100,11 @@ class DiscoveryContext implements Hookable {
 			'description' => 'A message from Albert, the plugin serving this connection, about something the site administrator needs to do. Pass it on to the user.',
 		];
 
+		$args['output_schema']['properties']['privacy'] = [
+			'type'        => 'string',
+			'description' => 'How this site masks personal data in tool results.',
+		];
+
 		$args['output_schema']['properties']['skills'] = [
 			'type'        => 'string',
 			'description' => 'Task guides available on this site, one line each. Fetch a full guide with the albert/get-skill ability.',
@@ -116,7 +122,7 @@ class DiscoveryContext implements Hookable {
 	 * @param mixed  $mcp_tool  The adapter's tool instance (unused, the name is enough).
 	 * @param mixed  $server    The MCP server firing the filter.
 	 *
-	 * @return mixed The result, with `site`, `skills` and `notice` added when there is something to add.
+	 * @return mixed The result, with `site`, `skills`, `notice` and `privacy` added when there is something to add.
 	 * @since 1.4.0
 	 */
 	public function add_context( $result, $args, string $tool_name, $mcp_tool = null, $server = null ): mixed {
@@ -143,6 +149,11 @@ class DiscoveryContext implements Hookable {
 		$notice = $this->notice();
 		if ( $notice !== '' ) {
 			$payload['notice'] = $notice;
+		}
+
+		// Outside the site context, so switching that off never drops it.
+		if ( PrivacyMode::resolve() !== PrivacyMode::Off ) {
+			$payload['privacy'] = 'Personal data in tool results, such as email addresses, is masked. Never write a masked value back: it would replace the real one.';
 		}
 
 		if ( $payload === [] ) {

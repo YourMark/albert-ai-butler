@@ -99,6 +99,25 @@ class DiscoveryContextTest extends TestCase {
 	}
 
 	/**
+	 * While privacy mode masks anything, the assistant is told not to write a masked value back.
+	 *
+	 * @return void
+	 */
+	public function test_the_privacy_line_follows_the_mode(): void {
+		$result = [ 'abilities' => [] ];
+
+		foreach ( [ 'strict', 'balanced' ] as $mode ) {
+			$GLOBALS['albert_test_options']['albert_privacy_mode'] = $mode;
+			$filtered = $this->add_context( $result, [], 'mcp-adapter/discover-abilities' );
+			$this->assertStringContainsString( 'Never write a masked value back', $filtered['privacy'] ?? '' );
+		}
+
+		$GLOBALS['albert_test_options']['albert_privacy_mode'] = 'off';
+		$this->assertArrayNotHasKey( 'privacy', $this->add_context( $result, [], 'mcp-adapter/discover-abilities' ) );
+		unset( $GLOBALS['albert_test_options']['albert_privacy_mode'] );
+	}
+
+	/**
 	 * Both the raw ability id and the MCP-sanitised tool name are recognised.
 	 *
 	 * The adapter reports one spelling on some paths and the other elsewhere, so

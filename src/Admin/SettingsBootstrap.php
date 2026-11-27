@@ -117,7 +117,7 @@ class SettingsBootstrap {
 							],
 							PrivacyMode::Balanced->value => [
 								'label'       => __( 'Balanced', 'albert-ai-butler' ),
-								'description' => __( 'Anonymised by default, but an authorised request can reveal it.', 'albert-ai-butler' ),
+								'description' => __( 'Anonymised by default. Anyone allowed to use an ability can ask it for the real data.', 'albert-ai-butler' ),
 							],
 							PrivacyMode::Off->value      => [
 								'label'       => __( 'Off', 'albert-ai-butler' ),
