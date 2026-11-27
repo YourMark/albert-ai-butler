@@ -29,7 +29,14 @@ class EmDashCheckTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
-		exec( 'rm -rf ' . escapeshellarg( $this->root ) );
+		$files = new \RecursiveIteratorIterator(
+			new \RecursiveDirectoryIterator( $this->root, \FilesystemIterator::SKIP_DOTS ),
+			\RecursiveIteratorIterator::CHILD_FIRST
+		);
+		foreach ( $files as $file ) {
+			$file->isDir() ? rmdir( $file->getPathname() ) : unlink( $file->getPathname() );
+		}
+		rmdir( $this->root );
 		parent::tearDown();
 	}
 
@@ -76,6 +83,8 @@ class EmDashCheckTest extends TestCase {
 	}
 
 	/**
+	 * Write a fixture file.
+	 *
 	 * @param string $path    Path relative to the fixture root.
 	 * @param string $content File content.
 	 */
@@ -84,6 +93,8 @@ class EmDashCheckTest extends TestCase {
 	}
 
 	/**
+	 * Run the em dash check as the CLI does.
+	 *
 	 * @param string $root Tree to check.
 	 * @return array{0: int, 1: string} Exit code and combined output.
 	 */

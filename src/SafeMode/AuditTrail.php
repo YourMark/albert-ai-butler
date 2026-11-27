@@ -48,7 +48,7 @@ class AuditTrail {
 	 * @since 1.5.0
 	 * @var string
 	 */
-	const CODE_APPROVED = 'albert_approval_granted';
+	const CODE_APPROVED = 'approval_granted';
 
 	/**
 	 * A person rejected a held call. The ability never ran.
@@ -56,7 +56,7 @@ class AuditTrail {
 	 * @since 1.5.0
 	 * @var string
 	 */
-	const CODE_REJECTED = 'albert_approval_rejected';
+	const CODE_REJECTED = 'approval_rejected';
 
 	/**
 	 * Nobody decided in time.
@@ -64,7 +64,7 @@ class AuditTrail {
 	 * @since 1.5.0
 	 * @var string
 	 */
-	const CODE_EXPIRED = 'albert_approval_expired';
+	const CODE_EXPIRED = 'approval_expired';
 
 	/**
 	 * An approved run never reported back.
@@ -72,7 +72,7 @@ class AuditTrail {
 	 * @since 1.5.0
 	 * @var string
 	 */
-	const CODE_ABANDONED = 'albert_run_abandoned';
+	const CODE_ABANDONED = 'run_abandoned';
 
 	/**
 	 * An assistant tried to write one of Albert's own control options.
@@ -82,7 +82,7 @@ class AuditTrail {
 	 * @since 1.5.0
 	 * @var string
 	 */
-	const CODE_OPTION_BLOCKED = 'albert_protected_option_write_blocked';
+	const CODE_OPTION_BLOCKED = 'protected_option_write_blocked';
 
 	/**
 	 * A protected option was changed outside the option API during an
@@ -94,7 +94,7 @@ class AuditTrail {
 	 * @since 1.5.0
 	 * @var string
 	 */
-	const CODE_OPTION_RESTORED = 'albert_protected_option_restored';
+	const CODE_OPTION_RESTORED = 'protected_option_restored';
 
 	/**
 	 * Record an approval.

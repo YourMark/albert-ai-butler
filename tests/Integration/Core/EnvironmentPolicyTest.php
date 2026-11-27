@@ -221,7 +221,6 @@ class EnvironmentPolicyTest extends TestCase {
 	 */
 	public function test_destructive_writes_declare_it( string $class_name ): void {
 		$meta = new \ReflectionProperty( $class_name, 'meta' );
-		$meta->setAccessible( true );
 
 		$this->assertTrue( $meta->getValue( new $class_name() )['annotations']['destructive'] );
 	}

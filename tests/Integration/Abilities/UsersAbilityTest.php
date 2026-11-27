@@ -15,6 +15,7 @@ use Albert\Abilities\WordPress\Users\Delete as DeleteUser;
 use Albert\Abilities\WordPress\Users\FindUsers;
 use Albert\Abilities\WordPress\Users\Update as UpdateUser;
 use Albert\Abilities\WordPress\Users\ViewUser;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
 use WP_Error;
 
@@ -192,7 +193,12 @@ class UsersAbilityTest extends TestCase {
 			]
 		);
 
-		$result = ( new FindUsers() )->execute( [ 'id' => $user_id ] );
+		ConnectionContext::set( 'client-1' );
+		try {
+			$result = wp_get_ability( 'albert/find-users' )->execute( [ 'id' => $user_id ] );
+		} finally {
+			ConnectionContext::reset();
+		}
 
 		$this->assertIsArray( $result );
 		$this->assertNotSame( 'private@albert.test', $result['users'][0]['email'] );
@@ -233,7 +239,7 @@ class UsersAbilityTest extends TestCase {
 	}
 
 	/**
-	 * ViewUser anonymises personal data under the default (Balanced) privacy mode.
+	 * An assistant's call to ViewUser is anonymised under Balanced, through core's execution path.
 	 *
 	 * @return void
 	 */
@@ -251,14 +257,19 @@ class UsersAbilityTest extends TestCase {
 			]
 		);
 
-		$result = ( new ViewUser() )->execute( [ 'id' => $user_id ] );
+		ConnectionContext::set( 'client-1' );
+		try {
+			$result = wp_get_ability( 'albert/view-user' )->execute( [ 'id' => $user_id ] );
+		} finally {
+			ConnectionContext::reset();
+		}
 
 		$this->assertIsArray( $result );
 		$this->assertNotSame( 'masked@albert.test', $result['user']['email'] );
 		$this->assertStringContainsString( '***', $result['user']['email'] );
 
 		// Previously-leaked account fields are now masked, not raw.
-		$this->assertNotSame( 'maskeduser', $result['user']['username'] );
+		$this->assertSame( 'User #' . $user_id, $result['user']['username'] );
 		$this->assertNotSame( 'https://maskeduser.example', $result['user']['url'] );
 		$this->assertSame( '', $result['user']['url'] );
 		$this->assertNotSame( 'A personal bio that must not reach the LLM.', $result['user']['description'] );

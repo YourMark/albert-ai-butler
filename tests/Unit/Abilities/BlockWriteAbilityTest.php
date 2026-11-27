@@ -43,6 +43,25 @@ class BlockWriteAbilityTest extends TestCase {
 		$GLOBALS['albert_test_rest_calls']     = [];
 		$GLOBALS['albert_test_rest_responses'] = [];
 
+		// The update abilities refuse an id that is not an existing post or page.
+		$GLOBALS['albert_test_posts'] = [
+			7  => (object) [
+				'ID'           => 7,
+				'post_type'    => 'post',
+				'post_content' => '',
+			],
+			9  => (object) [
+				'ID'           => 9,
+				'post_type'    => 'page',
+				'post_content' => '',
+			],
+			55 => (object) [
+				'ID'           => 55,
+				'post_type'    => 'page',
+				'post_content' => '',
+			],
+		];
+
 		albert_test_register_default_block_types();
 	}
 
@@ -55,7 +74,8 @@ class BlockWriteAbilityTest extends TestCase {
 		unset(
 			$GLOBALS['albert_test_block_types'],
 			$GLOBALS['albert_test_rest_calls'],
-			$GLOBALS['albert_test_rest_responses']
+			$GLOBALS['albert_test_rest_responses'],
+			$GLOBALS['albert_test_posts']
 		);
 		parent::tearDown();
 	}
@@ -130,12 +150,6 @@ class BlockWriteAbilityTest extends TestCase {
 	}
 
 	public function test_update_post_with_block_error_returns_wp_error_and_does_not_save(): void {
-		// The existence check (GET) succeeds; the update (POST) must not run.
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 7 ],
-		];
-
 		$ability = new UpdatePost();
 
 		$result = $ability->execute(
@@ -151,11 +165,6 @@ class BlockWriteAbilityTest extends TestCase {
 	}
 
 	public function test_update_page_with_block_error_returns_wp_error_and_does_not_save(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 9 ],
-		];
-
 		$ability = new UpdatePage();
 
 		$result = $ability->execute(
@@ -246,10 +255,6 @@ class BlockWriteAbilityTest extends TestCase {
 	}
 
 	public function test_update_page_with_warning_only_saves_and_returns_block_issues(): void {
-		$GLOBALS['albert_test_rest_responses']['get'] = [
-			'is_error' => false,
-			'data'     => [ 'id' => 55 ],
-		];
 		$this->queue_write_success(
 			[
 				'id'     => 55,

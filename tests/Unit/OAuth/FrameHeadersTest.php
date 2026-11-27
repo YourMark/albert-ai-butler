@@ -73,21 +73,21 @@ class FrameHeadersTest extends TestCase {
 		$output  = null;
 
 		foreach ( $this->tokens( $this->body( $method ) ) as $i => [ $id, $text ] ) {
-			if ( null === $headers && T_STRING === $id && 'send_page_headers' === $text ) {
+			if ( $headers === null && $id === T_STRING && $text === 'send_page_headers' ) {
 				$headers = $i;
 			}
 
 			$prints = in_array( $id, [ T_ECHO, T_PRINT, T_INLINE_HTML, T_CLOSE_TAG, T_OPEN_TAG_WITH_ECHO ], true )
-				|| ( T_STRING === $id && in_array( $text, self::OUTPUT_FUNCTIONS, true ) );
+				|| ( $id === T_STRING && in_array( $text, self::OUTPUT_FUNCTIONS, true ) );
 
-			if ( null === $output && $prints ) {
+			if ( $output === null && $prints ) {
 				$output = $i;
 			}
 		}
 
 		$this->assertNotNull( $headers, "$method does not send the page headers." );
 
-		if ( null !== $output ) {
+		if ( $output !== null ) {
 			$this->assertLessThan( $output, $headers, "$method outputs before sending the page headers." );
 		}
 	}
@@ -112,7 +112,7 @@ class FrameHeadersTest extends TestCase {
 
 		foreach ( token_get_all( $open_first ? "<?php\n" . $code : $code ) as $token ) {
 			// A leading backslash names the same global function.
-			$token = is_array( $token ) ? [ $token[0], ltrim( $token[1], '\\' ) ] : [ 0, $token ];
+			$token    = is_array( $token ) ? [ $token[0], ltrim( $token[1], '\\' ) ] : [ 0, $token ];
 			$token[0] = T_NAME_FULLY_QUALIFIED === $token[0] ? T_STRING : $token[0];
 
 			if ( ! in_array( $token[0], [ T_OPEN_TAG, T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ], true ) ) {
@@ -124,6 +124,8 @@ class FrameHeadersTest extends TestCase {
 	}
 
 	/**
+	 * Read one AuthorizationPage method's source.
+	 *
 	 * @param string $method Method name.
 	 * @return string The method's source.
 	 */
