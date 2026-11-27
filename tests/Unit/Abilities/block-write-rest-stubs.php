@@ -5,7 +5,7 @@
  * Records every WP_REST_Request the abilities dispatch into
  * $GLOBALS['albert_test_rest_calls'] (each entry: method, route) and returns
  * canned responses driven by $GLOBALS['albert_test_rest_responses']:
- *   - ['get']   → response for GET existence checks (Update abilities)
+ *   - ['get']   → response for GET reads
  *   - ['write'] → response for the mutating POST create/update
  * A response entry is [ 'is_error' => bool, 'data' => array, 'status' => int ].
  *

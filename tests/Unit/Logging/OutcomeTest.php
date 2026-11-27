@@ -90,8 +90,6 @@ class OutcomeTest extends TestCase {
 			'session'            => [ 'session_not_found' ],
 			'third party suffix' => [ 'acme_widget_not_found' ],
 			'bare not_found'     => [ 'not_found' ],
-			'invalid_post'       => [ 'invalid_post' ],
-			'invalid_attachment' => [ 'invalid_attachment' ],
 		];
 	}
 
@@ -122,7 +120,7 @@ class OutcomeTest extends TestCase {
 	public static function provide_policy_codes(): array {
 		return [
 			'albert capability'   => [ 'ability_permission_denied' ],
-			'premium enforcer'    => [ 'albert_permission_denied' ],
+			'premium enforcer'    => [ 'permission_denied' ],
 			'third party suffix'  => [ 'acme_permission_denied' ],
 			'core generic'        => [ 'ability_invalid_permissions' ],
 			'switched off'        => [ 'ability_disabled' ],
@@ -255,7 +253,7 @@ class OutcomeTest extends TestCase {
 	 */
 	public static function provide_api_surface_codes(): array {
 		return [
-			'free ability'    => [ 'albert_ability_not_found' ],
+			'free ability'    => [ 'ability_not_found' ],
 			'premium ability' => [ 'albert_premium_ability_not_found' ],
 			'bare ability'    => [ 'ability_not_found' ],
 			'mcp tool'        => [ 'tool_not_found' ],

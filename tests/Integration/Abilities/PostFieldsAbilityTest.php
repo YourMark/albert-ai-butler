@@ -241,7 +241,7 @@ class PostFieldsAbilityTest extends TestCase {
 		wp_set_current_user( $author );
 
 		$this->assertRefused(
-			'rest_cannot_edit_others',
+			'albert_post_permission_denied',
 			( new UpdatePost() )->execute(
 				[
 					'id'     => $post_id,
@@ -250,6 +250,27 @@ class PostFieldsAbilityTest extends TestCase {
 			)
 		);
 		$this->assertSame( (string) $author, get_post( $post_id )->post_author );
+	}
+
+	public function test_a_user_who_cannot_edit_the_page_is_refused(): void {
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'  => 'page',
+				'post_title' => 'Kept',
+			]
+		);
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'author' ] ) );
+
+		$this->assertRefused(
+			'albert_page_permission_denied',
+			( new UpdatePage() )->execute(
+				[
+					'id'    => $page_id,
+					'title' => 'Changed',
+				]
+			)
+		);
+		$this->assertSame( 'Kept', get_post( $page_id )->post_title );
 	}
 
 	public function test_page_parent_and_menu_order_are_saved(): void {

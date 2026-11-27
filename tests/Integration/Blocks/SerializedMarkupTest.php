@@ -233,8 +233,8 @@ class SerializedMarkupTest extends TestCase {
 										[
 											'name'       => 'core/button',
 											'attributes' => [
-												'text'            => 'Go',
-												'url'             => 'https://example.com/',
+												'text' => 'Go',
+												'url'  => 'https://example.com/',
 												'backgroundColor' => 'accent',
 											],
 										],
