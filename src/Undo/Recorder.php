@@ -187,6 +187,14 @@ final class Recorder {
 	private array $secrets = [];
 
 	/**
+	 * In-memory fingerprints of Albert's controls the call tried to write, by
+	 * name, so one that really changed is listed as a secret.
+	 *
+	 * @var array<string, array{entity: Entity, hash: string}>
+	 */
+	private array $controls = [];
+
+	/**
 	 * In-memory fingerprints of captured entities' credential columns, by entity id.
 	 *
 	 * @var array<string, array{entity: Entity, hash: string}>
@@ -323,6 +331,12 @@ final class Recorder {
 				}
 
 				$verdict = Exclusions::holds_secret( $entity, $before );
+				if ( $verdict === Exclusions::CONTROL ) {
+					$this->refused[ $entity->id() ] = true;
+					$this->watch_control( $entity, $before );
+					return;
+				}
+
 				if ( $verdict === Exclusions::SECRET ) {
 					$this->refused[ $entity->id() ]                                 = true;
 					$this->secrets[ $entity->parts[ count( $entity->parts ) - 1 ] ] = true;
@@ -483,7 +497,7 @@ final class Recorder {
 		$entry_id = null;
 
 		// A failed recorder still writes, so the call is listed as not recorded.
-		if ( $this->entry !== null || $this->failed || $this->items !== [] || $this->untracked !== [] || $this->secrets !== [] ) {
+		if ( $this->entry !== null || $this->failed || $this->items !== [] || $this->untracked !== [] || $this->secrets !== [] || $this->controls !== [] ) {
 			try {
 				$this->quietly(
 					function () use ( $status, &$entry_id ): void {
@@ -546,6 +560,10 @@ final class Recorder {
 			$this->secrets[ $entity->parts[ count( $entity->parts ) - 1 ] ] = true;
 		}
 
+		if ( $class === Exclusions::CONTROL ) {
+			$this->watch_control( $entity );
+		}
+
 		// Past the limit nothing more is read or held: the entry is unrevertable already.
 		return $class === null && ! $this->too_large;
 	}
@@ -565,6 +583,42 @@ final class Recorder {
 		};
 
 		return $post_id > 0 && isset( $this->revisions[ $post_id ] );
+	}
+
+	/**
+	 * Fingerprint one of Albert's controls before a write, in memory only.
+	 *
+	 * @param Entity                    $entity The option.
+	 * @param array<string, mixed>|null $state  Its state, when already read.
+	 *
+	 * @return void
+	 */
+	private function watch_control( Entity $entity, ?array $state = null ): void {
+		$name = $entity->parts[0];
+		if ( isset( $this->controls[ $name ] ) ) {
+			return;
+		}
+
+		$this->safely(
+			$entity,
+			function () use ( $entity, $name, $state ): void {
+				$this->controls[ $name ] = [
+					'entity' => $entity,
+					'hash'   => self::fingerprint( $state ?? $this->snapshot->read( $entity ) ),
+				];
+			}
+		);
+	}
+
+	/**
+	 * A state's fingerprint, for telling whether it changed without keeping it.
+	 *
+	 * @param array<string, mixed>|null $state The state.
+	 *
+	 * @return string
+	 */
+	private static function fingerprint( ?array $state ): string {
+		return hash( 'sha256', serialize( $state ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Hash input only.
 	}
 
 	/**
@@ -708,6 +762,12 @@ final class Recorder {
 
 			$item['operation'] = ! $item['existed'] ? 'create' : ( $after === null ? 'delete' : 'update' );
 			$kept[]            = $item;
+		}
+
+		foreach ( $this->controls as $name => $control ) {
+			if ( self::fingerprint( $this->snapshot->read( $control['entity'] ) ) !== $control['hash'] ) {
+				$this->secrets[ $name ] = true;
+			}
 		}
 
 		foreach ( $this->credentials as $credential ) {

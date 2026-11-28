@@ -115,6 +115,19 @@ class ExclusionsTest extends TestCase {
 	}
 
 	/**
+	 * Albert's own controls are never stored, under any spelling MySQL would
+	 * match, so no revert can rewrite them.
+	 *
+	 * @return void
+	 */
+	public function test_albert_controls_are_secrets(): void {
+		$this->assertSame( Exclusions::CONTROL, Exclusions::option( 'albert_safe_mode' ) );
+		$this->assertSame( Exclusions::CONTROL, Exclusions::option( 'albert_disabled_abilities' ) );
+		$this->assertSame( Exclusions::CONTROL, Exclusions::holds_secret( Entity::option( 'albért_safe_mode' ), $this->option( 'Albert_Safe_Mode', '1' ) ) );
+		$this->assertNull( Exclusions::option( 'albert_banner_text' ), 'Other options are recorded.' );
+	}
+
+	/**
 	 * Albert's tables are recognised on every blog of a network, not only this one.
 	 *
 	 * @return void

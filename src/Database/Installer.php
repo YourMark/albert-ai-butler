@@ -382,7 +382,7 @@ class Installer {
 	public static function uninstall(): void {
 		global $wpdb;
 
-		foreach ( Tables::all() as $table ) {
+		foreach ( array_merge( Tables::all(), self::other_sites_journals() ) as $table ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Schema change required for uninstall.
 			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
 		}
@@ -410,6 +410,35 @@ class Installer {
 		foreach ( $transients as $option ) {
 			delete_option( $option );
 		}
+	}
+
+	/**
+	 * The change journal tables of every other site on a network. Each site
+	 * keeps its own journal, and what it holds is page content and personal
+	 * data, so none of it may outlive the plugin.
+	 *
+	 * @return array<int, string>
+	 * @since 1.7.0
+	 */
+	private static function other_sites_journals(): array {
+		if ( ! is_multisite() ) {
+			return [];
+		}
+
+		$tables = [];
+		foreach ( get_sites(
+			[
+				'fields' => 'ids',
+				'number' => 0,
+			]
+		) as $site_id ) {
+			if ( (int) $site_id !== get_current_blog_id() ) {
+				$tables[] = Tables::changes( (int) $site_id );
+				$tables[] = Tables::change_items( (int) $site_id );
+			}
+		}
+
+		return $tables;
 	}
 
 	/**

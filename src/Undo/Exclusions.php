@@ -12,6 +12,7 @@ namespace Albert\Undo;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Database\Tables;
+use Albert\SafeMode\ConnectionGuard;
 
 /**
  * Noise and secrets: two lists, two treatments.
@@ -21,7 +22,7 @@ use Albert\Database\Tables;
  * entry unrevertable. Besides the known names, any option or meta key whose
  * name looks like a credential counts as a secret: storing an SMTP password or
  * API key in plain text costs more than an occasional harmless setting that
- * cannot be reverted.
+ * cannot be reverted. Albert's own controls are never stored either.
  *
  * The filters can only add noise. A filter that removed an entry would make
  * Albert store more, and a pattern of `*` or a two-letter prefix would quietly
@@ -38,6 +39,16 @@ final class Exclusions {
 	 */
 	public const NOISE  = 'noise';
 	public const SECRET = 'secret';
+
+	/**
+	 * One of Albert's own controls (the options safe mode refuses over a
+	 * connection): never stored, so a revert can never be the way to switch
+	 * safe mode back off, and listed as a secret only if it really changed.
+	 * Safe mode refuses most such writes before they run.
+	 *
+	 * @var string
+	 */
+	public const CONTROL = 'control';
 
 	/**
 	 * Options rewritten by WordPress itself. A trailing `*` matches a prefix.
@@ -148,7 +159,7 @@ final class Exclusions {
 	 *
 	 * @param Entity $entity The entity.
 	 *
-	 * @return string|null NOISE, SECRET, or null when it is recorded.
+	 * @return string|null NOISE, SECRET, CONTROL, or null when it is recorded.
 	 * @since 1.7.0
 	 */
 	public static function classify( Entity $entity ): ?string {
@@ -170,6 +181,10 @@ final class Exclusions {
 	public static function option( string $name ): ?string {
 		if ( self::matches( $name, self::SECRET_OPTIONS ) || preg_match( self::SECRET_NAME, $name ) ) {
 			return self::SECRET;
+		}
+
+		if ( self::matches( $name, ConnectionGuard::protected_names() ) ) {
+			return self::CONTROL;
 		}
 
 		/**
@@ -240,9 +255,10 @@ final class Exclusions {
 	 * @param Entity                    $entity The entity.
 	 * @param array<string, mixed>|null $state  Its state as {@see Snapshot} reads it.
 	 *
-	 * @return string|null {@see self::SECRET}, {@see self::UNREADABLE} when a
-	 *                     value is too big to decode in the memory left, or
-	 *                     null when it is clean.
+	 * @return string|null {@see self::SECRET}, {@see self::CONTROL} for a
+	 *                     stored name that is one of Albert's controls,
+	 *                     {@see self::UNREADABLE} when a value is too big to
+	 *                     decode in the memory left, or null when it is clean.
 	 * @since 1.7.0
 	 */
 	public static function holds_secret( Entity $entity, ?array $state ): ?string {
@@ -262,6 +278,9 @@ final class Exclusions {
 		foreach ( $names as $name ) {
 			if ( is_string( $name ) && self::matches( $name, $entity->type === Entity::OPTION ? self::SECRET_OPTIONS : self::SECRET_META_KEYS ) ) {
 				return self::SECRET;
+			}
+			if ( is_string( $name ) && $entity->type === Entity::OPTION && self::matches( $name, ConnectionGuard::protected_names() ) ) {
+				return self::CONTROL;
 			}
 			if ( is_string( $name ) && preg_match( self::SECRET_NAME, $name ) ) {
 				return self::SECRET;

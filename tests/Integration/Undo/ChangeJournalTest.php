@@ -1622,6 +1622,26 @@ class ChangeJournalTest extends TestCase {
 	}
 
 	/**
+	 * One of Albert's controls that really changed is listed as a secret by
+	 * name, never stored as an item.
+	 *
+	 * @return void
+	 */
+	public function test_a_changed_control_is_a_secret_never_an_item(): void {
+		ConnectionContext::reset();
+		update_option( 'albert_privacy_mode', 'balanced' );
+
+		Window::open( new WindowContext( WindowContext::SOURCE_MCP, self::ABILITY, $this->user_id, 'client-acme' ) );
+		update_option( 'albert_privacy_mode', 'off' );
+		Window::close();
+
+		$entry = $this->only_entry();
+		$this->assertSame( Recorder::REASON_SECRET, $entry['reason'] );
+		$this->assertSame( [ 'albert_privacy_mode' ], json_decode( (string) $entry['effects'], true )['secrets'] );
+		$this->assertSame( [], $this->items_by_key( (int) $entry['id'] ) );
+	}
+
+	/**
 	 * A revert is recorded as a change of its own, saying what it took back.
 	 *
 	 * @return void
