@@ -72,13 +72,11 @@ class FindTaxonomies extends BaseAbility {
 	/**
 	 * Get the output schema for this ability.
 	 *
-	 * Describes the object {@see self::execute()} returns. Until 1.4.0 this
-	 * declared a bare `array` of taxonomy items while execute() returned
-	 * `{ taxonomies: [...], total: int }`. WordPress 7.1 validates ability
-	 * output, so the mismatch was not cosmetic: every call to this ability came
-	 * back as `ability_invalid_output` — "output is not of type array" — and the
-	 * assistant never saw a taxonomy. The list moved under `taxonomies`; the
-	 * item shape is unchanged.
+	 * Describes the object {@see self::execute()} returns, down to the wrapper.
+	 * WordPress 7.1 validates ability output, so a schema declaring a bare array
+	 * of items against a `{ taxonomies: [...], total: int }` return does not
+	 * degrade — every call fails with `ability_invalid_output` and the assistant
+	 * sees no taxonomy at all.
 	 *
 	 * @return array<string, mixed> Output schema.
 	 * @since 1.0.0

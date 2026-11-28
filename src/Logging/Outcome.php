@@ -37,17 +37,14 @@ use WP_Error;
  *   - `error`   — the site could not do what was asked. Something broke, timed
  *                 out, or was malformed.
  *
- * `term_not_found` is a `success`, not a status of its own. An earlier draft of
- * this class gave it a `no_match` value, and that was wrong for a reason worth
- * writing down: *succeeded* and *failed* describe the run, while *not found*
- * describes the answer. Two kinds of statement in one column is what made the
- * value read as ambiguous — an owner could not tell whether a `no_match` row
- * meant the call went badly or the site simply has no such term. `warning`
- * earns the place `no_match` did not: *blocked* is the same grammatical kind as
- * *succeeded* and *failed*, and painting a correctly configured permission
- * system red every time it does its job is the same misinformation this class
- * exists to remove. Amber says "you may want to look"; red says "something is
- * broken". Only one of those is true of a refusal.
+ * `term_not_found` is a `success`, not a status of its own. *Succeeded* and
+ * *failed* describe the run, while *not found* describes the answer, and two
+ * kinds of statement in one column leave an owner unable to tell whether a row
+ * means the call went badly or the site simply has no such term. `warning`
+ * belongs because *blocked* is the same grammatical kind as the other two, and
+ * painting a correctly configured permission system red every time it does its
+ * job is the misinformation this class exists to remove. Amber says "you may
+ * want to look"; red says "something is broken". Only one is true of a refusal.
  *
  * Nothing is lost by folding a truthful "no" into `success`. `error_code` is
  * still stored, so `status = 'success' AND error_code IS NOT NULL` still finds

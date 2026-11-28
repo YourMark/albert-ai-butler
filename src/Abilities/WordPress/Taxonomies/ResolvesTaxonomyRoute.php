@@ -37,24 +37,19 @@ trait ResolvesTaxonomyRoute {
 	 * A hand-rolled copy is a second answer to a question that already has one,
 	 * and it drifts.
 	 *
-	 * Until 1.4.0 there was such a copy, and it asked the wrong question.
-	 * `rest_base` was read as "is this taxonomy in the REST API", but it is the
-	 * route *name*: `register_taxonomy()` leaves it `false` unless the caller
-	 * sets one, and WordPress then serves the taxonomy under its own slug.
-	 * Every REST-enabled taxonomy without an explicit base was refused, which
-	 * is the common case for a custom taxonomy — WooCommerce registers
-	 * `product_cat` with `show_in_rest => true` and no `rest_base`, and it came
-	 * back as "not available via REST API" from an ability whose whole job was
-	 * to read it.
+	 * `rest_base` in particular is the route *name*, not an answer to "is this
+	 * taxonomy in the REST API": `register_taxonomy()` leaves it `false` unless
+	 * the caller sets one, and WordPress then serves the taxonomy under its own
+	 * slug. A check built on it refuses every REST-enabled taxonomy without an
+	 * explicit base, which is the common case — WooCommerce registers
+	 * `product_cat` with `show_in_rest => true` and no `rest_base`.
 	 *
-	 * A `post_tags => post_tag` alias used to live here too, quietly accepting
-	 * a slug that is not a taxonomy on any site. It is gone on purpose. A tool
-	 * is reachable only through what it advertises, and quietly accepting a
-	 * second spelling makes the advertised contract false: the next caller
-	 * guesses `tags`, then `posttag`, and there is no version of that list that
-	 * ends. The refusals below name the taxonomy and point at
-	 * `find-taxonomies`, so a wrong guess costs one round trip and teaches the
-	 * right slug.
+	 * No slug aliases either, `post_tags => post_tag` included. A tool is
+	 * reachable only through what it advertises, and quietly accepting a second
+	 * spelling makes the advertised contract false: the next caller guesses
+	 * `tags`, then `posttag`, and there is no version of that list that ends.
+	 * The refusals below name the taxonomy and point at `find-taxonomies`, so a
+	 * wrong guess costs one round trip and teaches the right slug.
 	 *
 	 * @param string $taxonomy Taxonomy slug.
 	 *

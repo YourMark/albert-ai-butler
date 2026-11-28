@@ -26,15 +26,11 @@ use Albert\Core\AbilitiesState;
  * {@see Payload::segments()} verbatim. Nothing on this screen is re-rendered
  * for display.
  *
- * There used to be a third thing: a token cost per section and for the whole
- * payload, priced by an estimator calibrated against one reference tokeniser.
- * Removed, not because the estimate was wrong for what it measured, but
- * because different assistants tokenise differently, so the number could only
- * ever be shown with a wide, provider-specific error band attached, and it did
- * not change what an owner should do: the section descriptions already say
- * what each one includes, which is what a decision to switch one off actually
- * needs. See `docs/context-token-budget.md`'s git history for the measurement
- * that was made before removing it.
+ * No token cost is shown, per section or overall. Assistants tokenise
+ * differently, so any figure would need a wide provider-specific error band
+ * attached, and it does not change what an owner should do: the section
+ * descriptions already say what each one includes, which is what deciding to
+ * switch one off actually needs.
  *
  * @since 1.4.0
  */

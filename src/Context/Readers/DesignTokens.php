@@ -91,15 +91,11 @@ class DesignTokens {
 	/**
 	 * The declared colour palette.
 	 *
-	 * Every declared colour is sent, uncapped. A palette entry costs a handful
-	 * of tokens, a theme with thirty of them adds perhaps a hundred to a
-	 * payload of a few hundred, nowhere near anything that matters, so
-	 * truncating one down to "the important ones" traded a real, if small,
-	 * cost for the certainty of silently dropping colours, including the
-	 * site owner's own. That is what happened before this was uncapped: a
-	 * custom colour added in the Styles editor sat past a theme's own eight,
-	 * and a fixed limit removed it from the payload with nothing on this
-	 * screen or in the response saying so.
+	 * Every declared colour is sent, uncapped. An entry costs a handful of
+	 * tokens, so a limit saves almost nothing and silently drops colours,
+	 * including the owner's own: a colour added in the Styles editor sits after
+	 * the theme's, and nothing on this screen or in the response would say it
+	 * had gone.
 	 *
 	 * @return list<array{name: string, slug: string, color: string}>
 	 * @since 1.4.0

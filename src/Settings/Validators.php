@@ -28,19 +28,18 @@ use Albert\SafeMode\Interceptor;
  *
  * **Keyed by option name, and reachable without a boot step**, both on purpose.
  *
- * *By option name*, because every caller has to reach the same verdict. When
- * the rule lived at the call site, {@see PrivacyMode::resolve()} applied one and
- * the Settings screen did not, so `define( 'ALBERT_PRIVACY_MODE', 'bananas' )`
- * made the screen render the field read-only, showing `bananas` and naming the
- * constant, while the site went on running the stored mode, locking an owner
- * out of a setting the constant did not control.
+ * *By option name*, because every caller has to reach the same verdict. With the
+ * rule at the call site, only the callers that remember it apply it: given
+ * `define( 'ALBERT_PRIVACY_MODE', 'bananas' )`, a screen that checks renders the
+ * field read-only showing `bananas`, while {@see PrivacyMode::resolve()} goes on
+ * running the stored mode — locking the owner out of a setting the constant does
+ * not control.
  *
  * *Without a boot step*, because these are consulted by code that has no reason
- * to wait for one. An earlier version published them on the validator filter
- * from a `Hookable`, which made `PrivacyMode::resolve()` correct only after
- * `plugins_loaded` had fired. A fine assumption right up until something asks
- * a privacy question earlier, at which point the fall-through quietly stops
- * happening. A plain static map has no such window.
+ * to wait for one. Publishing them on the validator filter from a `Hookable`
+ * would make {@see PrivacyMode::resolve()} correct only after `plugins_loaded`
+ * has fired, and the fall-through quietly stops happening for anything that
+ * asks a privacy question earlier. A plain static map has no such window.
  *
  * Add-ons declare their own with `albert/settings/validator/{option_name}`,
  * which {@see Value::validator()} consults first.

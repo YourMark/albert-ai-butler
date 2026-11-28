@@ -19,8 +19,8 @@ use Albert\MCP\Server as McpServer;
  *
  * The single source of the RFC 8414 Authorization Server Metadata document.
  *
- * It is a class rather than a method on an endpoint because two endpoints
- * serve this document, and until 1.4.0 each built its own copy:
+ * It is a class rather than a method on an endpoint because two endpoints serve
+ * this document:
  *
  * - `/.well-known/oauth-authorization-server`, handled by
  *   {@see \Albert\OAuth\Endpoints\OAuthDiscovery}. This is the path RFC 8414
@@ -30,14 +30,11 @@ use Albert\MCP\Server as McpServer;
  *   {@see \Albert\OAuth\Endpoints\OAuthController}. A non-standard convenience
  *   route kept for clients that were pointed at it directly.
  *
- * They drifted, and the half that matters drifted wrong: 1.3.1 added `none` to
- * `token_endpoint_auth_methods_supported` on the REST route only, so the
- * standard path went on advertising two auth methods while client registration
- * kept issuing public clients that use a third. A loopback client that reads
- * discovery and believes it cannot authenticate is the interop failure that
- * release was meant to have fixed.
- *
- * One builder, two callers. There is no second copy left to drift.
+ * One builder, two callers, so there is no second copy to drift. Two copies
+ * disagreeing is an interop failure, not a cosmetic one: if the standard path
+ * advertises fewer `token_endpoint_auth_methods_supported` than client
+ * registration actually issues, a loopback client reads discovery and concludes
+ * it cannot authenticate at all.
  *
  * @since 1.4.0
  */

@@ -150,10 +150,9 @@ class OAuthController implements Hookable {
 	 * The client only ever sees the generic OAuth error code (e.g. `invalid_grant`
 	 * covers a decrypt failure, an expired code, a revoked code, a client ID
 	 * mismatch, a redirect URI mismatch, and a PKCE verifier mismatch alike, per
-	 * RFC 6749 §5.2's intentional collapsing of failure modes). Nothing server-side
-	 * previously recorded which of those it was, which turns any real failure into
-	 * a guessing game. This carries the library's specific message and hint out
-	 * so the true cause is diagnosable without exposing it to the client.
+	 * RFC 6749 §5.2's intentional collapsing of failure modes). This carries the
+	 * library's specific message and hint out to the log, so the true cause is
+	 * diagnosable server-side without ever being exposed to the client.
 	 *
 	 * @param OAuthServerException $e The rejection.
 	 *

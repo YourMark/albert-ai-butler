@@ -291,13 +291,12 @@ class Server implements Hookable {
 	/**
 	 * Add OAuth discovery headers for unauthorized MCP requests.
 	 *
-	 * When a request to our MCP endpoint fails authentication, we need to tell
-	 * the client where to find OAuth authorization server metadata — on every
-	 * 401, not only when no token was sent. An expired or otherwise invalid
-	 * token (access tokens are 1 hour) previously skipped this entirely, so a
-	 * client mid-session got a bare 401 indistinguishable from "never
-	 * authorised", with no signal that refreshing would fix it. Per RFC 6750
-	 * §3, a token that was supplied but rejected also carries `error="invalid_token"`.
+	 * When a request to our MCP endpoint fails authentication, the client is told
+	 * where to find OAuth authorization server metadata — on every 401, not only
+	 * when no token was sent, so a client whose one-hour access token has just
+	 * expired gets a signal that refreshing will fix it rather than a bare 401
+	 * indistinguishable from "never authorised". Per RFC 6750 §3, a token that
+	 * was supplied but rejected also carries `error="invalid_token"`.
 	 *
 	 * @param mixed                                 $response The response.
 	 * @param array<string, mixed>                  $handler  The handler.

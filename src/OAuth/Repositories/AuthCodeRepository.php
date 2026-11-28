@@ -69,9 +69,9 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface {
 			[ '%s', '%s', '%d', '%s', '%d', '%s' ]
 		);
 
-		// A silently-ignored failure here used to leave the browser redirecting
-		// with a code that could never be exchanged: isAuthCodeRevoked() treats a
-		// missing row as revoked, so the caller only ever saw an unexplained
+		// Throw rather than ignore: isAuthCodeRevoked() treats a missing row as
+		// revoked, so a silent insert failure would redirect the browser with a
+		// code that can never be exchanged, surfacing as an unexplained
 		// invalid_grant with no link back to the real cause.
 		if ( $inserted === false ) {
 			throw OAuthServerException::serverError( 'Failed to persist the authorization code.' );

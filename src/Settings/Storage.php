@@ -27,9 +27,9 @@ use Albert\Contracts\Interfaces\Hookable;
  *
  * 1. **Sanitisation becomes a property of the option rather than of the form.**
  *    `register_setting()` hooks `sanitize_option_{$option}`, and
- *    `update_option()` applies that filter itself. Before this, Albert's
- *    sanitisers ran only on the settings-screen POST, so an add-on calling
- *    `update_option( 'albert_upload_link_max_mb', 'nonsense' )` stored nonsense.
+ *    `update_option()` applies that filter itself. Without it a sanitiser runs
+ *    only on the settings-screen POST, so an add-on calling
+ *    `update_option( 'albert_upload_link_max_mb', 'nonsense' )` stores nonsense.
  *    This is the one benefit that cannot be had by writing more of our own
  *    code: the enforcement point is inside core.
  * 2. **One default, declared once.** `register_setting()`'s `default` is served
@@ -44,11 +44,10 @@ use Albert\Contracts\Interfaces\Hookable;
  * add-on's registration callback on every front-end request, which is not worth
  * it until a real bypass turns up. Do not assume a cron write is sanitised.
  *
- * **What that costs, since it is a change add-ons can feel.** Before 1.4.0 the
- * schema was collected only when the Settings screen rendered or saved. It is
- * now collected on every admin request, admin-ajax included, because that is
- * what `admin_init` means — so `albert/settings/register` fires there too, and
- * every add-on's registration callback runs with it. {@see Schema::collect()}
+ * **What that costs add-ons.** The schema is collected on every admin request,
+ * admin-ajax included, because that is what `admin_init` means — so
+ * `albert/settings/register` fires there too, and every add-on's registration
+ * callback runs with it. {@see Schema::collect()}
  * memoises, so it is once per request rather than once per consumer, but a
  * registration callback must be cheap and free of side effects. It is a
  * declaration, not a place to do work.

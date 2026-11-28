@@ -193,10 +193,9 @@ class Dashboard implements Hookable {
 		);
 
 		// The same script Connections and Settings load, not a Dashboard-specific
-		// one. `admin-dashboard.js` used to exist purely to wire a copy button,
-		// against its own `.albert-copy-btn` class, duplicating the handler in
-		// `admin-settings.js` that every other screen already used. One endpoint
-		// field, one class, one handler.
+		// one: the only behaviour this screen needs is the copy button, and
+		// `admin-settings.js` already handles that class on every other screen.
+		// One endpoint field, one class, one handler.
 		wp_enqueue_script(
 			'albert-admin',
 			ALBERT_PLUGIN_URL . 'assets/js/admin-settings.js',
@@ -1422,17 +1421,13 @@ class Dashboard implements Hookable {
 	 * The connections this site actually has, by the one definition of the word.
 	 *
 	 * {@see ClientRepository::getLiveConnections()} is that definition, and it
-	 * is what the Connections screen lists, what both retention sweeps act on,
-	 * and what {@see Attention::connections_about_to_go()} counts down. This
-	 * screen used to ask its own question instead — `revoked = 0` on the access
-	 * tokens alone — and got a different answer in both directions.
-	 *
-	 * `revoked = 0` has no expiry check in it and never looks at a refresh
-	 * token, so this screen counted a client whose every token had expired: for
+	 * is what the Connections screen lists and what both retention sweeps act
+	 * on. Asking a narrower question here gives a different answer: `revoked = 0` on the
+	 * access tokens has no expiry check in it and never looks at a refresh
+	 * token, so a client whose every token had expired would still count — for
 	 * up to a day, until `Cron\TokenCleanup` removes the rows, and indefinitely
-	 * on a site where WP-Cron never runs. The screen then read "1 connection"
-	 * and offered the finished-setup state over an assistant that could not
-	 * call anything.
+	 * on a site where WP-Cron never runs — and the screen would offer the
+	 * finished-setup state over an assistant that cannot call anything.
 	 *
 	 * Held for the request because the page asks three times: the setup state,
 	 * the stat tile's figure, and the names beneath it.

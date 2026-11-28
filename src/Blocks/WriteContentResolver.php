@@ -5,13 +5,11 @@
  * Single decision point for turning a write ability's `content`/`blocks` input
  * into the content string to store, shared by Posts and Pages Create/Update.
  *
- * The four write abilities previously repeated the same branch: detect the
- * editor for the target, reject structured `blocks` on a classic-editor target,
- * serialize `blocks`/`content` to valid block markup on a block-editor target,
- * enforce the per-user allowed-block set (with an Update exemption for blocks
- * already present in the post), partition the resulting issues into fatal errors
- * and non-fatal warnings, and either abort with a WP_Error or return the markup
- * plus its warnings. That whole decision now lives here.
+ * One branch for all four: detect the editor for the target, reject structured
+ * `blocks` on a classic-editor target, serialize `blocks`/`content` to valid
+ * block markup on a block-editor target, enforce the per-user allowed-block set
+ * (with an Update exemption for blocks already in the post), and split the
+ * resulting issues into fatal errors and non-fatal warnings.
  *
  * @package    Albert
  * @subpackage Blocks

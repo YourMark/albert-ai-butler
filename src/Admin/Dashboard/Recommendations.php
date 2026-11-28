@@ -50,10 +50,9 @@ class Recommendations {
 	/**
 	 * The most cards to show at once.
 	 *
-	 * One, not two. The count used to allow for Premium (which applies to every
-	 * site) plus whatever this particular site earned; Premium now lives on the
-	 * activity card, so what is left is the site-specific one, and there is no
-	 * second slot worth filling.
+	 * One, not two. Premium is offered on the activity card instead, so all that
+	 * is left here is the recommendation this particular site earned, and there
+	 * is no second slot worth filling.
 	 *
 	 * @since 1.4.0
 	 * @var int
@@ -65,8 +64,7 @@ class Recommendations {
 	 *
 	 * Takes no user, deliberately. A recommendation is decided entirely by what
 	 * this site runs, and there is no per-user state to consult: no dismissal,
-	 * by design (see the class docblock). It carried a `$user_id` parameter
-	 * that was resolved and then never read.
+	 * by design (see the class docblock).
 	 *
 	 * @since 1.4.0
 	 *
@@ -190,9 +188,9 @@ class Recommendations {
 				'because'         => __( 'Because you run WooCommerce', 'albert-ai-butler' ),
 				'detail'          => __( 'Lets an assistant read orders, products and customers, with payment details stripped before they ever leave your site.', 'albert-ai-butler' ),
 				// What to say when it is installed and switched off. Carried by
-				// the entry, because the card cannot know what any given add-on
-				// does: this string used to be hardcoded in the renderer, so an
-				// inactive Premium was offered as a way to "work with your shop".
+				// the entry rather than the renderer, because the card cannot
+				// know what any given add-on does — one shared string would offer
+				// an inactive Premium as a way to "work with your shop".
 				'inactive_detail' => __( 'You already have this. Switch it on to let assistants work with your shop.', 'albert-ai-butler' ),
 				'url'             => 'https://albertwp.com/add-ons/albert-for-woocommerce/',
 				'host_symbol'     => 'WooCommerce',

@@ -24,11 +24,10 @@ use Albert\Media\UploadLinks\UploadLinkService;
  * `albert/settings/value/albert_privacy_mode` would, so renaming them to match a
  * generic scheme would make the API worse, not better.
  *
- * What they lacked was a way to tell the Settings screen they were in force.
- * Bridging them onto `albert/settings/value/{option}` fixes that in one place:
- * a site filtering the privacy mode used to see the *stored* value on screen,
- * fully editable, and could save over it without changing what the site did.
- * Now the control renders read-only and says where the value comes from.
+ * What they lack is a way to tell the Settings screen they are in force.
+ * Bridging them onto `albert/settings/value/{option}` supplies it in one place:
+ * the control renders read-only and names where the value comes from, rather
+ * than offering an editable copy of a value the filter overrides anyway.
  *
  * What decides whether a given override is *usable* is a separate thing and
  * lives in {@see Validators}, deliberately as a static map rather than another
@@ -48,13 +47,10 @@ class Overrides implements Hookable {
 	 * value filter ran.
 	 *
 	 * Read by {@see self::privacy_mode_source()}, which runs immediately after
-	 * within the same {@see Value::override()} call. It used to answer from
-	 * `has_filter( 'albert/privacy/mode' )` instead, which is true whenever
-	 * anything is *attached* to that hook, including a callback that returned
-	 * null. So a site that answered `albert/settings/value/albert_privacy_mode`
-	 * directly while some other code merely listened on the legacy hook was told
-	 * its value came from the legacy hook, and went looking in the wrong place.
-	 * Naming a source is only worth doing if the name is right.
+	 * within the same {@see Value::override()} call. A flag rather than
+	 * `has_filter( 'albert/privacy/mode' )`: that is true whenever anything is
+	 * *attached* to the hook, including a callback that deferred by returning
+	 * null, so it would name the wrong source.
 	 *
 	 * @since 1.4.0
 	 * @var bool

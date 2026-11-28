@@ -34,10 +34,10 @@ use Albert\OAuth\Repositories\ClientRepository;
  *    reversible without the assistant re-authorising, or every legitimate domain
  *    migration would cost every connected user a reconnection.
  *
- * A client with no recorded host is never suspended. That covers connections
- * made before this shipped: suspending them all on upgrade would punish every
- * existing user for a migration that never happened. They record their host the
- * next time they are authorised.
+ * A client with no recorded host is never suspended: there is no baseline to
+ * compare against, and treating a missing one as a mismatch would punish every
+ * connection that predates the recording for a migration that never happened.
+ * They record their host the next time they are authorised.
  *
  * @since 1.4.0
  */
