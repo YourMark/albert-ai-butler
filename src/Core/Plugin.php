@@ -71,6 +71,7 @@ use Albert\Abilities\WordPress\Comments\ModerateComment;
 use Albert\Abilities\WordPress\Comments\DeleteComment;
 use Albert\Abilities\WordPress\Search\SearchContent;
 use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
+use Albert\Abilities\WordPress\Plugins\FindPlugins;
 use Albert\Abilities\WordPress\Revisions\FindRevisions;
 use Albert\Abilities\WordPress\Revisions\ViewRevision;
 use Albert\Abilities\WordPress\Revisions\RestoreRevision;
@@ -497,6 +498,9 @@ class Plugin {
 
 		// Site Health (read only).
 		$this->abilities_manager->add_ability( new ViewSiteHealth() );
+
+		// Plugins (read only).
+		$this->abilities_manager->add_ability( new FindPlugins() );
 
 		// Revision abilities.
 		$this->abilities_manager->add_ability( new FindRevisions() );

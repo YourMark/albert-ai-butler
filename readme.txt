@@ -236,6 +236,16 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.7.0 =
+
+**Features**
+
+* **Plugins.** Your assistant can list the installed plugins with their versions, which are active and which have an update waiting, using what WordPress already learned at its last update check. It also knows which versions of Albert and the MCP Adapter the site runs, so a bug report no longer needs a trip to the Plugins screen.
+
+**Credits**
+
+* [Marinus Klasen](https://profiles.wordpress.org/mklasen/) for asking to see the plugin versions through the assistant.
+
 = 1.6.0 =
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
