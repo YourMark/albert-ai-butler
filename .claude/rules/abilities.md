@@ -15,6 +15,7 @@ Every ability extends `Albert\Abstracts\BaseAbility` and is added in `Plugin::bu
 
 - Always set `meta.annotations` with `Core\Annotations::read|create|update|delete|destructive|action()`. Safe mode always holds an ability without `destructive => false`.
 - `destructive` means removes or overwrites data beyond recovery, or has a wide impact, as in MCP. It does not mean delete: `remove-post-block` and `update-user` are destructive, an ordinary post update (revisions) is not. `AnnotationPresenter::is_destructive()` is the one answer for the chips and the environment policy.
+- When a call is useless with only its required target, the input schema says so: `minProperties: 2` when every optional property is a change, `anyOf` with one `required: [field]` per change field when one is only a selector (`update-term`'s `taxonomy`). Add "Send the id and at least one of ..." to the schema's `description`: core's refusal does not name the fields.
 - `check_permission(): bool|WP_Error`, usually `$this->require_capability( '...' )`.
 - `execute( array $args ): array|WP_Error`. Never call your ability's `execute()` directly; WordPress registers `guarded_execute()` as the callback, which fires the before and after hooks.
 - List any top-level result key holding a credential in `$sensitive_output_keys`, so observers and logs see `[redacted]`.

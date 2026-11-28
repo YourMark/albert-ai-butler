@@ -808,10 +808,21 @@ class PostsAbilityTest extends TestCase {
 			$this->markTestSkipped( 'albert/update-post is not registered.' );
 		}
 
-		$result = $ability->execute( [ 'id' => self::factory()->post->create( [ 'post_type' => 'post' ] ) ] );
+		$id     = self::factory()->post->create( [ 'post_type' => 'post' ] );
+		$result = $ability->execute( [ 'id' => $id ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+
+		$this->assertIsArray(
+			$ability->execute(
+				[
+					'id'      => $id,
+					'excerpt' => '',
+				]
+			),
+			'Clearing one field is enough.'
+		);
 	}
 
 	/**

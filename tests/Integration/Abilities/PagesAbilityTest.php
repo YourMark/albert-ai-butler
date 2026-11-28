@@ -509,10 +509,21 @@ class PagesAbilityTest extends TestCase {
 			$this->markTestSkipped( 'albert/update-page is not registered.' );
 		}
 
-		$result = $ability->execute( [ 'id' => self::factory()->post->create( [ 'post_type' => 'page' ] ) ] );
+		$id     = self::factory()->post->create( [ 'post_type' => 'page' ] );
+		$result = $ability->execute( [ 'id' => $id ] );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+
+		$this->assertIsArray(
+			$ability->execute(
+				[
+					'id'      => $id,
+					'excerpt' => '',
+				]
+			),
+			'Clearing one field is enough.'
+		);
 	}
 
 	// ─── DeletePage ─────────────────────────────────────────────────

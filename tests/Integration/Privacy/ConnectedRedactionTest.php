@@ -39,6 +39,13 @@ class ConnectedRedactionTest extends TestCase {
 	private const NO_INPUT = 'other-plugin/site-settings';
 
 	/**
+	 * Another plugin's ability whose schema needs a change besides the id.
+	 *
+	 * @var string
+	 */
+	private const NEEDS_A_CHANGE = 'other-plugin/update-contact';
+
+	/**
 	 * What each callback was called with, per ability.
 	 *
 	 * @var array<string, array<int, mixed>>
@@ -99,6 +106,22 @@ class ConnectedRedactionTest extends TestCase {
 					)
 				);
 				wp_register_ability(
+					self::NEEDS_A_CHANGE,
+					self::args(
+						static fn( $input ): array => $input,
+						[
+							'type'                 => 'object',
+							'properties'           => [
+								'id'   => [ 'type' => 'integer' ],
+								'name' => [ 'type' => 'string' ],
+							],
+							'required'             => [ 'id' ],
+							'minProperties'        => 2,
+							'additionalProperties' => false,
+						]
+					)
+				);
+				wp_register_ability(
 					self::NO_INPUT,
 					self::args(
 						static function (): array {
@@ -124,7 +147,7 @@ class ConnectedRedactionTest extends TestCase {
 	 * @return void
 	 */
 	public function tear_down(): void {
-		foreach ( [ self::CLOSED, self::NO_INPUT ] as $id ) {
+		foreach ( [ self::CLOSED, self::NEEDS_A_CHANGE, self::NO_INPUT ] as $id ) {
 			if ( wp_has_ability( $id ) ) {
 				wp_unregister_ability( $id );
 			}
@@ -183,6 +206,37 @@ class ConnectedRedactionTest extends TestCase {
 		);
 
 		$this->assertSame( 'j***@e***.com', $result['email'] );
+	}
+
+	/**
+	 * The reveal input does not count towards `minProperties`, which judges only the ability's own input.
+	 *
+	 * @return void
+	 */
+	public function test_the_reveal_input_is_not_a_change(): void {
+		$refused = wp_get_ability( self::NEEDS_A_CHANGE )->execute(
+			[
+				'id'                   => 3,
+				'reveal_personal_data' => true,
+			]
+		);
+		$changed = wp_get_ability( self::NEEDS_A_CHANGE )->execute(
+			[
+				'id'                   => 3,
+				'name'                 => '',
+				'reveal_personal_data' => true,
+			]
+		);
+
+		$this->assertWPError( $refused );
+		$this->assertSame( 'ability_invalid_input', $refused->get_error_code() );
+		$this->assertSame(
+			[
+				'id'   => 3,
+				'name' => '',
+			],
+			$changed
+		);
 	}
 
 	/**

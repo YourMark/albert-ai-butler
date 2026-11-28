@@ -58,9 +58,12 @@ class UpdateTerm extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	protected function get_input_schema(): array {
+		$fields = [ 'name', 'slug', 'description', 'parent' ];
+
 		return [
-			'type'       => 'object',
-			'properties' => [
+			'type'        => 'object',
+			'description' => 'Send the id and at least one of name, slug, description or parent.',
+			'properties'  => [
 				'taxonomy'    => [
 					'type'        => 'string',
 					'description' => 'Taxonomy slug (e.g., "category", "post_tag")',
@@ -88,7 +91,9 @@ class UpdateTerm extends BaseAbility {
 					'description' => 'The parent term ID (for hierarchical taxonomies)',
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'    => [ 'id' ],
+			// Not minProperties: `taxonomy` only selects the term, so `{ id, taxonomy }` changes nothing.
+			'anyOf'       => array_map( static fn( string $field ): array => [ 'required' => [ $field ] ], $fields ),
 		];
 	}
 

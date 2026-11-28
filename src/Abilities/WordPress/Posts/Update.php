@@ -111,11 +111,16 @@ class Update extends BaseAbility {
 			],
 		];
 
+		$properties = array_merge( $properties, PostFields::input_schema( PostFields::POST ) );
+		$fields     = array_diff( array_keys( $properties ), [ 'id' ] );
+
 		return [
 			'type'          => 'object',
-			'properties'    => array_merge( $properties, PostFields::input_schema( PostFields::POST ) ),
+			// Core's refusal does not name the fields, so the schema does.
+			'description'   => 'Send the id and at least one of ' . implode( ', ', $fields ) . '.',
+			'properties'    => $properties,
 			'required'      => [ 'id' ],
-			// Refuses a call that sends nothing but `id`.
+			// Every other property is a change, so this refuses a call that sends nothing but `id`.
 			'minProperties' => 2,
 		];
 	}
