@@ -175,6 +175,9 @@ Website: https://yourmark.nl
 
 ### 1.7.0
 
+**Features**
+
+
 **Improvements**
 
 - Every skill your assistant can read as a prompt is also in its skills list, and a skill about abilities that are all switched off is no longer offered.
@@ -185,6 +188,7 @@ Website: https://yourmark.nl
 - New filter `albert/skills/conditions` lets an add-on add preconditions a skill can require.
 - Deprecated: `albert/skills/files`. Its files now join the skills registry, so they are in the skills index as well as the prompts and follow their `requires`. It starts from an empty list instead of Albert's own files, so removing a bundled skill through it no longer works. Register skills through `albert/skills/registry` instead.
 - New filter `albert/skills/available` lets an add-on withhold a skill from a user or connection. It can only narrow what Albert offers.
+- Owner skills, additions and customised copies are stored in a private `albert_skill` post type with revisions, and switched-off skills in `albert_disabled_skills`. Neither can be written over an assistant connection; uninstall removes both.
 
 ### 1.6.0
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
