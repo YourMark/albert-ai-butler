@@ -238,6 +238,10 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 = 1.7.0 =
 
+**Features**
+
+* A skill on writing posts and pages: match the site's voice, clear headings, a useful excerpt and featured image, and drafts that stay drafts until the owner says publish.
+
 **Improvements**
 
 * Every skill your assistant can read as a prompt is also in its skills list, and a skill about abilities that are all switched off is no longer offered.
