@@ -579,6 +579,7 @@ final class Recorder {
 				++$this->failures;
 				$lost              = true;
 				$item['after']     = [];
+				$item['blocks']    = null;
 				$item['operation'] = $item['existed'] ? 'update' : 'create';
 				$kept[]            = $item;
 				continue;
@@ -591,6 +592,7 @@ final class Recorder {
 			}
 
 			$item['after']     = $hashes;
+			$item['blocks']    = self::after_blocks( $item, $after, $hashes );
 			$item['operation'] = ! $item['existed'] ? 'create' : ( $after === null ? 'delete' : 'update' );
 			$kept[]            = $item;
 		}
@@ -628,7 +630,8 @@ final class Recorder {
 				$item['operation'],
 				$item['after'],
 				$item['by'],
-				$this->handlers->claimant( $item['entity'] )
+				$this->handlers->claimant( $item['entity'] ),
+				$item['blocks']
 			);
 
 			if ( $inserted ) {
@@ -658,6 +661,27 @@ final class Recorder {
 		}
 
 		return $this->entry['id'];
+	}
+
+	/**
+	 * The block tree a call left in a post's content, when it changed the content.
+	 *
+	 * @param array<string, mixed>      $item   The captured item.
+	 * @param array<string, mixed>|null $after  The entity's state now.
+	 * @param array<string, string>     $hashes Field hashes of that state.
+	 *
+	 * @return array<int, mixed>|null
+	 */
+	private static function after_blocks( array $item, ?array $after, array $hashes ): ?array {
+		if ( $item['entity']->type !== Entity::POST || ! is_string( $after['post_content'] ?? null ) ) {
+			return null;
+		}
+
+		if ( $item['existed'] && ( $item['before']['post_content'] ?? null ) === ( $hashes['post_content'] ?? null ) ) {
+			return null;
+		}
+
+		return BlockTree::of( $after['post_content'] );
 	}
 
 	/**

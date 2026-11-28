@@ -19,6 +19,7 @@ use Albert\SafeMode\Approver;
 use Albert\SafeMode\Repository as SafeModeRepository;
 use Albert\Support\WpCompat;
 use Albert\Tests\TestCase;
+use Albert\Undo\BlockTree;
 use Albert\Undo\Entity;
 use Albert\Undo\Handlers\Handler;
 use Albert\Undo\Handlers\Registry;
@@ -227,6 +228,41 @@ class ChangeJournalTest extends TestCase {
 		$this->assertSame( "post:{$post_id}", $post['thing_key'] );
 		$this->assertSame( 'option:acme_banner', $items['option:acme_banner']['thing_key'] );
 		$this->assertNotSame( $post['thing_hash'], $items['option:acme_banner']['thing_hash'] );
+	}
+
+	/**
+	 * A content edit stores the block tree it left; an edit that leaves the
+	 * content alone stores none.
+	 *
+	 * @return void
+	 */
+	public function test_a_content_edit_stores_the_block_tree_it_left(): void {
+		$content = '<!-- wp:paragraph --><p>One</p><!-- /wp:paragraph -->' . "\n\n" . '<!-- wp:paragraph --><p>Two</p><!-- /wp:paragraph -->';
+		$edited  = str_replace( 'Two', 'Three', $content );
+		$post_id = self::factory()->post->create( [ 'post_content' => $content ] );
+		$titled  = self::factory()->post->create( [ 'post_content' => $content ] );
+
+		$this->work = static function () use ( $post_id, $titled, $edited ): void {
+			wp_update_post(
+				[
+					'ID'           => $post_id,
+					'post_content' => $edited,
+				]
+			);
+			wp_update_post(
+				[
+					'ID'         => $titled,
+					'post_title' => 'Only the title',
+				]
+			);
+		};
+
+		$this->call();
+
+		$items = $this->items_by_key( (int) $this->only_entry()['id'] );
+
+		$this->assertSame( BlockTree::of( $edited ), json_decode( (string) $items[ "post:{$post_id}" ]['after_blocks'], true ) );
+		$this->assertNull( $items[ "post:{$titled}" ]['after_blocks'] );
 	}
 
 	/**

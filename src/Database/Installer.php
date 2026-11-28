@@ -602,7 +602,8 @@ class Installer {
 	 * `before_image` is NULL for a create, a call too large to keep, and once
 	 * pruned (`pruned` says why). `after_hashes` lets a revert see later edits.
 	 * `thing_key` and `thing_hash` group items into what the owner sees as one
-	 * changed thing ({@see \Albert\Undo\Thing}).
+	 * changed thing ({@see \Albert\Undo\Thing}). `after_blocks` is the block
+	 * tree a call left in a post's content ({@see \Albert\Undo\BlockTree}).
 	 *
 	 * @param string $charset_collate Charset/collation clause.
 	 *
@@ -629,6 +630,7 @@ class Installer {
 			pruned varchar(10) DEFAULT NULL,
 			thing_key varchar(191) NOT NULL DEFAULT '',
 			thing_hash char(64) NOT NULL DEFAULT '',
+			after_blocks longtext DEFAULT NULL,
 			PRIMARY KEY  (id),
 			KEY change_id (change_id),
 			KEY entity_run (entity_hash, run_id),

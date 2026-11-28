@@ -192,19 +192,21 @@ class Repository {
 	/**
 	 * Store one changed entity.
 	 *
-	 * @param int                   $change_id    Entry id.
-	 * @param int                   $run_id       Session id.
-	 * @param Entity                $entity       The entity.
-	 * @param string|null           $image        Encoded before-image; null for a create, or when not kept.
-	 * @param string                $operation    create, update or delete.
-	 * @param array<string, string> $after_hashes Field => hash of the state the call left.
-	 * @param string                $captured_by  `hook` or `handler`.
-	 * @param string|null           $claimed_by   Handler that restores this entity itself.
+	 * @param int                    $change_id    Entry id.
+	 * @param int                    $run_id       Session id.
+	 * @param Entity                 $entity       The entity.
+	 * @param string|null            $image        Encoded before-image; null for a create, or when not kept.
+	 * @param string                 $operation    create, update or delete.
+	 * @param array<string, string>  $after_hashes Field => hash of the state the call left.
+	 * @param string                 $captured_by  `hook` or `handler`.
+	 * @param string|null            $claimed_by   Handler that restores this entity itself.
+	 * @param array<int, mixed>|null $after_blocks The block tree the call left in a post's content
+	 *                                             ({@see \Albert\Undo\BlockTree}), when it changed it.
 	 *
 	 * @return bool
 	 * @since 1.7.0
 	 */
-	public function insert_item( int $change_id, int $run_id, Entity $entity, ?string $image, string $operation, array $after_hashes, string $captured_by, ?string $claimed_by ): bool {
+	public function insert_item( int $change_id, int $run_id, Entity $entity, ?string $image, string $operation, array $after_hashes, string $captured_by, ?string $claimed_by, ?array $after_blocks = null ): bool {
 		global $wpdb;
 
 		$thing = Thing::for( $entity );
@@ -227,6 +229,7 @@ class Repository {
 				'image_bytes'  => $image === null ? 0 : strlen( $image ),
 				'after_hashes' => (string) wp_json_encode( $after_hashes ),
 				'claimed_by'   => $claimed_by,
+				'after_blocks' => $after_blocks === null ? null : (string) wp_json_encode( $after_blocks ),
 			]
 		);
 	}
