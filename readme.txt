@@ -236,6 +236,12 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.7.0 =
+
+**Improvements**
+
+* Site Health > Info lists what each connected assistant reports about itself: its app and version, the protocol version it speaks and whether it supports skills.
+
 = 1.6.0 =
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 

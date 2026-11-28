@@ -109,6 +109,7 @@ use Albert\Logging\Logger;
 use Albert\Logging\ExecutionObserver;
 use Albert\Logging\Repository as LoggingRepository;
 use Albert\MCP\AdapterHealth as McpAdapterHealth;
+use Albert\MCP\ClientDiagnostics;
 use Albert\MCP\Server as McpServer;
 use Albert\Media\UploadLinks\UploadLinkController;
 use Albert\OAuth\Endpoints\AuthorizationPage;
@@ -370,6 +371,9 @@ class Plugin {
 		// address is not reachable. Some hosts serve /.well-known/ themselves, so
 		// assistant sign-in fails with no sign of why from inside WordPress.
 		( new DiscoveryHealth() )->register_hooks();
+
+		// What each connected client reports about itself, for Site Health and native skills.
+		( new ClientDiagnostics() )->register_hooks();
 
 		// Register MCP server (uses OAuth for authentication).
 		( new McpServer() )->register_hooks();
