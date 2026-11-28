@@ -211,10 +211,13 @@ class AbilitiesManager implements Hookable {
 	 *
 	 * @return void
 	 * @since 1.0.0
+	 * @since 1.7.0 Skips an ability a WordPress core ability replaces ({@see CoreAbilityOverlap}).
 	 */
 	public function register_abilities(): void {
 		foreach ( $this->abilities as $ability ) {
-			$ability->register_ability();
+			if ( ! CoreAbilityOverlap::is_superseded( $ability->get_id() ) ) {
+				$ability->register_ability();
+			}
 		}
 	}
 
@@ -353,7 +356,9 @@ class AbilitiesManager implements Hookable {
 	 *  4. Compute the newly-seen IDs. None → return (no option writes in the
 	 *     steady state).
 	 *  5. Disable ALL the new IDs by merging them into the persisted disabled
-	 *     option, and flag them in a transient so the admin can be told.
+	 *     option, and flag them in a transient so the admin can be told. A core
+	 *     ability replacing one of Albert's takes that ability's switch instead
+	 *     ({@see self::carry_over_superseded()}).
 	 *  6. Fold the new IDs into the known set.
 	 *
 	 * Hooked on `wp_abilities_api_init` at `PHP_INT_MAX - 1`.
@@ -394,6 +399,10 @@ class AbilitiesManager implements Hookable {
 		}
 
 		$known = array_values( array_unique( array_map( 'strval', (array) $known ) ) );
+
+		// Before the new ones are switched off, so a replacement first seen now is
+		// not switched off and announced as new.
+		$known = array_values( array_unique( array_merge( $known, $this->carry_over_superseded( $known ) ) ) );
 		$new   = array_values( array_diff( $registered, $known ) );
 
 		// The MCP transport meta-tools must always stay enabled, so they are never
@@ -421,6 +430,50 @@ class AbilitiesManager implements Hookable {
 		set_transient( 'albert_new_abilities_disabled', $new, DAY_IN_SECONDS );
 
 		update_option( 'albert_known_abilities', array_values( array_unique( array_merge( $known, $new ) ) ), false );
+	}
+
+	/**
+	 * Give a core ability that replaces one of Albert's that ability's switch, once.
+	 *
+	 * The owner already decided about that job, so an update must not take the
+	 * tool away or hand out one they had switched off. Independent of which was
+	 * updated first: a site on WordPress 7.2 before this Albert has the core
+	 * ability known, and switched off, already. Recorded per pair in
+	 * `albert_superseded_carried`, so the owner's later choice stands.
+	 *
+	 * @param list<string> $known Ability ids the site has accounted for.
+	 *
+	 * @return list<string> The core abilities whose switch was set, now known.
+	 * @since 1.7.0
+	 */
+	private function carry_over_superseded( array $known ): array {
+		$carried = array_map( 'strval', (array) get_option( 'albert_superseded_carried', [] ) );
+		$set     = [];
+
+		foreach ( array_keys( CoreAbilityOverlap::SUPERSEDED ) as $albert_id ) {
+			$core_id = CoreAbilityOverlap::replacement( $albert_id );
+			if ( $core_id === null || in_array( $albert_id, $carried, true ) || ! in_array( $albert_id, $known, true ) ) {
+				continue;
+			}
+
+			$disabled = array_map( 'strval', (array) get_option( AbilitiesPage::DISABLED_ABILITIES_OPTION, [] ) );
+			$disabled = in_array( $albert_id, $disabled, true )
+				? array_values( array_unique( array_merge( $disabled, [ $core_id ] ) ) )
+				: array_values( array_diff( $disabled, [ $core_id ] ) );
+			update_option( AbilitiesPage::DISABLED_ABILITIES_OPTION, $disabled );
+
+			$carried[] = $albert_id;
+			$set[]     = $core_id;
+		}
+
+		if ( $set !== [] ) {
+			update_option( 'albert_superseded_carried', $carried, false );
+			update_option( 'albert_known_abilities', array_values( array_unique( array_merge( $known, $set ) ) ), false );
+		}
+
+		// The caller folds these into the known set it writes back.
+
+		return $set;
 	}
 
 	/**
@@ -489,6 +542,9 @@ class AbilitiesManager implements Hookable {
 	 */
 	public function add_wordpress_abilities_to_settings( array $abilities ): array {
 		foreach ( $this->abilities as $ability ) {
+			if ( CoreAbilityOverlap::is_superseded( $ability->get_id() ) ) {
+				continue;
+			}
 			$abilities[ $ability->get_id() ] = $ability->get_settings_data();
 		}
 
