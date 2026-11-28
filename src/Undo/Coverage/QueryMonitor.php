@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo\Coverage
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo\Coverage;
@@ -27,7 +27,7 @@ use Albert\Undo\Recorder;
  *
  * It never changes, delays or blocks a query, and does no database work itself.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class QueryMonitor {
 
@@ -131,7 +131,7 @@ final class QueryMonitor {
 	 * Attach, last, so the monitor sees the query that will actually run.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function attach(): void {
 		$this->callback = [ $this, 'filter' ];
@@ -142,7 +142,7 @@ final class QueryMonitor {
 	 * Detach.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function detach(): void {
 		if ( $this->callback !== null ) {
@@ -157,7 +157,7 @@ final class QueryMonitor {
 	 * @param mixed $query The query about to run.
 	 *
 	 * @return mixed The same query.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function filter( $query ) {
 		// An empty query is a statement an earlier filter dropped (safe mode's

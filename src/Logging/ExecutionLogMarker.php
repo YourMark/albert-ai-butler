@@ -34,7 +34,7 @@ class ExecutionLogMarker {
 	/**
 	 * The last log row written per ability this request.
 	 *
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 * @var array<string, int>
 	 */
 	private static array $rows = [];
@@ -73,7 +73,7 @@ class ExecutionLogMarker {
 	 * @param int    $row_id       The log row id.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function remember_row( string $ability_name, int $row_id ): void {
 		if ( $ability_name !== '' && $row_id > 0 ) {
@@ -87,7 +87,7 @@ class ExecutionLogMarker {
 	 * @param string $ability_name The ability identifier.
 	 *
 	 * @return int|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function row_id( string $ability_name ): ?int {
 		return self::$rows[ $ability_name ] ?? null;
@@ -100,7 +100,7 @@ class ExecutionLogMarker {
 	 * @param string $ability_name The ability identifier.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function forget_row( string $ability_name ): void {
 		unset( self::$rows[ $ability_name ] );

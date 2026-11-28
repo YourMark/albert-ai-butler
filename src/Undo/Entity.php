@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo;
@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
  * Carries its blog, so on multisite a call that switches blogs never reads or
  * compares another blog's row under the same key.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class Entity {
 

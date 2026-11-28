@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo;
@@ -27,7 +27,7 @@ use Albert\Database\Tables;
  * Albert store more, and a pattern of `*` or a two-letter prefix would quietly
  * exclude everything, so both are refused.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class Exclusions {
 
@@ -149,7 +149,7 @@ final class Exclusions {
 	 * @param Entity $entity The entity.
 	 *
 	 * @return string|null NOISE, SECRET, or null when it is recorded.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function classify( Entity $entity ): ?string {
 		return match ( $entity->type ) {
@@ -165,7 +165,7 @@ final class Exclusions {
 	 * @param string $name Option name.
 	 *
 	 * @return string|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function option( string $name ): ?string {
 		if ( self::matches( $name, self::SECRET_OPTIONS ) || preg_match( self::SECRET_NAME, $name ) ) {
@@ -178,7 +178,7 @@ final class Exclusions {
 		 * Can only add: Albert's own entries are kept whatever is returned. A
 		 * trailing `*` matches a prefix of at least three characters.
 		 *
-		 * @since 1.5.0
+		 * @since 1.7.0
 		 *
 		 * @param array<int, string> $options Option names or prefixes.
 		 */
@@ -193,7 +193,7 @@ final class Exclusions {
 	 * @param string $meta_key Meta key.
 	 *
 	 * @return string|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function meta_key( string $meta_key ): ?string {
 		if ( self::matches( $meta_key, self::SECRET_META_KEYS ) || preg_match( self::SECRET_NAME, $meta_key ) ) {
@@ -207,7 +207,7 @@ final class Exclusions {
 		 * Can only add: Albert's own entries are kept whatever is returned. A
 		 * trailing `*` matches a prefix of at least three characters.
 		 *
-		 * @since 1.5.0
+		 * @since 1.7.0
 		 *
 		 * @param array<int, string> $meta_keys Meta keys or prefixes.
 		 */
@@ -228,7 +228,7 @@ final class Exclusions {
 	 * @return string|null {@see self::SECRET}, {@see self::UNREADABLE} when a
 	 *                     value is too big to decode in the memory left, or
 	 *                     null when it is clean.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function holds_secret( Entity $entity, ?array $state ): ?string {
 		if ( $state === null ) {
@@ -423,7 +423,7 @@ final class Exclusions {
 	 * @param string $table Table name.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function own_table( string $table ): bool {
 		return Tables::is_albert_table( $table );
@@ -435,7 +435,7 @@ final class Exclusions {
 	 * @param string $table Table name.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function journal_table( string $table ): bool {
 		return Tables::is_albert_table( $table, true );

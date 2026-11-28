@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo\Handlers
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo\Handlers;
@@ -17,7 +17,7 @@ use Albert\Undo\Entity;
 /**
  * The handlers registered through `albert/undo/handlers`, resolved once per window.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class Registry {
 
@@ -40,7 +40,7 @@ final class Registry {
 	 * whose id is empty or holds a colon, is ignored.
 	 *
 	 * @return Registry
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function load(): Registry {
 		$registry = new self();
@@ -52,7 +52,7 @@ final class Registry {
 		 * plugin's API. Its tables then count as captured instead of as a gap in
 		 * an entry's coverage. See {@see Handler}.
 		 *
-		 * @since 1.5.0
+		 * @since 1.7.0
 		 *
 		 * @param array<int, Handler> $handlers Registered handlers.
 		 */
@@ -78,7 +78,7 @@ final class Registry {
 	 * Every handler.
 	 *
 	 * @return array<string, Handler>
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function all(): array {
 		return $this->handlers;
@@ -90,7 +90,7 @@ final class Registry {
 	 * @param string $id Handler id.
 	 *
 	 * @return Handler|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function get( string $id ): ?Handler {
 		return $this->handlers[ $id ] ?? null;
@@ -103,7 +103,7 @@ final class Registry {
 	 * @param string $id Handler id.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function drop( string $id ): void {
 		if ( isset( $this->handlers[ $id ] ) ) {
@@ -118,7 +118,7 @@ final class Registry {
 	 * as covered, so the entry notes them.
 	 *
 	 * @return array<int, string>
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function dropped(): array {
 		return $this->dropped;
@@ -133,7 +133,7 @@ final class Registry {
 	 * @param string $table Table name, prefixed.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function covers_table( string $table ): bool {
 		if ( self::reserved( $table ) ) {
@@ -159,7 +159,7 @@ final class Registry {
 	 * @param Entity $entity The entity.
 	 *
 	 * @return string|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function claimant( Entity $entity ): ?string {
 		if ( $entity->type === Entity::CUSTOM ) {

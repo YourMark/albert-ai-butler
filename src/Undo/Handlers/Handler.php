@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo\Handlers
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo\Handlers;
@@ -23,7 +23,7 @@ use Albert\Undo\Recorder;
  * gap. Without a handler, writes to those tables leave the entry unrevertable,
  * which is the honest default.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 interface Handler {
 
@@ -31,7 +31,7 @@ interface Handler {
 	 * Unique handler id. No colons.
 	 *
 	 * @return string
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function id(): string;
 
@@ -39,7 +39,7 @@ interface Handler {
 	 * Tables this handler captures itself, without the site prefix (`wc_orders`).
 	 *
 	 * @return array<int, string>
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function tables(): array;
 
@@ -48,7 +48,7 @@ interface Handler {
 	 * to them are not gaps. Without the site prefix.
 	 *
 	 * @return array<int, string>
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function derived_tables(): array;
 
@@ -59,7 +59,7 @@ interface Handler {
 	 * @param Entity $entity The entity.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function claims( Entity $entity ): bool;
 
@@ -70,7 +70,7 @@ interface Handler {
 	 * @param Recorder $recorder The open window's recorder.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function open( Recorder $recorder ): void;
 
@@ -78,7 +78,7 @@ interface Handler {
 	 * Stop capturing: detach what {@see self::open()} attached.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function close(): void;
 
@@ -89,7 +89,7 @@ interface Handler {
 	 * @param string $key The handler's own key.
 	 *
 	 * @return array<string, mixed>|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function read( string $key ): ?array;
 }

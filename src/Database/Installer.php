@@ -565,7 +565,7 @@ class Installer {
 	 * @param string $charset_collate Charset/collation clause.
 	 *
 	 * @return string CREATE TABLE statement.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	private static function changes_sql( string $charset_collate ): string {
 		$table = Tables::changes();
@@ -605,7 +605,7 @@ class Installer {
 	 * @param string $charset_collate Charset/collation clause.
 	 *
 	 * @return string CREATE TABLE statement.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	private static function change_items_sql( string $charset_collate ): string {
 		$table = Tables::change_items();

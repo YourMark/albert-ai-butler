@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo\Coverage
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo\Coverage;
@@ -19,7 +19,7 @@ defined( 'ABSPATH' ) || exit;
  * the protected `check_current_query` flag: a nested query re-arms it, which
  * would make wpdb refuse a valid insert the caller already checked per field.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class WpdbState {
 
@@ -37,7 +37,7 @@ final class WpdbState {
 	 * @param callable(): T $read The queries.
 	 *
 	 * @return T
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function preserve( callable $read ) {
 		global $wpdb;

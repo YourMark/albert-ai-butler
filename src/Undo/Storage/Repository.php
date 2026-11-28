@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo\Storage
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo\Storage;
@@ -25,7 +25,7 @@ use Albert\Undo\WindowContext;
  * its last call is past the window, or when an item it changed was changed
  * later by as many other sessions as the policy keeps.
  *
- * @since 1.5.0
+ * @since 1.7.0
  *
  * phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Albert's own tables; never cached.
  */
@@ -84,7 +84,7 @@ class Repository {
 	 * @param WindowContext $context The call.
 	 *
 	 * @return array{id: int, run_id: int}|null Null when the insert failed.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function create_entry( WindowContext $context ): ?array {
 		global $wpdb;
@@ -175,7 +175,7 @@ class Repository {
 	 *
 	 * @return bool True when it exists, or when the database could not say:
 	 *              creating a second entry for one call is the worse mistake.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function entry_exists( int $change_id ): bool {
 		global $wpdb;
@@ -198,7 +198,7 @@ class Repository {
 	 * @param string|null           $claimed_by   Handler that restores this entity itself.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function insert_item( int $change_id, int $run_id, Entity $entity, ?string $image, string $operation, array $after_hashes, string $captured_by, ?string $claimed_by ): bool {
 		global $wpdb;
@@ -234,7 +234,7 @@ class Repository {
 	 * @param int|null             $log_id       The ability-log row for the same call.
 	 *
 	 * @return bool Whether the row was updated.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function finish_entry( int $change_id, string $status, ?string $reason, array $other_tables, array $effects, int $item_count, ?int $log_id ): bool {
 		global $wpdb;
@@ -289,7 +289,7 @@ class Repository {
 	 * @param int $change_id Entry id.
 	 *
 	 * @return bool Whether both deletes ran without error.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function delete_entry( int $change_id ): bool {
 		global $wpdb;
@@ -306,7 +306,7 @@ class Repository {
 	 * @param int $change_id Entry id.
 	 *
 	 * @return array<string, mixed>|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function entry( int $change_id ): ?array {
 		global $wpdb;
@@ -326,7 +326,7 @@ class Repository {
 	 * @param int $change_id Entry id.
 	 *
 	 * @return array<int, array<string, mixed>>
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function items( int $change_id ): array {
 		global $wpdb;
@@ -371,7 +371,7 @@ class Repository {
 	 * @param string $before UTC datetime; entries started earlier are closed.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function close_abandoned( string $before ): void {
 		global $wpdb;
@@ -394,7 +394,7 @@ class Repository {
 	 * @param string $before UTC datetime.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function prune_older_than( string $before ): void {
 		global $wpdb;
@@ -416,7 +416,7 @@ class Repository {
 	 * @param int $keep Sessions kept per item; 0 for no limit.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function prune_beyond_runs( int $keep ): void {
 		global $wpdb;
@@ -443,7 +443,7 @@ class Repository {
 	 * @param int $max_bytes Ceiling.
 	 *
 	 * @return bool Whether anything was pruned.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function prune_to_bytes( int $max_bytes ): bool {
 		global $wpdb;
@@ -482,7 +482,7 @@ class Repository {
 	 * @param string $before UTC datetime.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function delete_older_than( string $before ): void {
 		global $wpdb;
@@ -510,7 +510,7 @@ class Repository {
 	 * @param int $days Window.
 	 *
 	 * @return string
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function cutoff( int $days ): string {
 		return gmdate( 'Y-m-d H:i:s', time() - max( 0, $days ) * DAY_IN_SECONDS );
@@ -522,7 +522,7 @@ class Repository {
 	 * @param Entity $entity The entity.
 	 *
 	 * @return string
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function entity_hash( Entity $entity ): string {
 		return hash( 'sha256', $entity->id() );
@@ -537,7 +537,7 @@ class Repository {
 	 * @param array<string, mixed> $state The state.
 	 *
 	 * @return string
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function encode( array $state ): string {
 		$compressed = gzcompress( serialize( $state ), 6 ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Binary-safe; decoded with allowed_classes false.
@@ -551,7 +551,7 @@ class Repository {
 	 * @param string $image Stored image.
 	 *
 	 * @return array<string, mixed>|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function decode( string $image ): ?array {
 		$raw = gzuncompress( $image );

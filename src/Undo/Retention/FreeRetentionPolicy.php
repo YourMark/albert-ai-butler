@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo\Retention
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo\Retention;
@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
  * lets the owner revert, so there is no data kept here that a setting elsewhere
  * would unlock (WordPress.org guideline 5).
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class FreeRetentionPolicy implements RetentionPolicy {
 

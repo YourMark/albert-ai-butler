@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo;
@@ -25,7 +25,7 @@ use Albert\Undo\Handlers\Registry;
  * so a recount is never mistaken for a change and a password never reaches the
  * journal.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class Snapshot {
 
@@ -72,7 +72,7 @@ final class Snapshot {
 	 * @param Entity $entity The entity.
 	 *
 	 * @return array<string, mixed>|null Field => value, or null when it does not exist.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function read( Entity $entity ): ?array {
 		return self::on_blog( $entity, fn() => $this->read_here( $entity ) );
@@ -85,7 +85,7 @@ final class Snapshot {
 	 * @param Entity $entity The entity.
 	 *
 	 * @return string|null Null for an entity without credentials.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function credentials( Entity $entity ): ?string {
 		$column = Exclusions::CREDENTIAL_COLUMNS[ $entity->type ][0] ?? null;
@@ -138,7 +138,7 @@ final class Snapshot {
 	 * @param array<string, mixed>|null $state  Its state.
 	 *
 	 * @return array<string, mixed>|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function comparable( Entity $entity, ?array $state ): ?array {
 		if ( $state === null ) {

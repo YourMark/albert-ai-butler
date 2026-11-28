@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo;
@@ -19,7 +19,7 @@ defined( 'ABSPATH' ) || exit;
  * and the time of the last failure in an option. Written only once the window
  * has closed, so the write is never recorded as part of a call.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class FailureCounter {
 
@@ -36,7 +36,7 @@ final class FailureCounter {
 	 * @param int $count How many.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function record( int $count ): void {
 		try {
@@ -59,7 +59,7 @@ final class FailureCounter {
 	 * The count so far and when the last failure happened (UTC).
 	 *
 	 * @return array{count: int, last_at: string|null}
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function get(): array {
 		$value = get_option( self::OPTION, [] );

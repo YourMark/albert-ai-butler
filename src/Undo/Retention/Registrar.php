@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo\Retention
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo\Retention;
@@ -24,7 +24,7 @@ defined( 'ABSPATH' ) || exit;
  * } );
  * ```
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class Registrar {
 
@@ -41,7 +41,7 @@ final class Registrar {
 	 * @param RetentionPolicy $policy The policy.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function register( RetentionPolicy $policy ): void {
 		$this->policy = $policy;
@@ -51,7 +51,7 @@ final class Registrar {
 	 * The policy in force: a registered one, or Free's.
 	 *
 	 * @return RetentionPolicy
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function current(): RetentionPolicy {
 		$registrar = new self();
@@ -62,7 +62,7 @@ final class Registrar {
 		 * Call `$registrar->register()` with a {@see RetentionPolicy} to replace
 		 * Free's fixed limits.
 		 *
-		 * @since 1.5.0
+		 * @since 1.7.0
 		 *
 		 * @param Registrar $registrar The registrar.
 		 */

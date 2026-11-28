@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo;
@@ -23,7 +23,7 @@ use Albert\Undo\Storage\Repository;
  * its window closes, `shutdown` closes it and marks it interrupted, so a fatal
  * never leaves the journal listening or an entry stuck as "recording".
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class Window {
 
@@ -61,7 +61,7 @@ final class Window {
 	 * @param WindowContext $context The call.
 	 *
 	 * @return bool False when a window is already open.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function open( WindowContext $context ): bool {
 		if ( self::$recorder !== null ) {
@@ -106,7 +106,7 @@ final class Window {
 	 * @param string $status Recorder::STATUS_RECORDED or STATUS_INTERRUPTED.
 	 *
 	 * @return int|null The entry id, or null when nothing was recorded.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function close( string $status = Recorder::STATUS_RECORDED ): ?int {
 		$recorder = self::$recorder;
@@ -150,7 +150,7 @@ final class Window {
 	 * Close a window the call never closed. Bound to `shutdown`.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function interrupt(): void {
 		self::close( Recorder::STATUS_INTERRUPTED );
@@ -160,7 +160,7 @@ final class Window {
 	 * The open window's source, or null when none is open.
 	 *
 	 * @return string|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function source(): ?string {
 		return self::$source;
@@ -170,7 +170,7 @@ final class Window {
 	 * The open window's recorder, for handlers.
 	 *
 	 * @return Recorder|null
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function recorder(): ?Recorder {
 		return self::$recorder;

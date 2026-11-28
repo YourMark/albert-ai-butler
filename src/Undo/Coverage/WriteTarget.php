@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo\Coverage
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo\Coverage;
@@ -20,7 +20,7 @@ defined( 'ABSPATH' ) || exit;
  * reported as a gap, so a mistake here costs a warning, never a promise to
  * revert something that was not recorded.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class WriteTarget {
 
@@ -66,7 +66,7 @@ final class WriteTarget {
 	 * @param string $sql The query.
 	 *
 	 * @return WriteTarget
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function of( string $sql ): WriteTarget {
 		if ( self::has_hidden_code( $sql ) ) {
@@ -110,7 +110,7 @@ final class WriteTarget {
 	 * Whether this is a write.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function is_write(): bool {
 		return $this->kind === self::WRITE;

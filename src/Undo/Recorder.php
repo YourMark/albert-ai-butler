@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo;
@@ -28,7 +28,7 @@ use Albert\Undo\Storage\Repository;
  *
  * At the end each entity is read again; one left as it was is dropped.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class Recorder {
 
@@ -212,7 +212,7 @@ final class Recorder {
 	 * count as gaps rather than as covered.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function start(): void {
 		ExecutionLogMarker::forget_row( $this->context->ability_name );
@@ -249,7 +249,7 @@ final class Recorder {
 	 * @param string $captured_by `hook` or `handler`.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function capture( Entity $entity, string $captured_by = 'handler' ): void {
 		if ( ! $this->admit( $entity ) ) {
@@ -295,7 +295,7 @@ final class Recorder {
 	 * @param string $captured_by `hook` or `handler`.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function created( Entity $entity, string $captured_by = 'handler' ): void {
 		if ( ! $this->admit( $entity ) ) {
@@ -311,7 +311,7 @@ final class Recorder {
 	 * @param Entity $entity The entity.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function has( Entity $entity ): bool {
 		return isset( $this->items[ $entity->id() ] ) || Exclusions::classify( $entity ) !== null;
@@ -323,7 +323,7 @@ final class Recorder {
 	 * @param string $what A table name, {@see self::UNREADABLE}, or a plain description (`media files`).
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function untracked( string $what ): void {
 		$this->untracked[ $what ] = true;
@@ -335,7 +335,7 @@ final class Recorder {
 	 * @param string $name The secret's name.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function secret( string $name ): void {
 		$this->secrets[ $name ] = true;
@@ -348,7 +348,7 @@ final class Recorder {
 	 * @param string $writer The function that issued the query.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function direct_write( string $table, string $writer ): void {
 		$this->direct_write = true;
@@ -382,7 +382,7 @@ final class Recorder {
 	 * Whether the journal is doing its own database work.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function is_busy(): bool {
 		return $this->busy > 0;
@@ -394,7 +394,7 @@ final class Recorder {
 	 * @param string $status One of the STATUS_ constants.
 	 *
 	 * @return int|null The entry id, or null when the call changed nothing.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function finish( string $status ): ?int {
 		$this->detach();
@@ -427,7 +427,7 @@ final class Recorder {
 	 * @param array<string, mixed>|null $state A comparable state.
 	 *
 	 * @return array<string, string>
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function field_hashes( ?array $state ): array {
 		$hashes = [];

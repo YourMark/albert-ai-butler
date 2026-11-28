@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo\Retention
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo\Retention;
@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
  * registering a class implementing this interface through
  * `albert/undo/register_retention_policy`; there is no filter around the numbers.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 interface RetentionPolicy {
 
@@ -26,7 +26,7 @@ interface RetentionPolicy {
 	 * Days a session stays revertable, counted from its last call.
 	 *
 	 * @return int
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function max_age_days(): int;
 
@@ -38,7 +38,7 @@ interface RetentionPolicy {
 	 * outside the count for any item it changed is pruned whole.
 	 *
 	 * @return int
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function runs_per_item(): int;
 
@@ -46,7 +46,7 @@ interface RetentionPolicy {
 	 * Ceiling on the stored before-images, in bytes. Oldest go first past it.
 	 *
 	 * @return int
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function max_bytes(): int;
 }

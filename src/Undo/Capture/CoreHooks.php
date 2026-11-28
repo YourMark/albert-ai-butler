@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo\Capture
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo\Capture;
@@ -35,7 +35,7 @@ use Albert\Undo\Snapshot;
  *
  * Attached only while a call is being recorded.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class CoreHooks {
 
@@ -64,7 +64,7 @@ final class CoreHooks {
 	 * Attach every hook, ahead of other listeners so their own writes come after.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function attach(): void {
 		$post = fn( $post_id ) => $this->capture( Entity::post( (int) $post_id ) );
@@ -202,7 +202,7 @@ final class CoreHooks {
 	 * Detach every hook.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function detach(): void {
 		foreach ( $this->attached as [ $hook, $callback ] ) {

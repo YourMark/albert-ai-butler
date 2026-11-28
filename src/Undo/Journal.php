@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo;
@@ -24,7 +24,7 @@ use WP_Error;
  * needed per ability. Only calls with a {@see ConnectionContext} are recorded:
  * WP-CLI, cron, the editor and other plugins never are.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 class Journal implements Hookable {
 
@@ -32,7 +32,7 @@ class Journal implements Hookable {
 	 * Register WordPress hooks.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function register_hooks(): void {
 		// Last, so a filter that blocks the call has already had its say.
@@ -49,7 +49,7 @@ class Journal implements Hookable {
 	 * @param mixed  $mcp_tool  The adapter's tool.
 	 *
 	 * @return mixed The arguments, unchanged.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function open( $args, $tool_name = '', $mcp_tool = null ) {
 		if ( $args instanceof WP_Error || ! is_array( $args ) ) {
@@ -87,7 +87,7 @@ class Journal implements Hookable {
 	 * @param mixed $result The tool result.
 	 *
 	 * @return mixed The result, unchanged.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function close( $result ) {
 		if ( Window::source() === WindowContext::SOURCE_MCP ) {

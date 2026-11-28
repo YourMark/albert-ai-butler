@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Undo
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Undo;
@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * The call a window records: which ability, as whom, through which connection.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 final class WindowContext {
 

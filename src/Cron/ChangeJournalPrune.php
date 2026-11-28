@@ -4,7 +4,7 @@
  *
  * @package Albert
  * @subpackage Cron
- * @since      1.5.0
+ * @since      1.7.0
  */
 
 namespace Albert\Cron;
@@ -25,7 +25,7 @@ use Albert\Undo\Storage\Repository;
  * entry can still say what happened; entries go {@see self::DELETE_AFTER_DAYS}
  * later.
  *
- * @since 1.5.0
+ * @since 1.7.0
  */
 class ChangeJournalPrune implements Hookable {
 
@@ -85,7 +85,7 @@ class ChangeJournalPrune implements Hookable {
 	 * Register WordPress hooks.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function register_hooks(): void {
 		add_action( self::HOOK, [ $this, 'run' ] );
@@ -95,7 +95,7 @@ class ChangeJournalPrune implements Hookable {
 	 * Apply the retention policy.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public function run(): void {
 		try {
@@ -124,7 +124,7 @@ class ChangeJournalPrune implements Hookable {
 	 * @param int|null $blog_id The blog whose journal recorded; the current one by default.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function soon( ?int $blog_id = null ): void {
 		$blog_id  = $blog_id ?? get_current_blog_id();
@@ -149,7 +149,7 @@ class ChangeJournalPrune implements Hookable {
 	 * Schedule the nightly prune if not already scheduled.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function schedule(): void {
 		if ( ! wp_next_scheduled( self::HOOK ) ) {
@@ -161,7 +161,7 @@ class ChangeJournalPrune implements Hookable {
 	 * Unschedule the nightly prune.
 	 *
 	 * @return void
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function unschedule(): void {
 		$timestamp = wp_next_scheduled( self::HOOK );

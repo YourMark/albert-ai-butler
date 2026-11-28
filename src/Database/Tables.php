@@ -85,7 +85,7 @@ class Tables {
 	 * @param int|null $blog_id The blog whose journal; the current one by default.
 	 *
 	 * @return string Prefixed table name.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function changes( ?int $blog_id = null ): string {
 		global $wpdb;
@@ -99,7 +99,7 @@ class Tables {
 	 * @param int|null $blog_id The blog whose journal; the current one by default.
 	 *
 	 * @return string Prefixed table name.
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function change_items( ?int $blog_id = null ): string {
 		global $wpdb;
@@ -127,7 +127,7 @@ class Tables {
 	 * @param bool   $journal Only the change journal's two tables.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.7.0
 	 */
 	public static function is_albert_table( string $table, bool $journal = false ): bool {
 		global $wpdb;
