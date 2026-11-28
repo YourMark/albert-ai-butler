@@ -98,13 +98,11 @@ class FindTerms extends BaseAbility {
 	/**
 	 * Get the output schema for this ability.
 	 *
-	 * Describes the object {@see self::execute()} returns. Until 1.4.0 this
-	 * declared a bare `array` of term items while execute() returned
-	 * `{ terms: [...], total: int }`. WordPress 7.1 validates ability output, so
-	 * the mismatch was not cosmetic: every call came back as
-	 * `ability_invalid_output` — "output is not of type array" — and the
-	 * assistant never saw a term. The list moved under `terms`; the item shape
-	 * is unchanged.
+	 * Describes the object {@see self::execute()} returns, down to the wrapper.
+	 * WordPress 7.1 validates ability output, so a schema declaring a bare array
+	 * of items against a `{ terms: [...], total: int }` return does not degrade —
+	 * every call fails with `ability_invalid_output` and the assistant sees no
+	 * term at all.
 	 *
 	 * @return array<string, mixed> Output schema.
 	 * @since 1.0.0

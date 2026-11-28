@@ -27,24 +27,21 @@ defined( 'ABSPATH' ) || exit;
  * saw it. Emitting the markup here, with `inline`, is what opts out of the
  * hoist.
  *
- * **No live region, and that is a correction rather than an omission.** The
- * wrapper carried `aria-live="polite"` and a comment claiming the notice was
- * therefore announced. It was not: a live region only announces content that
- * changes *after* the region is in the accessibility tree, and every notice
- * here is server-rendered, present at parse time, on the page a redirect
- * landed on. The attribute did nothing, and a comment asserting behaviour the
- * markup does not have is worse than no comment. Announcing a post-redirect
- * confirmation needs focus moved to it, which is a change to how the screens
- * handle their own save flow rather than something this class can do alone;
- * until then Albert is exactly where core's `settings_errors()` is, and says so.
+ * **No live region, deliberately.** A live region only announces content that
+ * changes *after* the region is in the accessibility tree, and every notice here
+ * is server-rendered, present at parse time, on the page a redirect landed on —
+ * so `aria-live` here would assert behaviour the markup does not have.
+ * Announcing a post-redirect confirmation needs focus moved to it, which is a
+ * change to how the screens handle their own save flow rather than something
+ * this class can do alone; until then Albert is exactly where core's
+ * `settings_errors()` is, and says so.
  *
  * The markup is core's, from `wp_admin_notice()` (WP 6.4+), which is what
  * `settings_errors()` itself calls. An admin notice should look and behave like
  * every other WordPress admin notice, `is-dismissible` is wired by core's JS
  * wherever the node sits, and anything core changes about that markup arrives
- * here for free. All this class decides is *where* the notice goes and that it
- * is announced; it hand-rolled the `<div>` for a while and that was one more
- * copy of core's markup than anybody needed.
+ * here for free. All this class decides is *where* the notice goes; hand-rolling
+ * the `<div>` would be one more copy of core's markup than anybody needs.
  *
  * @since 1.4.0
  */

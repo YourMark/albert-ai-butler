@@ -19,8 +19,7 @@ use Albert\Admin\SettingsRegistry;
  *
  * Three things need this list and must all see the same one: the screen that
  * renders the form, the handler that saves it, and {@see Storage}, which hands
- * every field to WordPress's `register_setting()`. It was previously private to
- * the screen, which is why it is here rather than there.
+ * every field to WordPress's `register_setting()`.
  *
  * **Memoised, and that is load-bearing rather than an optimisation.**
  * `SettingsRegistry::append_field_to_section()` appends — it does not replace —
@@ -107,20 +106,10 @@ class Schema {
 	/**
 	 * Stamp every field with the option name it reads and writes.
 	 *
-	 * One derivation, once, for every consumer. This exists because it
-	 * previously happened twice and the two disagreed: the renderer derived the
-	 * input's `name` as `option_name ?? id`, while the save loop derived the
-	 * `$_POST` key as `option_name ?? {section_id}_{field_id}`. Every field that
-	 * set an explicit `option_name` masked the difference; the privacy mode
-	 * field, the only one that did not, rendered `name="mode"` while the save
-	 * loop looked for `albert_privacy_mode`. The key was therefore never
-	 * present, the sanitiser always saw null, and its default was written back
-	 * on every save — so the setting silently reverted and could not be changed
-	 * from the screen at all.
-	 *
-	 * Resolving here, after `albert/settings/sections` so a filtered-in field
-	 * gets the same treatment, means every consumer reads the same value:
-	 * there is nothing left to derive.
+	 * One derivation, once, for every consumer: the input's `name` and the key
+	 * the save loop reads from `$_POST` are the same string because both read it
+	 * from here rather than deriving it themselves. Runs after
+	 * `albert/settings/sections` so a filtered-in field is stamped too.
 	 *
 	 * @since 1.4.0
 	 *

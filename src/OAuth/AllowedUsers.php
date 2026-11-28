@@ -35,26 +35,21 @@ use Albert\Settings\Value;
  * moving someone's deadline because an unrelated setting changed would be a
  * surprise no security control should spring on someone.
  *
- * {@see self::reset_expiry_clock()} recalculates them deliberately, but is
- * programmatic only. It was briefly offered as a checkbox on the Settings
- * screen and removed in 1.4.0: "apply to invitations already waiting" asks the
- * owner to reason about the difference between a window and a deadline in
- * order to tick a box, which is a distinction the screen should simply make
- * for them.
+ * {@see self::reset_expiry_clock()} recalculates them deliberately, and stays
+ * programmatic: an "apply to invitations already waiting" checkbox would ask the
+ * owner to reason about the difference between a window and a deadline in order
+ * to tick a box, which is a distinction the screen should make for them.
  *
- * Before 1.4.0 this was a flat array of ints with no timestamps at all.
- * {@see \Albert\Database\Installer} migrates existing sites once, on
- * upgrade, before any of these methods can run in the same request (its
- * `maybe_upgrade()` fires first in {@see \Albert\Core\Plugin::init()}), by
- * leaving every field `null`: there is no record of when a legacy entry was
- * actually added or whether it was ever exercised, and inventing either
- * would be stating a fact nobody knows, displayed as one right on the row
- * ("Added 2 hours ago" for an account that predates this feature entirely
- * is not a rounding error, it is simply wrong). A migrated entry is exempt
- * from expiry the same way a fresh one with expiry turned off is: `null`
- * `expires_at` alone, {@see self::is_expired()}, needs no fabricated
- * `authorised_at` to back it up. Fields are still read defensively here in
- * case an entry somehow predates even that migration.
+ * An entry migrated from the older flat array of ints carries `null` in every
+ * timestamp field, and is left that way: there is no record of when it was
+ * added or whether it was ever exercised, and inventing either would state a
+ * fact nobody knows right on the row ("Added 2 hours ago" for an account that
+ * predates the feature). A `null` `expires_at` alone exempts it from expiry,
+ * {@see self::is_expired()}, with no fabricated `authorised_at` behind it.
+ * {@see \Albert\Database\Installer} runs that migration on upgrade, before
+ * anything here can run in the same request (its `maybe_upgrade()` fires first
+ * in {@see \Albert\Core\Plugin::init()}); fields are still read defensively in
+ * case an entry predates even it.
  *
  * `authorised_at` is the exemption for entries that *do* have a real one: an
  * invitation that was exercised at least once is allowed forever, no matter

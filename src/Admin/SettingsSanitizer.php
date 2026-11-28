@@ -132,17 +132,14 @@ class SettingsSanitizer {
 	/**
 	 * Hold a number to the range its own field declares.
 	 *
-	 * `min` and `max` used to reach the `<input>` and stop there, so the bound
-	 * was a hint to the browser and nothing else: a field declaring
-	 * `max => 3650` accepted 99999 from a crafted POST, and — since the option
-	 * is registered — from any `update_option()` call as well. Clamping here
-	 * makes one declaration drive both the attribute and the stored value,
-	 * which is the point of declaring it.
+	 * `min` and `max` reach the `<input>` as attributes, where they are a hint to
+	 * the browser and nothing else: a crafted POST ignores them, and so does any
+	 * `update_option()` call on the registered option. Clamping here makes one
+	 * declaration drive both the attribute and the stored value.
 	 *
 	 * Clamping is also *said*, not done quietly. Rewriting somebody's 99999 to
 	 * 3650 without a word leaves them looking at a number they did not type and
-	 * no way to know why. This is the behaviour Free's upload limit already had
-	 * as a one-off; here it becomes what every bounded number field does.
+	 * no way to know why.
 	 *
 	 * Idempotent, which matters because a registered option is sanitised twice
 	 * on save — once by the settings screen and again inside `update_option()`.

@@ -14,14 +14,10 @@ defined( 'ABSPATH' ) || exit;
 /**
  * What a setting's value actually is, and whether the site owner still owns it.
  *
- * Before this, every setting that could be overridden in code hand-rolled its
- * own precedence: {@see \Albert\Privacy\PrivacyMode::resolve()} was constant →
- * filter → option → default, {@see \Albert\Media\UploadLinks\UploadLinkService}
- * was filter → option → ceiling, and connection retention was option → default
- * with no override at all. Three chains, three spellings, and only one of them
- * told the Settings screen it was in force — so a site filtering the privacy
- * mode showed the *stored* value on screen and let somebody save over it,
- * which is a lie about what the site does.
+ * One precedence chain for every setting that code can override, so the value
+ * the site runs on and the value the Settings screen shows can never disagree:
+ * a screen offering an editable copy of a value code has pinned is a lie about
+ * what the site does.
  *
  * The chain, highest priority first:
  *

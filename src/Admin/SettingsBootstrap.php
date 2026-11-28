@@ -190,14 +190,13 @@ class SettingsBootstrap {
 				'description' => __( 'How assistants send files to your site.', 'albert-ai-butler' ),
 				'fields'      => [
 					[
-						// An ordinary number field. It used to be 'custom' purely
-						// because the renderer had no way to express "disabled,
-						// because a filter is overriding this". It now works that
-						// out itself from Settings\Value, so this field declares
-						// no `disabled` and no `display_value` at all. The `hint`
-						// stays: the generated one names the filter, but only this
-						// field can give the exact size in force, which matters
-						// because the control rounds up to whole megabytes.
+						// An ordinary number field: the renderer works out
+						// "disabled, because a filter is overriding this" from
+						// Settings\Value, so nothing here declares `disabled` or
+						// `display_value`. The `hint` stays — the generated one
+						// names the filter, but only this field can give the exact
+						// size in force, which matters because the control rounds
+						// up to whole megabytes.
 						'id'                => 'default_max_mb',
 						'type'              => 'number',
 						'label'             => __( 'Default upload size limit', 'albert-ai-butler' ),

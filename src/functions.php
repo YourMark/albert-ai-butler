@@ -254,10 +254,9 @@ if ( ! function_exists( 'albert_register_setting' ) ) {
 		 * "Other", because nothing truer can be said about it. It cannot be
 		 * named after what is inside: it holds whatever no add-on placed, so a
 		 * title borrowed from the first occupant would be wrong the moment a
-		 * second, unrelated setting landed beside it. It was called "Add-ons"
-		 * and that was worse — it described who registered the setting rather
-		 * than what the setting is, which is not what a heading on a settings
-		 * screen is for.
+		 * second, unrelated setting landed beside it. Nor "Add-ons", which names
+		 * who registered the setting rather than what the setting is, which is
+		 * not what a heading on a settings screen is for.
 		 *
 		 * It exists for compatibility, not as the intended destination. Pass
 		 * `section` and `section_title` and this card stays empty, which is

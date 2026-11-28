@@ -449,13 +449,10 @@ class SettingsRenderer {
 		// single derivation for both the input's `name` and the key the save
 		// loop reads from $_POST.
 		//
-		// This used to fall back to `$field['id']` when `option_name` was
-		// absent, which is where the privacy-mode bug lived: the save loop
-		// derived `{section}_{field}` instead, so the two never matched and the
-		// setting could not be saved at all. There is deliberately no fallback
-		// now — a field arriving here without a name is a caller error, and a
-		// control with `name=""` submits nothing, which is a visible failure
-		// rather than a value silently reverting on every save.
+		// There is deliberately no fallback. A field arriving here without a
+		// name is a caller error, and a control with `name=""` submits nothing,
+		// which is a visible failure rather than a second derivation quietly
+		// disagreeing with the save loop's and reverting the value on every save.
 		return isset( $field['option_name'] ) && is_string( $field['option_name'] )
 			? $field['option_name']
 			: '';

@@ -124,12 +124,11 @@ class InfoTip {
 			// The popover is the trigger's *next sibling* on purpose:
 			// admin-popover.js finds it with `nextElementSibling`, so anything
 			// inserted between the two silently breaks the control.
-			// Every element here is phrasing content, `<span>` rather than the
-			// `<div>` the popover used to be. That is what makes this control
-			// legal, and so reliably rendered, inside a `<legend>`, a `<p>` or
-			// a `<label>`, which is exactly where a tip beside a field's name
-			// belongs. It is absolutely positioned either way, so nothing about
-			// the appearance depends on the tag.
+			// Every element here is phrasing content — `<span>`, never `<div>` —
+			// which is what makes the control legal, and so reliably rendered,
+			// inside a `<legend>`, a `<p>` or a `<label>`, exactly where a tip
+			// beside a field's name belongs. It is absolutely positioned either
+			// way, so nothing about the appearance depends on the tag.
 			'<span class="albert-tip"><button type="button" class="albert-tip__trigger" aria-expanded="false" aria-controls="%1$s" aria-label="%2$s"><span class="dashicons dashicons-info-outline" aria-hidden="true"></span></button><span class="albert-tip__popover" id="%1$s" role="note" hidden>%3$s</span></span>',
 			esc_attr( $id ),
 			esc_attr(

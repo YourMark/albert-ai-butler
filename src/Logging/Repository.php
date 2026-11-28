@@ -64,12 +64,11 @@ class Repository {
 	 * writer produced it. Every writer classifies identically instead of each
 	 * one carrying its own copy of the rule.
 	 *
-	 * `ip_address`, `referrer` and `request_id` were dropped from the schema in
-	 * 1.4.0. They are deliberately *not* deprecation-wrapped: the mapping loop
-	 * has always ignored keys it does not recognise, so an add-on built against
-	 * an older Free that still sends them degrades silently instead of erroring,
-	 * and that same property is what lets one build of an add-on run against
-	 * both the old and the new Free.
+	 * `ip_address`, `referrer` and `request_id` are no longer in the schema, and
+	 * are deliberately *not* deprecation-wrapped: the mapping loop ignores keys
+	 * it does not recognise, so an add-on built against an older Free that still
+	 * sends them degrades silently instead of erroring, and one build of an
+	 * add-on runs against both the old and the new Free.
 	 *
 	 * The prune step is gated behind `albert/logging/enabled` so that Premium's
 	 * full-history rows are never trimmed by Free's 2-row cap. When Premium is

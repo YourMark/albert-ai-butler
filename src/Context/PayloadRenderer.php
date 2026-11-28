@@ -47,11 +47,9 @@ class PayloadRenderer {
 	/**
 	 * Section key carrying the owner's own words.
 	 *
-	 * Named rather than inlined because the section is addressed by key in three
-	 * places: the renderer orders it last among the context sections, the screen
-	 * labels its cost chip, and the instructions field prices what is being typed
-	 * by composing this section's heading with the draft text. A rename has to
-	 * reach all three.
+	 * Named rather than inlined because the key is matched twice: once to order
+	 * the section last among the written ones, and once to dispatch it to its own
+	 * renderer. A rename has to reach both.
 	 *
 	 * @since 1.4.0
 	 * @var string
@@ -249,11 +247,10 @@ class PayloadRenderer {
 	 * through the abilities whether context is on or not, and with context off
 	 * nothing frames that text for it.
 	 *
-	 * The wording was cut down rather than left as first drafted: at 83 tokens it
-	 * was a sixth of the whole budget spent on something nobody chose.
-	 * This version costs 72 and still names all four things it has to, that the
-	 * owner's own instructions are included, that this is data, the three things
-	 * it never changes, and that post and product text is covered too.
+	 * Kept to 72 tokens, because this is budget nobody chose to spend, while
+	 * still naming all four things it has to: that the owner's own instructions
+	 * are included, that this is data, the three things it never changes, and
+	 * that post and product text is covered too.
 	 *
 	 * @return string The framing statement, always the same text.
 	 * @since 1.4.0

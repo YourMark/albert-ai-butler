@@ -142,15 +142,14 @@ class SettingsRegistry {
 			return;
 		}
 
-		// An empty `fields` array is allowed, and deliberately so since 1.4.0: a
-		// section may be registered first and filled afterwards by
-		// albert_register_setting() calls naming it as their `section`, which is
-		// the natural way an add-on builds its own card. Nothing renders an
-		// empty one — render_section() skips a section with no valid fields —
-		// so the old non-empty requirement bought nothing and silently dropped
-		// the card, taking every field aimed at it down to the shared "Other"
-		// bucket. A `fields` key that is present but not an array is still a
-		// mistake worth reporting.
+		// An empty `fields` array is allowed on purpose: a section may be
+		// registered first and filled afterwards by albert_register_setting()
+		// calls naming it as their `section`, which is the natural way an add-on
+		// builds its own card. Nothing renders an empty one — render_section()
+		// skips a section with no valid fields — so requiring one here would
+		// only drop the card and send every field aimed at it to the shared
+		// "Other" bucket. A `fields` key that is present but not an array is
+		// still a mistake worth reporting.
 		if ( isset( $section['fields'] ) && ! is_array( $section['fields'] ) ) {
 			_doing_it_wrong(
 				__METHOD__,
@@ -253,13 +252,11 @@ class SettingsRegistry {
 			return;
 		}
 
-		// Delegated, not duplicated. This used to build the normalised shape by
-		// hand, because register_section() once demanded a non-empty `fields`
-		// array and a section created here is filled afterwards by
-		// albert_register_setting(). That requirement was dropped in 1.4.0, so
-		// the copy outlived its reason and had already drifted: it skipped the
-		// namespacing and non-empty-title checks every other section is held to,
-		// and would have gone on skipping whatever was added to them next.
+		// Delegated, not duplicated. Building the normalised shape by hand here
+		// would skip the namespacing and non-empty-title checks every other
+		// section is held to, and go on skipping whatever is added to them next.
+		// `fields` is dropped because a section created here is filled
+		// afterwards by albert_register_setting().
 		unset( $section['fields'] );
 
 		$this->register_section( $section );
