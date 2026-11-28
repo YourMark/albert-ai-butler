@@ -1,63 +1,60 @@
 ---
 name: media-alt-text
-description: How to write alt text that is true, when an image should have none, and how to sweep a site for images without it. Read this before setting alt text on any image.
+description: How to write alt text that fits each place an image is used, when an image should have none, and what to do when you have not seen it. Read this before setting alt text on any image.
 metadata:
-  abilities: "albert/find-media albert/view-media albert/update-media albert/edit-post-block albert/edit-page-block"
+  abilities: "albert/find-media albert/view-media albert/update-media albert/view-post albert/view-page albert/edit-post-block albert/edit-page-block"
 ---
 
 # Alt text through Albert
 
+Alt text is for people who cannot see the image. It depends on the place, not the file. The
+same photo can be decorative on the home page, carry information in an article and be the
+only label of a link in a menu. Write it per placement.
+
+## Start with where the image is used
+
+`albert/view-media` returns `used_in`: every post, page or pattern that shows the file. For
+each placement it gives the block `path`, the alt text there, whether the image is a `link`,
+its `caption`, the text `before` and `after` it and the nearest `heading`.
+
+- The alt text in a block is what visitors get. The media library's alt text
+  (`albert/update-media`) is only the default for new placements and for featured images.
+- Change one placement with `albert/edit-post-block` or `albert/edit-page-block`. Read the
+  post first, send the same block back at its `path` and change only `alt` (or
+  `isDecorative`). Leave the rest of the block as it was.
+- A placement in a template part or a theme cannot be edited from here. Tell the person
+  where it is.
+
+## Decide what the image does in that place
+
+- **Decorative** (a background, a divider, or a picture that repeats what the text next to it
+  already says): set `isDecorative` and leave alt empty. An empty alt is correct, not a gap.
+- **A link or a button**: describe where it goes or what it does ("Shop the spring range"),
+  not what it looks like.
+- **Informative**: say what the reader needs from it here, in one short sentence. Do not
+  start with "Image of".
+- **Text in the image** (a poster, a screenshot of a quote): the alt text is that text.
+- **A logo**: the organisation's name. When it links home, the name is enough.
+- **A chart or diagram**: a short alt that names what it shows, plus the key numbers in the
+  text or caption next to it. A long explanation does not belong in alt text.
+- **With a caption** that already describes it: do not repeat the caption. Add only what
+  the caption leaves out, or nothing.
+
+There is no right length. Use the site's own words: a product name, a place, a colour the
+shop uses.
+
 ## You have probably not seen the image
 
-`albert/view-media` returns the file's address, title and size, not the picture. Unless the
-image itself is in this conversation (the person attached it, or your client opened the URL
-and showed it to you), you do not know what it shows. A file name like `IMG_2041.jpg` or a
-title like "hero" is not a description.
+Unless the person shared the picture with you, you have only its file name, title, caption
+and the text around each placement. That is not enough to describe what it shows.
 
-When you have not seen it, say so. Then offer one of these:
-
-- The person tells you what the image shows, and you write the alt text from that.
-- You draft alt text from the context (the post around it, the caption), mark each one as a
-  guess, and save only what the person confirms.
-
-Never save alt text for an image you have not seen as if you had.
-
-## Good alt text
-
-- Say what the image adds to the page, not everything in it. A product photo names the
-  product; a chart gives its main finding.
-- Write it in the language of the page it sits on.
-- Text in the image goes in the alt text, word for word, when it matters.
-- An image that is a link: describe where the link goes, such as "Contact us".
-- Leave out the site name, keywords and "photo of", unless the photo style matters.
-
-## Decorative images
-
-Some images add nothing a reader would miss: a divider, a background texture, a photo next to
-a heading that already says the same. Give them empty alt text, so screen readers skip them.
-Ask the person when you are not sure. Empty is not the same as missing: missing alt text
-makes some screen readers read the file name aloud.
-
-`find-media` with `missing_alt_text` lists empty and missing alike, so a decorative image
-comes back in every sweep. Keep a list of the ones the person called decorative, and skip
-them.
-
-## The library and the page
-
-The library's alt text (set with `albert/update-media`) is only where new image blocks start.
-An image block already in a post keeps its own copy. To change what visitors get on a page,
-also edit that block: read the post or page with `"format": ["blocks"]`, change only the
-`alt="..."` inside the image block's `html`, and send it back with `edit-post-block` or
-`edit-page-block`. Fix every image in one post in a single call with `edits`.
-
-To find where an image is used, `albert/search-content` with its file name usually finds the
-posts and pages whose blocks point to it.
+- Say so before you write anything: "I can't see this image. From the page it looks like ...".
+- Ask the person what the image shows, or offer drafts marked as guesses for them to check.
+- Never invent details such as colours, people or text you cannot know.
 
 ## Sweeps
 
-1. Run `find-media` with `missing_alt_text` and tell the person the `total`.
-2. Work in pages of 10 to 20. Show the alt text you plan for each image, with its id and
-   title, and wait for a yes before saving.
-3. Skip images you cannot describe and say which ones.
-4. End with a list: what you set, what you skipped, and which posts still show old alt text
-   in their own blocks.
+`albert/find-media` with `missing_alt_text` lists files whose library alt is empty. That
+includes decorative images, which are correct as they are, so check each placement before
+counting it as missing. Work in small batches, say what you changed per page, and list the
+images you left for the person because you could not tell what they show.
