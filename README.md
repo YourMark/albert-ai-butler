@@ -175,6 +175,10 @@ Website: https://yourmark.nl
 
 ### 1.7.0
 
+**Features**
+
+- A skill on comment moderation: spot spam, approve or trash waiting comments in one batch, write replies that are safe to publish, and keep commenters' personal data out of the chat.
+
 **Improvements**
 
 - Every skill your assistant can read as a prompt is also in its skills list, and a skill about abilities that are all switched off is no longer offered.
