@@ -67,6 +67,8 @@ class ConnectionGuard implements Hookable {
 		'albert_connection_idle_days',
 		'albert_upload_link_max_mb',
 		'albert_site_location',
+		// An assistant that edits its own guidance keeps an injected instruction.
+		'albert_disabled_skills',
 		// Deleting or rewinding these re-runs migrations and rewrite flushes.
 		'albert_installed_version',
 		'albert_db_version',
@@ -113,6 +115,7 @@ class ConnectionGuard implements Hookable {
 		'albert_disabled_abilities' => [],
 		'albert_allowed_users'      => [],
 		'albert_privacy_mode'       => 'strict',
+		'albert_disabled_skills'    => [],
 	];
 
 	/**
