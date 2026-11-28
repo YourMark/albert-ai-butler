@@ -175,6 +175,10 @@ Website: https://yourmark.nl
 
 ### 1.7.0
 
+**Features**
+
+- A skill on changing a live site safely: the smallest change, confirming scope, trash before permanent deletes, and saying plainly when a change is held for approval rather than done.
+
 **Improvements**
 
 - Every skill your assistant can read as a prompt is also in its skills list, and a skill about abilities that are all switched off is no longer offered.
