@@ -8,6 +8,7 @@
 namespace Albert\Tests\Integration\Core;
 
 use Albert\Database\Installer;
+use Albert\SafeMode\Repository as SafeModeRepository;
 use Albert\Tests\TestCase;
 
 /**
@@ -92,5 +93,42 @@ class NoteInputTest extends TestCase {
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+	}
+
+	/**
+	 * Two held calls that differ only in the note are one decision; the
+	 * stored input keeps the first note.
+	 *
+	 * @return void
+	 */
+	public function test_held_calls_differing_only_in_the_note_share_a_row(): void {
+		$queue  = new SafeModeRepository();
+		$first  = $queue->stage(
+			'albert/update-post',
+			[
+				'id'    => 5,
+				'title' => 'New',
+				'note'  => 'First reason',
+			],
+			1,
+			'client-acme',
+			'Acme',
+			HOUR_IN_SECONDS
+		);
+		$second = $queue->stage(
+			'albert/update-post',
+			[
+				'id'    => 5,
+				'title' => 'New',
+				'note'  => 'Other reason',
+			],
+			1,
+			'client-acme',
+			'Acme',
+			HOUR_IN_SECONDS
+		);
+
+		$this->assertSame( $first->id, $second->id );
+		$this->assertSame( 'First reason', $queue->find( $first->action_id )->input['note'] );
 	}
 }
