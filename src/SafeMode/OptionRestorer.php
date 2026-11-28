@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\OAuth\Server\ConnectionContext;
+use Albert\Undo\Window;
 
 /**
  * The backstop behind {@see ConnectionGuard}: a write to an options table that
@@ -350,7 +351,11 @@ class OptionRestorer implements Hookable {
 	}
 
 	/**
-	 * Run this class's own queries, unseen by itself.
+	 * Run this class's own queries, unseen by itself and by the change journal.
+	 *
+	 * A restore is not something the call did: the journal already notes the
+	 * write that made it necessary, and naming the restorer as a second direct
+	 * writer would only mislead.
 	 *
 	 * @param callable $work The queries.
 	 *
@@ -364,7 +369,12 @@ class OptionRestorer implements Hookable {
 		$suppressed = $wpdb->suppress_errors();
 
 		try {
-			$work();
+			$recorder = Window::recorder();
+			if ( $recorder !== null ) {
+				$recorder->quietly( $work );
+			} else {
+				$work();
+			}
 		} finally {
 			$wpdb->suppress_errors( $suppressed );
 			$this->busy = false;

@@ -1,0 +1,175 @@
+<?php
+/**
+ * Change-journal prune
+ *
+ * @package Albert
+ * @subpackage Cron
+ * @since      1.7.0
+ */
+
+namespace Albert\Cron;
+
+defined( 'ABSPATH' ) || exit;
+
+use Albert\Contracts\Interfaces\Hookable;
+use Albert\Undo\FailureCounter;
+use Albert\Undo\Retention\Registrar;
+use Albert\Undo\Retention\RetentionPolicy;
+use Albert\Undo\Storage\Repository;
+
+/**
+ * Nightly WP-Cron job that holds the change journal to its retention policy.
+ *
+ * Prunes whole sessions by age, then by size, least recently active first.
+ * A pruned item keeps its row, so the entry can still say what happened;
+ * entries go {@see self::DELETE_AFTER_DAYS} later.
+ *
+ * @since 1.7.0
+ */
+class ChangeJournalPrune implements Hookable {
+
+	/**
+	 * Cron hook name.
+	 *
+	 * @var string
+	 */
+	const HOOK = 'albert_prune_change_journal';
+
+	/**
+	 * Days after which an entry, already pruned, is deleted. Short, so "nothing
+	 * older than the window is left" stays true of the rows too.
+	 *
+	 * @var int
+	 */
+	const DELETE_AFTER_DAYS = 1;
+
+	/**
+	 * How long an entry may stay `recording` before it counts as abandoned, in seconds.
+	 *
+	 * @var int
+	 */
+	const ABANDONED_SECONDS = HOUR_IN_SECONDS;
+
+	/**
+	 * Least time between two prunes run at the end of a request.
+	 *
+	 * @var int
+	 */
+	const SOON_INTERVAL = HOUR_IN_SECONDS;
+
+	/**
+	 * Transient that throttles {@see self::soon()}.
+	 *
+	 * @var string
+	 */
+	const SOON_LOCK = 'albert_undo_prune_lock';
+
+	/**
+	 * The journal store.
+	 *
+	 * @var Repository
+	 */
+	private Repository $repository;
+
+	/**
+	 * Wire the prune to its store and policy.
+	 *
+	 * @param Repository|null      $repository The journal store.
+	 * @param RetentionPolicy|null $policy     The policy; defaults to the registered one.
+	 */
+	public function __construct( ?Repository $repository = null, private ?RetentionPolicy $policy = null ) {
+		$this->repository = $repository ?? new Repository();
+	}
+
+	/**
+	 * Register WordPress hooks.
+	 *
+	 * @return void
+	 * @since 1.7.0
+	 */
+	public function register_hooks(): void {
+		add_action( self::HOOK, [ $this, 'run' ] );
+	}
+
+	/**
+	 * Apply the retention policy.
+	 *
+	 * @return void
+	 * @since 1.7.0
+	 */
+	public function run(): void {
+		try {
+			$policy = $this->policy ?? Registrar::current();
+			$now    = time();
+
+			$this->repository->close_abandoned( gmdate( 'Y-m-d H:i:s', $now - self::ABANDONED_SECONDS ) );
+			foreach ( Repository::cutoffs( $policy ) as $cutoff ) {
+				$this->repository->prune_older_than( $cutoff );
+			}
+			$this->repository->prune_to_bytes( $policy->max_bytes() );
+			foreach ( Repository::cutoffs( $policy, self::DELETE_AFTER_DAYS ) as $cutoff ) {
+				$this->repository->delete_older_than( $cutoff );
+			}
+		} catch ( \Throwable $e ) {
+			// Counted, so retention that stopped working can be reported rather than go unseen.
+			FailureCounter::record( 1 );
+		}
+	}
+
+	/**
+	 * Also prune at the end of a request that recorded something, at most once
+	 * per {@see self::SOON_INTERVAL}: WP-Cron only runs on traffic and can be
+	 * switched off, and before-images are personal data that must not outlive
+	 * the window because a cron never ran.
+	 *
+	 * @param int|null $blog_id The blog whose journal recorded; the current one by default.
+	 *
+	 * @return void
+	 * @since 1.7.0
+	 */
+	public static function soon( ?int $blog_id = null ): void {
+		$blog_id  = $blog_id ?? get_current_blog_id();
+		$switched = is_multisite() && $blog_id !== get_current_blog_id() && switch_to_blog( $blog_id );
+
+		try {
+			if ( get_transient( self::SOON_LOCK ) !== false ) {
+				return;
+			}
+
+			set_transient( self::SOON_LOCK, 1, self::SOON_INTERVAL );
+		} finally {
+			if ( $switched ) {
+				restore_current_blog();
+			}
+		}
+
+		add_action( 'shutdown', [ new self( new Repository( $blog_id ) ), 'run' ], PHP_INT_MAX );
+	}
+
+	/**
+	 * Schedule the nightly prune if not already scheduled.
+	 *
+	 * @return void
+	 * @since 1.7.0
+	 */
+	public static function schedule(): void {
+		if ( ! wp_next_scheduled( self::HOOK ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', self::HOOK );
+		}
+	}
+
+	/**
+	 * Unschedule the nightly prune.
+	 *
+	 * @return void
+	 * @since 1.7.0
+	 */
+	public static function unschedule(): void {
+		$timestamp = wp_next_scheduled( self::HOOK );
+
+		while ( $timestamp !== false ) {
+			wp_unschedule_event( $timestamp, self::HOOK );
+			$timestamp = wp_next_scheduled( self::HOOK );
+		}
+	}
+}

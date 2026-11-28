@@ -101,7 +101,7 @@ class UpdateMedia extends BaseAbility {
 				],
 			],
 			'required'      => [ 'id' ],
-			// Only `id` and the four fields are allowed, so this means at least one field.
+			// Only `id` and the four fields are allowed (Albert's `note` never counts), so this means at least one field.
 			'minProperties' => 2,
 		];
 	}

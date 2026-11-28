@@ -216,8 +216,10 @@ class UploadLinkService {
 				'mime_allowlist' => $allowlist,
 				'max_bytes'      => $max_bytes,
 				'post_id'        => $post_id,
-				// The connection that asked, so disconnecting it ends the link too.
+				// The connection that asked, so disconnecting it ends the link too,
+				// and so the upload is recorded in the change journal as its call.
 				'client_id'      => self::minting_client_id(),
+				'client_name'    => ConnectionContext::client_name(),
 			],
 			self::TTL_SECONDS
 		);
@@ -250,7 +252,7 @@ class UploadLinkService {
 	 *
 	 * @param string $token The raw link token.
 	 *
-	 * @return array{user_id: int, mime_allowlist: array<string, string>, max_bytes: int, post_id: int}|WP_Error
+	 * @return array{user_id: int, mime_allowlist: array<string, string>, max_bytes: int, post_id: int, client_id: string|null, client_name: string|null}|WP_Error
 	 * @since 1.4.0
 	 */
 	public function redeem_link( string $token ): array|WP_Error {
@@ -324,6 +326,8 @@ class UploadLinkService {
 			// would then promise more than core will accept.
 			'max_bytes'      => $this->apply_server_ceiling( (int) ( $payload['max_bytes'] ?? self::DEFAULT_MAX_BYTES ) ),
 			'post_id'        => $post_id,
+			'client_id'      => is_string( $payload['client_id'] ?? null ) && $payload['client_id'] !== '' ? $payload['client_id'] : null,
+			'client_name'    => is_string( $payload['client_name'] ?? null ) ? $payload['client_name'] : null,
 		];
 	}
 

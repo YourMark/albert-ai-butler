@@ -39,6 +39,13 @@ class ConnectedRedactionTest extends TestCase {
 	private const NO_INPUT = 'other-plugin/site-settings';
 
 	/**
+	 * Another plugin's ability that declares its properties as an empty object.
+	 *
+	 * @var string
+	 */
+	private const EMPTY_OBJECT = 'other-plugin/ping';
+
+	/**
 	 * What each callback was called with, per ability.
 	 *
 	 * @var array<string, array<int, mixed>>
@@ -111,6 +118,16 @@ class ConnectedRedactionTest extends TestCase {
 						}
 					)
 				);
+				wp_register_ability(
+					self::EMPTY_OBJECT,
+					self::args(
+						static fn(): array => [ 'contact' => 'jane@example.com' ],
+						[
+							'type'       => 'object',
+							'properties' => new \stdClass(),
+						]
+					)
+				);
 			}
 		);
 
@@ -124,7 +141,7 @@ class ConnectedRedactionTest extends TestCase {
 	 * @return void
 	 */
 	public function tear_down(): void {
-		foreach ( [ self::CLOSED, self::NO_INPUT ] as $id ) {
+		foreach ( [ self::CLOSED, self::NO_INPUT, self::EMPTY_OBJECT ] as $id ) {
 			if ( wp_has_ability( $id ) ) {
 				wp_unregister_ability( $id );
 			}
@@ -183,6 +200,20 @@ class ConnectedRedactionTest extends TestCase {
 		);
 
 		$this->assertSame( 'j***@e***.com', $result['email'] );
+	}
+
+	/**
+	 * Properties declared as an empty object get the reveal input instead of breaking registration.
+	 *
+	 * @return void
+	 */
+	public function test_properties_declared_as_an_object(): void {
+		$ability = wp_get_ability( self::EMPTY_OBJECT );
+
+		$this->assertNotNull( $ability );
+		$this->assertSame( 'boolean', $ability->get_input_schema()['properties']['reveal_personal_data']['type'] );
+		$this->assertSame( 'j***@e***.com', $ability->execute( [] )['contact'] );
+		$this->assertSame( 'jane@example.com', $ability->execute( [ 'reveal_personal_data' => true ] )['contact'] );
 	}
 
 	/**

@@ -11,6 +11,7 @@ namespace Albert\SafeMode;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Core\NoteInput;
 use Albert\Database\Tables;
 
 /**
@@ -52,7 +53,8 @@ class Repository {
 	 * @since 1.5.0
 	 */
 	public function stage( string $ability_name, array $input, int $user_id, ?string $client_id, ?string $client_name, int $ttl_seconds, ?array $target = null ): PendingAction {
-		$fingerprint = $this->fingerprint( $ability_name, $input, $user_id );
+		// Two calls that differ only in the assistant's note are one decision.
+		$fingerprint = $this->fingerprint( $ability_name, NoteInput::without( $ability_name, $input ), $user_id );
 
 		$existing = $this->find_open_duplicate( $ability_name, $fingerprint );
 		if ( $existing instanceof PendingAction ) {

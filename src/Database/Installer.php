@@ -11,6 +11,8 @@ namespace Albert\Database;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Cron\ChangeJournalPrune;
+
 /**
  * Installer class
  *
@@ -74,6 +76,8 @@ class Installer {
 		'albert_safe_mode_ttl_minutes',
 		// The Context screen's instructions and section toggles.
 		'albert_context',
+		// Change journal: its own failure count, read by the Dashboard.
+		'albert_undo_failures',
 		// Where the site runs, chosen in the connect guide.
 		'albert_site_location',
 		// Legacy options retired in earlier releases, cleared here for completeness.
@@ -378,7 +382,7 @@ class Installer {
 	public static function uninstall(): void {
 		global $wpdb;
 
-		foreach ( Tables::all() as $table ) {
+		foreach ( array_merge( Tables::all(), self::other_sites_journals() ) as $table ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Schema change required for uninstall.
 			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
 		}
@@ -391,6 +395,7 @@ class Installer {
 			delete_metadata( 'user', 0, $meta_key, '', true );
 		}
 
+		delete_transient( ChangeJournalPrune::SOON_LOCK );
 		// Caches and rate-limit counters. They expire anyway, but uninstall leaves nothing.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall sweep.
 		$transients = $wpdb->get_col(
@@ -408,6 +413,35 @@ class Installer {
 	}
 
 	/**
+	 * The change journal tables of every other site on a network. Each site
+	 * keeps its own journal, and what it holds is page content and personal
+	 * data, so none of it may outlive the plugin.
+	 *
+	 * @return array<int, string>
+	 * @since 1.7.0
+	 */
+	private static function other_sites_journals(): array {
+		if ( ! is_multisite() ) {
+			return [];
+		}
+
+		$tables = [];
+		foreach ( get_sites(
+			[
+				'fields' => 'ids',
+				'number' => 0,
+			]
+		) as $site_id ) {
+			if ( (int) $site_id !== get_current_blog_id() ) {
+				$tables[] = Tables::changes( (int) $site_id );
+				$tables[] = Tables::change_items( (int) $site_id );
+			}
+		}
+
+		return $tables;
+	}
+
+	/**
 	 * Run dbDelta over every table's CREATE statement.
 	 *
 	 * @return void
@@ -421,6 +455,8 @@ class Installer {
 		$sql = self::ability_log_sql( $charset_collate )
 			. self::single_use_tokens_sql( $charset_collate )
 			. self::pending_actions_sql( $charset_collate )
+			. self::changes_sql( $charset_collate )
+			. self::change_items_sql( $charset_collate )
 			. self::oauth_clients_sql( $charset_collate )
 			. self::oauth_access_tokens_sql( $charset_collate )
 			. self::oauth_refresh_tokens_sql( $charset_collate )
@@ -545,6 +581,104 @@ class Installer {
 			KEY status_created (status, created_at),
 			KEY expires_at (expires_at),
 			KEY dedupe (ability_name, status, input_fingerprint)
+		) $charset_collate;\n\n";
+	}
+
+	/**
+	 * Change journal DDL: one row per recorded assistant call.
+	 *
+	 * `run_id` is the session, the id of its first entry. `reason` is why the
+	 * entry cannot be reverted (NULL when it can), `other_tables` what was
+	 * written but not captured. `approved_by` is who approved a run safe mode
+	 * held; `note` the assistant's own one-line reason, never Albert's words.
+	 * `coverage` says how much of the call was recorded and names what was not;
+	 * `meta` holds add-ons' namespaced keys (`albert/changes/entry_meta`).
+	 *
+	 * @param string $charset_collate Charset/collation clause.
+	 *
+	 * @return string CREATE TABLE statement.
+	 * @since 1.7.0
+	 */
+	private static function changes_sql( string $charset_collate ): string {
+		$table = Tables::changes();
+
+		return "CREATE TABLE {$table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			run_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			blog_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			source varchar(20) NOT NULL DEFAULT 'mcp',
+			ability_name varchar(191) NOT NULL,
+			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			client_id varchar(80) DEFAULT NULL,
+			client_name varchar(255) DEFAULT NULL,
+			session_id varchar(191) DEFAULT NULL,
+			pending_action_id bigint(20) unsigned DEFAULT NULL,
+			approved_by bigint(20) unsigned DEFAULT NULL,
+			note varchar(191) DEFAULT NULL,
+			log_id bigint(20) unsigned DEFAULT NULL,
+			status varchar(20) NOT NULL DEFAULT 'recording',
+			reason varchar(20) DEFAULT NULL,
+			other_tables text DEFAULT NULL,
+			effects text DEFAULT NULL,
+			coverage text DEFAULT NULL,
+			meta text DEFAULT NULL,
+			item_count int(10) unsigned NOT NULL DEFAULT 0,
+			created_at datetime NOT NULL,
+			finished_at datetime DEFAULT NULL,
+			PRIMARY KEY  (id),
+			KEY run_created (run_id, created_at),
+			KEY client_recent (client_id, user_id, blog_id, id),
+			KEY created_at (created_at)
+		) $charset_collate;\n\n";
+	}
+
+	/**
+	 * Change journal items DDL: one row per entity a recorded call changed.
+	 *
+	 * `before_image` is NULL for a create, a call too large to keep, and once
+	 * pruned (`pruned` says why). `after_hashes` lets a revert see later edits.
+	 * `thing_key` and `thing_hash` group items into what the owner sees as one
+	 * changed thing ({@see \Albert\Undo\Thing}). `after_blocks` is the block
+	 * tree a call left in a post's content ({@see \Albert\Undo\BlockTree}),
+	 * `after_preview` short text of what it changed ({@see \Albert\Undo\Preview}).
+	 * A post's content before the call is left out of `before_image` when the
+	 * revision `content_revision_id` holds it; `content_hash` proves it still does.
+	 *
+	 * @param string $charset_collate Charset/collation clause.
+	 *
+	 * @return string CREATE TABLE statement.
+	 * @since 1.7.0
+	 */
+	private static function change_items_sql( string $charset_collate ): string {
+		$table = Tables::change_items();
+
+		return "CREATE TABLE {$table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			change_id bigint(20) unsigned NOT NULL,
+			run_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			blog_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			entity_type varchar(20) NOT NULL,
+			entity_key text NOT NULL,
+			entity_hash char(64) NOT NULL,
+			operation varchar(10) NOT NULL,
+			captured_by varchar(10) NOT NULL DEFAULT 'hook',
+			before_image longblob DEFAULT NULL,
+			image_bytes int(10) unsigned NOT NULL DEFAULT 0,
+			after_hashes longtext DEFAULT NULL,
+			claimed_by varchar(100) DEFAULT NULL,
+			pruned varchar(20) DEFAULT NULL,
+			thing_key varchar(191) NOT NULL DEFAULT '',
+			thing_hash char(64) NOT NULL DEFAULT '',
+			after_blocks longtext DEFAULT NULL,
+			after_preview longtext DEFAULT NULL,
+			content_revision_id bigint(20) unsigned DEFAULT NULL,
+			content_hash char(64) DEFAULT NULL,
+			PRIMARY KEY  (id),
+			KEY change_id (change_id),
+			KEY entity_run (entity_hash, run_id),
+			KEY run_pruned (run_id, pruned),
+			KEY thing_change (thing_hash, change_id),
+			KEY content_revision (content_revision_id)
 		) $charset_collate;\n\n";
 	}
 

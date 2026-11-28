@@ -15,6 +15,9 @@ use Albert\Abstracts\BaseAbility;
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\Plugin;
 use Albert\Media\TempFile;
+use Albert\Undo\Recorder;
+use Albert\Undo\Window;
+use Albert\Undo\WindowContext;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -156,16 +159,30 @@ class UploadLinkController implements Hookable {
 			return $received;
 		}
 
-		$result = $this->links->finalize_upload( $received['tmp_path'], $received['filename'], $context );
-
-		$this->log(
-			$context['user_id'],
-			[
-				'post_id'  => $context['post_id'],
-				'filename' => $received['filename'],
-			],
-			$result
+		// The upload is the connection's call, made by another route: record it
+		// in the change journal like any tool call.
+		$recording = $context['client_id'] !== null && Window::open(
+			new WindowContext( WindowContext::SOURCE_UPLOAD, self::LOG_ABILITY_ID, $context['user_id'], $context['client_id'], $context['client_name'] )
 		);
+		$status    = Recorder::STATUS_INTERRUPTED;
+
+		try {
+			$result = $this->links->finalize_upload( $received['tmp_path'], $received['filename'], $context );
+
+			$this->log(
+				$context['user_id'],
+				[
+					'post_id'  => $context['post_id'],
+					'filename' => $received['filename'],
+				],
+				$result
+			);
+			$status = Recorder::STATUS_RECORDED;
+		} finally {
+			if ( $recording ) {
+				Window::close( $status );
+			}
+		}
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
