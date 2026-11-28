@@ -603,7 +603,8 @@ class Installer {
 	 * pruned (`pruned` says why). `after_hashes` lets a revert see later edits.
 	 * `thing_key` and `thing_hash` group items into what the owner sees as one
 	 * changed thing ({@see \Albert\Undo\Thing}). `after_blocks` is the block
-	 * tree a call left in a post's content ({@see \Albert\Undo\BlockTree}).
+	 * tree a call left in a post's content ({@see \Albert\Undo\BlockTree}),
+	 * `after_preview` short text of what it changed ({@see \Albert\Undo\Preview}).
 	 *
 	 * @param string $charset_collate Charset/collation clause.
 	 *
@@ -631,6 +632,7 @@ class Installer {
 			thing_key varchar(191) NOT NULL DEFAULT '',
 			thing_hash char(64) NOT NULL DEFAULT '',
 			after_blocks longtext DEFAULT NULL,
+			after_preview longtext DEFAULT NULL,
 			PRIMARY KEY  (id),
 			KEY change_id (change_id),
 			KEY entity_run (entity_hash, run_id),

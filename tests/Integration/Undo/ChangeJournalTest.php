@@ -266,6 +266,44 @@ class ChangeJournalTest extends TestCase {
 	}
 
 	/**
+	 * The preview holds the changed fields and the added or changed blocks,
+	 * never an unchanged block or a credential-looking value.
+	 *
+	 * @return void
+	 */
+	public function test_the_preview_holds_what_changed(): void {
+		$kept    = '<!-- wp:paragraph --><p>Unchanged</p><!-- /wp:paragraph -->';
+		$added   = '<!-- wp:heading --><h2 class="wp-block-heading">Frequently <em>asked</em> questions</h2><!-- /wp:heading -->';
+		$post_id = self::factory()->post->create(
+			[
+				'post_title'   => 'Plans',
+				'post_content' => $kept,
+			]
+		);
+
+		$this->work = static function () use ( $post_id, $kept, $added ): void {
+			wp_update_post(
+				[
+					'ID'           => $post_id,
+					'post_title'   => 'Pricing',
+					'post_excerpt' => 'Bearer abc.def',
+					'post_content' => $kept . "\n\n" . $added,
+				]
+			);
+		};
+
+		$this->call();
+
+		$item    = $this->items_by_key( (int) $this->only_entry()['id'] )[ "post:{$post_id}" ];
+		$preview = json_decode( (string) $item['after_preview'], true );
+
+		$this->assertSame( 'Pricing', $preview['post_title'] );
+		$this->assertArrayNotHasKey( 'post_excerpt', $preview );
+		$this->assertArrayNotHasKey( 'post_content', $preview );
+		$this->assertSame( [ BlockTree::hash( parse_blocks( $added )[0] ) => 'Frequently asked questions' ], $preview['blocks'] );
+	}
+
+	/**
 	 * A raw insert into a table nothing captures makes the entry unrevertable, and names it.
 	 *
 	 * @return void

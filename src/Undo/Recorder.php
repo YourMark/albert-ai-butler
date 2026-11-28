@@ -580,6 +580,7 @@ final class Recorder {
 				$lost              = true;
 				$item['after']     = [];
 				$item['blocks']    = null;
+				$item['preview']   = [];
 				$item['operation'] = $item['existed'] ? 'update' : 'create';
 				$kept[]            = $item;
 				continue;
@@ -593,6 +594,7 @@ final class Recorder {
 
 			$item['after']     = $hashes;
 			$item['blocks']    = self::after_blocks( $item, $after, $hashes );
+			$item['preview']   = Preview::of( Snapshot::comparable( $item['entity'], $after ), $item['before'], $hashes, $item['blocks'] === null ? null : self::before_content( $item ) );
 			$item['operation'] = ! $item['existed'] ? 'create' : ( $after === null ? 'delete' : 'update' );
 			$kept[]            = $item;
 		}
@@ -631,7 +633,8 @@ final class Recorder {
 				$item['after'],
 				$item['by'],
 				$this->handlers->claimant( $item['entity'] ),
-				$item['blocks']
+				$item['blocks'],
+				$item['preview']
 			);
 
 			if ( $inserted ) {
@@ -682,6 +685,19 @@ final class Recorder {
 		}
 
 		return BlockTree::of( $after['post_content'] );
+	}
+
+	/**
+	 * A post's content before the call, from its held before-image.
+	 *
+	 * @param array<string, mixed> $item The captured item.
+	 *
+	 * @return string|null Null for a create, or when the image was not kept.
+	 */
+	private static function before_content( array $item ): ?string {
+		$before = is_string( $item['image'] ) ? Repository::decode( $item['image'] ) : null;
+
+		return is_string( $before['post_content'] ?? null ) ? $before['post_content'] : null;
 	}
 
 	/**

@@ -418,6 +418,19 @@ final class Exclusions {
 	}
 
 	/**
+	 * Whether a string is a credential whatever it is stored under: an
+	 * authorization header, a well-known API key format, a private key.
+	 *
+	 * @param string $value The value.
+	 *
+	 * @return bool
+	 * @since 1.7.0
+	 */
+	public static function is_secret_value( string $value ): bool {
+		return $value !== '' && preg_match( self::SECRET_VALUE, $value ) === 1;
+	}
+
+	/**
 	 * Whether a table is Albert's own bookkeeping.
 	 *
 	 * @param string $table Table name.

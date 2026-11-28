@@ -202,11 +202,12 @@ class Repository {
 	 * @param string|null            $claimed_by   Handler that restores this entity itself.
 	 * @param array<int, mixed>|null $after_blocks The block tree the call left in a post's content
 	 *                                             ({@see \Albert\Undo\BlockTree}), when it changed it.
+	 * @param array<string, mixed>   $preview      Short text of what changed ({@see \Albert\Undo\Preview}).
 	 *
 	 * @return bool
 	 * @since 1.7.0
 	 */
-	public function insert_item( int $change_id, int $run_id, Entity $entity, ?string $image, string $operation, array $after_hashes, string $captured_by, ?string $claimed_by, ?array $after_blocks = null ): bool {
+	public function insert_item( int $change_id, int $run_id, Entity $entity, ?string $image, string $operation, array $after_hashes, string $captured_by, ?string $claimed_by, ?array $after_blocks = null, array $preview = [] ): bool {
 		global $wpdb;
 
 		$thing = Thing::for( $entity );
@@ -229,7 +230,8 @@ class Repository {
 				'image_bytes'  => $image === null ? 0 : strlen( $image ),
 				'after_hashes' => (string) wp_json_encode( $after_hashes ),
 				'claimed_by'   => $claimed_by,
-				'after_blocks' => $after_blocks === null ? null : (string) wp_json_encode( $after_blocks ),
+				'after_blocks'  => $after_blocks === null ? null : (string) wp_json_encode( $after_blocks ),
+				'after_preview' => $preview === [] ? null : (string) wp_json_encode( $preview, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
 			]
 		);
 	}
