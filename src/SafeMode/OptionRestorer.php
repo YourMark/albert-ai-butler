@@ -104,10 +104,7 @@ class OptionRestorer implements Hookable {
 			return $query;
 		}
 
-		// Reads, and creating a table: a new table holds no protected row yet,
-		// and reading it first would fail and drop the statement creating it.
-		// Other CREATEs (a trigger, procedure or event) can write it later.
-		if ( preg_match( '/^[\s(]*(?:(?:SELECT|SHOW|DESCRIBE|DESC|EXPLAIN)\s|CREATE\s+(?:TEMPORARY\s+)?TABLE\b)/i', $query ) === 1 ) {
+		if ( preg_match( '/^[\s(]*(?:SELECT|SHOW|DESCRIBE|DESC|EXPLAIN)\s/i', $query ) === 1 ) {
 			return $query;
 		}
 

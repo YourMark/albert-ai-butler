@@ -350,7 +350,7 @@ class AbilitySweepTest extends TestCase {
 				[
 					'id'         => $user_id,
 					'first_name' => 'Sweep',
-					'email'      => 'sweep-edited@example.com',
+					'last_name'  => 'Edited',
 				]
 			)
 		);
