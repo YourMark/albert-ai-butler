@@ -56,6 +56,11 @@ class RiskPolicy {
 		'albert/moderate-comment',
 		// Undoable through a new revision, but it replaces live content in one call.
 		'albert/restore-revision',
+		// Proposed for WordPress core (PR #10892), not in 7.2. It takes REST names
+		// nested by group (`email`, `url`), which the option-key scan cannot see,
+		// so it is held by name before it lands. Both names it has been given.
+		'core/settings-update',
+		'core/update-settings',
 	];
 
 	/**

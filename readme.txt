@@ -236,6 +236,12 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.7.0 =
+
+**Improvements**
+
+* Safe mode is ready for the settings writer WordPress is planning: when it arrives, a change to your site's settings through it waits for your approval.
+
 = 1.6.0 =
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
