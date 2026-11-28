@@ -291,7 +291,7 @@ final class QueryMonitor {
 				}
 			}
 
-			$this->recorder->direct_write( $table, ( $class !== '' ? "{$class}::{$function}()" : "{$function}()" ) . self::origin( $file ) );
+			$this->recorder->direct_write( $table, $class !== '' ? "{$class}::{$function}()" : "{$function}()", self::origin( $file ) );
 			return;
 		}
 

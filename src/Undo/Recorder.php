@@ -417,17 +417,23 @@ final class Recorder {
 	}
 
 	/**
-	 * Note a write to WordPress's own tables that bypassed the hooks, so nothing captured it.
+	 * Note a write to WordPress's own tables that bypassed the hooks, so nothing
+	 * captured it, unless a handler vouches it captured the write itself.
 	 *
 	 * @param string $table  The table.
 	 * @param string $writer The function that issued the query.
+	 * @param string $origin Where that function lives, as ` (plugin)`, for the note.
 	 *
 	 * @return void
 	 * @since 1.7.0
 	 */
-	public function direct_write( string $table, string $writer ): void {
+	public function direct_write( string $table, string $writer, string $origin = '' ): void {
+		if ( $this->handlers->covers_direct_write( $table, $writer ) ) {
+			return;
+		}
+
 		$this->direct_write = true;
-		$this->untracked( "{$table}, written directly by {$writer}", self::REASON_DIRECT_WRITE );
+		$this->untracked( "{$table}, written directly by {$writer}{$origin}", self::REASON_DIRECT_WRITE );
 	}
 
 	/**

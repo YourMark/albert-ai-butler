@@ -21,6 +21,7 @@ use Albert\Support\WpCompat;
 use Albert\Tests\TestCase;
 use Albert\Undo\BlockTree;
 use Albert\Undo\Entity;
+use Albert\Undo\Handlers\CoversDirectWrites;
 use Albert\Undo\Handlers\Handler;
 use Albert\Undo\Handlers\Registry;
 use Albert\Undo\Journal;
@@ -820,6 +821,28 @@ class ChangeJournalTest extends TestCase {
 
 		$this->assertSame( Recorder::REASON_DIRECT_WRITE, $entry['reason'] );
 		$this->assertContains( "{$GLOBALS['wpdb']->postmeta}, written directly by " . self::class . '::reduce_stock()', json_decode( (string) $entry['other_tables'], true ) );
+	}
+
+	/**
+	 * A handler that captured what a direct write changes can vouch for it.
+	 *
+	 * @return void
+	 */
+	public function test_a_handler_can_vouch_for_a_direct_write_it_captured(): void {
+		$entry = $this->stock_call( self::class . '::reduce_stock()' );
+
+		$this->assertNull( $entry['reason'], (string) $entry['other_tables'] );
+	}
+
+	/**
+	 * A handler vouches only for the writer it names.
+	 *
+	 * @return void
+	 */
+	public function test_a_handler_vouches_only_for_its_writer(): void {
+		$entry = $this->stock_call( 'someone_else()' );
+
+		$this->assertSame( Recorder::REASON_DIRECT_WRITE, $entry['reason'] );
 	}
 
 	/**
@@ -1884,6 +1907,110 @@ class ChangeJournalTest extends TestCase {
 			 */
 			public function read( string $key ): ?array {
 				return null;
+			}
+		};
+	}
+
+	/**
+	 * Lower a product's stock directly, with a handler that captured the
+	 * stock first and vouches for one writer.
+	 *
+	 * @param string $vouched The writer the handler vouches for.
+	 *
+	 * @return array<string, mixed> The entry.
+	 */
+	private function stock_call( string $vouched ): array {
+		$post_id = self::factory()->post->create();
+		update_post_meta( $post_id, '_stock', '5' );
+
+		$handler = $this->stock_handler( $post_id, $vouched );
+		$filter  = static fn( $handlers ) => array_merge( (array) $handlers, [ $handler ] );
+
+		add_filter( 'albert/undo/handlers', $filter );
+		$this->work = static fn() => self::reduce_stock( $post_id );
+		try {
+			$this->call();
+		} finally {
+			remove_filter( 'albert/undo/handlers', $filter );
+		}
+
+		$entry = $this->only_entry();
+		$this->assertArrayHasKey( "meta:post:{$post_id}:_stock", $this->items_by_key( (int) $entry['id'] ), 'The handler captured the stock.' );
+
+		return $entry;
+	}
+
+	/**
+	 * A handler that captures a product's stock itself and vouches for one writer.
+	 *
+	 * @param int    $post_id The product.
+	 * @param string $writer  The writer it vouches for.
+	 *
+	 * @return Handler
+	 */
+	private function stock_handler( int $post_id, string $writer ): Handler {
+		return new class( $post_id, $writer ) implements Handler, CoversDirectWrites {
+
+			/**
+			 * Build.
+			 *
+			 * @param int    $post_id Product.
+			 * @param string $writer  Vouched writer.
+			 */
+			public function __construct( private int $post_id, private string $writer ) {}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function id(): string {
+				return 'acme-stock';
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function tables(): array {
+				return [];
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function derived_tables(): array {
+				return [];
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function claims( Entity $entity ): bool {
+				return false;
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function open( Recorder $recorder ): void {
+				$recorder->capture( Entity::meta( 'post', $this->post_id, '_stock' ) );
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function close(): void {}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function read( string $key ): ?array {
+				return null;
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function covers_direct_write( string $table, string $writer ): bool {
+				return $table === $GLOBALS['wpdb']->postmeta && $writer === $this->writer;
 			}
 		};
 	}

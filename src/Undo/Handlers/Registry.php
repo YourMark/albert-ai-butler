@@ -154,6 +154,34 @@ final class Registry {
 	}
 
 	/**
+	 * Whether a handler vouches that it captured what a direct write to one
+	 * of WordPress's tables changes ({@see CoversDirectWrites}).
+	 *
+	 * @param string $table  Table name, prefixed.
+	 * @param string $writer The function that issued the query.
+	 *
+	 * @return bool
+	 * @since 1.7.0
+	 */
+	public function covers_direct_write( string $table, string $writer ): bool {
+		foreach ( $this->handlers as $id => $handler ) {
+			if ( ! $handler instanceof CoversDirectWrites ) {
+				continue;
+			}
+
+			try {
+				if ( $handler->covers_direct_write( $table, $writer ) === true ) {
+					return true;
+				}
+			} catch ( \Throwable $e ) {
+				$this->drop( $id );
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * The id of the handler claiming an entity, if any.
 	 *
 	 * @param Entity $entity The entity.
