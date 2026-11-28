@@ -13,7 +13,6 @@ namespace Albert\Tests\Integration\Undo;
 
 use Albert\Database\Installer;
 use Albert\Database\Tables;
-use Albert\Logging\Repository as LogRepository;
 use Albert\MCP\Server;
 use Albert\OAuth\Server\ConnectionContext;
 use Albert\SafeMode\Approver;
@@ -28,10 +27,13 @@ use Albert\Undo\Recorder;
 use Albert\Undo\Storage\Repository;
 use Albert\Undo\Window;
 use Albert\Undo\WindowContext;
+use WP\MCP\Core\McpRequestContext;
 use WP\MCP\Core\McpServer;
 use WP\MCP\Domain\Tools\McpTool;
 use WP\MCP\Infrastructure\ErrorHandling\NullMcpErrorHandler;
 use WP\MCP\Handlers\Tools\ToolsHandler;
+use WP\McpSchema\Record\CallToolRequest;
+use WP\McpSchema\Schemas;
 
 /**
  * Change journal recording tests.
@@ -326,18 +328,18 @@ class ChangeJournalTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_log_row_is_linked(): void {
-		$log_id  = 0;
-		$user_id = $this->user_id;
+		global $wpdb;
 
-		$this->work = static function () use ( &$log_id, $user_id ): void {
-			global $wpdb;
+		$this->work = static function (): void {
 			update_option( 'acme_banner', 'logged' );
-			( new LogRepository() )->insert( self::ABILITY, $user_id );
-			$log_id = (int) $wpdb->insert_id;
 		};
 
 		$this->call();
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Assertion read.
+		$log_id = $wpdb->get_var( $wpdb->prepare( 'SELECT MAX(id) FROM %i WHERE ability_name = %s', Tables::ability_log(), self::ABILITY ) );
+
+		$this->assertNotNull( $log_id, 'The call was not logged.' );
 		$this->assertSame( (string) $log_id, $this->only_entry()['log_id'] );
 	}
 
@@ -1216,12 +1218,21 @@ class ChangeJournalTest extends TestCase {
 		$server->method( 'get_mcp_tool' )->willReturn( $tool );
 		$server->method( 'get_error_handler' )->willReturn( new NullMcpErrorHandler() );
 
-		( new ToolsHandler( $server ) )->call_tool(
-			[
-				'name'      => 'acme-work',
-				'arguments' => [],
+		$schema  = Schemas::create()->forVersion( Schemas::V2025_11_25 );
+		$request = $schema->fromValue(
+			CallToolRequest::class,
+			(object) [
+				'jsonrpc' => '2.0',
+				'id'      => 1,
+				'method'  => 'tools/call',
+				'params'  => (object) [
+					'name'      => 'acme-work',
+					'arguments' => new \stdClass(),
+				],
 			]
 		);
+
+		( new ToolsHandler( $server ) )->call_tool( $request, new McpRequestContext( $schema, new \stdClass(), null, 'test' ) );
 	}
 
 	/**
