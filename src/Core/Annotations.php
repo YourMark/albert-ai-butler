@@ -11,6 +11,8 @@
 
 namespace Albert\Core;
 
+defined( 'ABSPATH' ) || exit;
+
 /**
  * Annotations class
  *

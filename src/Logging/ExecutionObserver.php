@@ -63,7 +63,7 @@ class ExecutionObserver implements Hookable {
 	 * Static so {@see Logger} can ask without holding this instance.
 	 *
 	 * @since 1.6.0
-	 * @var array<string, list<array{input: mixed, running: bool}>>
+	 * @var array<string, list<array{input: mixed, running: bool, reported: bool}>>
 	 */
 	private static array $open = [];
 
@@ -75,6 +75,15 @@ class ExecutionObserver implements Hookable {
 	 * @var array{ability: string, error: WP_Error}|null
 	 */
 	private ?array $denied = null;
+
+	/**
+	 * The ability whose failure is being relayed on `albert/abilities/after_execute`,
+	 * so the Logger does not write it a second row.
+	 *
+	 * @since 1.6.0
+	 * @var string|null
+	 */
+	private static ?string $relaying = null;
 
 	/**
 	 * Constructor.
@@ -101,6 +110,7 @@ class ExecutionObserver implements Hookable {
 		add_filter( 'wp_ability_validate_input', [ $this, 'on_validate_input' ], PHP_INT_MAX, 3 );
 		add_filter( 'wp_ability_permission_result', [ $this, 'on_permission_result' ], PHP_INT_MAX, 3 );
 		add_action( 'wp_before_execute_ability', [ $this, 'on_before_execute' ], PHP_INT_MAX, 1 );
+		add_action( 'albert/abilities/after_execute', [ $this, 'on_reported' ], 0, 1 );
 		add_filter( 'wp_ability_execute_result', [ $this, 'on_execute_result' ], PHP_INT_MAX, 2 );
 		add_filter( 'wp_ability_validate_output', [ $this, 'on_validate_output' ], PHP_INT_MAX, 3 );
 		add_action( 'wp_after_execute_ability', [ $this, 'on_after_execute' ], PHP_INT_MAX, 3 );
@@ -116,6 +126,10 @@ class ExecutionObserver implements Hookable {
 	 * @since 1.6.0
 	 */
 	public static function is_observing( string $ability_name ): bool {
+		if ( self::$relaying === $ability_name ) {
+			return true;
+		}
+
 		$calls = self::$open[ $ability_name ] ?? [];
 
 		return $calls !== [] && end( $calls )['running'];
@@ -128,7 +142,8 @@ class ExecutionObserver implements Hookable {
 	 * @since 1.6.0
 	 */
 	public static function reset(): void {
-		self::$open = [];
+		self::$relaying = null;
+		self::$open     = [];
 	}
 
 	/**
@@ -148,9 +163,26 @@ class ExecutionObserver implements Hookable {
 		}
 
 		self::$open[ $ability_name ][] = [
-			'input'   => $input,
-			'running' => false,
+			'input'    => $input,
+			'running'  => false,
+			'reported' => false,
 		];
+	}
+
+	/**
+	 * Note that the open call fired `albert/abilities/after_execute` itself.
+	 *
+	 * @param string $ability_name The ability identifier.
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	public function on_reported( string $ability_name ): void {
+		$top = array_key_last( self::$open[ $ability_name ] ?? [] );
+
+		if ( $top !== null && self::$relaying !== $ability_name ) {
+			self::$open[ $ability_name ][ $top ]['reported'] = true;
+		}
 	}
 
 	/**
@@ -325,6 +357,10 @@ class ExecutionObserver implements Hookable {
 			return;
 		}
 
+		if ( $result instanceof WP_Error && ! $call['reported'] ) {
+			self::relay_failure( $ability_name, $call['input'], $result );
+		}
+
 		// A success can be any value, `record()` takes an array, and only the
 		// outcome is stored, so casting loses nothing.
 		$this->logger->record(
@@ -341,7 +377,7 @@ class ExecutionObserver implements Hookable {
 	 *
 	 * @param string $ability_name The ability identifier.
 	 *
-	 * @return array{input: mixed, running: bool}|null The call, or null when none is open.
+	 * @return array{input: mixed, running: bool, reported: bool}|null The call, or null when none is open.
 	 * @since 1.6.0
 	 */
 	private static function close( string $ability_name ): ?array {
@@ -383,7 +419,36 @@ class ExecutionObserver implements Hookable {
 			return;
 		}
 
+		self::relay_failure( $denied['ability'], $input['parameters'] ?? null, $denied['error'] );
 		$this->logger->record( $denied['ability'], $input['parameters'] ?? null, $denied['error'], get_current_user_id(), 'permission' );
+	}
+
+	/**
+	 * Fire `albert/abilities/after_execute` for a failure nothing logged yet.
+	 *
+	 * Until 1.6.0 every failed call reached that action, also one that never ran
+	 * or came from another plugin, and Albert Premium 1.1.0 still logs from it.
+	 * Skipped when the call fired it already, or an add-on marked it logged.
+	 *
+	 * @param string   $ability_name The ability identifier.
+	 * @param mixed    $input        The call's input.
+	 * @param WP_Error $error        Why it failed.
+	 *
+	 * @return void
+	 * @since 1.6.0
+	 */
+	private static function relay_failure( string $ability_name, mixed $input, WP_Error $error ): void {
+		if ( ExecutionLogMarker::has( $ability_name ) ) {
+			return;
+		}
+
+		self::$relaying = $ability_name;
+		try {
+			/** This action is documented in src/Abstracts/BaseAbility.php */
+			do_action( 'albert/abilities/after_execute', $ability_name, is_array( $input ) ? $input : [], $error, get_current_user_id() );
+		} finally {
+			self::$relaying = null;
+		}
 	}
 
 	/**

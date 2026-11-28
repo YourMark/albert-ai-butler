@@ -299,7 +299,7 @@ class OptionRestorer implements Hookable {
 		$failed = true;
 		$this->own(
 			static function () use ( $wpdb, $selects, &$found, &$failed ): void {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Each part prepared above.
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Each part prepared above.
 				$found  = $wpdb->get_results( implode( ' UNION ALL ', $selects ), ARRAY_A );
 				$failed = $wpdb->last_error !== '';
 			}

@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Server;
 
+defined( 'ABSPATH' ) || exit;
+
 use Defuse\Crypto\Key;
 
 /**

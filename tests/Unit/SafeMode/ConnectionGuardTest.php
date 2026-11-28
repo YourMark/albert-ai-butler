@@ -167,4 +167,17 @@ class ConnectionGuardTest extends TestCase {
 
 		$this->assertSame( 'generated-key', $this->guard->refuse_network_add( 'generated-key', 'albert_oauth_private_key' ) );
 	}
+
+	/**
+	 * Settings that widen what a connection may do or how long it lives are protected.
+	 *
+	 * @return void
+	 */
+	public function test_protects_settings_that_widen_access(): void {
+		$protected = ConnectionGuard::protected_names();
+
+		foreach ( [ 'albert_abilities_saved', 'albert_known_abilities', 'albert_context', 'albert_allowed_user_expiry_days', 'albert_connection_never_used_days', 'albert_connection_idle_days', 'albert_upload_link_max_mb', 'albert_site_location', 'albert_installed_version', 'albert_db_version', 'albert_rewrite_version' ] as $option ) {
+			$this->assertContains( $option, $protected );
+		}
+	}
 }

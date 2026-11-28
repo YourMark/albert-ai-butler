@@ -11,6 +11,8 @@ namespace Albert\Abilities\WordPress;
 
 use WP_Error;
 
+defined( 'ABSPATH' ) || exit;
+
 /**
  * The post and page fields beyond title and content. REST validates and saves
  * them; only what it gets wrong silently is checked here.

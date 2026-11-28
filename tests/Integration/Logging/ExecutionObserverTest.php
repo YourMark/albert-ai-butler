@@ -399,4 +399,39 @@ class ExecutionObserverTest extends TestCase {
 
 		$this->assertCount( 1, $this->rows( 'albert/find-users' ) );
 	}
+
+	/**
+	 * Every failed call reaches `albert/abilities/after_execute` once, as before 1.6.0,
+	 * so an add-on that logs from it keeps seeing denials and other plugins' errors.
+	 *
+	 * @return void
+	 */
+	public function test_relays_each_failure_to_after_execute_once(): void {
+		$seen   = [];
+		$listen = static function ( string $ability_name, $input, $result ) use ( &$seen ): void {
+			$seen[] = [ $ability_name, is_wp_error( $result ) ? $result->get_error_code() : 'ok' ];
+		};
+		add_action( 'albert/abilities/after_execute', $listen, 5, 3 );
+
+		$this->setExpectedIncorrectUsage( 'WP_Ability::execute' );
+		$this->run_ability(
+			static fn(): array => [ 'ok' => true ],
+			[ 'permission_callback' => static fn() => new WP_Error( 'report_forbidden', 'No.' ) ]
+		);
+		wp_unregister_ability( self::ABILITY );
+		$this->run_ability( static fn() => new WP_Error( 'report_broken', 'Broken.' ) );
+		wp_get_ability( 'albert/view-user' )->execute( [ 'id' => PHP_INT_MAX ] );
+
+		remove_action( 'albert/abilities/after_execute', $listen, 5 );
+
+		$this->assertSame(
+			[
+				[ self::ABILITY, 'report_forbidden' ],
+				[ self::ABILITY, 'report_broken' ],
+				[ 'albert/view-user', 'user_not_found' ],
+			],
+			$seen
+		);
+		$this->assertCount( 2, $this->rows(), 'The relay writes no extra row.' );
+	}
 }

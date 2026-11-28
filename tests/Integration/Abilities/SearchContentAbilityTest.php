@@ -416,7 +416,7 @@ class SearchContentAbilityTest extends TestCase {
 			);
 
 			$this->assertInstanceOf( WP_Error::class, $result );
-			$this->assertSame( 'albert_invalid_subtypes', $result->get_error_code() );
+			$this->assertSame( 'invalid_subtypes', $result->get_error_code() );
 			// Other plugins add their own post types to the list, such as WooCommerce's product.
 			$allowed = explode( ', ', rtrim( explode( 'Allowed: ', $result->get_error_message() )[1] ?? '', '.' ) );
 			foreach ( [ 'post', 'page', 'wp_block', 'wp_template_part' ] as $subtype_allowed ) {

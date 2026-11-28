@@ -430,7 +430,7 @@ class SettingsRenderer {
 
 		echo '<div class="albert-hint albert-hint--' . esc_attr( $hint['tone'] ) . ' albert-field-hint" id="' . esc_attr( $id ) . '">';
 		echo '<span class="dashicons dashicons-' . esc_attr( $icon ) . '" aria-hidden="true"></span>';
-		echo '<p>' . wp_kses( $hint['text'], [ 'code' => [] ] ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_kses() with an explicit allowlist.
+		echo '<p>' . wp_kses( $hint['text'], [ 'code' => [] ] ) . '</p>';
 		echo '</div>';
 	}
 
@@ -462,22 +462,23 @@ class SettingsRenderer {
 	}
 
 	/**
-	 * Build the HTML attribute string for a field's `attributes` array.
+	 * Print a field's `attributes` array as HTML attributes, escaped here.
 	 *
 	 * Skips `name`, `id`, `type`, `value`, and `checked` — those are owned
-	 * by the renderer for each input type.
+	 * by the renderer for each input type — and any name that is not a valid
+	 * attribute name.
 	 *
 	 * @since 1.1.0
+	 * @since 1.5.1 Prints instead of returning a string, so it escapes at output.
 	 *
 	 * @param array<string, mixed> $attributes Attribute => value pairs.
 	 *
-	 * @return string
+	 * @return void
 	 */
-	private function build_attributes( array $attributes ): string {
+	private function print_attributes( array $attributes ): void {
 		$reserved = [ 'name', 'id', 'type', 'value', 'checked' ];
-		$out      = '';
 		foreach ( $attributes as $attr => $value ) {
-			if ( ! is_string( $attr ) || $attr === '' ) {
+			if ( ! is_string( $attr ) || preg_match( '/^[a-zA-Z_:][-a-zA-Z0-9_:.]*$/', $attr ) !== 1 ) {
 				continue;
 			}
 			if ( in_array( $attr, $reserved, true ) ) {
@@ -485,15 +486,14 @@ class SettingsRenderer {
 			}
 			if ( is_bool( $value ) ) {
 				if ( $value ) {
-					$out .= ' ' . esc_attr( $attr );
+					echo ' ' . esc_attr( $attr );
 				}
 				continue;
 			}
 			if ( is_scalar( $value ) ) {
-				$out .= ' ' . esc_attr( $attr ) . '="' . esc_attr( (string) $value ) . '"';
+				echo ' ' . esc_attr( $attr ) . '="' . esc_attr( (string) $value ) . '"';
 			}
 		}
-		return $out;
 	}
 
 	/**
@@ -514,13 +514,14 @@ class SettingsRenderer {
 		$attributes = isset( $field['attributes'] ) && is_array( $field['attributes'] ) ? $field['attributes'] : [];
 
 		printf(
-			'<input type="%1$s" name="%2$s" id="%3$s" value="%4$s" class="albert-text-input"%5$s />',
+			'<input type="%1$s" name="%2$s" id="%3$s" value="%4$s" class="albert-text-input"',
 			esc_attr( $html_type ),
 			esc_attr( $option_name ),
 			esc_attr( $input_id ),
-			esc_attr( $value ),
-			$this->build_attributes( $attributes ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped per attribute in build_attributes().
+			esc_attr( $value )
 		);
+		$this->print_attributes( $attributes );
+		echo ' />';
 	}
 
 	/**
@@ -540,12 +541,12 @@ class SettingsRenderer {
 		$attributes = isset( $field['attributes'] ) && is_array( $field['attributes'] ) ? $field['attributes'] : [];
 
 		printf(
-			'<textarea name="%1$s" id="%2$s" class="albert-textarea"%3$s>%4$s</textarea>',
+			'<textarea name="%1$s" id="%2$s" class="albert-textarea"',
 			esc_attr( $option_name ),
-			esc_attr( $input_id ),
-			$this->build_attributes( $attributes ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped per attribute in build_attributes().
-			esc_textarea( $value )
+			esc_attr( $input_id )
 		);
+		$this->print_attributes( $attributes );
+		echo '>' . esc_textarea( $value ) . '</textarea>';
 	}
 
 	/**
@@ -566,11 +567,12 @@ class SettingsRenderer {
 		$value      = $current_value === null ? '' : (string) $current_value;
 
 		printf(
-			'<select name="%1$s" id="%2$s" class="albert-select"%3$s>',
+			'<select name="%1$s" id="%2$s" class="albert-select"',
 			esc_attr( $option_name ),
-			esc_attr( $input_id ),
-			$this->build_attributes( $attributes ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped per attribute in build_attributes().
+			esc_attr( $input_id )
 		);
+		$this->print_attributes( $attributes );
+		echo '>';
 
 		foreach ( $options as $opt_value => $opt_label ) {
 			$opt_value_str = (string) $opt_value;
@@ -578,7 +580,7 @@ class SettingsRenderer {
 			printf(
 				'<option value="%1$s"%2$s>%3$s</option>',
 				esc_attr( $opt_value_str ),
-				selected( $value, $opt_value_str, false ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- selected() returns a safe attribute string.
+				selected( $value, $opt_value_str, false ),
 				esc_html( $opt_label_str )
 			);
 		}
@@ -618,7 +620,7 @@ class SettingsRenderer {
 		// can still see which one is in force and what the alternatives are.
 		printf(
 			'<div class="albert-radio-cards%s">',
-			$disabled ? ' albert-radio-cards--disabled' : '' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static string.
+			esc_attr( $disabled ? ' albert-radio-cards--disabled' : '' )
 		);
 
 		foreach ( $options as $opt_value => $opt ) {
@@ -632,7 +634,7 @@ class SettingsRenderer {
 			printf(
 				'<label for="%1$s" class="albert-radio-card%2$s">',
 				esc_attr( $radio_id ),
-				$checked ? ' albert-radio-card--checked' : '' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static string.
+				esc_attr( $checked ? ' albert-radio-card--checked' : '' )
 			);
 			// aria-disabled, not disabled. This file argues at length elsewhere
 			// that a locked field must stay reachable, so a keyboard or screen
@@ -647,7 +649,7 @@ class SettingsRenderer {
 				esc_attr( $option_name ),
 				esc_attr( $radio_id ),
 				esc_attr( $opt_value_str ),
-				checked( $checked, true, false ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- checked() returns a safe attribute string.
+				checked( $checked, true, false ),
 				$disabled ? ' aria-disabled="true" data-albert-locked="1"' : '',
 				$describedby !== '' ? ' aria-describedby="' . esc_attr( $describedby ) . '"' : ''
 			);
@@ -690,12 +692,13 @@ class SettingsRenderer {
 			esc_attr( $option_name )
 		);
 		printf(
-			'<label class="albert-checkbox-wrap"><input type="checkbox" name="%1$s" id="%2$s" value="1"%3$s%4$s />',
+			'<label class="albert-checkbox-wrap"><input type="checkbox" name="%1$s" id="%2$s" value="1"%3$s',
 			esc_attr( $option_name ),
 			esc_attr( $input_id ),
-			checked( $checked, true, false ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- checked() returns a safe attribute string.
-			$this->build_attributes( $attributes ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped per attribute in build_attributes().
+			checked( $checked, true, false )
 		);
+		$this->print_attributes( $attributes );
+		echo ' />';
 		echo '</label>';
 	}
 

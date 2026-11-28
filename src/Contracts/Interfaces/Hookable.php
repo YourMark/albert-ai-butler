@@ -9,6 +9,8 @@
 
 namespace Albert\Contracts\Interfaces;
 
+defined( 'ABSPATH' ) || exit;
+
 /**
  * The Hookable interface
  *

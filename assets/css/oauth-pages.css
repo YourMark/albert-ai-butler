@@ -89,6 +89,15 @@ body {
 	word-break: break-all;
 }
 
+.redirect-destination__uri {
+	display: block;
+	margin-top: 2px;
+	font-family: Menlo, Consolas, monospace;
+	font-size: 12px;
+	color: #50575e;
+	word-break: break-all;
+}
+
 .client-age-notice {
 	margin-top: 12px;
 	padding: 8px 10px;

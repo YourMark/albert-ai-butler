@@ -185,7 +185,12 @@ class CreatePattern extends BaseAbility {
 		}
 
 		if ( ! empty( $args['categories'] ) && is_array( $args['categories'] ) ) {
-			$terms = wp_set_object_terms( $id, array_map( 'sanitize_text_field', $args['categories'] ), 'wp_pattern_category', false );
+			// Naming a category creates it, so the caller needs the right the
+			// editor asks for to do the same.
+			$category_taxonomy = get_taxonomy( 'wp_pattern_category' );
+			$terms             = $category_taxonomy && current_user_can( $category_taxonomy->cap->assign_terms )
+				? wp_set_object_terms( $id, array_map( 'sanitize_text_field', $args['categories'] ), 'wp_pattern_category', false )
+				: new WP_Error( 'cannot_assign_terms', __( 'You are not allowed to assign pattern categories.', 'albert-ai-butler' ) );
 			if ( is_wp_error( $terms ) ) {
 				$block_issues[] = sprintf(
 					/* translators: %s: error message. */

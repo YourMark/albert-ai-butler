@@ -166,7 +166,7 @@ class PatternCatalog {
 
 		$post = get_page_by_path( $name, OBJECT, 'wp_block' );
 
-		if ( ! $post instanceof WP_Post || $post->post_status !== 'publish' ) {
+		if ( ! $post instanceof WP_Post || $post->post_status !== 'publish' || self::is_withheld( $post ) ) {
 			return null;
 		}
 
@@ -262,7 +262,23 @@ class PatternCatalog {
 			]
 		);
 
-		return array_map( [ $this, 'map_user_post' ], $posts );
+		$readable = array_filter( $posts, static fn ( WP_Post $post ): bool => ! self::is_withheld( $post ) );
+
+		return array_map( [ $this, 'map_user_post' ], array_values( $readable ) );
+	}
+
+	/**
+	 * Whether a password-protected pattern's content is not the user's to see.
+	 *
+	 * Core refuses to render such a pattern; its raw content is held back too.
+	 *
+	 * @param WP_Post $post The wp_block post.
+	 * @return bool
+	 *
+	 * @since 1.5.1
+	 */
+	private static function is_withheld( WP_Post $post ): bool {
+		return post_password_required( $post ) && ! current_user_can( 'edit_post', $post->ID );
 	}
 
 	/**

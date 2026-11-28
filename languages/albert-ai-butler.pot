@@ -2,14 +2,14 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Albert - The AI Butler 1.5.0\n"
+"Project-Id-Version: Albert - The AI Butler 1.6.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/albert-ai-butler\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-03T18:44:29+00:00\n"
+"POT-Creation-Date: 2026-11-27T17:13:33+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: albert-ai-butler\n"
@@ -31,17 +31,17 @@ msgstr ""
 
 #. Author of the plugin
 #: albert-ai-butler.php
-#: src/Admin/AdapterNudge.php:307
+#: src/Admin/AdapterNudge.php:321
 #: src/Admin/Dashboard.php:146
-#: src/Admin/Dashboard.php:262
+#: src/Admin/Dashboard.php:261
 #: src/Admin/Menu.php:186
 #: src/Admin/Menu.php:188
-#: src/Core/AbilitiesRegistry.php:63
-#: src/MCP/AdapterHealth.php:176
-#: src/MCP/AdapterHealth.php:213
+#: src/Core/AbilitiesRegistry.php:65
+#: src/MCP/AdapterHealth.php:192
+#: src/MCP/AdapterHealth.php:229
 #: src/MCP/Skills/SkillRegistry.php:205
-#: src/OAuth/DiscoveryHealth.php:328
-#: src/OAuth/DiscoveryHealth.php:349
+#: src/OAuth/DiscoveryHealth.php:348
+#: src/OAuth/DiscoveryHealth.php:369
 msgid "Albert"
 msgstr ""
 
@@ -62,50 +62,50 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/Abilities/WooCommerce/FindCustomers.php:33
+#: src/Abilities/WooCommerce/FindCustomers.php:34
 msgid "Find Customers"
 msgstr ""
 
-#: src/Abilities/WooCommerce/FindCustomers.php:34
+#: src/Abilities/WooCommerce/FindCustomers.php:35
 msgid "Search and list WooCommerce customers with optional filtering and pagination."
 msgstr ""
 
-#: src/Abilities/WooCommerce/FindOrders.php:31
+#: src/Abilities/WooCommerce/FindOrders.php:33
 msgid "Find Orders"
 msgstr ""
 
-#: src/Abilities/WooCommerce/FindOrders.php:32
+#: src/Abilities/WooCommerce/FindOrders.php:34
 msgid "Search and list WooCommerce orders with optional filtering and pagination."
 msgstr ""
 
-#: src/Abilities/WooCommerce/FindProducts.php:31
+#: src/Abilities/WooCommerce/FindProducts.php:33
 msgid "Find Products"
 msgstr ""
 
-#: src/Abilities/WooCommerce/FindProducts.php:32
+#: src/Abilities/WooCommerce/FindProducts.php:34
 msgid "Search and list WooCommerce products with optional filtering and pagination."
 msgstr ""
 
-#: src/Abilities/WooCommerce/ViewCustomer.php:33
+#: src/Abilities/WooCommerce/ViewCustomer.php:34
 msgid "View Customer"
 msgstr ""
 
-#: src/Abilities/WooCommerce/ViewCustomer.php:34
+#: src/Abilities/WooCommerce/ViewCustomer.php:35
 msgid "Retrieve a single WooCommerce customer by user ID."
 msgstr ""
 
 #. translators: %d: Customer ID
-#: src/Abilities/WooCommerce/ViewCustomer.php:122
-#: src/Abilities/WooCommerce/ViewCustomer.php:133
+#: src/Abilities/WooCommerce/ViewCustomer.php:118
+#: src/Abilities/WooCommerce/ViewCustomer.php:130
 #, php-format
 msgid "Customer with ID %d not found."
 msgstr ""
 
-#: src/Abilities/WooCommerce/ViewOrder.php:34
+#: src/Abilities/WooCommerce/ViewOrder.php:35
 msgid "View Order"
 msgstr ""
 
-#: src/Abilities/WooCommerce/ViewOrder.php:35
+#: src/Abilities/WooCommerce/ViewOrder.php:36
 msgid "Retrieve a single WooCommerce order by ID."
 msgstr ""
 
@@ -115,16 +115,16 @@ msgstr ""
 msgid "Order with ID %d not found."
 msgstr ""
 
-#: src/Abilities/WooCommerce/ViewProduct.php:31
+#: src/Abilities/WooCommerce/ViewProduct.php:33
 msgid "View Product"
 msgstr ""
 
-#: src/Abilities/WooCommerce/ViewProduct.php:32
+#: src/Abilities/WooCommerce/ViewProduct.php:34
 msgid "Retrieve a single WooCommerce product by ID."
 msgstr ""
 
 #. translators: %d: Product ID
-#: src/Abilities/WooCommerce/ViewProduct.php:114
+#: src/Abilities/WooCommerce/ViewProduct.php:146
 #, php-format
 msgid "Product with ID %d not found."
 msgstr ""
@@ -145,8 +145,13 @@ msgstr ""
 msgid "The pattern could not be saved."
 msgstr ""
 
+#: src/Abilities/WordPress/Blocks/CreatePattern.php:193
+#: src/Abilities/WordPress/Blocks/UpdatePattern.php:205
+msgid "You are not allowed to assign pattern categories."
+msgstr ""
+
 #. translators: %s: error message.
-#: src/Abilities/WordPress/Blocks/CreatePattern.php:192
+#: src/Abilities/WordPress/Blocks/CreatePattern.php:197
 #, php-format
 msgid "The pattern was saved, but its categories could not be set: %s"
 msgstr ""
@@ -159,26 +164,26 @@ msgstr ""
 msgid "Delete a user block pattern by name. Only user patterns can be deleted; theme and plugin (registered) patterns are read-only. Find a pattern's name with find-patterns."
 msgstr ""
 
-#: src/Abilities/WordPress/Blocks/DeletePattern.php:138
-#: src/Abilities/WordPress/Blocks/UpdatePattern.php:229
+#: src/Abilities/WordPress/Blocks/DeletePattern.php:141
+#: src/Abilities/WordPress/Blocks/UpdatePattern.php:234
 #: src/Abilities/WordPress/Blocks/ViewPattern.php:142
 msgid "A pattern name is required."
 msgstr ""
 
 #. translators: %s: pattern name.
-#: src/Abilities/WordPress/Blocks/DeletePattern.php:147
-#: src/Abilities/WordPress/Blocks/UpdatePattern.php:238
+#: src/Abilities/WordPress/Blocks/DeletePattern.php:150
+#: src/Abilities/WordPress/Blocks/UpdatePattern.php:243
 #, php-format
 msgid "No pattern named \"%s\" is registered on this site."
 msgstr ""
 
 #. translators: %s: pattern name.
-#: src/Abilities/WordPress/Blocks/DeletePattern.php:156
+#: src/Abilities/WordPress/Blocks/DeletePattern.php:159
 #, php-format
 msgid "The pattern \"%s\" is a registered theme or plugin pattern and cannot be deleted."
 msgstr ""
 
-#: src/Abilities/WordPress/Blocks/DeletePattern.php:176
+#: src/Abilities/WordPress/Blocks/DeletePattern.php:179
 msgid "The pattern could not be deleted."
 msgstr ""
 
@@ -187,7 +192,7 @@ msgid "Find Patterns"
 msgstr ""
 
 #: src/Abilities/WordPress/Blocks/FindPatterns.php:52
-msgid "List the block patterns registered on this site (theme, plugin and user-created), optionally filtered by a search term or category. Reuse a pattern as the basis for new content. Fetch one pattern's block markup with view-pattern."
+msgid "List the block patterns registered on this site (theme, plugin and user-created), optionally filtered by a search term or category. To place one, send its name as `pattern` to add-post-block or add-page-block; read its markup with view-pattern only to adapt it."
 msgstr ""
 
 #: src/Abilities/WordPress/Blocks/GetBlockType.php:52
@@ -235,13 +240,13 @@ msgid "The pattern could not be updated."
 msgstr ""
 
 #. translators: %s: error message.
-#: src/Abilities/WordPress/Blocks/UpdatePattern.php:204
+#: src/Abilities/WordPress/Blocks/UpdatePattern.php:209
 #, php-format
 msgid "The pattern was updated, but its categories could not be set: %s"
 msgstr ""
 
 #. translators: %s: pattern name.
-#: src/Abilities/WordPress/Blocks/UpdatePattern.php:247
+#: src/Abilities/WordPress/Blocks/UpdatePattern.php:252
 #, php-format
 msgid "The pattern \"%s\" is a registered theme or plugin pattern and cannot be edited."
 msgstr ""
@@ -251,7 +256,7 @@ msgid "View Pattern"
 msgstr ""
 
 #: src/Abilities/WordPress/Blocks/ViewPattern.php:49
-msgid "Read one block pattern by name, including its block markup. Reuse the markup as the basis for new content. Find pattern names with find-patterns."
+msgid "Read one block pattern by name, including its block markup, to adapt it into new content. To place a pattern unchanged, send its name as `pattern` to add-post-block or add-page-block instead. Find pattern names with find-patterns."
 msgstr ""
 
 #. translators: %s: pattern name.
@@ -260,79 +265,509 @@ msgstr ""
 msgid "No pattern named \"%s\" is registered on this site. Use find-patterns to list available names."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/CreateUploadLink.php:45
+#. translators: %d: Comment ID
+#: src/Abilities/WordPress/Comments/CommentPresenter.php:227
+#, php-format
+msgid "Comment with ID %d not found. Find comments with albert/find-comments."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/DeleteComment.php:43
+msgid "Delete Comment"
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/DeleteComment.php:44
+msgid "Move up to 50 comments to the trash in one call; send force to delete them permanently. Get the IDs from albert/find-comments."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/DeleteComment.php:212
+msgid "The comment could not be deleted."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/FindComments.php:37
+msgid "Find Comments"
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/FindComments.php:38
+msgid "Find comments matching filters, for example the ones waiting for approval before you moderate them with albert/moderate-comment."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/FindComments.php:233
+msgid "Nothing matched in the comment text. While personal data is masked, search does not look at commenters' names, emails or websites; those are matched only when personal data is revealed."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/ModerateComment.php:51
+msgid "Moderate Comment"
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/ModerateComment.php:52
+msgid "Set the moderation status of up to 50 comments in one call; find them first with albert/find-comments."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/ModerateComment.php:200
+msgid "The comment could not be moderated."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/ReplyToComment.php:37
+msgid "Reply to Comment"
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/ReplyToComment.php:38
+msgid "Publish a reply to a comment as the connected user, after reading it with albert/view-comment."
+msgstr ""
+
+#. translators: %s: comment status
+#: src/Abilities/WordPress/Comments/ReplyToComment.php:146
+#, php-format
+msgid "This comment is marked %s. Approve it with albert/moderate-comment before replying."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/ReplyToComment.php:156
+msgid "The post this comment is on is in the trash. Restore the post before replying."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/ReplyToComment.php:170
+msgid "The reply could not be saved."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/ReplyToComment.php:190
+msgid "The reply was saved, but the comment it answers could not be approved."
+msgstr ""
+
+#. translators: %s: why the approval failed
+#: src/Abilities/WordPress/Comments/ReplyToComment.php:195
+#, php-format
+msgid "The reply was saved, but the comment it answers is still waiting for approval: %s Approve it with albert/moderate-comment; do not send the reply again."
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/ViewComment.php:40
+msgid "View Comment"
+msgstr ""
+
+#: src/Abilities/WordPress/Comments/ViewComment.php:41
+msgid "Read one comment in its thread before you act on it; get the ID from albert/find-comments."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/CreateUploadLink.php:47
 msgid "Create Upload Link"
 msgstr ""
 
-#: src/Abilities/WordPress/Media/CreateUploadLink.php:46
+#: src/Abilities/WordPress/Media/CreateUploadLink.php:48
 msgid "Mint a short-lived, single-use link that accepts an uploaded file and adds it to the media library."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/FindMedia.php:32
+#: src/Abilities/WordPress/Media/DeleteMedia.php:38
+msgid "Delete Media"
+msgstr ""
+
+#: src/Abilities/WordPress/Media/DeleteMedia.php:39
+msgid "Permanently delete a media file from the media library, including its file on the server."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/DeleteMedia.php:105
+msgid "You are not allowed to delete this media file."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/DeleteMedia.php:130
+msgid "The media file could not be deleted."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/FindMedia.php:34
 msgid "Find Media"
 msgstr ""
 
-#: src/Abilities/WordPress/Media/FindMedia.php:33
+#: src/Abilities/WordPress/Media/FindMedia.php:35
 msgid "Find and search media files with optional filtering and pagination."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/SetFeaturedImage.php:32
+#. translators: %d: Media ID
+#: src/Abilities/WordPress/Media/MediaFileAccess.php:74
+#: src/Abilities/WordPress/Media/ViewMedia.php:117
+#, php-format
+msgid "Media with ID %d not found."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:34
 msgid "Set Featured Image"
 msgstr ""
 
-#: src/Abilities/WordPress/Media/SetFeaturedImage.php:33
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:35
 msgid "Set an existing media attachment as the featured image for a post or page."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/SetFeaturedImage.php:135
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:139
 msgid "The specified post or page does not exist."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/SetFeaturedImage.php:148
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:152
 msgid "The specified attachment does not exist."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/SetFeaturedImage.php:176
+#: src/Abilities/WordPress/Media/SetFeaturedImage.php:180
 msgid "Failed to set the featured image."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/UploadMedia.php:35
+#: src/Abilities/WordPress/Media/UpdateMedia.php:46
+msgid "Update Media"
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UpdateMedia.php:47
+msgid "Set the alt text, title, caption or description of a media file."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UpdateMedia.php:146
+msgid "You are not allowed to edit this media file."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UpdateMedia.php:177
+msgid "The media file could not be updated."
+msgstr ""
+
+#: src/Abilities/WordPress/Media/UploadMedia.php:37
 msgid "Upload Media"
 msgstr ""
 
-#: src/Abilities/WordPress/Media/UploadMedia.php:36
+#: src/Abilities/WordPress/Media/UploadMedia.php:38
 msgid "Upload media to WordPress by sideloading from a URL."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/UploadMedia.php:164
+#: src/Abilities/WordPress/Media/UploadMedia.php:166
 msgid "Invalid URL format. Must be a valid HTTP or HTTPS URL."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/UploadMedia.php:177
-#: src/Media/UploadLinks/UploadLinkService.php:198
-msgid "The specified post does not exist."
+#: src/Abilities/WordPress/Media/UploadMedia.php:180
+msgid "That post does not exist, or you may not attach media to it."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/UploadMedia.php:191
+#: src/Abilities/WordPress/Media/UploadMedia.php:193
 msgid "Failed to download file from URL."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/UploadMedia.php:242
+#: src/Abilities/WordPress/Media/UploadMedia.php:244
 msgid "Invalid or unsupported file type."
 msgstr ""
 
-#: src/Abilities/WordPress/Media/ViewMedia.php:31
+#: src/Abilities/WordPress/Media/ViewMedia.php:33
 msgid "View Media"
 msgstr ""
 
-#: src/Abilities/WordPress/Media/ViewMedia.php:32
+#: src/Abilities/WordPress/Media/ViewMedia.php:34
 msgid "Retrieve a single media file by ID."
 msgstr ""
 
-#. translators: %d: Media ID
-#: src/Abilities/WordPress/Media/ViewMedia.php:113
+#: src/Abilities/WordPress/Menus/AddMenuItem.php:33
+msgid "Add Menu Item"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/AddMenuItem.php:34
+msgid "Add one link to a classic or navigation menu, pointing at content on the site or at any URL; read the menu with albert/view-menu first."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/AddMenuItem.php:224
+msgid "The \"parent_item_id\" must be an item in the same menu. Call albert/view-menu to see its items, or leave it out for the top level."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/AddMenuItem.php:264
+#: src/Abilities/WordPress/Menus/NavigationWriter.php:267
+#: src/Abilities/WordPress/Menus/UpdateMenuItem.php:201
+msgid "The \"title\" is empty once HTML and extra spaces are removed. Send the label as plain text."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/AddMenuItem.php:280
+msgid "The menu item could not be added."
+msgstr ""
+
+#. translators: 1: why placing failed, 2: menu item ID
+#: src/Abilities/WordPress/Menus/AddMenuItem.php:294
 #, php-format
-msgid "Media with ID %d not found."
+msgid "%1$s The item was added at the end of the menu (ID %2$d): move it with albert/move-menu-item, do not add it again."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/AssignMenuLocation.php:35
+msgid "Assign Menu Location"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/AssignMenuLocation.php:36
+msgid "Show a classic menu in one of the theme's menu locations, replacing the menu there; to empty a location use albert/unassign-menu-location."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/AssignMenuLocation.php:136
+msgid "The menu location could not be assigned."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/CreateMenu.php:32
+msgid "Create Menu"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/CreateMenu.php:33
+msgid "Create an empty classic menu; show it on the site afterwards with albert/assign-menu-location."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/CreateMenu.php:116
+msgid "The menu could not be created."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/DeleteMenu.php:32
+msgid "Delete Menu"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/DeleteMenu.php:33
+msgid "Permanently delete a classic menu with all its items; check its \"visible\" in albert/find-menus first."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/DeleteMenu.php:120
+msgid "The menu could not be deleted."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/FindMenus.php:40
+msgid "Find Menus"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/FindMenus.php:41
+msgid "List every menu on the site with where visitors see it, starting from the menu the header shows; call this before changing any menu."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/FindMenus.php:274
+msgid "Classic theme: visitors see the classic menus assigned to its menu locations or used in widgets, as \"visible\" says. Which location is in the header is up to the theme."
+msgstr ""
+
+#. translators: %s: template part slug
+#: src/Abilities/WordPress/Menus/FindMenus.php:300
+#, php-format
+msgid "Block theme: the header keeps its own links inside the \"%s\" template part, not in a navigation menu. Albert cannot change those; the person can edit the header in Appearance > Editor."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/FindMenus.php:307
+msgid "Block theme with no navigation menu yet: the first time the header is shown, WordPress creates one that lists the published pages."
+msgstr ""
+
+#. translators: %s: classic menu name
+#: src/Abilities/WordPress/Menus/FindMenus.php:309
+#, php-format
+msgid "Block theme with no navigation menu yet: the first time the header is shown, WordPress copies the classic menu \"%s\" into a new navigation menu and shows that copy. Until then, changing that classic menu changes what gets copied; after that, only the navigation menu counts."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/FindMenus.php:312
+msgid "Block theme: its header is a navigation block, shown in \"header\". Change that navigation menu with menu_type \"block\". Classic menus are not shown to visitors; do not edit them to change the site's navigation."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuItemOrder.php:47
+msgid "That item is not in this menu. Call albert/view-menu to see its items."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuItemOrder.php:51
+msgid "The \"parent_item_id\" must be an item in the same menu, or 0 for the top level."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuItemOrder.php:67
+msgid "An item cannot move under itself or one of its own sub-items. Choose another \"parent_item_id\"."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuItemOrder.php:90
+msgid "The menu item could not be moved."
+msgstr ""
+
+#. translators: %s: menu location name
+#: src/Abilities/WordPress/Menus/MenuLocator.php:178
+#, php-format
+msgid "the \"%s\" menu location"
+msgstr ""
+
+#. translators: %s: template slug
+#: src/Abilities/WordPress/Menus/MenuLocator.php:200
+#, php-format
+msgid "the \"%s\" template"
+msgstr ""
+
+#. translators: %s: template part slug
+#: src/Abilities/WordPress/Menus/MenuLocator.php:202
+#, php-format
+msgid "the \"%s\" template part"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuLocator.php:240
+msgid "Visitors do not see this classic menu: this site uses a block theme, whose header is a navigation block. Call albert/find-menus to see which navigation menu the header shows, and change that one with menu_type \"block\"."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuLocator.php:243
+msgid "Visitors do not see this menu: it is not assigned to a menu location or used in a widget. Assign it with albert/assign-menu-location, or change the menu that is assigned instead."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuLocator.php:257
+msgid "Visitors do not see this navigation menu: no navigation block in a template the theme uses shows it. Call albert/find-menus to see which menu the header shows."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuLocator.php:260
+msgid "The header keeps its links inside its template part instead of a navigation menu; Albert cannot change those; the person can edit the header in Appearance > Editor."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuLocator.php:268
+msgid "The site shows this menu only because its navigation block names no menu and this is the newest published navigation menu. Publishing another navigation menu would take its place."
+msgstr ""
+
+#. translators: %s: sidebar name
+#: src/Abilities/WordPress/Menus/MenuLocator.php:420
+#, php-format
+msgid "a Navigation Menu widget in the \"%s\" sidebar"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuSupport.php:57
+msgid "No classic menu has that ID. Call albert/find-menus to list them."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuSupport.php:79
+msgid "No navigation menu has that ID. Call albert/find-menus to list them."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuSupport.php:101
+msgid "No menu item has that ID. Call albert/view-menu to see a menu's items."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuSupport.php:126
+msgid "The \"url\" is not an address WordPress allows in a link. Send a web address such as https://example.com/page, a path such as /contact, or a mailto: or tel: link."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuSupport.php:152
+msgid "No page or post visitors can open has that \"object_id\". Find it with albert/find-pages or albert/find-posts."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuSupport.php:160
+msgid "That page or post is not published, so visitors cannot open it. Publish it first, then add it to the menu."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuSupport.php:183
+msgid "No category or term visitors can open has that \"object_id\". Find it with albert/find-terms."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MenuSupport.php:282
+msgid "This theme has no menu locations. On a block theme the header is a navigation block; call albert/find-menus to see which menu it shows."
+msgstr ""
+
+#. translators: %s: comma-separated location slugs
+#: src/Abilities/WordPress/Menus/MenuSupport.php:285
+#, php-format
+msgid "This theme has no menu location with that slug. Its locations are: %s."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MoveMenuItem.php:32
+msgid "Move Menu Item"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/MoveMenuItem.php:33
+msgid "Move a menu item with its sub-items to a new place in the same menu; read the menu with albert/view-menu first."
+msgstr ""
+
+#. translators: %d: most pages
+#: src/Abilities/WordPress/Menus/NavigationEditor.php:86
+#, php-format
+msgid "This page list shows more than %d pages, too many to turn into separate links. Remove the page list with albert/remove-menu-item and add the pages that matter with albert/add-menu-item."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationEditor.php:110
+msgid "The automatic page list was turned into separate links, as the Site Editor does before one page is changed. New pages are no longer added to this menu by themselves; add them with albert/add-menu-item."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationEditor.php:197
+msgid "An item cannot move under itself or one of its own sub-items. Choose another \"parent_path\"."
+msgstr ""
+
+#. translators: %s: block name
+#: src/Abilities/WordPress/Menus/NavigationEditor.php:285
+#, php-format
+msgid "The item at \"path\" is a %s block, not a link or submenu, so it has no label or link to change. The person can change it in Appearance > Editor > Navigation."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationEditor.php:308
+msgid "No menu item has that \"path\". Call albert/view-menu for the current paths."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationEditor.php:337
+msgid "A page list adds its pages by itself and cannot hold other items. Use the path of one of its pages, or of another link, as \"parent_path\"."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationEditor.php:338
+msgid "The \"parent_path\" must be a link or submenu in this menu, or [] for the top level. Call albert/view-menu for the current paths."
+msgstr ""
+
+#. translators: %d: most pages listed
+#: src/Abilities/WordPress/Menus/NavigationTree.php:97
+#, php-format
+msgid "All published pages, listed automatically: more than %d, so they are not listed here"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationTree.php:98
+msgid "All published pages, listed automatically"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationWriter.php:91
+msgid "That post type has no archive page. Send the slug of a post type with an archive, such as \"post\"."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationWriter.php:152
+msgid "This link points at an address, not at a page or term, so it has no title of its own to use. Send \"title\" instead."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationWriter.php:209
+msgid "The navigation menu could not be saved."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationWriter.php:221
+msgid "The navigation menu was saved, but it reads back differently from the change sent: WordPress altered it while saving. Call albert/view-menu to see what it holds now."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/NavigationWriter.php:268
+msgid "The linked item has no title, and a navigation link without a label is not shown. Send \"title\"."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/RemoveMenuItem.php:32
+msgid "Remove Menu Item"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/RemoveMenuItem.php:33
+msgid "Remove one item from a menu, moving its sub-items up a level without touching the linked content; read the menu with albert/view-menu first."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/RemoveMenuItem.php:157
+msgid "A sub-item could not be moved up."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/RemoveMenuItem.php:165
+msgid "The menu item could not be removed."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/UnassignMenuLocation.php:35
+msgid "Unassign Menu Location"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/UnassignMenuLocation.php:36
+msgid "Empty one of the theme's menu locations, keeping the menu itself; call albert/find-menus first to see what the location shows."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/UnassignMenuLocation.php:131
+msgid "The menu location could not be emptied."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/UpdateMenuItem.php:33
+msgid "Update Menu Item"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/UpdateMenuItem.php:34
+msgid "Change how one menu item reads or links, leaving out fields to keep them; to move it use albert/move-menu-item."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/UpdateMenuItem.php:179
+msgid "Send \"title\" or \"use_original_title\", not both."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/UpdateMenuItem.php:227
+msgid "The menu item could not be updated."
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/ViewMenu.php:32
+msgid "View Menu"
+msgstr ""
+
+#: src/Abilities/WordPress/Menus/ViewMenu.php:33
+msgid "Read one menu's items as a tree, with where visitors see it. Call albert/find-menus first for its ID."
 msgstr ""
 
 #: src/Abilities/WordPress/Pages/AddBlock.php:31
@@ -340,35 +775,34 @@ msgid "Add Page Block"
 msgstr ""
 
 #: src/Abilities/WordPress/Pages/AddBlock.php:32
-msgid "Insert a single block into a page before/after a block at a given position (path), or inside it. Every other block is left untouched. Read the page first to get block paths."
+msgid "Insert a single block, or a pattern by name, into a page before/after a block at a given position (path), or inside it; into an empty page without a path. Every other block is left untouched. Read the page first to get block paths."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Create.php:34
+#: src/Abilities/WordPress/Pages/Create.php:37
 msgid "Create Page"
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Create.php:35
-msgid "Create a new WordPress page with specified title and content."
+#: src/Abilities/WordPress/Pages/Create.php:38
+msgid "Create a new page (standalone content such as About or Contact, not a dated blog post), saved as a draft unless you set a status. To change an existing page use albert/update-page; for a blog post use albert/create-post."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Create.php:200
-msgid "An error occurred while creating the page."
+#: src/Abilities/WordPress/Pages/Create.php:207
+msgid "The page could not be created."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Delete.php:32
+#: src/Abilities/WordPress/Pages/Delete.php:34
 msgid "Delete Page"
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Delete.php:33
-msgid "Delete a WordPress page permanently or move it to trash."
+#: src/Abilities/WordPress/Pages/Delete.php:35
+msgid "Move a WordPress page to the trash, or delete it permanently with \"force\"."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Delete.php:128
-#: src/Abilities/WordPress/Pages/Update.php:170
+#: src/Abilities/WordPress/Pages/Delete.php:134
 msgid "Page not found."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Delete.php:152
+#: src/Abilities/WordPress/Pages/Delete.php:158
 msgid "An error occurred while deleting the page."
 msgstr ""
 
@@ -377,18 +811,18 @@ msgid "Edit Page Block"
 msgstr ""
 
 #: src/Abilities/WordPress/Pages/EditBlock.php:32
-msgid "Replace a single block in a page by its position (path), leaving every other block untouched. Read the page first to get each block's path."
+msgid "Replace a block in a page by its position (path), leaving every other block untouched. Read the page first to get each block's path. To change several blocks, send them together in `edits`: one save, one revision."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/FindPages.php:34
+#: src/Abilities/WordPress/Pages/FindPages.php:37
 msgid "Find Pages"
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/FindPages.php:35
+#: src/Abilities/WordPress/Pages/FindPages.php:38
 msgid "Find and search WordPress pages with optional filtering and pagination."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/FindPages.php:252
+#: src/Abilities/WordPress/Pages/FindPages.php:266
 msgid "An error occurred while retrieving pages."
 msgstr ""
 
@@ -408,34 +842,80 @@ msgstr ""
 msgid "Delete a single block from a page by its position (path), leaving every other block untouched. Read the page first to get each block's path."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Update.php:34
+#: src/Abilities/WordPress/Pages/ReplaceText.php:31
+msgid "Replace Page Text"
+msgstr ""
+
+#: src/Abilities/WordPress/Pages/ReplaceText.php:32
+msgid "Replace exact text in a page field without resending the page; read it with albert/view-page first."
+msgstr ""
+
+#: src/Abilities/WordPress/Pages/Update.php:37
 msgid "Update Page"
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Update.php:35
-msgid "Update an existing WordPress page with new title and content."
+#: src/Abilities/WordPress/Pages/Update.php:38
+msgid "Update an existing page: only the fields you send change. Read it first with albert/view-page before replacing content or blocks; to change one block use albert/edit-page-block, and for a new page use albert/create-page."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/Update.php:232
-msgid "An error occurred while updating the page."
+#: src/Abilities/WordPress/Pages/Update.php:241
+msgid "The page could not be updated."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/ViewPage.php:33
+#. translators: %d: post ID
+#: src/Abilities/WordPress/Pages/Update.php:279
+#, php-format
+msgid "ID %d is a post, not a page. Use albert/update-post."
+msgstr ""
+
+#. translators: %d: page ID
+#: src/Abilities/WordPress/Pages/Update.php:292
+#, php-format
+msgid "This account may not edit page %d."
+msgstr ""
+
+#. translators: %d: page ID
+#: src/Abilities/WordPress/Pages/Update.php:311
+#, php-format
+msgid "No page with ID %d. Find it with albert/find-pages."
+msgstr ""
+
+#: src/Abilities/WordPress/Pages/ViewPage.php:36
 msgid "View Page"
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/ViewPage.php:34
+#: src/Abilities/WordPress/Pages/ViewPage.php:37
 msgid "Retrieve a single WordPress page by ID."
 msgstr ""
 
 #. translators: %d: Page ID
-#: src/Abilities/WordPress/Pages/ViewPage.php:200
+#: src/Abilities/WordPress/Pages/ViewPage.php:205
 #, php-format
 msgid "Page with ID %d not found."
 msgstr ""
 
-#: src/Abilities/WordPress/Pages/ViewPage.php:208
+#: src/Abilities/WordPress/Pages/ViewPage.php:213
 msgid "You do not have permission to view this page."
+msgstr ""
+
+#: src/Abilities/WordPress/PostFields.php:111
+msgid "That date or time does not exist, such as 30 February or 24:00. Send a real one, e.g. \"2026-12-01T09:00:00\"."
+msgstr ""
+
+#. translators: %s: user display name.
+#: src/Abilities/WordPress/PostFields.php:174
+#, php-format
+msgid "%s cannot edit this kind of content, so they cannot be its author. Pick a user with an author, editor or administrator role."
+msgstr ""
+
+#. translators: 1: post ID, 2: post type.
+#: src/Abilities/WordPress/PostFields.php:197
+#, php-format
+msgid "ID %1$d is not a %2$s. The parent must be the same kind of content; send 0 for top level."
+msgstr ""
+
+#: src/Abilities/WordPress/PostFields.php:205
+msgid "That parent is this item itself or one of its children, which would make a loop. Pick another parent."
 msgstr ""
 
 #: src/Abilities/WordPress/Posts/AddBlock.php:31
@@ -443,35 +923,52 @@ msgid "Add Post Block"
 msgstr ""
 
 #: src/Abilities/WordPress/Posts/AddBlock.php:32
-msgid "Insert a single block into a post before/after a block at a given position (path), or inside it. Every other block is left untouched. Read the post first to get block paths."
+msgid "Insert a single block, or a pattern by name, into a post before/after a block at a given position (path), or inside it; into an empty post without a path. Every other block is left untouched. Read the post first to get block paths."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Create.php:34
+#: src/Abilities/WordPress/Posts/AddTerms.php:31
+msgid "Add Post Terms"
+msgstr ""
+
+#: src/Abilities/WordPress/Posts/AddTerms.php:32
+msgid "Add terms of one taxonomy to a post, keeping the terms it already has, including the default category (such as Uncategorized) if that is all it has; remove that one with albert/remove-post-terms. Use it to categorise a post or tag it, instead of the categories and tags fields of albert/update-post."
+msgstr ""
+
+#: src/Abilities/WordPress/Posts/Create.php:39
 msgid "Create Post"
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Create.php:35
-msgid "Create a new WordPress post with specified title, content, and metadata."
+#: src/Abilities/WordPress/Posts/Create.php:40
+msgid "Create a new blog post, saved as a draft unless you set a status. To change an existing post use albert/update-post; for a page use albert/create-page."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Create.php:227
-msgid "An error occurred while creating the post."
+#: src/Abilities/WordPress/Posts/Create.php:229
+msgid "You may not create new tags, so the post was not created. Use existing tags only."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Delete.php:32
+#: src/Abilities/WordPress/Posts/Create.php:252
+msgid "The post could not be created."
+msgstr ""
+
+#. translators: %d: post ID
+#: src/Abilities/WordPress/Posts/Create.php:261
+#, php-format
+msgid "The post was created as ID %d, without its new tags: WordPress refused to create one of them. Add tags with albert/add-post-terms."
+msgstr ""
+
+#: src/Abilities/WordPress/Posts/Delete.php:34
 msgid "Delete Post"
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Delete.php:33
-msgid "Delete a WordPress post permanently or move it to trash."
+#: src/Abilities/WordPress/Posts/Delete.php:35
+msgid "Move a WordPress post to the trash, or delete it permanently with \"force\"."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Delete.php:128
-#: src/Abilities/WordPress/Posts/Update.php:177
+#: src/Abilities/WordPress/Posts/Delete.php:134
 msgid "Post not found."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Delete.php:152
+#: src/Abilities/WordPress/Posts/Delete.php:158
 msgid "An error occurred while deleting the post."
 msgstr ""
 
@@ -480,18 +977,18 @@ msgid "Edit Post Block"
 msgstr ""
 
 #: src/Abilities/WordPress/Posts/EditBlock.php:32
-msgid "Replace a single block in a post by its position (path), leaving every other block untouched. Read the post first to get each block's path."
+msgid "Replace a block in a post by its position (path), leaving every other block untouched. Read the post first to get each block's path. To change several blocks, send them together in `edits`: one save, one revision."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/FindPosts.php:34
+#: src/Abilities/WordPress/Posts/FindPosts.php:37
 msgid "Find Posts"
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/FindPosts.php:35
+#: src/Abilities/WordPress/Posts/FindPosts.php:38
 msgid "Find and search WordPress posts with optional filtering and pagination."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/FindPosts.php:259
+#: src/Abilities/WordPress/Posts/FindPosts.php:273
 msgid "An error occurred while retrieving posts."
 msgstr ""
 
@@ -511,34 +1008,181 @@ msgstr ""
 msgid "Delete a single block from a post by its position (path), leaving every other block untouched. Read the post first to get each block's path."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Update.php:34
+#: src/Abilities/WordPress/Posts/RemoveTerms.php:47
+msgid "Remove Post Terms"
+msgstr ""
+
+#: src/Abilities/WordPress/Posts/RemoveTerms.php:48
+msgid "Remove terms of one taxonomy from a post, keeping its other terms. Use it to take a category or tag off a post. A post always keeps one category: to move a post to another category, add the new one with albert/add-post-terms first, then remove the old one. Removing its last category puts the site's default category back."
+msgstr ""
+
+#: src/Abilities/WordPress/Posts/RemoveTerms.php:107
+msgid "Nothing changed: this is the post's only category, and a post always keeps one. To move the post to another category, add that category with albert/add-post-terms first, then remove this one."
+msgstr ""
+
+#: src/Abilities/WordPress/Posts/ReplaceText.php:31
+msgid "Replace Post Text"
+msgstr ""
+
+#: src/Abilities/WordPress/Posts/ReplaceText.php:32
+msgid "Replace exact text in a post field without resending the post; read it with albert/view-post first."
+msgstr ""
+
+#: src/Abilities/WordPress/Posts/Update.php:38
 msgid "Update Post"
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Update.php:35
-msgid "Update an existing WordPress post with new title, content, and metadata."
+#: src/Abilities/WordPress/Posts/Update.php:39
+msgid "Update an existing post: only the fields you send change. Read it first with albert/view-post before replacing content or blocks; to change one block use albert/edit-post-block, and for a new post use albert/create-post."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/Update.php:248
-msgid "An error occurred while updating the post."
+#: src/Abilities/WordPress/Posts/Update.php:289
+msgid "The post could not be updated."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/ViewPost.php:33
+#. translators: %d: page ID
+#: src/Abilities/WordPress/Posts/Update.php:327
+#, php-format
+msgid "ID %d is a page, not a post. Use albert/update-page."
+msgstr ""
+
+#. translators: %d: post ID
+#: src/Abilities/WordPress/Posts/Update.php:340
+#, php-format
+msgid "This account may not edit post %d."
+msgstr ""
+
+#. translators: %d: post ID
+#: src/Abilities/WordPress/Posts/Update.php:359
+#, php-format
+msgid "No post with ID %d. Find it with albert/find-posts."
+msgstr ""
+
+#: src/Abilities/WordPress/Posts/ViewPost.php:36
 msgid "View Post"
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/ViewPost.php:34
+#: src/Abilities/WordPress/Posts/ViewPost.php:37
 msgid "Retrieve a single WordPress post by ID."
 msgstr ""
 
 #. translators: %d: Post ID
-#: src/Abilities/WordPress/Posts/ViewPost.php:200
+#: src/Abilities/WordPress/Posts/ViewPost.php:205
 #, php-format
 msgid "Post with ID %d not found."
 msgstr ""
 
-#: src/Abilities/WordPress/Posts/ViewPost.php:208
+#: src/Abilities/WordPress/Posts/ViewPost.php:213
 msgid "You do not have permission to view this post."
+msgstr ""
+
+#. translators: %s: comma-separated category IDs.
+#: src/Abilities/WordPress/PostTerms.php:147
+#, php-format
+msgid "No category exists with ID %s, so nothing was saved. Look up category IDs with albert/find-terms."
+msgstr ""
+
+#. translators: 1: tag name, 2: reason from WordPress.
+#: src/Abilities/WordPress/PostTerms.php:202
+#, php-format
+msgid "The tag \"%1$s\" could not be created, so the post was not changed: %2$s"
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/FindRevisions.php:33
+msgid "Find Revisions"
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/FindRevisions.php:34
+msgid "List the saved revisions of any content that keeps revisions, newest first (the newest is the current version), with the fields each save changed; use albert/view-revision to see one revision's changes line by line."
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/RestoreRevision.php:38
+msgid "Restore Revision"
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/RestoreRevision.php:39
+msgid "Put a post, page, template or other content back to one of its revisions, recorded as a new revision so it can be undone; show the owner the changes with albert/view-revision first."
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/RestoreRevision.php:133
+msgid "This revision belongs to content in the trash. Ask the owner to restore it from the trash first."
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/RestoreRevision.php:142
+msgid "Revisions are turned off for this content, so a restore here could not be undone."
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/RestoreRevision.php:166
+msgid "WordPress could not restore this revision. Try again in a moment."
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/RevisionDiff.php:222
+msgid "No revision with that ID. Use albert/find-revisions to list the revisions of a post, page or other content."
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/RevisionDiff.php:249
+msgid "No content with that ID. Send the ID of any content that keeps revisions; use albert/find-posts or albert/find-pages to find it."
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/RevisionDiff.php:257
+msgid "You cannot edit this content, so you may not see or restore its revisions."
+msgstr ""
+
+#. translators: %s: post type name
+#: src/Abilities/WordPress/Revisions/RevisionDiff.php:267
+#, php-format
+msgid "The \"%s\" post type does not keep revisions. Send the ID of content that does, such as a post, page, template or navigation menu."
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/ViewRevision.php:33
+msgid "View Revision"
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/ViewRevision.php:34
+msgid "Show one revision's changes as a line diff, against the current version or the revision before it; the newest revision is the current version, so compare it with \"previous\" to see the last edit. Use it before albert/restore-revision."
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/ViewRevision.php:161
+msgid "This is the oldest revision, so there is nothing before it. Use compare_to \"current\" instead."
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/ViewRevision.php:167
+msgid "Previous revision"
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/ViewRevision.php:168
+#: src/Abilities/WordPress/Revisions/ViewRevision.php:172
+msgid "This revision"
+msgstr ""
+
+#: src/Abilities/WordPress/Revisions/ViewRevision.php:173
+msgid "Current version"
+msgstr ""
+
+#: src/Abilities/WordPress/Search/SearchContent.php:64
+msgid "Search Content"
+msgstr ""
+
+#: src/Abilities/WordPress/Search/SearchContent.php:65
+msgid "Search the whole site for words in one call: posts, pages, other public content types, synced patterns and template parts such as the header and footer, including drafts, scheduled and private items you may read. Each result has a kind that says which ability changes it: post (update-post, replace-post-text), page (update-page, replace-page-text), pattern (update-pattern), term (update-term); a template part can only be changed in the Site Editor. With type \"term\" it searches categories, tags and other terms instead. Media files are not searched: use find-media."
+msgstr ""
+
+#. translators: 1: type, 2: the unknown subtypes, 3: the allowed subtypes
+#: src/Abilities/WordPress/Search/SearchContent.php:209
+#, php-format
+msgid "For type \"%1$s\", \"subtypes\" cannot include: %2$s. Allowed: %3$s."
+msgstr ""
+
+#: src/Abilities/WordPress/Search/SearchContent.php:301
+msgid "The search failed."
+msgstr ""
+
+#: src/Abilities/WordPress/SiteHealth/ViewSiteHealth.php:72
+msgid "View Site Health"
+msgstr ""
+
+#: src/Abilities/WordPress/SiteHealth/ViewSiteHealth.php:73
+msgid "Report the site's Site Health results; use it when the person asks what on the site needs attention."
 msgstr ""
 
 #: src/Abilities/WordPress/Skills/GetSkill.php:49
@@ -569,51 +1213,51 @@ msgstr ""
 msgid "none are registered on this site"
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:34
+#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:36
 msgid "Create Term"
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:35
+#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:37
 msgid "Create a new term in a taxonomy (category, tag, etc)."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:177
+#: src/Abilities/WordPress/Taxonomies/CreateTerm.php:179
 msgid "An error occurred while creating the term."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:34
+#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:36
 msgid "Delete Term"
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:35
-msgid "Delete a term from a taxonomy (category, tag, etc)."
+#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:37
+msgid "Permanently delete a term, such as a category or tag, from its taxonomy; terms have no trash, so check the term with albert/view-term first."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:159
+#: src/Abilities/WordPress/Taxonomies/DeleteTerm.php:160
 msgid "An error occurred while deleting the term."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/FindTaxonomies.php:32
+#: src/Abilities/WordPress/Taxonomies/FindTaxonomies.php:34
 msgid "Find Taxonomies"
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/FindTaxonomies.php:33
+#: src/Abilities/WordPress/Taxonomies/FindTaxonomies.php:35
 msgid "Find all registered taxonomies (categories, tags, custom taxonomies)."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/FindTaxonomies.php:152
+#: src/Abilities/WordPress/Taxonomies/FindTaxonomies.php:154
 msgid "An error occurred while retrieving taxonomies."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/FindTerms.php:34
+#: src/Abilities/WordPress/Taxonomies/FindTerms.php:36
 msgid "Find Terms"
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/FindTerms.php:35
+#: src/Abilities/WordPress/Taxonomies/FindTerms.php:37
 msgid "Find terms from a specific taxonomy (categories, tags, custom terms)."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/FindTerms.php:200
+#: src/Abilities/WordPress/Taxonomies/FindTerms.php:202
 msgid "An error occurred while retrieving terms."
 msgstr ""
 
@@ -629,75 +1273,79 @@ msgstr ""
 msgid "The \"%s\" taxonomy is registered on this site but is not exposed over the REST API, so Albert cannot read or change its terms."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:34
+#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:36
 msgid "Update Term"
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:35
+#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:37
 msgid "Update an existing term in a taxonomy (category, tag, etc)."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:182
+#: src/Abilities/WordPress/Taxonomies/UpdateTerm.php:185
 msgid "An error occurred while updating the term."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/ViewTerm.php:31
+#: src/Abilities/WordPress/Taxonomies/ViewTerm.php:35
 msgid "View Term"
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/ViewTerm.php:32
+#: src/Abilities/WordPress/Taxonomies/ViewTerm.php:36
 msgid "Retrieve a single taxonomy term by ID."
 msgstr ""
 
-#: src/Abilities/WordPress/Taxonomies/ViewTerm.php:113
+#: src/Abilities/WordPress/Taxonomies/ViewTerm.php:126
 msgid "Invalid taxonomy."
 msgstr ""
 
 #. translators: %d: Term ID
-#: src/Abilities/WordPress/Taxonomies/ViewTerm.php:127
+#: src/Abilities/WordPress/Taxonomies/ViewTerm.php:140
 #, php-format
 msgid "Term with ID %d not found."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Create.php:33
+#: src/Abilities/WordPress/Users/Create.php:35
 msgid "Create User"
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Create.php:34
-msgid "Create a new WordPress user. The password is generated on the site; a one-time link to set their own is returned."
+#: src/Abilities/WordPress/Users/Create.php:36
+msgid "Create a new WordPress user. The password is generated on the site, and WordPress emails the new user a link to set their own."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Create.php:218
+#: src/Abilities/WordPress/Users/Create.php:215
 msgid "An error occurred while creating the user."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Create.php:240
-msgid "No sign-in link could be issued, most likely because password resets are disabled on this site. Set this user a password in wp-admin."
+#: src/Abilities/WordPress/Users/Create.php:235
+msgid "No invitation could be sent, most likely because password resets are disabled on this site. Set this user a password in wp-admin."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Delete.php:32
+#: src/Abilities/WordPress/Users/Delete.php:34
 msgid "Delete User"
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Delete.php:33
-msgid "Delete a WordPress user and optionally reassign their content."
+#: src/Abilities/WordPress/Users/Delete.php:35
+msgid "Permanently delete a WordPress user, handing everything they wrote to the user in \"reassign\"; find that user with albert/find-users first."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Delete.php:127
-#: src/Abilities/WordPress/Users/Update.php:180
-#: src/Admin/Connections.php:2117
+#: src/Abilities/WordPress/Users/Delete.php:130
+#: src/Abilities/WordPress/Users/Update.php:186
+#: src/Admin/Connections.php:2163
 msgid "User not found."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Delete.php:154
+#: src/Abilities/WordPress/Users/Delete.php:139
+msgid "You cannot delete the user you are connected as."
+msgstr ""
+
+#: src/Abilities/WordPress/Users/Delete.php:162
 msgid "An error occurred while deleting the user."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/FindUsers.php:33
+#: src/Abilities/WordPress/Users/FindUsers.php:34
 msgid "Find Users"
 msgstr ""
 
-#: src/Abilities/WordPress/Users/FindUsers.php:34
+#: src/Abilities/WordPress/Users/FindUsers.php:35
 msgid "Find and search WordPress users with optional filtering and pagination."
 msgstr ""
 
@@ -705,108 +1353,236 @@ msgstr ""
 msgid "An error occurred while retrieving users."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Update.php:32
+#: src/Abilities/WordPress/Users/Update.php:34
 msgid "Update User"
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Update.php:33
+#: src/Abilities/WordPress/Users/Update.php:35
 msgid "Update an existing WordPress user with new information."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Update.php:169
+#: src/Abilities/WordPress/Users/Update.php:174
 msgid "This ability cannot change a password. The account holder can reset their own from the login screen."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/Update.php:231
+#: src/Abilities/WordPress/Users/Update.php:200
+msgid "This ability cannot change an email address. The account holder can change it on their own profile, where WordPress confirms it by email."
+msgstr ""
+
+#: src/Abilities/WordPress/Users/Update.php:251
 msgid "An error occurred while updating the user."
 msgstr ""
 
-#: src/Abilities/WordPress/Users/ViewUser.php:32
+#: src/Abilities/WordPress/Users/ViewUser.php:33
 msgid "View User"
 msgstr ""
 
-#: src/Abilities/WordPress/Users/ViewUser.php:33
+#: src/Abilities/WordPress/Users/ViewUser.php:34
 msgid "Retrieve a single WordPress user by ID."
 msgstr ""
 
 #. translators: %d: User ID
-#: src/Abilities/WordPress/Users/ViewUser.php:119
+#: src/Abilities/WordPress/Users/ViewUser.php:116
 #, php-format
 msgid "User with ID %d not found."
 msgstr ""
 
+#. translators: %s: post type.
+#: src/Abstracts/AbstractAddBlock.php:131
+#, php-format
+msgid "This %s already has blocks, so send `path` and `position` to say where to insert. Take the path from a fresh read of its blocks."
+msgstr ""
+
+#: src/Abstracts/AbstractAddBlock.php:140
+msgid "Send either `block` or `pattern` (a pattern name), not both."
+msgstr ""
+
+#: src/Abstracts/AbstractAddBlock.php:143
+msgid "`pattern` must be a pattern name from albert/find-patterns."
+msgstr ""
+
+#. translators: %s: pattern name.
+#: src/Abstracts/AbstractAddBlock.php:233
+#, php-format
+msgid "No pattern named '%s'. Call albert/find-patterns for the names on this site."
+msgstr ""
+
+#. translators: %s: pattern name.
+#: src/Abstracts/AbstractAddBlock.php:250
+#, php-format
+msgid "The pattern '%s' has no blocks to insert."
+msgstr ""
+
+#. translators: 1: pattern name, 2: comma-separated block names.
+#: src/Abstracts/AbstractAddBlock.php:278
+#, php-format
+msgid "The pattern '%1$s' can't be used here: it contains blocks you may not use on this site (%2$s). To reuse its layout, read it with albert/view-pattern, adapt its markup without those blocks, and send that as `block`."
+msgstr ""
+
 #. translators: 1: post type, 2: post ID.
-#: src/Abstracts/AbstractBlockEdit.php:140
+#: src/Abstracts/AbstractBlockEdit.php:168
 #, php-format
 msgid "No %1$s found with ID %2$d."
 msgstr ""
 
 #. translators: 1: post type, 2: the update ability id (e.g. albert/update-post).
-#: src/Abstracts/AbstractBlockEdit.php:154
+#: src/Abstracts/AbstractBlockEdit.php:182
 #, php-format
 msgid "This %1$s uses the classic editor; granular block edits don't apply. Use %2$s with HTML content."
 msgstr ""
 
-#: src/Abstracts/AbstractBlockEdit.php:252
+#. translators: 1: zero-based position in the edits list, 2: the error message.
+#: src/Abstracts/AbstractBlockEdit.php:327
+#, php-format
+msgid "edits[%1$d] failed, so nothing was saved: %2$s"
+msgstr ""
+
+#. translators: 1: zero-based position in the edits list, 2: a message about that edit.
+#: src/Abstracts/AbstractBlockEdit.php:345
+#, php-format
+msgid "edits[%1$d]: %2$s"
+msgstr ""
+
+#: src/Abstracts/AbstractBlockEdit.php:408
 msgid "An error occurred while saving the block change."
 msgstr ""
 
 #. translators: %s: post type.
-#: src/Abstracts/AbstractBlockEdit.php:309
+#: src/Abstracts/AbstractBlockEdit.php:465
 #, php-format
 msgid "The %s ID to edit."
 msgstr ""
 
-#: src/Abstracts/AbstractBlockEdit.php:427
+#: src/Abstracts/AbstractBlockEdit.php:583
 msgid "The `block` parameter is required and must be a block spec object."
 msgstr ""
 
-#: src/Abstracts/AbstractBlockEdit.php:438
+#: src/Abstracts/AbstractBlockEdit.php:594
 msgid "The submitted block could not be built. Check the block name and attributes."
 msgstr ""
 
+#: src/Abstracts/AbstractEditBlock.php:127
+msgid "Send either `edits` or `path`, `block` and `expect`, not both. Put every edit in `edits`. Nothing was saved."
+msgstr ""
+
+#. translators: %d: Post ID
+#: src/Abstracts/AbstractPostTerms.php:142
+#, php-format
+msgid "No post exists with ID %d. Find the post with albert/find-posts."
+msgstr ""
+
+#: src/Abstracts/AbstractPostTerms.php:152
+msgid "You do not have permission to edit this post. Ask the site owner for access."
+msgstr ""
+
+#: src/Abstracts/AbstractPostTerms.php:221
+msgid "For \"category\", \"terms\" takes category IDs as numbers. Look them up with albert/find-terms."
+msgstr ""
+
+#: src/Abstracts/AbstractPostTerms.php:241
+msgid "For \"post_tag\", \"terms\" takes tag names as text or tag IDs as numbers."
+msgstr ""
+
+#: src/Abstracts/AbstractPostTerms.php:242
+msgid "For \"post_tag\", \"terms\" takes tag names as text, not IDs."
+msgstr ""
+
+#: src/Abstracts/AbstractPostTerms.php:280
+msgid "The post's terms could not be saved."
+msgstr ""
+
+#. translators: 1: post type, 2: post ID, 3: the find ability id.
+#: src/Abstracts/AbstractReplaceText.php:110
+#, php-format
+msgid "No %1$s found with ID %2$d. Use %3$s to look up the ID."
+msgstr ""
+
+#. translators: 1: post type, 2: post ID.
+#: src/Abstracts/AbstractReplaceText.php:125
+#, php-format
+msgid "This account may not edit %1$s %2$d."
+msgstr ""
+
+#. translators: 1: post type, 2: the field.
+#: src/Abstracts/AbstractReplaceText.php:139
+#, php-format
+msgid "A %1$s has no %2$s. Nothing was saved."
+msgstr ""
+
+#. translators: 1: the field, 2: times found, 3: times expected.
+#: src/Abstracts/AbstractReplaceText.php:160
+#, php-format
+msgid "The text occurs %2$d times in the %1$s, not %3$d. Send a longer `search` that occurs once, or set `expected_count` to %2$d to replace every one. Nothing was saved."
+msgstr ""
+
+#: src/Abstracts/AbstractReplaceText.php:197
+msgid "WordPress changed the text while saving it, for example by removing HTML this account may not post. Read it again before the next edit."
+msgstr ""
+
+#. translators: 1: what changed, e.g. "it changes the settings of core/heading at [2]", 2: the block edit ability id.
+#: src/Abstracts/AbstractReplaceText.php:222
+#, php-format
+msgid "This replacement changes blocks, not only text: %1$s. Use %2$s to change a block. Nothing was saved."
+msgstr ""
+
+#. translators: %s: the field searched, e.g. content.
+#: src/Abstracts/AbstractReplaceText.php:245
+#, php-format
+msgid "The text was not found in the %s. It must match the stored text exactly."
+msgstr ""
+
+#. translators: %s: the text as stored, e.g. Tom &amp; Jerry.
+#: src/Abstracts/AbstractReplaceText.php:250
+#, php-format
+msgid "It is stored as `%s`; search for that."
+msgstr ""
+
+#: src/Abstracts/AbstractReplaceText.php:257
+msgid "It occurs with different capitalisation."
+msgstr ""
+
+#: src/Abstracts/AbstractReplaceText.php:288
+msgid "An error occurred while saving."
+msgstr ""
+
+#. translators: %s: post type.
+#: src/Abstracts/AbstractReplaceText.php:310
+#, php-format
+msgid "The %s ID."
+msgstr ""
+
 #. translators: 1: ability label, 2: capability name
-#: src/Abstracts/BaseAbility.php:447
+#: src/Abstracts/BaseAbility.php:494
 #, php-format
 msgid "You do not have permission to use \"%1$s\". The \"%2$s\" capability is required."
 msgstr ""
 
-#. translators: %s: ability name
-#: src/Abstracts/BaseAbility.php:590
-#, php-format
-msgid "The ability \"%s\" is currently disabled."
-msgstr ""
-
 #: src/Admin/AbilitiesPage.php:80
-#: assets/src/abilities/AbilitiesApp.jsx:322
+#: assets/src/abilities/AbilitiesApp.jsx:331
 msgid "Abilities"
 msgstr ""
 
-#: src/Admin/AbilitiesPage.php:130
-msgid "WordPress 6.9+ Required"
-msgstr ""
-
-#: src/Admin/AbilitiesPage.php:131
-msgid "The Abilities API requires WordPress 6.9 or later. Please update WordPress to use this feature."
+#: src/Admin/AbilitiesPayload.php:52
+msgid "The Abilities screen no longer shows a required capability, because an ability's permission check cannot be read."
 msgstr ""
 
 #. translators: %s: human-readable time difference, e.g. "2 hours".
 #. translators: %s: human time difference, e.g. "5 mins".
 #. translators: %s: a human-readable time difference, e.g. "2 minutes".
 #. translators: %s: Time difference
-#: src/Admin/AbilitiesPayload.php:367
-#: src/Admin/Approvals.php:946
-#: src/Admin/Connections.php:1943
-#: src/Admin/Dashboard.php:1419
-#: src/Admin/Dashboard.php:1650
+#: src/Admin/AbilitiesPayload.php:374
+#: src/Admin/Approvals.php:913
+#: src/Admin/Connections.php:1989
+#: src/Admin/Dashboard.php:1418
+#: src/Admin/Dashboard.php:1649
 #, php-format
 msgid "%s ago"
 msgstr ""
 
 #: src/Admin/AbstractReactPage.php:159
-#: src/Admin/Connections.php:915
+#: src/Admin/Connections.php:957
 #: src/Admin/ConnectPage.php:180
-#: src/Admin/Dashboard.php:247
+#: src/Admin/Dashboard.php:246
 #: src/Admin/Settings.php:84
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
@@ -827,250 +1603,235 @@ msgstr ""
 msgid "This screen requires JavaScript."
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:86
+#: src/Admin/AdapterNudge.php:100
 msgid "Needed soon"
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:150
+#: src/Admin/AdapterNudge.php:164
 msgid "The MCP Adapter plugin is installed and active."
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:150
+#: src/Admin/AdapterNudge.php:164
 msgid "Albert now uses it to talk to your AI assistants."
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:263
+#: src/Admin/AdapterNudge.php:277
 msgid "MCP Adapter"
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:265
+#: src/Admin/AdapterNudge.php:279
 msgid "Installing the MCP Adapter plugin…"
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:266
+#: src/Admin/AdapterNudge.php:280
 msgid "Activating the MCP Adapter plugin…"
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:267
+#: src/Admin/AdapterNudge.php:281
 msgid "The MCP Adapter plugin is active. Reloading…"
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:268
+#: src/Admin/AdapterNudge.php:282
 msgid "That did not work here. Opening the WordPress screen for it instead…"
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:289
+#: src/Admin/AdapterNudge.php:303
 msgid "MCP Adapter plugin"
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:304
+#: src/Admin/AdapterNudge.php:318
 msgid "The MCP Adapter plugin is active"
 msgstr ""
 
-#: src/Admin/AdapterNudge.php:310
+#: src/Admin/AdapterNudge.php:324
 msgid "Albert talks to AI assistants through the MCP Adapter plugin."
 msgstr ""
 
-#: src/Admin/Approvals.php:101
-#: src/Admin/Approvals.php:110
-#: src/Admin/Approvals.php:231
+#: src/Admin/Approvals.php:100
+#: src/Admin/Approvals.php:109
+#: src/Admin/Approvals.php:230
 msgid "Approvals"
 msgstr ""
 
-#: src/Admin/Approvals.php:217
+#: src/Admin/Approvals.php:216
 msgid "You are not allowed to view approvals."
 msgstr ""
 
-#: src/Admin/Approvals.php:232
+#: src/Admin/Approvals.php:231
 msgid "Destructive actions your assistant requested are held here until you approve them. Approving runs the request exactly as it was made; rejecting discards it."
 msgstr ""
 
-#: src/Admin/Approvals.php:241
+#: src/Admin/Approvals.php:239
 msgid "That request is no longer waiting for a decision. It may have already been approved, rejected, or expired."
 msgstr ""
 
-#: src/Admin/Approvals.php:269
+#: src/Admin/Approvals.php:267
 msgid "Waiting for approval"
 msgstr ""
 
-#: src/Admin/Approvals.php:281
+#: src/Admin/Approvals.php:279
 msgid "Nothing is waiting for approval."
 msgstr ""
 
 #. translators: 1: who requested the action, 2: how long ago.
-#: src/Admin/Approvals.php:325
+#: src/Admin/Approvals.php:323
 #, php-format
 msgid "%1$s, %2$s"
 msgstr ""
 
-#: src/Admin/Approvals.php:335
+#: src/Admin/Approvals.php:333
 msgid "Review…"
 msgstr ""
 
-#: src/Admin/Approvals.php:376
+#: src/Admin/Approvals.php:374
 msgid "Approve this action?"
 msgstr ""
 
-#: src/Admin/Approvals.php:378
-#: src/Admin/Approvals.php:431
-#: src/Admin/Connections.php:1511
+#: src/Admin/Approvals.php:376
+#: src/Admin/Approvals.php:429
+#: src/Admin/Connections.php:1553
 #: src/Admin/Connections/ConnectDialog.php:131
-#: src/Admin/Connections/UserPickerModal.php:197
-#: assets/src/abilities/FlyInPanel.jsx:353
+#: src/Admin/Connections/UserPickerModal.php:201
+#: assets/src/abilities/FlyInPanel.jsx:311
 #: assets/src/shared/FlyInShell.jsx:93
 #: assets/src/skills/SkillFlyIn.jsx:54
 msgid "Close"
 msgstr ""
 
-#: src/Admin/Approvals.php:391
+#: src/Admin/Approvals.php:389
 msgid "The thing this would affect no longer exists. Approving may do nothing, or fail."
 msgstr ""
 
-#: src/Admin/Approvals.php:397
+#: src/Admin/Approvals.php:395
 msgid "This has changed since it was requested. Approving will overwrite edits made in the meantime."
 msgstr ""
 
 #. translators: 1: who requested the action, 2: how long ago.
-#: src/Admin/Approvals.php:409
+#: src/Admin/Approvals.php:407
 #, php-format
 msgid "Requested by %1$s, %2$s."
 msgstr ""
 
-#: src/Admin/Approvals.php:417
+#: src/Admin/Approvals.php:415
 msgid "View the exact request"
 msgstr ""
 
-#: src/Admin/Approvals.php:426
+#: src/Admin/Approvals.php:424
 msgid "Reject"
 msgstr ""
 
-#: src/Admin/Approvals.php:427
+#: src/Admin/Approvals.php:425
 msgid "Approve and run"
 msgstr ""
 
 #. translators: 1: the action, e.g. "Delete a page"; 2: the affected object, e.g. "About us (published)".
-#: src/Admin/Approvals.php:503
+#: src/Admin/Approvals.php:501
 #, php-format
 msgid "%1$s: %2$s"
 msgstr ""
 
-#: src/Admin/Approvals.php:549
+#: src/Admin/Approvals.php:547
 msgid "From your assistant’s link"
 msgstr ""
 
-#: src/Admin/Approvals.php:553
+#: src/Admin/Approvals.php:551
 msgid "No longer exists"
 msgstr ""
 
-#: src/Admin/Approvals.php:555
+#: src/Admin/Approvals.php:553
 msgid "Changed since requested"
 msgstr ""
 
-#: src/Admin/Approvals.php:579
+#: src/Admin/Approvals.php:577
 msgid "Recently decided"
 msgstr ""
 
 #. translators: %s: the user who decided the action.
-#: src/Admin/Approvals.php:628
+#: src/Admin/Approvals.php:626
 #, php-format
 msgid "Decided by %s,"
 msgstr ""
 
-#: src/Admin/Approvals.php:685
+#: src/Admin/Approvals.php:683
 msgid "You are not allowed to decide approvals."
 msgstr ""
 
 #. translators: %s: the decided request, e.g. "Delete a page: About us".
-#: src/Admin/Approvals.php:772
+#: src/Admin/Approvals.php:770
 #, php-format
 msgid "Approved and run: %s."
 msgstr ""
 
 #. translators: %s: the decided request, e.g. "Delete a page: About us".
-#: src/Admin/Approvals.php:774
+#: src/Admin/Approvals.php:772
 #, php-format
 msgid "Approved, but it could not be completed: %s. See Recently decided for details."
 msgstr ""
 
 #. translators: %s: the decided request, e.g. "Delete a page: About us".
-#: src/Admin/Approvals.php:776
+#: src/Admin/Approvals.php:774
 #, php-format
 msgid "Rejected: %s. It never ran."
 msgstr ""
 
-#: src/Admin/Approvals.php:780
+#: src/Admin/Approvals.php:778
 msgid "Approved. The request was run."
 msgstr ""
 
-#: src/Admin/Approvals.php:781
+#: src/Admin/Approvals.php:779
 msgid "Approved, but the request could not be completed. See Recently decided for details."
 msgstr ""
 
-#: src/Admin/Approvals.php:782
+#: src/Admin/Approvals.php:780
 msgid "Rejected. The request was discarded and never ran."
 msgstr ""
 
-#: src/Admin/Approvals.php:787
+#: src/Admin/Approvals.php:785
 msgid "That request was no longer waiting for a decision."
 msgstr ""
 
-#: src/Admin/Approvals.php:788
+#: src/Admin/Approvals.php:786
 msgid "You are no longer able to decide that request. Your permission may have changed since it was requested."
 msgstr ""
 
-#: src/Admin/Approvals.php:841
-msgid "Nothing can be held on this site yet."
-msgstr ""
-
-#. translators: %s: the WordPress version this site is running.
-#: src/Admin/Approvals.php:846
-#, php-format
-msgid "Safe mode needs WordPress 7.1, which added the check it relies on. This site runs %s, so destructive actions an assistant requests are carried out immediately and this queue stays empty."
-msgstr ""
-
-#: src/Admin/Approvals.php:851
-#: src/Admin/Dashboard/Attention.php:316
-msgid "Update WordPress"
-msgstr ""
-
 #. translators: 1: WordPress user, 2: connecting client name.
-#: src/Admin/Approvals.php:905
+#: src/Admin/Approvals.php:872
 #, php-format
 msgid "%1$s via %2$s"
 msgstr ""
 
 #. translators: %d: user id.
-#: src/Admin/Approvals.php:924
+#: src/Admin/Approvals.php:891
 #, php-format
 msgid "User #%d"
 msgstr ""
 
-#: src/Admin/Approvals.php:983
+#: src/Admin/Approvals.php:950
 msgid "Approved, running"
 msgstr ""
 
-#: src/Admin/Approvals.php:985
+#: src/Admin/Approvals.php:952
 msgid "Approved and run"
 msgstr ""
 
-#: src/Admin/Approvals.php:987
+#: src/Admin/Approvals.php:954
 msgid "Approved, but failed"
 msgstr ""
 
-#: src/Admin/Approvals.php:989
+#: src/Admin/Approvals.php:956
 msgid "Rejected"
 msgstr ""
 
-#: src/Admin/Approvals.php:991
-#: src/Admin/Settings.php:582
+#: src/Admin/Approvals.php:958
+#: src/Admin/Settings.php:581
 msgid "Expired"
 msgstr ""
 
 #: src/Admin/Connections.php:118
 #: src/Admin/Connections.php:119
-#: src/Admin/Connections.php:936
-#: src/Admin/Dashboard.php:619
-#: src/Admin/SettingsBootstrap.php:137
+#: src/Admin/Connections.php:978
+#: src/Admin/Dashboard.php:618
+#: src/Admin/SettingsBootstrap.php:133
 msgid "Connections"
 msgstr ""
 
@@ -1079,14 +1840,14 @@ msgstr ""
 #: src/Admin/Connections.php:255
 #: src/Admin/Connections.php:361
 #: src/Admin/Connections.php:364
-#: src/Admin/Connections.php:468
-#: src/Admin/Connections.php:471
-#: src/Admin/Connections.php:531
-#: src/Admin/Connections.php:594
-#: src/Admin/Connections.php:621
-#: src/Admin/Connections.php:705
-#: src/Admin/Connections.php:708
-#: src/Admin/Connections.php:754
+#: src/Admin/Connections.php:510
+#: src/Admin/Connections.php:513
+#: src/Admin/Connections.php:573
+#: src/Admin/Connections.php:636
+#: src/Admin/Connections.php:663
+#: src/Admin/Connections.php:747
+#: src/Admin/Connections.php:750
+#: src/Admin/Connections.php:796
 msgid "Security check failed."
 msgstr ""
 
@@ -1115,9 +1876,9 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: src/Admin/Connections.php:367
-#: src/Admin/Connections.php:474
-#: src/Admin/Connections.php:711
-#: src/Admin/Connections.php:757
+#: src/Admin/Connections.php:516
+#: src/Admin/Connections.php:753
+#: src/Admin/Connections.php:799
 msgid "You do not have permission to manage MCP access."
 msgstr ""
 
@@ -1125,68 +1886,84 @@ msgstr ""
 msgid "Nobody was chosen, so nothing changed. Search for someone and tick their name."
 msgstr ""
 
-#: src/Admin/Connections.php:399
-msgid "Everyone you chose could already approve an assistant, so nothing changed."
-msgstr ""
-
 #. translators: %d: number of users added.
-#: src/Admin/Connections.php:402
+#: src/Admin/Connections.php:418
 #, php-format
 msgid "%d person can now approve an assistant."
 msgid_plural "%d people can now approve an assistant."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Connections.php:460
+#: src/Admin/Connections.php:424
+msgid "Everyone you chose could already approve an assistant, so nothing changed."
+msgstr ""
+
+#. translators: %d: number of chosen users already on the list.
+#: src/Admin/Connections.php:428
+#, php-format
+msgid "%d person could already approve an assistant."
+msgid_plural "%d people could already approve an assistant."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of users not added.
+#: src/Admin/Connections.php:436
+#, php-format
+msgid "%d person was not added: they do not have the role needed to approve an assistant."
+msgid_plural "%d people were not added: they do not have the role needed to approve an assistant."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Admin/Connections.php:502
 msgid "Something went wrong. Reload the page and try again."
 msgstr ""
 
-#: src/Admin/Connections.php:480
+#: src/Admin/Connections.php:522
 msgid "User removed. Every assistant they had connected was signed out."
 msgstr ""
 
-#: src/Admin/Connections.php:534
-#: src/Admin/Connections.php:597
+#: src/Admin/Connections.php:576
+#: src/Admin/Connections.php:639
 msgid "You do not have permission to revoke sessions."
 msgstr ""
 
-#: src/Admin/Connections.php:574
+#: src/Admin/Connections.php:616
 msgid "Session revoked."
 msgstr ""
 
-#: src/Admin/Connections.php:601
+#: src/Admin/Connections.php:643
 msgid "All sessions revoked."
 msgstr ""
 
-#: src/Admin/Connections.php:624
-#: src/Admin/Connections.php:783
+#: src/Admin/Connections.php:666
+#: src/Admin/Connections.php:825
 msgid "You do not have permission to manage connections."
 msgstr ""
 
-#: src/Admin/Connections.php:631
+#: src/Admin/Connections.php:673
 msgid "Could not save the label. Please try again."
 msgstr ""
 
-#: src/Admin/Connections.php:639
+#: src/Admin/Connections.php:681
 msgid "Label removed."
 msgstr ""
 
-#: src/Admin/Connections.php:640
+#: src/Admin/Connections.php:682
 msgid "Label saved."
 msgstr ""
 
 #. translators: 1: number of emails sent, 2: number that failed.
-#: src/Admin/Connections.php:676
+#: src/Admin/Connections.php:718
 #, php-format
 msgid "Setup emails sent: %1$d. Not sent: %2$d; copy their link from Send setup link instead."
 msgstr ""
 
-#: src/Admin/Connections.php:683
+#: src/Admin/Connections.php:725
 msgid "No setup email was sent: nobody you added has an email address."
 msgstr ""
 
 #. translators: %d: number of emails sent.
-#: src/Admin/Connections.php:688
+#: src/Admin/Connections.php:730
 #, php-format
 msgid "A setup email went to %d person."
 msgid_plural "Setup emails went to %d people."
@@ -1194,407 +1971,407 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: the person's email address.
-#: src/Admin/Connections.php:721
+#: src/Admin/Connections.php:763
 #, php-format
 msgid "Setup link sent to %s."
 msgstr ""
 
-#: src/Admin/Connections.php:722
-#: src/Admin/Connections/UserPickerModal.php:156
+#: src/Admin/Connections.php:764
+#: src/Admin/Connections/UserPickerModal.php:160
 msgid "The email couldn’t be sent. Copy the link and send it another way."
 msgstr ""
 
-#: src/Admin/Connections.php:938
+#: src/Admin/Connections.php:980
 msgid "Connect AI assistants and choose who may use them."
 msgstr ""
 
-#: src/Admin/Connections.php:983
+#: src/Admin/Connections.php:1025
 #: src/Admin/Connections/ConnectDialog.php:67
 #: src/Admin/ConnectPage.php:204
 msgid "Connect an assistant"
 msgstr ""
 
-#: src/Admin/Connections.php:991
+#: src/Admin/Connections.php:1033
 #: src/Admin/ConnectPage.php:212
 msgid "MCP URL"
 msgstr ""
 
-#: src/Admin/Connections.php:1001
+#: src/Admin/Connections.php:1043
 #: src/Admin/Connections/ClientSetupGuides.php:246
 #: src/Admin/Connections/ClientSetupGuides.php:273
 #: src/Admin/Connections/ClientSetupGuides.php:274
 #: src/Admin/Connections/ClientSetupGuides.php:399
 #: src/Admin/Connections/ClientSetupGuides.php:426
-#: src/Admin/Connections/GuidePanel.php:260
+#: src/Admin/Connections/GuidePanel.php:261
 #: src/Admin/ConnectPage.php:215
-#: src/Admin/Dashboard.php:1163
-#: src/Admin/Dashboard.php:1297
+#: src/Admin/Dashboard.php:1162
+#: src/Admin/Dashboard.php:1296
 msgid "Copy"
 msgstr ""
 
-#: src/Admin/Connections.php:1007
+#: src/Admin/Connections.php:1049
 #: src/Admin/ConnectPage.php:219
 #: src/Admin/ConnectPage.php:220
 msgid "Instructions for"
 msgstr ""
 
-#: src/Admin/Connections.php:1008
+#: src/Admin/Connections.php:1050
 msgid "Needs a public site:"
 msgstr ""
 
 #. translators: 1: opening <code>, 2: closing </code> wrapping the filter name.
-#: src/Admin/Connections.php:1072
+#: src/Admin/Connections.php:1114
 #, php-format
 msgid "External override active: the address above comes from the %1$salbert/mcp/external_url%2$s filter, not from this site's own web address."
 msgstr ""
 
-#: src/Admin/Connections.php:1096
+#: src/Admin/Connections.php:1138
 msgid "The external address filter is returning something Albert cannot use."
 msgstr ""
 
 #. translators: 1: opening <code>, 2: closing </code> for the filter name, 3: opening <code>, 4: closing </code> for the invalid value, 5: the invalid value.
-#: src/Admin/Connections.php:1102
+#: src/Admin/Connections.php:1144
 #, php-format
 msgid "The %1$salbert/mcp/external_url%2$s filter returned %3$s%5$s%4$s, which is not a valid web address. Albert is ignoring it and using this site's own address instead."
 msgstr ""
 
 #. translators: %d: number of connected assistants.
-#: src/Admin/Connections.php:1140
+#: src/Admin/Connections.php:1182
 #, php-format
 msgid "%d connection"
 msgid_plural "%d connections"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Connections.php:1166
+#: src/Admin/Connections.php:1208
 msgid "Nothing is connected yet. Connect your app above."
 msgstr ""
 
-#: src/Admin/Connections.php:1175
-#: src/Admin/Connections.php:1205
+#: src/Admin/Connections.php:1217
+#: src/Admin/Connections.php:1247
 msgid "Connected assistants"
 msgstr ""
 
-#: src/Admin/Connections.php:1207
+#: src/Admin/Connections.php:1249
 msgid "Names come from the connecting app, so several may look alike. Give one a label to tell them apart."
 msgstr ""
 
-#: src/Admin/Connections.php:1235
+#: src/Admin/Connections.php:1277
 msgid "Revoking signs that assistant out immediately."
 msgstr ""
 
-#: src/Admin/Connections.php:1239
+#: src/Admin/Connections.php:1281
 msgid "Disconnect every assistant? Each one has to be approved again before it can reconnect."
 msgstr ""
 
-#: src/Admin/Connections.php:1241
+#: src/Admin/Connections.php:1283
 msgid "Disconnect all"
 msgstr ""
 
-#: src/Admin/Connections.php:1282
+#: src/Admin/Connections.php:1324
 msgid "Filter connections by label or person"
 msgstr ""
 
-#: src/Admin/Connections.php:1283
+#: src/Admin/Connections.php:1325
 msgid "Filter by label or person"
 msgstr ""
 
-#: src/Admin/Connections.php:1292
+#: src/Admin/Connections.php:1334
 msgid "Select"
 msgstr ""
 
-#: src/Admin/Connections.php:1299
-#: src/Admin/Connections/UserPickerModal.php:121
+#: src/Admin/Connections.php:1341
+#: src/Admin/Connections/UserPickerModal.php:123
 msgid "Nothing selected"
 msgstr ""
 
 #. translators: %d: number of connections matching the current filter.
-#: src/Admin/Connections.php:1306
-#: src/Admin/Connections/UserPickerModal.php:125
+#: src/Admin/Connections.php:1348
+#: src/Admin/Connections/UserPickerModal.php:127
 #, php-format
 msgid "Select all %d that match this filter"
 msgstr ""
 
-#: src/Admin/Connections.php:1317
+#: src/Admin/Connections.php:1359
 msgid "Revoke the selected connections? Each one has to be approved again before it can reconnect."
 msgstr ""
 
-#: src/Admin/Connections.php:1319
+#: src/Admin/Connections.php:1361
 msgid "Revoke selected"
 msgstr ""
 
-#: src/Admin/Connections.php:1322
+#: src/Admin/Connections.php:1364
 #: src/Admin/Connections/ConnectDialog.php:155
 msgid "Done"
 msgstr ""
 
 #. translators: 1: connection name, 2: the row's own meta line.
-#: src/Admin/Connections.php:1388
+#: src/Admin/Connections.php:1430
 #, php-format
 msgid "Select %1$s. %2$s"
 msgstr ""
 
-#: src/Admin/Connections.php:1425
+#: src/Admin/Connections.php:1467
 msgid "+ Name this connection"
 msgstr ""
 
-#: src/Admin/Connections.php:1425
+#: src/Admin/Connections.php:1467
 msgid "Edit"
 msgstr ""
 
 #. translators: %s: the client's own name.
-#: src/Admin/Connections.php:1447
+#: src/Admin/Connections.php:1489
 #, php-format
 msgid "Your name for the %s connection"
 msgstr ""
 
-#: src/Admin/Connections.php:1458
+#: src/Admin/Connections.php:1500
 msgid "Studio iMac"
 msgstr ""
 
-#: src/Admin/Connections.php:1463
+#: src/Admin/Connections.php:1505
 msgid "Save"
 msgstr ""
 
-#: src/Admin/Connections.php:1465
-#: src/Admin/Connections.php:1529
-#: src/Admin/Connections/UserPickerModal.php:233
+#: src/Admin/Connections.php:1507
+#: src/Admin/Connections.php:1571
+#: src/Admin/Connections/UserPickerModal.php:237
 msgid "Cancel"
 msgstr ""
 
-#: src/Admin/Connections.php:1468
+#: src/Admin/Connections.php:1510
 msgid "Leave it empty to remove the label."
 msgstr ""
 
-#: src/Admin/Connections.php:1478
-#: src/Admin/Connections.php:2219
+#: src/Admin/Connections.php:1520
+#: src/Admin/Connections.php:2265
 #: src/Admin/ConnectPage.php:304
 msgid "Revoke"
 msgstr ""
 
-#: src/Admin/Connections.php:1509
+#: src/Admin/Connections.php:1551
 msgid "Disconnect?"
 msgstr ""
 
-#: src/Admin/Connections.php:1518
+#: src/Admin/Connections.php:1560
 msgid "Sign it out"
 msgstr ""
 
-#: src/Admin/Connections.php:1519
+#: src/Admin/Connections.php:1561
 msgid "Ends the current session. The assistant signs back in on its own within the hour, without anyone approving anything."
 msgstr ""
 
-#: src/Admin/Connections.php:1522
+#: src/Admin/Connections.php:1564
 msgid "Disconnect completely"
 msgstr ""
 
-#: src/Admin/Connections.php:1523
+#: src/Admin/Connections.php:1565
 msgid "Ends the session and the sign-in behind it. An allowed user has to approve the assistant again before it can come back."
 msgstr ""
 
-#: src/Admin/Connections.php:1558
+#: src/Admin/Connections.php:1600
 msgid "Nobody may connect an assistant yet. Choose someone with \"Add user\"."
 msgstr ""
 
-#: src/Admin/Connections.php:1567
+#: src/Admin/Connections.php:1609
 msgid "Users who may approve an assistant"
 msgstr ""
 
-#: src/Admin/Connections.php:1593
+#: src/Admin/Connections.php:1635
 msgid "Who may connect"
 msgstr ""
 
-#: src/Admin/Connections.php:1594
+#: src/Admin/Connections.php:1636
 msgid "Only these users can approve an AI assistant. Everyone else is refused at sign-in."
 msgstr ""
 
-#: src/Admin/Connections.php:1597
-#: src/Admin/Connections/UserPickerModal.php:149
-#: src/Admin/Connections/UserPickerModal.php:235
+#: src/Admin/Connections.php:1639
+#: src/Admin/Connections/UserPickerModal.php:153
+#: src/Admin/Connections/UserPickerModal.php:239
 msgid "Add user"
 msgstr ""
 
-#: src/Admin/Connections.php:1609
+#: src/Admin/Connections.php:1651
 msgid "Filter the allowed users below by name or email"
 msgstr ""
 
-#: src/Admin/Connections.php:1610
+#: src/Admin/Connections.php:1652
 msgid "Filter by name or email"
 msgstr ""
 
-#: src/Admin/Connections.php:1621
+#: src/Admin/Connections.php:1663
 msgid "Removing someone revokes their access immediately, including any assistant they had approved."
 msgstr ""
 
-#: src/Admin/Connections.php:1679
+#: src/Admin/Connections.php:1721
 msgid "You"
 msgstr ""
 
-#: src/Admin/Connections.php:1705
+#: src/Admin/Connections.php:1747
 msgid "Send setup link"
 msgstr ""
 
-#: src/Admin/Connections.php:1710
+#: src/Admin/Connections.php:1752
 msgid "Opens the steps to connect their assistant."
 msgstr ""
 
 #. translators: %s: the person's display name.
-#: src/Admin/Connections.php:1718
+#: src/Admin/Connections.php:1764
 #, php-format
 msgid "Email to %s"
 msgstr ""
 
-#: src/Admin/Connections.php:1725
+#: src/Admin/Connections.php:1771
 msgid "Copy link"
 msgstr ""
 
 #. translators: %d: number of sessions.
-#: src/Admin/Connections.php:1738
+#: src/Admin/Connections.php:1784
 #, php-format
 msgid "%d session"
 msgid_plural "%d sessions"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Connections.php:1744
+#: src/Admin/Connections.php:1790
 msgid "No sessions"
 msgstr ""
 
-#: src/Admin/Connections.php:1752
+#: src/Admin/Connections.php:1798
 msgid "Remove this user? Every assistant they have connected is signed out straight away."
 msgstr ""
 
-#: src/Admin/Connections.php:1753
+#: src/Admin/Connections.php:1799
 msgid "This is the only person on the list. After this nobody can connect an assistant until someone is added again. Every assistant they have connected is signed out straight away."
 msgstr ""
 
-#: src/Admin/Connections.php:1759
+#: src/Admin/Connections.php:1805
 msgid "Remove"
 msgstr ""
 
-#: src/Admin/Connections.php:1830
+#: src/Admin/Connections.php:1876
 msgid "Authorised by an account that no longer exists"
 msgstr ""
 
 #. translators: %s: comma-separated list of user names.
-#: src/Admin/Connections.php:1833
+#: src/Admin/Connections.php:1879
 #, php-format
 msgid "Authorised by %s"
 msgstr ""
 
 #. translators: %s: human-readable time difference, e.g. "2 hours ago".
-#: src/Admin/Connections.php:1839
+#: src/Admin/Connections.php:1885
 #, php-format
 msgid "connected %s"
 msgstr ""
 
 #. translators: %s: human-readable time difference, e.g. "2 hours ago".
-#: src/Admin/Connections.php:1846
+#: src/Admin/Connections.php:1892
 #, php-format
 msgid "used %s"
 msgstr ""
 
-#: src/Admin/Connections.php:1849
+#: src/Admin/Connections.php:1895
 msgid "never used"
 msgstr ""
 
 #. translators: 1: the person who wrote the label, 2: the date they wrote it.
-#: src/Admin/Connections.php:1883
+#: src/Admin/Connections.php:1929
 #, php-format
 msgid "Labelled by %1$s on %2$s"
 msgstr ""
 
-#: src/Admin/Connections.php:1884
+#: src/Admin/Connections.php:1930
 msgid "a deleted account"
 msgstr ""
 
-#: src/Admin/Connections.php:1938
+#: src/Admin/Connections.php:1984
 msgid "never"
 msgstr ""
 
 #. translators: %s: human-readable time since they were added, e.g. "3 days ago".
-#: src/Admin/Connections.php:1975
+#: src/Admin/Connections.php:2021
 #, php-format
 msgid "Added %s"
 msgstr ""
 
 #. translators: %s: the date and time it expired.
-#: src/Admin/Connections.php:1986
+#: src/Admin/Connections.php:2032
 #, php-format
 msgid "Invitation expired %s"
 msgstr ""
 
 #. translators: %s: the exact date and time it expires.
-#: src/Admin/Connections.php:1993
+#: src/Admin/Connections.php:2039
 #, php-format
 msgid "Expires at %s"
 msgstr ""
 
-#: src/Admin/Connections.php:2064
-#: src/Admin/Connections/UserPickerModal.php:161
+#: src/Admin/Connections.php:2110
+#: src/Admin/Connections/UserPickerModal.php:165
 msgid "No role on this site"
 msgstr ""
 
-#: src/Admin/Connections.php:2149
+#: src/Admin/Connections.php:2195
 msgid "Sessions"
 msgstr ""
 
 #. translators: 1: user display name, 2: user email address.
-#: src/Admin/Connections.php:2154
+#: src/Admin/Connections.php:2200
 #, php-format
 msgid "Assistants approved by %1$s (%2$s)."
 msgstr ""
 
-#: src/Admin/Connections.php:2163
+#: src/Admin/Connections.php:2209
 msgid "Back to Connections"
 msgstr ""
 
-#: src/Admin/Connections.php:2175
+#: src/Admin/Connections.php:2221
 msgid "Approved assistants"
 msgstr ""
 
-#: src/Admin/Connections.php:2176
+#: src/Admin/Connections.php:2222
 msgid "Revoking a session disconnects that assistant straight away."
 msgstr ""
 
-#: src/Admin/Connections.php:2182
+#: src/Admin/Connections.php:2228
 msgid "No sessions. This user has not approved an assistant yet."
 msgstr ""
 
 #. translators: %s: human-readable time difference.
-#: src/Admin/Connections.php:2209
+#: src/Admin/Connections.php:2255
 #, php-format
 msgid "Connected %s"
 msgstr ""
 
-#: src/Admin/Connections.php:2218
+#: src/Admin/Connections.php:2264
 msgid "Revoke this session?"
 msgstr ""
 
-#: src/Admin/Connections.php:2243
+#: src/Admin/Connections.php:2289
 msgid "Revoke every session for this user?"
 msgstr ""
 
-#: src/Admin/Connections.php:2244
+#: src/Admin/Connections.php:2290
 msgid "Revoke all sessions"
 msgstr ""
 
-#: src/Admin/Connections.php:2308
+#: src/Admin/Connections.php:2370
 #: src/Admin/ConnectPage.php:163
-#: src/Admin/Dashboard.php:216
-#: src/Admin/Settings.php:445
+#: src/Admin/Dashboard.php:215
+#: src/Admin/Settings.php:444
 msgid "Copied!"
 msgstr ""
 
-#: src/Admin/Connections.php:2309
+#: src/Admin/Connections.php:2371
 #: src/Admin/ConnectPage.php:164
-#: src/Admin/Dashboard.php:217
-#: src/Admin/Settings.php:446
+#: src/Admin/Dashboard.php:216
+#: src/Admin/Settings.php:445
 msgid "Copy failed"
 msgstr ""
 
 #. translators: %s: the connection's name.
-#: src/Admin/Connections.php:2311
+#: src/Admin/Connections.php:2373
 #, php-format
 msgid "Disconnect %s?"
 msgstr ""
@@ -2118,7 +2895,7 @@ msgstr ""
 msgid "Steps for a specific app"
 msgstr ""
 
-#: src/Admin/Connections/GuidePanel.php:247
+#: src/Admin/Connections/GuidePanel.php:248
 msgid "Code"
 msgstr ""
 
@@ -2169,154 +2946,162 @@ msgid "You received this because %1$s added you to the people who may connect an
 msgstr ""
 
 #. translators: %d: number of selected connections.
-#: src/Admin/Connections/UserPickerModal.php:123
+#: src/Admin/Connections/UserPickerModal.php:125
 #, php-format
 msgid "%d selected"
 msgstr ""
 
 #. translators: 1: number of selected connections, 2: number of connections currently shown.
-#: src/Admin/Connections/UserPickerModal.php:127
+#: src/Admin/Connections/UserPickerModal.php:129
 #, php-format
 msgid "%1$d of %2$d connections selected"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:128
+#: src/Admin/Connections/UserPickerModal.php:130
 msgid "Selection mode on, nothing selected"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:129
+#: src/Admin/Connections/UserPickerModal.php:131
 msgid "Selection mode off"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:131
+#: src/Admin/Connections/UserPickerModal.php:133
 msgid "Searching…"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:132
+#: src/Admin/Connections/UserPickerModal.php:134
 msgid "Nobody matched that."
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:133
+#: src/Admin/Connections/UserPickerModal.php:135
 msgid "Could not search users. Reload the page and try again."
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:134
-#: src/Admin/Connections/UserPickerModal.php:220
+#: src/Admin/Connections/UserPickerModal.php:136
+msgid "Your site blocks the list of users this search reads, often through a security plugin that hides users from the REST API. Allow administrators to see users there, then reload this page."
+msgstr ""
+
+#: src/Admin/Connections/UserPickerModal.php:137
+msgid "Your account's role can't list users. Ask an administrator to add users, or give this role the list_users capability."
+msgstr ""
+
+#: src/Admin/Connections/UserPickerModal.php:138
+#: src/Admin/Connections/UserPickerModal.php:224
 msgid "Type a name, email address or user ID to search."
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:135
+#: src/Admin/Connections/UserPickerModal.php:139
 #: assets/src/context/ContextApp.jsx:99
 msgid "Loading…"
 msgstr ""
 
 #. translators: %s: the search term.
-#: src/Admin/Connections/UserPickerModal.php:139
+#: src/Admin/Connections/UserPickerModal.php:143
 #, php-format
 msgid "One match for “%s”, among users who can edit content."
 msgstr ""
 
 #. translators: 1: number of matches, 2: the search term.
-#: src/Admin/Connections/UserPickerModal.php:141
+#: src/Admin/Connections/UserPickerModal.php:145
 #, php-format
 msgid "%1$d matches for “%2$s”, among users who can edit content."
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:142
+#: src/Admin/Connections/UserPickerModal.php:146
 msgid "One person you can add. Search to find someone else."
 msgstr ""
 
 #. translators: %d: number of suggested people.
-#: src/Admin/Connections/UserPickerModal.php:144
+#: src/Admin/Connections/UserPickerModal.php:148
 #, php-format
 msgid "%d people you can add. Search to find someone else."
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:145
+#: src/Admin/Connections/UserPickerModal.php:149
 msgid "Everyone on this site can already approve an assistant. Search to find someone else."
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:146
+#: src/Admin/Connections/UserPickerModal.php:150
 msgid "Already allowed"
 msgstr ""
 
 #. translators: %s: the person's name.
-#: src/Admin/Connections/UserPickerModal.php:148
+#: src/Admin/Connections/UserPickerModal.php:152
 #, php-format
 msgid "Remove %s from the selection"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:150
+#: src/Admin/Connections/UserPickerModal.php:154
 msgid "Add 1 user"
 msgstr ""
 
 #. translators: %d: number of selected people.
-#: src/Admin/Connections/UserPickerModal.php:152
+#: src/Admin/Connections/UserPickerModal.php:156
 #, php-format
 msgid "Add %d users"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:153
+#: src/Admin/Connections/UserPickerModal.php:157
 msgid "Could not add the selected people. Reload the page and try again."
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:154
+#: src/Admin/Connections/UserPickerModal.php:158
 msgid "Sending…"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:155
+#: src/Admin/Connections/UserPickerModal.php:159
 msgid "Email sent"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:157
+#: src/Admin/Connections/UserPickerModal.php:161
 msgid "Couldn’t send, copy the link instead"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:158
+#: src/Admin/Connections/UserPickerModal.php:162
 msgid "Copied"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:159
+#: src/Admin/Connections/UserPickerModal.php:163
 msgid "Setup link copied"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:160
+#: src/Admin/Connections/UserPickerModal.php:164
 msgid "Couldn’t copy the link, try again"
 msgstr ""
 
 #. translators: %s: the person's name.
-#: src/Admin/Connections/UserPickerModal.php:163
+#: src/Admin/Connections/UserPickerModal.php:167
 #, php-format
 msgid "%s added to the selection."
 msgstr ""
 
 #. translators: %s: the person's name.
-#: src/Admin/Connections/UserPickerModal.php:165
+#: src/Admin/Connections/UserPickerModal.php:169
 #, php-format
 msgid "%s removed from the selection."
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:194
+#: src/Admin/Connections/UserPickerModal.php:198
 msgid "Choose who may approve an assistant"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:195
+#: src/Admin/Connections/UserPickerModal.php:199
 msgid "Search everyone on this site. You can add more people later on the Connections screen."
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:210
+#: src/Admin/Connections/UserPickerModal.php:214
 msgid "Search all users on this site by name, email or ID"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:212
+#: src/Admin/Connections/UserPickerModal.php:216
 msgid "Search by name, email or ID"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:216
+#: src/Admin/Connections/UserPickerModal.php:220
 msgid "Selected people"
 msgstr ""
 
-#: src/Admin/Connections/UserPickerModal.php:231
+#: src/Admin/Connections/UserPickerModal.php:235
 msgid "Email them how to connect"
 msgstr ""
 
@@ -2369,7 +3154,7 @@ msgid "Context"
 msgstr ""
 
 #: src/Admin/ContextPayload.php:160
-#: src/Core/AbilitiesManager.php:129
+#: src/Core/AbilitiesManager.php:124
 msgid "Site"
 msgstr ""
 
@@ -2386,7 +3171,7 @@ msgid "Content model"
 msgstr ""
 
 #: src/Admin/ContextPayload.php:164
-#: src/Core/AbilitiesManager.php:145
+#: src/Core/AbilitiesManager.php:144
 msgid "Commerce"
 msgstr ""
 
@@ -2469,245 +3254,245 @@ msgstr ""
 msgid "Dashboard"
 msgstr ""
 
-#: src/Admin/Dashboard.php:264
+#: src/Admin/Dashboard.php:263
 msgid "Connect your WordPress site to AI assistants like Claude and ChatGPT."
 msgstr ""
 
-#: src/Admin/Dashboard.php:317
+#: src/Admin/Dashboard.php:316
 msgid "Albert is connected and ready"
 msgstr ""
 
 #. translators: 1: number of connected assistants, 2: number of enabled abilities, 3: total abilities.
-#: src/Admin/Dashboard.php:321
+#: src/Admin/Dashboard.php:320
 #, php-format
 msgid "Setup complete. %1$d assistant connected, %2$d of %3$d abilities enabled."
 msgid_plural "Setup complete. %1$d assistants connected, %2$d of %3$d abilities enabled."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Dashboard.php:392
+#: src/Admin/Dashboard.php:391
 msgid "Set up Albert"
 msgstr ""
 
 #. translators: 1: steps done, 2: number of steps.
-#: src/Admin/Dashboard.php:397
+#: src/Admin/Dashboard.php:396
 #, php-format
 msgid "%1$d of %2$d done"
 msgstr ""
 
-#: src/Admin/Dashboard.php:413
+#: src/Admin/Dashboard.php:412
 msgid "Setup progress"
 msgstr ""
 
-#: src/Admin/Dashboard.php:424
+#: src/Admin/Dashboard.php:423
 msgid "Add an allowed user"
 msgstr ""
 
-#: src/Admin/Dashboard.php:425
+#: src/Admin/Dashboard.php:424
 msgid "Only the users you pick here can authorise an AI assistant to act on this site."
 msgstr ""
 
-#: src/Admin/Dashboard.php:430
+#: src/Admin/Dashboard.php:429
 msgid "Choose users"
 msgstr ""
 
-#: src/Admin/Dashboard.php:443
+#: src/Admin/Dashboard.php:442
 msgid "Connect an AI assistant"
 msgstr ""
 
 #. translators: 1: the assistant's name, 2: how long ago it connected, e.g. "2 minutes ago".
-#: src/Admin/Dashboard.php:451
+#: src/Admin/Dashboard.php:450
 #, php-format
 msgid "%1$s connected %2$s."
 msgstr ""
 
-#: src/Admin/Dashboard.php:453
-#: src/Admin/Dashboard.php:1303
+#: src/Admin/Dashboard.php:452
+#: src/Admin/Dashboard.php:1302
 msgid "Manage connections"
 msgstr ""
 
 #. translators: %d: number of abilities enabled by default.
-#: src/Admin/Dashboard.php:470
+#: src/Admin/Dashboard.php:469
 #, php-format
 msgid "%d abilities are on by default."
 msgstr ""
 
-#: src/Admin/Dashboard.php:477
+#: src/Admin/Dashboard.php:476
 msgid "Choose what Albert may do"
 msgstr ""
 
-#: src/Admin/Dashboard.php:483
+#: src/Admin/Dashboard.php:482
 msgid "Review them"
 msgstr ""
 
 #. translators: %s: what the owner is asked to do, e.g. "Install the MCP Adapter plugin".
-#: src/Admin/Dashboard.php:496
+#: src/Admin/Dashboard.php:495
 #, php-format
 msgid "Recommended: %s"
 msgstr ""
 
-#: src/Admin/Dashboard.php:551
+#: src/Admin/Dashboard.php:550
 msgid "(done)"
 msgstr ""
 
-#: src/Admin/Dashboard.php:553
+#: src/Admin/Dashboard.php:552
 msgid "(current step)"
 msgstr ""
 
-#: src/Admin/Dashboard.php:555
+#: src/Admin/Dashboard.php:554
 msgid "(not started)"
 msgstr ""
 
 #. translators: %d: number of abilities currently switched off.
-#: src/Admin/Dashboard.php:600
+#: src/Admin/Dashboard.php:599
 #, php-format
 msgid "Review the %d you switched off"
 msgid_plural "Review the %d you switched off"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Dashboard.php:609
+#: src/Admin/Dashboard.php:608
 msgid "Enabled abilities"
 msgstr ""
 
 #. translators: 1: enabled ability count, 2: total ability count.
-#: src/Admin/Dashboard.php:612
+#: src/Admin/Dashboard.php:611
 #, php-format
 msgid "%1$d / %2$d"
 msgstr ""
 
-#: src/Admin/Dashboard.php:711
-#: src/Admin/Dashboard.php:728
+#: src/Admin/Dashboard.php:710
+#: src/Admin/Dashboard.php:727
 msgid "Recent activity"
 msgstr ""
 
-#: src/Admin/Dashboard.php:731
+#: src/Admin/Dashboard.php:730
 msgid "The most recent ability executions and connections"
 msgstr ""
 
-#: src/Admin/Dashboard.php:734
-#: src/Admin/Settings.php:536
+#: src/Admin/Dashboard.php:733
+#: src/Admin/Settings.php:535
 msgid "Status"
 msgstr ""
 
-#: src/Admin/Dashboard.php:735
+#: src/Admin/Dashboard.php:734
 msgid "Event"
 msgstr ""
 
-#: src/Admin/Dashboard.php:736
+#: src/Admin/Dashboard.php:735
 msgid "By"
 msgstr ""
 
-#: src/Admin/Dashboard.php:737
+#: src/Admin/Dashboard.php:736
 msgid "When"
 msgstr ""
 
-#: src/Admin/Dashboard.php:763
+#: src/Admin/Dashboard.php:762
 msgid "Nothing has happened yet. Connect an AI assistant to get started."
 msgstr ""
 
-#: src/Admin/Dashboard.php:773
+#: src/Admin/Dashboard.php:772
 msgid "Premium is installed but switched off"
 msgstr ""
 
-#: src/Admin/Dashboard.php:774
+#: src/Admin/Dashboard.php:773
 msgid "This list only goes back a few actions"
 msgstr ""
 
-#: src/Admin/Dashboard.php:782
+#: src/Admin/Dashboard.php:781
 msgid "Nothing is being kept while it is off. Albert holds only the most recent runs of each ability, so this history is being lost as it happens."
 msgstr ""
 
-#: src/Admin/Dashboard.php:783
+#: src/Admin/Dashboard.php:782
 msgid "Albert keeps only the most recent runs of each ability, so anything older than this is already gone."
 msgstr ""
 
-#: src/Admin/Dashboard.php:788
+#: src/Admin/Dashboard.php:787
 msgid "Every action kept, for as long as you choose"
 msgstr ""
 
-#: src/Admin/Dashboard.php:789
+#: src/Admin/Dashboard.php:788
 msgid "Filter by person, assistant or date"
 msgstr ""
 
-#: src/Admin/Dashboard.php:790
+#: src/Admin/Dashboard.php:789
 msgid "See what was sent and what came back, errors included"
 msgstr ""
 
-#: src/Admin/Dashboard.php:794
-#: src/Admin/Dashboard.php:1254
-#: src/Admin/Dashboard/Attention.php:205
+#: src/Admin/Dashboard.php:793
+#: src/Admin/Dashboard.php:1253
+#: src/Admin/Dashboard/Attention.php:202
 #: assets/src/skills/SkillsApp.jsx:214
 msgid "Switch it on"
 msgstr ""
 
-#: src/Admin/Dashboard.php:798
+#: src/Admin/Dashboard.php:797
 msgid "Keep your full history"
 msgstr ""
 
-#: src/Admin/Dashboard.php:799
-#: src/Admin/Dashboard.php:1259
-#: src/Admin/Dashboard.php:1361
-#: src/Admin/Dashboard.php:1368
-#: src/Admin/Settings.php:681
-#: src/OAuth/Endpoints/AuthorizationPage.php:764
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:149
+#: src/Admin/Dashboard.php:798
+#: src/Admin/Dashboard.php:1258
+#: src/Admin/Dashboard.php:1360
+#: src/Admin/Dashboard.php:1367
+#: src/Admin/Settings.php:680
+#: src/OAuth/Endpoints/AuthorizationPage.php:770
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:103
 msgid "(opens in a new tab)"
 msgstr ""
 
-#: src/Admin/Dashboard.php:828
-#: src/Admin/SettingsBootstrap.php:118
+#: src/Admin/Dashboard.php:827
+#: src/Admin/SettingsBootstrap.php:114
 msgid "Strict"
 msgstr ""
 
-#: src/Admin/Dashboard.php:829
+#: src/Admin/Dashboard.php:828
 msgid "Personal details are removed"
 msgstr ""
 
-#: src/Admin/Dashboard.php:833
-#: src/Admin/SettingsBootstrap.php:123
+#: src/Admin/Dashboard.php:832
+#: src/Admin/SettingsBootstrap.php:119
 msgid "Balanced"
 msgstr ""
 
-#: src/Admin/Dashboard.php:834
+#: src/Admin/Dashboard.php:833
 msgid "Emails and names are masked"
 msgstr ""
 
-#: src/Admin/Dashboard.php:838
-#: src/Admin/SettingsBootstrap.php:68
-#: src/Admin/SettingsBootstrap.php:127
+#: src/Admin/Dashboard.php:837
+#: src/Admin/SettingsBootstrap.php:67
+#: src/Admin/SettingsBootstrap.php:123
 msgid "Off"
 msgstr ""
 
-#: src/Admin/Dashboard.php:839
+#: src/Admin/Dashboard.php:838
 msgid "Assistants see personal details in full"
 msgstr ""
 
-#: src/Admin/Dashboard.php:847
-#: src/Admin/SettingsBootstrap.php:96
+#: src/Admin/Dashboard.php:846
+#: src/Admin/SettingsBootstrap.php:92
 msgid "Privacy"
 msgstr ""
 
-#: src/Admin/Dashboard.php:871
+#: src/Admin/Dashboard.php:870
 #: src/functions.php:38
 msgid "Insufficient permissions."
 msgstr ""
 
-#: src/Admin/Dashboard.php:879
+#: src/Admin/Dashboard.php:878
 msgid "Nothing to dismiss."
 msgstr ""
 
-#: src/Admin/Dashboard.php:893
+#: src/Admin/Dashboard.php:892
 msgid "That item cannot be dismissed."
 msgstr ""
 
-#: src/Admin/Dashboard.php:918
+#: src/Admin/Dashboard.php:917
 msgid "Nothing right now. Anything that needs a decision from you shows up here."
 msgstr ""
 
 #. translators: %d: how many things need attention
-#: src/Admin/Dashboard.php:929
-#: src/Admin/Dashboard.php:952
+#: src/Admin/Dashboard.php:928
+#: src/Admin/Dashboard.php:951
 #, php-format
 msgid "%d thing Albert noticed on this site."
 msgid_plural "%d things Albert noticed on this site."
@@ -2715,207 +3500,193 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: how many things need attention
-#: src/Admin/Dashboard.php:932
+#: src/Admin/Dashboard.php:931
 #, php-format
 msgid "%d things Albert noticed on this site."
 msgstr ""
 
-#: src/Admin/Dashboard.php:934
+#: src/Admin/Dashboard.php:933
 msgid "Item dismissed."
 msgstr ""
 
-#: src/Admin/Dashboard.php:945
+#: src/Admin/Dashboard.php:944
 msgid "Needs your attention"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1026
+#: src/Admin/Dashboard.php:1025
 msgid "Dismiss"
 msgstr ""
 
 #. translators: 1: opening <code>, 2: closing </code> wrapping a filter name
-#: src/Admin/Dashboard.php:1084
+#: src/Admin/Dashboard.php:1083
 #, php-format
 msgid "An %1$salbert/mcp/external_url%2$s filter returned an address Albert could not use, so this is your site's own address instead."
 msgstr ""
 
 #. translators: 1: opening <code>, 2: closing </code> wrapping a filter name
-#: src/Admin/Dashboard.php:1091
+#: src/Admin/Dashboard.php:1090
 #, php-format
 msgid "This address comes from the %1$salbert/mcp/external_url%2$s filter, not from your site address."
 msgstr ""
 
-#: src/Admin/Dashboard.php:1136
+#: src/Admin/Dashboard.php:1135
 msgid "What you will be able to ask"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1137
+#: src/Admin/Dashboard.php:1136
 msgid "Try asking your assistant"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1145
+#: src/Admin/Dashboard.php:1144
 msgid "Once an assistant is connected, on this site, with what you already have switched on."
 msgstr ""
 
-#: src/Admin/Dashboard.php:1146
+#: src/Admin/Dashboard.php:1145
 msgid "Each one works here today, because the abilities it needs are switched on."
 msgstr ""
 
-#: src/Admin/Dashboard.php:1172
+#: src/Admin/Dashboard.php:1171
 msgid "Only the people you choose can authorise an assistant, and you decide which of these it is allowed to do."
 msgstr ""
 
-#: src/Admin/Dashboard.php:1225
+#: src/Admin/Dashboard.php:1224
 msgid "Installed, but switched off"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1258
+#: src/Admin/Dashboard.php:1257
 msgid "See what it adds"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1282
+#: src/Admin/Dashboard.php:1281
 msgid "MCP endpoint"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1283
+#: src/Admin/Dashboard.php:1282
 msgid "Add this URL to your AI assistant as an MCP connector."
 msgstr ""
 
-#: src/Admin/Dashboard.php:1288
+#: src/Admin/Dashboard.php:1287
 msgid "MCP endpoint address"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1352
+#: src/Admin/Dashboard.php:1351
 msgid "Resources"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1360
+#: src/Admin/Dashboard.php:1359
 msgid "Documentation"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1367
+#: src/Admin/Dashboard.php:1366
 msgid "Report an issue"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1415
+#: src/Admin/Dashboard.php:1414
 msgid "just now"
 msgstr ""
 
 #. translators: 1: a comma-separated list of assistant names, 2: how many further assistants are connected.
-#: src/Admin/Dashboard.php:1528
+#: src/Admin/Dashboard.php:1527
 #, php-format
 msgid "%1$s and %2$d more"
 msgid_plural "%1$s and %2$d more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Dashboard.php:1580
+#: src/Admin/Dashboard.php:1579
 msgid "New connection"
 msgstr ""
 
 #. translators: %s: Client name
-#: src/Admin/Dashboard.php:1584
+#: src/Admin/Dashboard.php:1583
 #, php-format
 msgid "New connection: %s"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1594
+#: src/Admin/Dashboard.php:1593
 msgid "System"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1614
-#: src/Core/AbilitiesRegistry.php:124
+#: src/Admin/Dashboard.php:1613
+#: src/Core/AbilitiesRegistry.php:126
 msgid "Unknown"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1695
-#: assets/src/abilities/fields.js:118
+#: src/Admin/Dashboard.php:1692
+#: assets/src/abilities/fields.js:120
 msgid "Failed"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1703
-#: assets/src/abilities/fields.js:114
+#: src/Admin/Dashboard.php:1700
+#: assets/src/abilities/fields.js:116
 msgid "Blocked"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1707
+#: src/Admin/Dashboard.php:1704
 msgid "Connection"
 msgstr ""
 
-#: src/Admin/Dashboard.php:1711
-#: assets/src/abilities/fields.js:110
+#: src/Admin/Dashboard.php:1708
+#: assets/src/abilities/fields.js:112
 msgid "Success"
 msgstr ""
 
-#: src/Admin/Dashboard/Attention.php:192
+#: src/Admin/Dashboard/Attention.php:189
 msgid "Unreachable"
 msgstr ""
 
 #. translators: %d: how many skills apply to this site
-#: src/Admin/Dashboard/Attention.php:195
+#: src/Admin/Dashboard/Attention.php:192
 #, php-format
 msgid "%d skill applies to this site but no assistant can read it"
 msgid_plural "%d skills apply to this site but no assistant can read them"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Dashboard/Attention.php:203
+#: src/Admin/Dashboard/Attention.php:200
 msgid "Fetching a skill needs the Get skill ability, which is switched off."
 msgstr ""
 
-#: src/Admin/Dashboard/Attention.php:240
-#: src/Admin/Dashboard/Attention.php:343
+#: src/Admin/Dashboard/Attention.php:237
+#: src/Admin/Dashboard/Attention.php:298
 msgid "Can't connect"
 msgstr ""
 
-#: src/Admin/Dashboard/Attention.php:241
+#: src/Admin/Dashboard/Attention.php:238
 msgid "Assistants can't connect while permalinks are set to Plain"
 msgstr ""
 
-#: src/Admin/Dashboard/Attention.php:242
+#: src/Admin/Dashboard/Attention.php:239
 msgid "Albert's sign-in addresses need a permalink structure. Choose any other setting, such as Post name."
 msgstr ""
 
-#: src/Admin/Dashboard/Attention.php:244
+#: src/Admin/Dashboard/Attention.php:241
 msgid "Change permalinks"
 msgstr ""
 
-#: src/Admin/Dashboard/Attention.php:273
+#: src/Admin/Dashboard/Attention.php:270
 msgid "Ignored"
 msgstr ""
 
-#: src/Admin/Dashboard/Attention.php:274
+#: src/Admin/Dashboard/Attention.php:271
 msgid "The endpoint address set in code was rejected"
 msgstr ""
 
-#: src/Admin/Dashboard/Attention.php:275
+#: src/Admin/Dashboard/Attention.php:272
 msgid "An albert/mcp/external_url filter returned an address Albert could not use, so assistants are being given this site's own address instead."
 msgstr ""
 
-#: src/Admin/Dashboard/Attention.php:308
-msgid "Not active"
-msgstr ""
-
-#: src/Admin/Dashboard/Attention.php:309
-msgid "Safe mode is on but cannot hold anything"
-msgstr ""
-
-#. translators: %s: the WordPress version this site is running.
-#: src/Admin/Dashboard/Attention.php:312
-#, php-format
-msgid "Holding destructive actions for approval needs WordPress 7.1. This site runs %s, so deletions an assistant requests are carried out immediately and the Approvals screen stays empty."
-msgstr ""
-
-#: src/Admin/Dashboard/Attention.php:344
+#: src/Admin/Dashboard/Attention.php:299
 msgid "New assistants can't connect: the connection limit is reached"
 msgstr ""
 
 #. translators: %d: the maximum number of registered apps.
-#: src/Admin/Dashboard/Attention.php:347
+#: src/Admin/Dashboard/Attention.php:302
 #, php-format
-msgid "This site allows %d registered apps, and every place is held by a connected assistant or one that started connecting in the last few minutes. Disconnect assistants you no longer use."
+msgid "This site allows %d connected apps, and every place is in use. Disconnect assistants you no longer use."
 msgstr ""
 
-#: src/Admin/Dashboard/Attention.php:351
+#: src/Admin/Dashboard/Attention.php:306
 msgid "Open Connections"
 msgstr ""
 
@@ -2935,45 +3706,69 @@ msgstr ""
 msgid "You already have this. Switch it on to let assistants work with your shop."
 msgstr ""
 
-#: src/Admin/Dashboard/Suggestions.php:162
+#: src/Admin/Dashboard/Suggestions.php:156
 msgid "Which products sold best last month?"
 msgstr ""
 
-#: src/Admin/Dashboard/Suggestions.php:169
+#: src/Admin/Dashboard/Suggestions.php:163
 msgid "How many orders came in this week, and what did they add up to?"
 msgstr ""
 
-#: src/Admin/Dashboard/Suggestions.php:173
+#: src/Admin/Dashboard/Suggestions.php:167
 msgid "Which posts have not been touched in over a year?"
 msgstr ""
 
-#: src/Admin/Dashboard/Suggestions.php:177
+#: src/Admin/Dashboard/Suggestions.php:171
 msgid "Give me an overview of the pages on this site and how they are organised."
 msgstr ""
 
-#: src/Admin/Dashboard/Suggestions.php:187
+#: src/Admin/Dashboard/Suggestions.php:181
 msgid "Turn my three most recent posts into a round-up, and leave it as a draft."
 msgstr ""
 
-#: src/Admin/Dashboard/Suggestions.php:191
+#: src/Admin/Dashboard/Suggestions.php:185
+msgid "Which images are missing alt text? Suggest alt text for each, and add it once I agree."
+msgstr ""
+
+#: src/Admin/Dashboard/Suggestions.php:189
+msgid "Are any comments waiting for approval? Tell me which look like spam."
+msgstr ""
+
+#: src/Admin/Dashboard/Suggestions.php:193
+msgid "Find every page, post, pattern, header and footer that mentions our opening hours."
+msgstr ""
+
+#: src/Admin/Dashboard/Suggestions.php:197
+msgid "Does Site Health flag anything I should fix?"
+msgstr ""
+
+#: src/Admin/Dashboard/Suggestions.php:201
+msgid "What changed the last time my homepage was edited?"
+msgstr ""
+
+#: src/Admin/Dashboard/Suggestions.php:205
 msgid "Who has administrator access to this site?"
 msgstr ""
 
-#: src/Admin/Dashboard/Suggestions.php:195
+#: src/Admin/Dashboard/Suggestions.php:209
 msgid "Summarise what this site is about."
 msgstr ""
 
+#: src/Admin/Dashboard/Suggestions.php:213
+msgid "Which menu do visitors see on my site, and what is in it?"
+msgstr ""
+
 #. translators: %s: the label of the thing being explained.
-#: src/Admin/InfoTip.php:114
+#: src/Admin/InfoTip.php:138
 #, php-format
 msgid "More about %s"
 msgstr ""
 
-#: src/Admin/Rest/AbilitiesController.php:140
+#: src/Admin/Rest/AbilitiesController.php:142
 msgid "Ability not found."
 msgstr ""
 
-#: src/Admin/Rest/AbilitiesController.php:149
+#: src/Admin/Rest/AbilitiesController.php:151
 msgid "This ability is required by the MCP adapter and can’t be toggled."
 msgstr ""
 
@@ -2993,244 +3788,238 @@ msgstr ""
 msgid "Settings saved."
 msgstr ""
 
-#: src/Admin/Settings.php:496
+#: src/Admin/Settings.php:495
 msgid "Activating..."
 msgstr ""
 
-#: src/Admin/Settings.php:497
-#: src/Admin/SettingsBootstrap.php:434
+#: src/Admin/Settings.php:496
+#: src/Admin/SettingsBootstrap.php:391
 msgid "Activate"
 msgstr ""
 
-#: src/Admin/Settings.php:498
+#: src/Admin/Settings.php:497
 msgid "Deactivating..."
 msgstr ""
 
 #. translators: %s: addon name
-#: src/Admin/Settings.php:500
+#: src/Admin/Settings.php:499
 #, php-format
 msgid "Deactivate license for %s?"
 msgstr ""
 
-#: src/Admin/Settings.php:501
+#: src/Admin/Settings.php:500
 msgid "Please enter a license key."
 msgstr ""
 
-#: src/Admin/Settings.php:502
+#: src/Admin/Settings.php:501
 msgid "A network error occurred. Please try again."
 msgstr ""
 
-#: src/Admin/Settings.php:534
+#: src/Admin/Settings.php:533
 msgid "Addon"
 msgstr ""
 
-#: src/Admin/Settings.php:535
+#: src/Admin/Settings.php:534
 msgid "Version"
 msgstr ""
 
-#: src/Admin/Settings.php:537
+#: src/Admin/Settings.php:536
 msgid "Expires"
 msgstr ""
 
-#: src/Admin/Settings.php:538
+#: src/Admin/Settings.php:537
 msgid "Actions"
 msgstr ""
 
-#: src/Admin/Settings.php:577
+#: src/Admin/Settings.php:576
 msgid "Active"
 msgstr ""
 
-#: src/Admin/Settings.php:596
+#: src/Admin/Settings.php:595
 msgid "Not activated"
 msgstr ""
 
-#: src/Admin/Settings.php:621
+#: src/Admin/Settings.php:620
 msgid "Lifetime"
 msgstr ""
 
-#: src/Admin/Settings.php:653
+#: src/Admin/Settings.php:652
 msgid "Deactivate"
 msgstr ""
 
-#: src/Admin/Settings.php:657
+#: src/Admin/Settings.php:656
 msgid "Renew"
 msgstr ""
 
-#: src/Admin/Settings.php:676
+#: src/Admin/Settings.php:675
 msgid "Premium addons extend Albert with powerful features like bulk operations, WooCommerce management, and SEO tools."
 msgstr ""
 
-#: src/Admin/Settings.php:680
+#: src/Admin/Settings.php:679
 msgid "Explore addons"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:47
+#: src/Admin/SettingsBootstrap.php:46
 msgid "Safe mode"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:50
+#: src/Admin/SettingsBootstrap.php:49
 msgid "Whether destructive actions an assistant requests wait for your approval."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:58
+#: src/Admin/SettingsBootstrap.php:57
 msgid "Hold destructive actions"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:63
+#: src/Admin/SettingsBootstrap.php:62
 msgid "On"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:64
-msgid "Deletions and other destructive changes are held on the Approvals screen until you approve them."
+#: src/Admin/SettingsBootstrap.php:63
+msgid "Permanent deletions and other destructive changes are held on the Approvals screen until you approve them. Moving a post, page or pattern to the trash is not held."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:69
+#: src/Admin/SettingsBootstrap.php:68
 msgid "Assistants can make destructive changes immediately, without approval."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:79
+#: src/Admin/SettingsBootstrap.php:76
 msgid "Approval window"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:80
+#: src/Admin/SettingsBootstrap.php:77
 msgid "How long a held action stays approvable before it expires, in minutes. Shorter is safer: approving a stale request can overwrite edits made in the meantime."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:81
+#: src/Admin/SettingsBootstrap.php:78
 msgid "minutes"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:99
+#: src/Admin/SettingsBootstrap.php:95
 msgid "What AI assistants may see of your customers and users."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:104
+#: src/Admin/SettingsBootstrap.php:100
 msgid "Privacy mode"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:119
+#: src/Admin/SettingsBootstrap.php:115
 msgid "Personal data is always anonymised, in every request."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:124
-msgid "Anonymised by default, but an authorised request can reveal it."
+#: src/Admin/SettingsBootstrap.php:120
+msgid "Anonymised by default. Anyone allowed to use an ability can ask it for the real data."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:128
+#: src/Admin/SettingsBootstrap.php:124
 msgid "Personal data is passed through as-is. Payment data is still always removed."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:140
+#: src/Admin/SettingsBootstrap.php:136
 msgid "Standing invitations and unused connections."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:145
+#: src/Admin/SettingsBootstrap.php:141
 msgid "Invitation expiry"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:146
-#: src/Admin/SettingsBootstrap.php:161
-#: src/Admin/SettingsBootstrap.php:176
+#: src/Admin/SettingsBootstrap.php:142
+#: src/Admin/SettingsBootstrap.php:157
+#: src/Admin/SettingsBootstrap.php:172
 msgid "days"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:147
+#: src/Admin/SettingsBootstrap.php:143
 msgid "How long someone has to approve their first assistant."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:148
+#: src/Admin/SettingsBootstrap.php:144
 msgid "Once they approve one, their access no longer expires. Set to 0 for no deadline."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:160
+#: src/Admin/SettingsBootstrap.php:156
 msgid "Drop never-used connections"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:162
+#: src/Admin/SettingsBootstrap.php:158
 msgid "Removes connections that were approved but never used."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:163
+#: src/Admin/SettingsBootstrap.php:159
 msgid "Once a connection has been used, this rule stops applying to it. Set to 0 to keep them."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:175
+#: src/Admin/SettingsBootstrap.php:171
 msgid "Expire idle connections"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:177
+#: src/Admin/SettingsBootstrap.php:173
 msgid "Removes connections that have gone quiet."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:178
+#: src/Admin/SettingsBootstrap.php:174
 msgid "Off by default, because a quiet assistant is not always an abandoned one. Set to 0 to keep them."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:191
+#: src/Admin/SettingsBootstrap.php:187
 msgid "Uploads"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:194
+#: src/Admin/SettingsBootstrap.php:190
 msgid "How assistants send files to your site."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:207
+#: src/Admin/SettingsBootstrap.php:203
 msgid "Default upload size limit"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:208
+#: src/Admin/SettingsBootstrap.php:204
 msgid "MB"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:209
+#: src/Admin/SettingsBootstrap.php:205
 msgid "Used when an assistant does not ask for a specific limit."
 msgstr ""
 
 #. translators: %s: this server's own upload size ceiling, human-readable (e.g. "64 MB")
-#: src/Admin/SettingsBootstrap.php:212
+#: src/Admin/SettingsBootstrap.php:208
 #, php-format
 msgid "An assistant can ask for a smaller or larger limit per upload. This server never accepts more than %s, whatever is set here."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:230
+#: src/Admin/SettingsBootstrap.php:226
 msgid "Licenses"
 msgstr ""
 
-#. translators: %s: the WordPress version this site is running.
-#: src/Admin/SettingsBootstrap.php:292
-#, php-format
-msgid "Safe mode needs WordPress 7.1, which added the check it relies on. This site runs %s, so destructive actions are not being held. Update WordPress to switch it on."
-msgstr ""
-
 #. translators: 1: opening <code>, 2: closing </code> wrapping the filter name, 3: the value the filter requested (MB), 4: the maximum allowed (MB)
-#: src/Admin/SettingsBootstrap.php:320
+#: src/Admin/SettingsBootstrap.php:277
 #, php-format
 msgid "The %1$salbert/media/upload_link_max_bytes%2$s filter is requesting %3$d MB, above the %4$d MB maximum, so %4$d MB is being used instead."
 msgstr ""
 
 #. translators: 1: opening <code>, 2: closing </code> wrapping the filter name, 3: the effective size, human-readable (e.g. "500 B")
-#: src/Admin/SettingsBootstrap.php:333
+#: src/Admin/SettingsBootstrap.php:290
 #, php-format
 msgid "The %1$salbert/media/upload_link_max_bytes%2$s filter is overriding what's saved here. The limit in effect is %3$s."
 msgstr ""
 
 #. translators: %d: the default that was saved instead (MB)
-#: src/Admin/SettingsBootstrap.php:376
+#: src/Admin/SettingsBootstrap.php:333
 #, php-format
 msgid "The default upload size limit must be at least 1 MB, so %d MB was saved instead."
 msgstr ""
 
 #. translators: 1: the value that was requested (MB), 2: the maximum allowed (MB)
-#: src/Admin/SettingsBootstrap.php:392
+#: src/Admin/SettingsBootstrap.php:349
 #, php-format
 msgid "The default upload size limit can't be set above %2$d MB. %1$d MB was requested, so %2$d MB was saved instead."
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:430
+#: src/Admin/SettingsBootstrap.php:387
 msgid "Enter your license key"
 msgstr ""
 
-#: src/Admin/SettingsBootstrap.php:438
+#: src/Admin/SettingsBootstrap.php:395
 msgid "Enter your license key. It will be automatically matched to the correct addon."
 msgstr ""
 
@@ -3304,22 +4093,22 @@ msgstr ""
 msgid "A \"%1$s\" field (\"%2$s\" in section \"%3$s\") requires a non-empty \"options\" array."
 msgstr ""
 
-#: src/Admin/SettingsRenderer.php:657
+#: src/Admin/SettingsRenderer.php:659
 msgid "Recommended"
 msgstr ""
 
-#: src/Admin/SettingsRenderer.php:733
+#: src/Admin/SettingsRenderer.php:736
 msgid "A settings field could not be rendered. Check the PHP error log for details."
 msgstr ""
 
 #. translators: 1: opening <code>, 2: closing </code> wrapping a PHP constant name
-#: src/Admin/SettingsRenderer.php:758
+#: src/Admin/SettingsRenderer.php:761
 #, php-format
 msgid "Set by the %1$s%3$s%2$s constant in this site's configuration, so it can't be changed here."
 msgstr ""
 
 #. translators: 1: opening <code>, 2: closing </code> wrapping a filter name
-#: src/Admin/SettingsRenderer.php:766
+#: src/Admin/SettingsRenderer.php:769
 #, php-format
 msgid "Set in code by the %1$s%3$s%2$s filter, so it can't be changed here."
 msgstr ""
@@ -3344,40 +4133,48 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: block type name, e.g. core/cover.
-#: src/Blocks/BlockPolicy.php:128
+#: src/Blocks/BlockPolicy.php:101
 #, php-format
 msgid "Block '%s' is not available to you on this site. Call albert/list-block-types to see the blocks you may use, then replace it."
 msgstr ""
 
 #. translators: 1: block name at the path, 2: the path, e.g. [2], 3: replacement block name.
-#: src/Blocks/BlockTreeEditor.php:109
+#: src/Blocks/BlockTreeEditor.php:110
 #, php-format
 msgid "%1$s at %2$s has inner blocks, and they can't be kept automatically under %3$s. Send innerBlocks explicitly: the blocks to keep, or [] to remove them."
 msgstr ""
 
 #. translators: 1: supplied position, 2: comma-separated allowed positions.
-#: src/Blocks/BlockTreeEditor.php:174
+#: src/Blocks/BlockTreeEditor.php:216
 #, php-format
 msgid "Invalid position '%1$s'. Use one of: %2$s."
 msgstr ""
 
 #. translators: 1: block name, 2: the path, e.g. [2].
-#: src/Blocks/BlockTreeEditor.php:207
+#: src/Blocks/BlockTreeEditor.php:249
 #, php-format
 msgid "%1$s at %2$s can't contain inner blocks. Use position 'before' or 'after' to place a sibling, or target a container block such as core/group, core/columns or core/column."
 msgstr ""
 
 #. translators: 1: expected block name, 2: path, 3: actual block name.
-#: src/Blocks/BlockTreeEditor.php:399
+#: src/Blocks/BlockTreeEditor.php:437
 #, php-format
 msgid "Expected %1$s at %2$s but found %3$s. The post changed since you read it. Re-read and retry."
 msgstr ""
 
 #. translators: %s: the path, e.g. [2,0].
-#: src/Blocks/BlockTreeEditor.php:421
+#: src/Blocks/BlockTreeEditor.php:459
 #, php-format
 msgid "No block at path %s. Re-read the post for current paths."
 msgstr ""
+
+#. translators: 1: tag names, e.g. `<ta>`, 2: JSON list, e.g. ["ta"].
+#: src/Blocks/MarkupTags.php:112
+#, php-format
+msgid "This change removes %1$s, which the content had. Ask the person before removing it; if they agree, send the call again with remove_tags: %2$s. Nothing was saved."
+msgid_plural "This change removes %1$s, which the content had. Ask the person before removing them; if they agree, send the call again with remove_tags: %2$s. Nothing was saved."
+msgstr[0] ""
+msgstr[1] ""
 
 #. translators: %s: post type label (e.g. post or page).
 #: src/Blocks/WriteContentResolver.php:134
@@ -3385,163 +4182,197 @@ msgstr ""
 msgid "This %s uses the classic editor. Send HTML in the `content` field instead of structured `blocks`."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:125
+#: src/Blocks/WriteContentResolver.php:185
+msgid "This looks like Markdown, which isn't converted. Send it as `blocks` instead."
+msgstr ""
+
+#: src/Core/AbilitiesManager.php:120
 msgid "Content"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:126
+#: src/Core/AbilitiesManager.php:121
 msgid "Posts, pages, and media management."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:130
+#: src/Core/AbilitiesManager.php:125
 msgid "Site-level information and guidance."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:133
+#: src/Core/AbilitiesManager.php:128
 msgid "Users"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:134
+#: src/Core/AbilitiesManager.php:129
 msgid "User accounts, roles, and profiles."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:137
+#: src/Core/AbilitiesManager.php:132
 msgid "Taxonomies"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:138
+#: src/Core/AbilitiesManager.php:133
 msgid "Categories, tags, and custom taxonomies."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:141
+#: src/Core/AbilitiesManager.php:136
 msgid "Comments"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:142
+#: src/Core/AbilitiesManager.php:137
 msgid "Comment management."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:146
+#: src/Core/AbilitiesManager.php:140
+msgid "Menus"
+msgstr ""
+
+#: src/Core/AbilitiesManager.php:141
+msgid "Classic menus and block theme navigation."
+msgstr ""
+
+#: src/Core/AbilitiesManager.php:145
 msgid "Store and order management."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:149
+#: src/Core/AbilitiesManager.php:148
 msgid "SEO"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:150
+#: src/Core/AbilitiesManager.php:149
 msgid "Search engine optimization."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:153
+#: src/Core/AbilitiesManager.php:152
 msgid "Custom Fields"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:154
+#: src/Core/AbilitiesManager.php:153
 msgid "Custom field management."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:157
+#: src/Core/AbilitiesManager.php:156
 msgid "Forms"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:158
+#: src/Core/AbilitiesManager.php:157
 msgid "Form management."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:161
+#: src/Core/AbilitiesManager.php:160
 msgid "Learning"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:162
+#: src/Core/AbilitiesManager.php:161
 msgid "Learning management."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:165
+#: src/Core/AbilitiesManager.php:164
 msgid "Maintenance"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:166
+#: src/Core/AbilitiesManager.php:165
 msgid "Site maintenance and monitoring."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:173
+#: src/Core/AbilitiesManager.php:172
 msgid "Products"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:174
+#: src/Core/AbilitiesManager.php:173
 msgid "WooCommerce product management."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:177
+#: src/Core/AbilitiesManager.php:176
 msgid "Orders"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:178
+#: src/Core/AbilitiesManager.php:177
 msgid "WooCommerce order management."
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:181
+#: src/Core/AbilitiesManager.php:180
 msgid "Customers"
 msgstr ""
 
-#: src/Core/AbilitiesManager.php:182
+#: src/Core/AbilitiesManager.php:181
 msgid "WooCommerce customer management."
 msgstr ""
 
 #. translators: %s: number of new abilities.
-#: src/Core/AbilitiesManager.php:473
+#: src/Core/AbilitiesManager.php:461
 #, php-format
-msgid "Albert added %s new ability and disabled it by default for safety."
-msgid_plural "Albert added %s new abilities and disabled them by default for safety."
+msgid "Albert found %s new ability and switched it off for assistants until you review it."
+msgid_plural "Albert found %s new abilities and switched them off for assistants until you review them."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Core/AbilitiesManager.php:487
+#: src/Core/AbilitiesManager.php:475
 msgid "Review them on the Abilities page."
 msgstr ""
 
-#: src/Core/AbilitiesRegistry.php:62
+#: src/Core/AbilitiesRegistry.php:64
 msgid "WordPress core"
 msgstr ""
 
-#: src/Core/AbilitiesRegistry.php:64
+#: src/Core/AbilitiesRegistry.php:66
 #: src/MCP/Skills/Skill.php:355
 msgid "WooCommerce"
 msgstr ""
 
-#: src/Core/AbilitiesRegistry.php:65
+#: src/Core/AbilitiesRegistry.php:67
 msgid "ACF"
 msgstr ""
 
-#: src/Core/AnnotationPresenter.php:79
+#. translators: %s: ability name
+#: src/Core/AbilitiesState.php:129
+#, php-format
+msgid "The ability \"%s\" is switched off on this site."
+msgstr ""
+
+#: src/Core/AnnotationPresenter.php:91
+#: assets/src/abilities/constants.js:19
+#: assets/src/abilities/Toolbar.jsx:29
+msgid "Not declared"
+msgstr ""
+
+#: src/Core/AnnotationPresenter.php:92
+msgid "This ability doesn't say whether it reads, changes or deletes anything, so Albert treats it as one that can make changes."
+msgstr ""
+
+#: src/Core/AnnotationPresenter.php:107
 #: assets/src/abilities/constants.js:16
 #: assets/src/abilities/Toolbar.jsx:26
 msgid "Read"
 msgstr ""
 
-#: src/Core/AnnotationPresenter.php:80
+#: src/Core/AnnotationPresenter.php:108
 msgid "Only reads data. It never creates, changes, or deletes anything on your site."
 msgstr ""
 
-#: src/Core/AnnotationPresenter.php:95
+#: src/Core/AnnotationPresenter.php:123
 #: assets/src/abilities/constants.js:17
 #: assets/src/abilities/Toolbar.jsx:27
 msgid "Write"
 msgstr ""
 
-#: src/Core/AnnotationPresenter.php:96
+#: src/Core/AnnotationPresenter.php:124
 msgid "Creates or updates content, settings, or files on your site."
 msgstr ""
 
-#: src/Core/AnnotationPresenter.php:111
+#: src/Core/AnnotationPresenter.php:139
 #: assets/src/abilities/constants.js:18
 #: assets/src/abilities/Toolbar.jsx:28
-msgid "Delete"
+msgid "Destructive"
 msgstr ""
 
-#: src/Core/AnnotationPresenter.php:112
-msgid "Permanently removes content. Deleted items may not be recoverable."
+#: src/Core/AnnotationPresenter.php:140
+msgid "Can remove or overwrite data in a way that may not be recoverable, or has a wide impact on your site."
+msgstr ""
+
+#. translators: 1: constant or filter name, 2: environment type
+#: src/Core/EnvironmentPolicy.php:214
+#, php-format
+msgid "%1$s sets an unknown policy for the %2$s environment, so it is ignored. Use toggles, read-write or all."
 msgstr ""
 
 #: src/Core/Tokens/TokenService.php:74
@@ -3585,6 +4416,14 @@ msgstr ""
 msgid "Other"
 msgstr ""
 
+#: src/Logging/ExecutionObserver.php:406
+msgid "The permission check denied this call without giving a reason."
+msgstr ""
+
+#: src/Logging/ExecutionObserver.php:422
+msgid "Validation failed."
+msgstr ""
+
 #: src/MCP/AdapterHealth.php:89
 msgid "Albert MCP endpoint"
 msgstr ""
@@ -3601,52 +4440,58 @@ msgstr ""
 msgid "Albert&#8217;s MCP endpoint is switched off"
 msgstr ""
 
-#: src/MCP/AdapterHealth.php:127
-#: src/OAuth/DiscoveryHealth.php:218
+#: src/MCP/AdapterHealth.php:132
+#: src/OAuth/DiscoveryHealth.php:222
 msgid "Albert:"
 msgstr ""
 
-#: src/MCP/AdapterHealth.php:142
+#: src/MCP/AdapterHealth.php:150
 msgid "The MCP endpoint is switched off, so every request to it fails with an authentication error even though no token would work: there is nothing registered to authenticate against."
 msgstr ""
 
 #. translators: %s: the composer command that rebuilds dependencies
-#: src/MCP/AdapterHealth.php:147
+#: src/MCP/AdapterHealth.php:155
 #, php-format
 msgid "The MCP library is not installed. Reinstall Albert from an official release, or if you are running it from source, install its dependencies with %s."
 msgstr ""
 
+#. translators: %s: list of missing class names
+#: src/MCP/AdapterHealth.php:163
+#, php-format
+msgid "A copy of the MCP library loaded by another plugin is older than Albert needs and does not provide: %s. Update the plugin that supplies it, or deactivate it so Albert&#8217;s own copy is used. Site Health shows where it is loaded from."
+msgstr ""
+
 #. translators: 1: path of the loaded library, 2: list of missing class names
-#: src/MCP/AdapterHealth.php:154
+#: src/MCP/AdapterHealth.php:170
 #, php-format
 msgid "A copy of the MCP library is loaded from %1$s, but it is older than Albert needs and does not provide: %2$s. Update the plugin that supplies it, or deactivate it so Albert&#8217;s own copy is used."
 msgstr ""
 
-#: src/MCP/AdapterHealth.php:179
+#: src/MCP/AdapterHealth.php:195
 msgid "MCP library"
 msgstr ""
 
-#: src/MCP/AdapterHealth.php:181
+#: src/MCP/AdapterHealth.php:197
 msgid "usable"
 msgstr ""
 
-#: src/MCP/AdapterHealth.php:182
+#: src/MCP/AdapterHealth.php:198
 msgid "unusable: the MCP endpoint cannot work"
 msgstr ""
 
-#: src/MCP/AdapterHealth.php:185
+#: src/MCP/AdapterHealth.php:201
 msgid "MCP library loaded from"
 msgstr ""
 
-#: src/MCP/AdapterHealth.php:186
+#: src/MCP/AdapterHealth.php:202
 msgid "not loaded"
 msgstr ""
 
-#: src/MCP/AdapterHealth.php:189
+#: src/MCP/AdapterHealth.php:205
 msgid "Missing from that copy"
 msgstr ""
 
-#: src/MCP/AdapterHealth.php:190
+#: src/MCP/AdapterHealth.php:206
 msgid "nothing"
 msgstr ""
 
@@ -3714,20 +4559,20 @@ msgstr ""
 msgid "The block types this user may use, with title, category and whether each block renders dynamically."
 msgstr ""
 
-#: src/MCP/Server.php:424
+#: src/MCP/Server.php:426
 msgid "Albert MCP Server"
 msgstr ""
 
-#: src/MCP/Server.php:425
+#: src/MCP/Server.php:427
 msgid "MCP server for AI assistants to interact with WordPress"
 msgstr ""
 
-#: src/MCP/Server.php:492
+#: src/MCP/Server.php:494
 msgid "OAuth Bearer token required. Include an Authorization header with a valid Bearer token."
 msgstr ""
 
 #. translators: %s: invalid URL returned by the filter
-#: src/MCP/Server.php:604
+#: src/MCP/Server.php:606
 #, php-format
 msgid "Filter returned an invalid URL: %s. Falling back to rest_url()."
 msgstr ""
@@ -3789,53 +4634,47 @@ msgstr ""
 msgid "this is a multisite network"
 msgstr ""
 
-#. translators: %s: ability identifier
-#: src/MCP/ToolCallObserver.php:199
-#, php-format
-msgid "The \"%s\" operation could not be completed."
-msgstr ""
-
 #. translators: %s: parameter name
-#: src/MCP/ToolCallObserver.php:281
+#: src/MCP/ToolCallObserver.php:187
 #, php-format
 msgid "Missing required parameter: %s."
 msgstr ""
 
 #. translators: %s: comma-separated list of parameter names
-#: src/MCP/ToolCallObserver.php:283
+#: src/MCP/ToolCallObserver.php:189
 #, php-format
 msgid "Missing required parameters: %s."
 msgstr ""
 
 #. translators: %s: the validator's reason
-#: src/MCP/ToolCallObserver.php:291
+#: src/MCP/ToolCallObserver.php:197
 #, php-format
 msgid "Invalid parameters: %s"
 msgstr ""
 
 #. translators: %s: comma-separated list of parameter names
-#: src/MCP/ToolCallObserver.php:299
+#: src/MCP/ToolCallObserver.php:205
 #, php-format
 msgid "Unrecognised parameters: %s."
 msgstr ""
 
 #. translators: 1: parameter name, 2: comma-separated list of accepted parameters
-#: src/MCP/ToolCallObserver.php:311
+#: src/MCP/ToolCallObserver.php:217
 #, php-format
 msgid "Accepted parameters for `%1$s`: %2$s."
 msgstr ""
 
 #. translators: %s: comma-separated list of accepted parameters
-#: src/MCP/ToolCallObserver.php:318
+#: src/MCP/ToolCallObserver.php:224
 #, php-format
 msgid "Accepted parameters: %s."
 msgstr ""
 
-#: src/MCP/ToolCallObserver.php:322
+#: src/MCP/ToolCallObserver.php:228
 msgid "This ability accepts no parameters."
 msgstr ""
 
-#: src/MCP/ToolCallObserver.php:498
+#: src/MCP/ToolCallObserver.php:404
 msgid "required"
 msgstr ""
 
@@ -3881,87 +4720,99 @@ msgstr ""
 msgid "No file data was received."
 msgstr ""
 
-#: src/Media/UploadLinks/UploadLinkService.php:174
+#: src/Media/UploadLinks/UploadLinkService.php:178
 msgid "This user does not have permission to upload media."
 msgstr ""
 
-#: src/Media/UploadLinks/UploadLinkService.php:187
+#: src/Media/UploadLinks/UploadLinkService.php:191
 msgid "None of the requested file types are allowed for this user."
 msgstr ""
 
-#: src/Media/UploadLinks/UploadLinkService.php:260
+#: src/Media/UploadLinks/UploadLinkService.php:205
+msgid "That post does not exist, or this user may not attach media to it."
+msgstr ""
+
+#: src/Media/UploadLinks/UploadLinkService.php:271
+msgid "The connection that created this upload link has been removed."
+msgstr ""
+
+#: src/Media/UploadLinks/UploadLinkService.php:282
 msgid "The user who created this upload link no longer has permission to upload media."
 msgstr ""
 
-#: src/Media/UploadLinks/UploadLinkService.php:276
+#: src/Media/UploadLinks/UploadLinkService.php:298
 msgid "The user who created this upload link no longer has permission to upload any of the accepted file types."
 msgstr ""
 
-#: src/Media/UploadLinks/UploadLinkService.php:466
+#: src/Media/UploadLinks/UploadLinkService.php:311
+msgid "The user who created this upload link can no longer edit the post it attaches to."
+msgstr ""
+
+#: src/Media/UploadLinks/UploadLinkService.php:550
 msgid "This upload link has expired."
 msgstr ""
 
-#: src/Media/UploadLinks/UploadLinkService.php:473
+#: src/Media/UploadLinks/UploadLinkService.php:557
 msgid "This upload link is invalid or has already been used."
 msgstr ""
 
 #. translators: 1: opening Site Health link tag; 2: closing link tag.
-#: src/OAuth/DiscoveryHealth.php:232
+#: src/OAuth/DiscoveryHealth.php:252
 #, php-format
 msgid "AI assistants cannot sign in to this site yet: the address they use to discover how to connect is not reachable. %1$sSee Site Health for what to do%2$s."
 msgstr ""
 
-#: src/OAuth/DiscoveryHealth.php:252
+#: src/OAuth/DiscoveryHealth.php:272
 msgid "Albert assistant sign-in discovery"
 msgstr ""
 
-#: src/OAuth/DiscoveryHealth.php:273
+#: src/OAuth/DiscoveryHealth.php:293
 msgid "Assistants can discover how to sign in to this site"
 msgstr ""
 
-#: src/OAuth/DiscoveryHealth.php:274
+#: src/OAuth/DiscoveryHealth.php:294
 msgid "The discovery address returns Albert&#8217;s data, so an AI assistant can find where to sign in and connect."
 msgstr ""
 
-#: src/OAuth/DiscoveryHealth.php:281
+#: src/OAuth/DiscoveryHealth.php:301
 msgid "Albert could not check the assistant sign-in discovery address"
 msgstr ""
 
 #. translators: %s: the discovery URL, in a code tag.
-#: src/OAuth/DiscoveryHealth.php:284
+#: src/OAuth/DiscoveryHealth.php:304
 #, php-format
 msgid "This site could not make a request to its own discovery address (%s). That often just means loopback requests are blocked here rather than a real problem. Opening that address in your browser should return a line of data."
 msgstr ""
 
-#: src/OAuth/DiscoveryHealth.php:292
+#: src/OAuth/DiscoveryHealth.php:312
 msgid "Assistants cannot discover how to sign in to this site"
 msgstr ""
 
 #. translators: %s: the discovery URL, in a code tag.
-#: src/OAuth/DiscoveryHealth.php:295
+#: src/OAuth/DiscoveryHealth.php:315
 #, php-format
 msgid "The discovery address %s does not return Albert&#8217;s data, so connecting an assistant will fail at sign-in until it is fixed."
 msgstr ""
 
-#: src/OAuth/DiscoveryHealth.php:298
+#: src/OAuth/DiscoveryHealth.php:318
 msgid "This is the hosting environment, not Albert: your host is blocking requests whose path contains .well-known before they reach WordPress. Ask your host to allow that path through, or serve it at the edge. Albert&#8217;s data is correct and available at its REST API address."
 msgstr ""
 
-#: src/OAuth/DiscoveryHealth.php:318
+#: src/OAuth/DiscoveryHealth.php:338
 msgid "Assistant sign-in discovery address"
 msgstr ""
 
-#: src/OAuth/DiscoveryHealth.php:323
+#: src/OAuth/DiscoveryHealth.php:343
 msgid "Assistant sign-in discovery reachable"
 msgstr ""
 
-#: src/OAuth/DiscoveryHealth.php:324
+#: src/OAuth/DiscoveryHealth.php:344
 msgid "not checked yet"
 msgstr ""
 
 #: src/OAuth/Endpoints/AuthorizationPage.php:164
-#: src/OAuth/Endpoints/AuthorizationPage.php:194
-#: src/OAuth/Endpoints/AuthorizationPage.php:219
+#: src/OAuth/Endpoints/AuthorizationPage.php:198
+#: src/OAuth/Endpoints/AuthorizationPage.php:223
 msgid "Invalid Request"
 msgstr ""
 
@@ -3977,292 +4828,310 @@ msgstr ""
 msgid "The application requesting access is not registered."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:186
+#: src/OAuth/Endpoints/AuthorizationPage.php:190
 msgid "Invalid Redirect"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:187
+#: src/OAuth/Endpoints/AuthorizationPage.php:191
 msgid "The redirect URI is not allowed for this application."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:220
+#: src/OAuth/Endpoints/AuthorizationPage.php:224
 msgid "Security verification failed. Please try again."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:256
+#: src/OAuth/Endpoints/AuthorizationPage.php:260
 msgid "This application must use PKCE (a code challenge) to connect."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:260
+#: src/OAuth/Endpoints/AuthorizationPage.php:264
 msgid "This site requires PKCE using the S256 code challenge method."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:265
+#: src/OAuth/Endpoints/AuthorizationPage.php:269
 msgid "The code challenge is not valid."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:466
+#: src/OAuth/Endpoints/AuthorizationPage.php:470
 msgid "Server Error"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:538
-#: src/OAuth/Endpoints/AuthorizationPage.php:544
+#: src/OAuth/Endpoints/AuthorizationPage.php:471
+msgid "The authorization could not be completed. Please try again."
+msgstr ""
+
+#: src/OAuth/Endpoints/AuthorizationPage.php:542
+#: src/OAuth/Endpoints/AuthorizationPage.php:548
 msgid "Authorize Application"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:551
+#: src/OAuth/Endpoints/AuthorizationPage.php:555
 msgid "This application wants to access your WordPress site on your behalf."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:555
+#: src/OAuth/Endpoints/AuthorizationPage.php:559
 msgid "After you authorize, the access code is sent to:"
 msgstr ""
 
 #. translators: %s: user display name
-#: src/OAuth/Endpoints/AuthorizationPage.php:570
+#: src/OAuth/Endpoints/AuthorizationPage.php:577
 #, php-format
 msgid "Logged in as %s"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:588
+#: src/OAuth/Endpoints/AuthorizationPage.php:595
 msgid "Name this connection (optional)"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:594
+#: src/OAuth/Endpoints/AuthorizationPage.php:601
 msgid "e.g. My laptop"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:598
+#: src/OAuth/Endpoints/AuthorizationPage.php:605
 msgid "Helps you tell it apart later on the Connections screen. You can leave this blank and add or change it anytime."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:604
+#: src/OAuth/Endpoints/AuthorizationPage.php:611
 msgid "Deny"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:607
+#: src/OAuth/Endpoints/AuthorizationPage.php:614
 msgid "Authorize"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:708
-#: src/OAuth/Endpoints/AuthorizationPage.php:721
+#: src/OAuth/Endpoints/AuthorizationPage.php:714
+#: src/OAuth/Endpoints/AuthorizationPage.php:727
 msgid "This account can’t connect an assistant"
 msgstr ""
 
 #. translators: %s: the name the connecting app registered, e.g. "Claude".
 #. translators: %s: the name the connecting app registered, e.g. "Cursor".
-#: src/OAuth/Endpoints/AuthorizationPage.php:718
-#: src/OAuth/Endpoints/AuthorizationPage.php:927
+#: src/OAuth/Endpoints/AuthorizationPage.php:724
+#: src/OAuth/Endpoints/AuthorizationPage.php:949
 #, php-format
 msgid "%s asked to connect to this site"
 msgstr ""
 
 #. translators: %s: the name of the connecting app.
-#: src/OAuth/Endpoints/AuthorizationPage.php:728
+#: src/OAuth/Endpoints/AuthorizationPage.php:734
 #, php-format
 msgid "Your invitation to connect an assistant expired before it was used. Ask an administrator to add you again on Albert’s Connections page, then start connecting again from %s."
 msgstr ""
 
 #. translators: %s: the name of the connecting app.
-#: src/OAuth/Endpoints/AuthorizationPage.php:731
+#: src/OAuth/Endpoints/AuthorizationPage.php:737
 #, php-format
 msgid "Your account isn’t on this site’s list of people who may connect an assistant. Ask an administrator to add you on Albert’s Connections page, then start connecting again from %s."
 msgstr ""
 
 #. translators: 1: the user's display name, 2: their role, e.g. "Editor".
 #. translators: 1: the user's display name, 2: their role, e.g. "Administrator".
-#: src/OAuth/Endpoints/AuthorizationPage.php:742
-#: src/OAuth/Endpoints/AuthorizationPage.php:949
+#: src/OAuth/Endpoints/AuthorizationPage.php:748
+#: src/OAuth/Endpoints/AuthorizationPage.php:971
 #, php-format
 msgid "Signed in as %1$s (%2$s)."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:747
+#: src/OAuth/Endpoints/AuthorizationPage.php:753
 msgid "Sign in as someone else"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:752
+#: src/OAuth/Endpoints/AuthorizationPage.php:758
 msgid "You can add yourself"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:753
+#: src/OAuth/Endpoints/AuthorizationPage.php:759
 msgid "You are an administrator. Add yourself on the Connections page, then come back and try again."
 msgstr ""
 
 #. translators: %s: an arrow between "Albert" and "Connections", hidden from screen readers.
-#: src/OAuth/Endpoints/AuthorizationPage.php:759
+#: src/OAuth/Endpoints/AuthorizationPage.php:765
 #, php-format
 msgid "Open Albert %s Connections"
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:766
-#: assets/src/context/ContextApp.jsx:165
+#: src/OAuth/Endpoints/AuthorizationPage.php:772
+#: assets/src/context/ContextApp.jsx:172
 msgid "Try again"
 msgstr ""
 
 #. translators: %s: the name of the connecting app.
-#: src/OAuth/Endpoints/AuthorizationPage.php:776
+#: src/OAuth/Endpoints/AuthorizationPage.php:782
 #, php-format
 msgid "Return to %s without connecting"
 msgstr ""
 
 #. translators: %s: the host the link goes to, e.g. "claude.ai".
-#: src/OAuth/Endpoints/AuthorizationPage.php:782
+#: src/OAuth/Endpoints/AuthorizationPage.php:788
 #, php-format
 msgid "This link goes to %s."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:883
+#: src/OAuth/Endpoints/AuthorizationPage.php:906
 msgid "Stopped. Use the link below to go back."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:917
-#: src/OAuth/Endpoints/AuthorizationPage.php:932
+#: src/OAuth/Endpoints/AuthorizationPage.php:939
+#: src/OAuth/Endpoints/AuthorizationPage.php:954
 msgid "Approved"
 msgstr ""
 
 #. translators: %s: the name of the connected app.
-#: src/OAuth/Endpoints/AuthorizationPage.php:939
+#: src/OAuth/Endpoints/AuthorizationPage.php:961
 #, php-format
 msgid "Taking you back to %s…"
 msgstr ""
 
 #. translators: %s: the name of the connected app.
-#: src/OAuth/Endpoints/AuthorizationPage.php:941
+#: src/OAuth/Endpoints/AuthorizationPage.php:963
 #, php-format
 msgid "Go back to %s to finish connecting."
 msgstr ""
 
-#: src/OAuth/Endpoints/AuthorizationPage.php:955
+#: src/OAuth/Endpoints/AuthorizationPage.php:977
 msgid "You can see or revoke this connection on Albert’s Connections page."
 msgstr ""
 
 #. translators: %s: the name of the connected app.
-#: src/OAuth/Endpoints/AuthorizationPage.php:964
+#: src/OAuth/Endpoints/AuthorizationPage.php:986
 #, php-format
 msgid "If nothing happens, return to %s"
 msgstr ""
 
 #. translators: %d: number of minutes since the application registered
-#: src/OAuth/Endpoints/AuthorizationPage.php:1027
+#: src/OAuth/Endpoints/AuthorizationPage.php:1080
 #, php-format
 msgid "This application registered %d minute ago. Only continue if you are expecting it."
 msgid_plural "This application registered %d minutes ago. Only continue if you are expecting it."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/OAuth/Endpoints/ClientRegistration.php:133
+#: src/OAuth/Endpoints/ClientRegistration.php:126
 msgid "Too many registration requests. Please try again later."
 msgstr ""
 
-#: src/OAuth/Endpoints/ClientRegistration.php:152
+#: src/OAuth/Endpoints/ClientRegistration.php:145
+msgid "This site has reached its maximum number of registered clients."
+msgstr ""
+
+#: src/OAuth/Endpoints/ClientRegistration.php:156
 msgid "At least one redirect_uris entry is required."
 msgstr ""
 
 #. translators: %d: maximum number of redirect URIs
-#: src/OAuth/Endpoints/ClientRegistration.php:162
+#: src/OAuth/Endpoints/ClientRegistration.php:166
 #, php-format
 msgid "A client may register at most %d redirect URIs."
 msgstr ""
 
-#: src/OAuth/Endpoints/ClientRegistration.php:196
-msgid "This site has reached its maximum number of registered clients."
-msgstr ""
-
-#: src/OAuth/Endpoints/ClientRegistration.php:214
+#: src/OAuth/Endpoints/ClientRegistration.php:211
 msgid "Failed to register client."
 msgstr ""
 
-#: src/OAuth/Endpoints/ClientRegistration.php:512
+#: src/OAuth/Endpoints/ClientRegistration.php:633
 msgid "A redirect URI must not contain a fragment (#)."
 msgstr ""
 
-#: src/OAuth/Endpoints/ClientRegistration.php:514
+#: src/OAuth/Endpoints/ClientRegistration.php:635
 msgid "A redirect URI is too long."
 msgstr ""
 
 #. translators: %s: URI scheme
-#: src/OAuth/Endpoints/ClientRegistration.php:518
+#: src/OAuth/Endpoints/ClientRegistration.php:639
 #, php-format
 msgid "The \"%s\" scheme is not permitted for redirect URIs."
 msgstr ""
 
 #. translators: %s: URI scheme
-#: src/OAuth/Endpoints/ClientRegistration.php:524
+#: src/OAuth/Endpoints/ClientRegistration.php:645
 #, php-format
 msgid "The \"%s\" scheme is not in this site's allowed redirect schemes."
 msgstr ""
 
-#: src/OAuth/Endpoints/ClientRegistration.php:528
+#: src/OAuth/Endpoints/ClientRegistration.php:649
 msgid "The redirect URI host resolves to a private or reserved address."
 msgstr ""
 
-#: src/OAuth/Endpoints/ClientRegistration.php:530
+#: src/OAuth/Endpoints/ClientRegistration.php:651
 msgid "Invalid redirect URI provided."
 msgstr ""
 
-#: src/OAuth/Repositories/ClientRepository.php:584
+#: src/OAuth/Repositories/ClientRepository.php:585
 msgid "Your assistant"
 msgstr ""
 
-#: src/OAuth/Repositories/ClientRepository.php:666
+#: src/OAuth/Repositories/ClientRepository.php:667
 msgid "Unknown assistant"
 msgstr ""
 
-#: src/OAuth/Server/TokenValidator.php:52
+#: src/OAuth/Server/TokenValidator.php:71
 msgid "Token does not contain a valid user identifier."
 msgstr ""
 
-#: src/OAuth/Server/TokenValidator.php:63
+#: src/OAuth/Server/TokenValidator.php:82
 msgid "User associated with token not found."
 msgstr ""
 
-#: src/OAuth/Server/TokenValidator.php:74
+#: src/OAuth/Server/TokenValidator.php:92
+msgid "The access token is not valid."
+msgstr ""
+
+#: src/OAuth/Server/TokenValidator.php:102
 msgid "This account is no longer allowed to connect assistants to this site."
 msgstr ""
 
+#: src/OAuth/Server/TokenValidator.php:142
+msgid "The access token could not be validated."
+msgstr ""
+
 #. translators: %s: Required scope
-#: src/OAuth/Server/TokenValidator.php:241
+#: src/OAuth/Server/TokenValidator.php:253
 #, php-format
 msgid "This action requires the \"%s\" scope."
 msgstr ""
 
-#: src/SafeMode/ApprovalPolicy.php:156
+#. translators: 1: ability name, 2: error message.
+#: src/Privacy/ConnectedResultRedactor.php:253
+#, php-format
+msgid "Ability \"%1$s\" has invalid output. Reason: %2$s"
+msgstr ""
+
+#: src/SafeMode/ApprovalPolicy.php:158
 msgid "Only an administrator, or the person who requested this, can decide it."
 msgstr ""
 
-#: src/SafeMode/ApprovalPolicy.php:160
+#: src/SafeMode/ApprovalPolicy.php:162
 msgid "The action this request needs is no longer available. An administrator can clear it, or it will expire on its own."
 msgstr ""
 
-#: src/SafeMode/ApprovalPolicy.php:163
+#: src/SafeMode/ApprovalPolicy.php:165
 msgid "You no longer have permission to perform this action yourself, so you cannot decide it. An administrator can, or it will expire on its own."
 msgstr ""
 
-#: src/SafeMode/Approver.php:67
+#: src/SafeMode/Approver.php:68
 msgid "This request has already been handled."
 msgstr ""
 
 #. translators: %s: ability name.
-#: src/SafeMode/Approver.php:77
+#: src/SafeMode/Approver.php:80
 #, php-format
 msgid "The ability \"%s\" is no longer available, so this action cannot run."
 msgstr ""
 
-#: src/SafeMode/Interceptor.php:159
+#: src/SafeMode/Interceptor.php:160
 msgid "This action was not performed. It would change one of Albert's own safety settings, which an assistant can never change, and it cannot be approved. Only a person can change these settings, in wp-admin."
 msgstr ""
 
-#: src/SafeMode/Interceptor.php:179
+#: src/SafeMode/Interceptor.php:180
 msgid "You do not have permission to perform this action, so it was not queued for approval. This is a permanent denial, not a pending request."
 msgstr ""
 
-#: src/SafeMode/Interceptor.php:196
+#: src/SafeMode/Interceptor.php:197
 msgid "This action was not performed. This site holds destructive changes for a person to approve first, but the request could not be recorded, so nothing is waiting for approval. Ask the site owner to check that Albert is installed correctly; retrying will not help until then."
 msgstr ""
 
 #. translators: 1: wp-admin approval URL, 2: action reference.
-#: src/SafeMode/Interceptor.php:257
+#: src/SafeMode/Interceptor.php:258
 #, php-format
 msgid "This action was not performed. For safety, this site holds destructive changes for a person to approve first. It is queued for approval (reference %2$s). Ask the site owner to approve or reject it in wp-admin: %1$s Retrying will not run it; it runs only once a person approves."
 msgstr ""
@@ -4271,168 +5140,186 @@ msgstr ""
 msgid "Approved, but the run never reported back. It may or may not have completed."
 msgstr ""
 
-#: assets/src/abilities/AbilitiesApp.jsx:173
+#. translators: 1: comment ID, 2: quoted post title.
+#: src/SafeMode/TargetResolver.php:254
+#, php-format
+msgid "Comment %1$d on %2$s"
+msgstr ""
+
+#. translators: 1: quoted post titles, 2: number of further posts.
+#: src/SafeMode/TargetResolver.php:261
+#, php-format
+msgid "%1$s and %2$d other post"
+msgid_plural "%1$s and %2$d other posts"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: number of comments, 2: the posts they are on.
+#: src/SafeMode/TargetResolver.php:264
+#, php-format
+msgid "%1$d comment on %2$s"
+msgid_plural "%1$d comments on %2$s"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/src/abilities/AbilitiesApp.jsx:177
 msgid "Could not save your changes. Please try again."
 msgstr ""
 
-#: assets/src/abilities/AbilitiesApp.jsx:200
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:115
+#: assets/src/abilities/AbilitiesApp.jsx:204
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:72
 msgid "Enable"
 msgstr ""
 
-#: assets/src/abilities/AbilitiesApp.jsx:210
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:126
+#: assets/src/abilities/AbilitiesApp.jsx:214
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:83
 msgid "Disable"
 msgstr ""
 
 #. translators: %d: number of matching abilities.
-#: assets/src/abilities/AbilitiesApp.jsx:269
+#: assets/src/abilities/AbilitiesApp.jsx:273
 #, js-format
 msgid "%d ability found."
 msgid_plural "%d abilities found."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/src/abilities/AbilitiesApp.jsx:325
-msgid "Capabilities exposed to apps and agents through the WordPress Abilities API. Enable an ability to make it callable, or open one to review its schema and permissions."
+#: assets/src/abilities/AbilitiesApp.jsx:334
+msgid "Choose which abilities are available through Albert’s MCP endpoint. Open an ability to review its schema and permissions."
 msgstr ""
 
-#: assets/src/abilities/AbilitiesApp.jsx:366
+#: assets/src/abilities/AbilitiesApp.jsx:339
+msgid "About what these switches change"
+msgstr ""
+
+#: assets/src/abilities/AbilitiesApp.jsx:345
+msgid "A switched-off ability is left out of Albert’s MCP endpoint, and refused there if an assistant calls it anyway."
+msgstr ""
+
+#: assets/src/abilities/AbilitiesApp.jsx:351
+msgid "The ability stays registered in WordPress. Other plugins, the MCP Adapter default server and other MCP servers on this site can still use it."
+msgstr ""
+
+#: assets/src/abilities/AbilitiesApp.jsx:396
 #: assets/src/skills/SkillsApp.jsx:178
 msgid "registered"
 msgstr ""
 
-#: assets/src/abilities/AbilitiesApp.jsx:371
+#: assets/src/abilities/AbilitiesApp.jsx:401
 msgid "enabled"
 msgstr ""
 
-#: assets/src/abilities/AbilitiesApp.jsx:381
-#: assets/src/abilities/AbilitiesApp.jsx:463
+#: assets/src/abilities/AbilitiesApp.jsx:411
+#: assets/src/abilities/AbilitiesApp.jsx:494
 msgid "Enable all"
 msgstr ""
 
-#: assets/src/abilities/AbilitiesApp.jsx:389
-#: assets/src/abilities/AbilitiesApp.jsx:464
+#: assets/src/abilities/AbilitiesApp.jsx:419
+#: assets/src/abilities/AbilitiesApp.jsx:495
 msgid "Disable all"
 msgstr ""
 
-#: assets/src/abilities/AbilitiesApp.jsx:468
+#: assets/src/abilities/AbilitiesApp.jsx:499
 msgid "Enable every ability? This includes abilities that can create, change, or permanently delete data."
 msgstr ""
 
-#: assets/src/abilities/AbilitiesApp.jsx:472
-msgid "Disable every ability? Apps and agents won’t be able to call any ability until you re-enable them."
+#: assets/src/abilities/AbilitiesApp.jsx:503
+msgid "Disable every ability? None will be available through Albert’s MCP endpoint until you enable them again."
+msgstr ""
+
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:27
+msgid "Advanced permissions"
 msgstr ""
 
 #: assets/src/abilities/AdvancedPermissionsUpsell.jsx:33
-msgid "Control who can use this ability, by its required capability or with custom per-role and per-user rules."
+msgid "(Premium)"
 msgstr ""
 
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:44
-msgid "Permission mode"
-msgstr ""
-
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:52
-msgid "Capability only"
-msgstr ""
-
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:56
-msgid "Custom rules (Premium)"
-msgstr ""
-
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:62
-msgid "Custom rules"
-msgstr ""
-
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:82
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:45
 msgid "Allow only specific roles or users"
 msgstr ""
 
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:88
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:51
 msgid "Block everyone else automatically"
 msgstr ""
 
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:94
-msgid "Override the required-capability check"
-msgstr ""
-
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:102
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:59
 msgid "Example"
 msgstr ""
 
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:118
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:75
 msgid "when role is"
 msgstr ""
 
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:121
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:78
 msgid "Editor"
 msgstr ""
 
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:129
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:86
 msgid "when user is"
 msgstr ""
 
-#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:144
+#: assets/src/abilities/AdvancedPermissionsUpsell.jsx:101
 msgid "Upgrade to Premium"
 msgstr ""
 
-#: assets/src/abilities/fields.js:20
-#: assets/src/abilities/fields.js:298
-#: assets/src/abilities/FlyInPanel.jsx:369
+#: assets/src/abilities/fields.js:21
+#: assets/src/abilities/fields.js:300
+#: assets/src/abilities/FlyInPanel.jsx:327
 #: assets/src/shared/ToolbarControls.jsx:21
 msgid "Enabled"
 msgstr ""
 
-#: assets/src/abilities/fields.js:21
+#: assets/src/abilities/fields.js:22
 #: assets/src/shared/ToolbarControls.jsx:22
 msgid "Disabled"
 msgstr ""
 
-#: assets/src/abilities/fields.js:143
+#: assets/src/abilities/fields.js:145
 msgid "Never used"
 msgstr ""
 
 #. translators: %s: ability label.
-#: assets/src/abilities/fields.js:185
+#: assets/src/abilities/fields.js:187
 #, js-format
 msgid "%s enabled"
 msgstr ""
 
-#: assets/src/abilities/fields.js:219
+#: assets/src/abilities/fields.js:221
 msgid "Ability"
 msgstr ""
 
-#: assets/src/abilities/fields.js:234
+#: assets/src/abilities/fields.js:236
 msgid "Ability ID"
 msgstr ""
 
-#: assets/src/abilities/fields.js:242
-#: assets/src/abilities/FlyInPanel.jsx:379
+#: assets/src/abilities/fields.js:244
+#: assets/src/abilities/FlyInPanel.jsx:344
 #: assets/src/skills/fields.js:57
 #: assets/src/skills/SkillFlyIn.jsx:87
 msgid "Description"
 msgstr ""
 
-#: assets/src/abilities/fields.js:250
-#: assets/src/abilities/FlyInPanel.jsx:332
+#: assets/src/abilities/fields.js:252
+#: assets/src/abilities/FlyInPanel.jsx:290
 msgid "Category"
 msgstr ""
 
-#: assets/src/abilities/fields.js:259
+#: assets/src/abilities/fields.js:261
 msgid "Operation"
 msgstr ""
 
-#: assets/src/abilities/fields.js:268
+#: assets/src/abilities/fields.js:270
 #: assets/src/skills/fields.js:65
 #: assets/src/skills/SkillFlyIn.jsx:36
 msgid "Source"
 msgstr ""
 
-#: assets/src/abilities/fields.js:278
+#: assets/src/abilities/fields.js:280
 msgid "Badges"
 msgstr ""
 
-#: assets/src/abilities/fields.js:290
+#: assets/src/abilities/fields.js:292
 msgid "Last used"
 msgstr ""
 
@@ -4440,44 +5327,24 @@ msgstr ""
 msgid "An add-on section failed to load."
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:211
-msgid "Required capability"
+#: assets/src/abilities/FlyInPanel.jsx:214
+msgid "No advanced permissions: the ability decides who may use it."
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:215
-msgid "About required capability"
-msgstr ""
-
-#: assets/src/abilities/FlyInPanel.jsx:221
-msgid "A WordPress capability that gates this ability: it can run only for users whose role grants this capability. This value is best-effort; an ability or add-on can override it."
-msgstr ""
-
-#: assets/src/abilities/FlyInPanel.jsx:229
-msgid "Roles with this capability:"
-msgstr ""
-
-#: assets/src/abilities/FlyInPanel.jsx:238
-msgid "No roles currently grant this capability."
-msgstr ""
-
-#: assets/src/abilities/FlyInPanel.jsx:268
+#: assets/src/abilities/FlyInPanel.jsx:226
 msgid "Permissions"
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:272
+#: assets/src/abilities/FlyInPanel.jsx:230
 msgid "About permissions"
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:275
-msgid "Controls who can invoke this ability over MCP. By default it follows the required WordPress capability."
-msgstr ""
-
-#: assets/src/abilities/FlyInPanel.jsx:281
-msgid "Albert Premium adds custom per-role and per-user rules that override the capability check."
+#: assets/src/abilities/FlyInPanel.jsx:233
+msgid "Albert Premium adds advanced permissions: rules per role or user that decide who can use this ability over MCP."
 msgstr ""
 
 #. translators: %d: number of input fields.
-#: assets/src/abilities/FlyInPanel.jsx:303
+#: assets/src/abilities/FlyInPanel.jsx:253
 #, js-format
 msgid "%d field"
 msgid_plural "%d fields"
@@ -4485,97 +5352,147 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: field-count phrase (e.g. "6 fields"); 2: required count.
-#: assets/src/abilities/FlyInPanel.jsx:310
+#: assets/src/abilities/FlyInPanel.jsx:260
 #, js-format
 msgid "%1$s · %2$d required"
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:349
-#: assets/src/context/ContextApp.jsx:277
+#: assets/src/abilities/FlyInPanel.jsx:277
+msgid "About \"Not declared\""
+msgstr ""
+
+#: assets/src/abilities/FlyInPanel.jsx:307
+#: assets/src/context/ContextApp.jsx:284
 msgid "Saving…"
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:350
-#: assets/src/context/ContextApp.jsx:298
+#: assets/src/abilities/FlyInPanel.jsx:308
+#: assets/src/context/ContextApp.jsx:305
 msgid "Saved"
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:370
-msgid "Allow apps and agents to invoke this ability."
+#: assets/src/abilities/FlyInPanel.jsx:330
+msgid "Available through Albert’s MCP endpoint."
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:388
+#: assets/src/abilities/FlyInPanel.jsx:334
+msgid "Not available through Albert’s MCP endpoint."
+msgstr ""
+
+#: assets/src/abilities/FlyInPanel.jsx:353
 msgid "Inputs"
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:409
+#: assets/src/abilities/FlyInPanel.jsx:374
 msgid "Required"
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:413
+#: assets/src/abilities/FlyInPanel.jsx:378
 msgid "Optional"
 msgstr ""
 
-#: assets/src/abilities/FlyInPanel.jsx:443
+#: assets/src/abilities/FlyInPanel.jsx:408
 msgid "Returns"
+msgstr ""
+
+#: assets/src/abilities/PolicyNotice.jsx:24
+msgid "local"
+msgstr ""
+
+#: assets/src/abilities/PolicyNotice.jsx:26
+msgid "development"
+msgstr ""
+
+#: assets/src/abilities/PolicyNotice.jsx:28
+msgid "staging"
+msgstr ""
+
+#: assets/src/abilities/PolicyNotice.jsx:30
+msgid "production"
+msgstr ""
+
+#. translators: %s: environment type, e.g. "staging".
+#: assets/src/abilities/PolicyNotice.jsx:53
+#, js-format
+msgid "This is a %s site, and its environment policy switches on every ability for assistants connected through Albert."
+msgstr ""
+
+#. translators: %s: environment type, e.g. "staging".
+#: assets/src/abilities/PolicyNotice.jsx:61
+#, js-format
+msgid "This is a %s site, and its environment policy switches on every Read and Write ability for assistants connected through Albert. Destructive abilities, and abilities that do not say what they do, follow their toggle."
+msgstr ""
+
+#: assets/src/abilities/PolicyNotice.jsx:76
+msgid "Environment policy in use."
+msgstr ""
+
+#: assets/src/abilities/PolicyNotice.jsx:79
+msgid "The toggles below are not changed, and apply again when the policy is removed."
+msgstr ""
+
+#. translators: %s: constant or filter name.
+#: assets/src/abilities/PolicyNotice.jsx:89
+#, js-format
+msgid "Set in code by <code>%s</code>."
 msgstr ""
 
 #: assets/src/abilities/Toolbar.jsx:25
 msgid "All operations"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:32
+#: assets/src/abilities/Toolbar.jsx:33
 #: assets/src/skills/Toolbar.jsx:14
 msgid "Sort: Name"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:33
+#: assets/src/abilities/Toolbar.jsx:34
 msgid "Sort: Category"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:34
+#: assets/src/abilities/Toolbar.jsx:35
 msgid "Sort: Operation"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:35
+#: assets/src/abilities/Toolbar.jsx:36
 msgid "Sort: Last used"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:83
+#: assets/src/abilities/Toolbar.jsx:93
 msgid "Filter by category"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:87
+#: assets/src/abilities/Toolbar.jsx:97
 msgid "All categories"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:93
+#: assets/src/abilities/Toolbar.jsx:103
 msgid "Filter by operation"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:100
+#: assets/src/abilities/Toolbar.jsx:110
 msgid "Filter by status"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:107
+#: assets/src/abilities/Toolbar.jsx:117
 #: assets/src/skills/Toolbar.jsx:35
 msgid "Filter by source"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:111
+#: assets/src/abilities/Toolbar.jsx:121
 #: assets/src/skills/Toolbar.jsx:39
 msgid "All sources"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:118
+#: assets/src/abilities/Toolbar.jsx:128
 msgid "Filter by badge"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:122
+#: assets/src/abilities/Toolbar.jsx:132
 msgid "All badges"
 msgstr ""
 
-#: assets/src/abilities/Toolbar.jsx:132
+#: assets/src/abilities/Toolbar.jsx:142
 msgid "Sort abilities"
 msgstr ""
 
@@ -4587,23 +5504,27 @@ msgstr ""
 msgid "Tell connected assistants what this site is and how to behave, so they stop guessing. Everything you include here is sent with each conversation."
 msgstr ""
 
-#: assets/src/context/ContextApp.jsx:170
+#: assets/src/context/ContextApp.jsx:144
+msgid "Changes reach an assistant the next time it asks what this site can do. An open conversation keeps what it started with, so start a new one to use them."
+msgstr ""
+
+#: assets/src/context/ContextApp.jsx:177
 msgid "Send context"
 msgstr ""
 
-#: assets/src/context/ContextApp.jsx:175
+#: assets/src/context/ContextApp.jsx:182
 msgid "Send context to connected assistants"
 msgstr ""
 
-#: assets/src/context/ContextApp.jsx:195
+#: assets/src/context/ContextApp.jsx:202
 msgid "Whether context is sent is set in code on this site, so it cannot be changed here."
 msgstr ""
 
-#: assets/src/context/ContextApp.jsx:213
+#: assets/src/context/ContextApp.jsx:220
 msgid "Context is switched off. Assistants still work, but they receive nothing about this site: no language, no brand, no content model."
 msgstr ""
 
-#: assets/src/context/ContextApp.jsx:286
+#: assets/src/context/ContextApp.jsx:293
 msgid "Not saved."
 msgstr ""
 

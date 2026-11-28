@@ -509,27 +509,18 @@ class BlockConverterTest extends TestCase {
 	}
 
 	// =========================================================================
-	// Sideloading & API
+	// API
 	// =========================================================================
 
-	public function test_sideloading_disabled_by_default(): void {
-		$converter = new BlockConverter( '<img src="https://example.com/photo.jpg" alt="test">' );
-		$converter->convert();
+	public function test_images_keep_their_source(): void {
+		$result = ( new BlockConverter( '<img src="https://example.com/photo.jpg" alt="test">' ) )->convert();
 
-		$this->assertSame( [], $converter->get_created_attachment_ids() );
+		$this->assertStringContainsString( 'src="https://example.com/photo.jpg"', $result );
 	}
 
 	public function test_convert_is_idempotent(): void {
 		$converter = new BlockConverter( '<p>Hello</p>' );
 
 		$this->assertSame( $converter->convert(), $converter->convert() );
-	}
-
-	public function test_attachment_ids_reset_between_conversions(): void {
-		$converter = new BlockConverter( '<p>Hello</p>' );
-		$converter->convert();
-		$converter->convert();
-
-		$this->assertSame( [], $converter->get_created_attachment_ids() );
 	}
 }

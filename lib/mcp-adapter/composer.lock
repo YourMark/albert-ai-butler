@@ -72,16 +72,16 @@
         },
         {
             "name": "wordpress/mcp-adapter",
-            "version": "v0.7.0",
+            "version": "v0.7.1",
             "source": {
                 "type": "git",
-                "url": "https://github.com/WordPress/mcp-adapter",
-                "reference": "54ed266a8c46b71fdb8e5b8a7d35668f90fb8994"
+                "url": "https://github.com/WordPress/mcp-adapter.git",
+                "reference": "5bdb40b49c307e517413f77f9157272d46d52e07"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WordPress/mcp-adapter/zipball/54ed266a8c46b71fdb8e5b8a7d35668f90fb8994",
-                "reference": "54ed266a8c46b71fdb8e5b8a7d35668f90fb8994",
+                "url": "https://api.github.com/repos/WordPress/mcp-adapter/zipball/5bdb40b49c307e517413f77f9157272d46d52e07",
+                "reference": "5bdb40b49c307e517413f77f9157272d46d52e07",
                 "shasum": ""
             },
             "require": {
@@ -96,8 +96,8 @@
                 "php-stubs/wp-cli-stubs": "^2.12",
                 "phpcompatibility/phpcompatibility-wp": "^3.0.0-alpha",
                 "phpstan/extension-installer": "^1.3",
-                "phpstan/php-8-stubs": "^0.4.41",
-                "phpstan/phpstan": "^2.2.14",
+                "phpstan/php-8-stubs": "^0.4.43",
+                "phpstan/phpstan": "^2.2.16",
                 "phpstan/phpstan-deprecation-rules": "^2.0.5",
                 "phpunit/phpunit": "^9.6",
                 "slevomat/coding-standard": "^8.0",
@@ -140,7 +140,7 @@
                 "issues": "https://github.com/wordpress/mcp-adapter/issues",
                 "source": "https://github.com/wordpress/mcp-adapter"
             },
-            "time": "2026-10-02T14:10:31+00:00"
+            "time": "2026-10-16T08:58:28+00:00"
         },
         {
             "name": "wordpress/php-mcp-schema",

@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Abstracts\BaseAbility;
 use Albert\Admin\AbilitiesPage;
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\OAuth\Server\ConnectionContext;
 
 /**
  * Abilities Manager class
@@ -73,6 +74,9 @@ class AbilitiesManager implements Hookable {
 		// Unregister Albert abilities an add-on refuses (a lapsed licence). Last,
 		// so every ability is in the registry when it is counted.
 		add_action( 'wp_abilities_api_init', [ $this, 'enforce_disabled' ], PHP_INT_MAX );
+
+		// Before safe mode, so a switched-off ability is refused rather than held.
+		add_filter( 'wp_pre_execute_ability', [ $this, 'refuse_disabled_execution' ], 1, 2 );
 
 		// Tell the admin when an upgrade disabled newly-added abilities by default.
 		add_action( 'admin_notices', [ $this, 'render_new_abilities_notice' ] );
@@ -251,6 +255,32 @@ class AbilitiesManager implements Hookable {
 				wp_unregister_ability( $id );
 			}
 		}
+	}
+
+	/**
+	 * Refuse to execute a switched-off ability for an assistant connected through Albert.
+	 *
+	 * The MCP server already refuses these; this also covers any other route a
+	 * connection can reach, such as core's own abilities REST endpoint. Other
+	 * plugins running the ability outside a connection are left alone.
+	 *
+	 * @param mixed  $pre          The short-circuit sentinel, or an earlier refusal.
+	 * @param string $ability_name The ability being executed.
+	 *
+	 * @return mixed The incoming value to proceed, or a WP_Error to refuse.
+	 * @since 1.5.1
+	 * @since 1.6.0 Only for a request over an Albert connection.
+	 */
+	public function refuse_disabled_execution( $pre, $ability_name ) {
+		if ( is_wp_error( $pre ) || ! is_string( $ability_name ) || ConnectionContext::client_id() === null ) {
+			return $pre;
+		}
+
+		if ( AbilitiesRegistry::is_transport_ability( $ability_name ) || AbilitiesState::is_enabled( $ability_name ) ) {
+			return $pre;
+		}
+
+		return AbilitiesState::switched_off_error( $ability_name );
 	}
 
 	/**
@@ -543,7 +573,14 @@ class AbilitiesManager implements Hookable {
 		 *
 		 * @param bool $is_management_context Whether this request is a management context.
 		 */
-		return (bool) apply_filters( 'albert/abilities/is_management_context', $is_page );
+		$is_management_context = (bool) apply_filters( 'albert/abilities/is_management_context', $is_page );
+
+		// An assistant's request never keeps disabled abilities, whatever a filter
+		// says. Read from the raw request: the registry is built before the
+		// token is validated, so ConnectionContext is usually still empty here.
+		return $is_management_context
+			&& ConnectionContext::client_id() === null
+			&& ! RestRequest::is_assistant_request();
 	}
 
 	/**

@@ -73,6 +73,12 @@ class ApproverTest extends TestCase {
 		}
 
 		Installer::install();
+
+		// Nothing switched off: a fresh install switches write abilities off, and
+		// switched-off abilities are refused when they run.
+		update_option( 'albert_abilities_saved', true );
+		update_option( 'albert_disabled_abilities', [] );
+
 		$this->repository     = new Repository();
 		$this->observed       = [];
 		$this->registered_ids = [];

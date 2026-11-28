@@ -120,6 +120,11 @@ class Interceptor implements Hookable {
 	 * @since 1.5.0
 	 */
 	public function intercept( $pre, string $ability_name, $input, $ability ) {
+		// An earlier refusal, such as a switched-off ability, stands: approving it would run it.
+		if ( is_wp_error( $pre ) ) {
+			return $pre;
+		}
+
 		// The wrapper fires first and the real ability fires next; act on that one.
 		if ( ! $this->decision->should_intercept( $ability_name ) ) {
 			return $pre;

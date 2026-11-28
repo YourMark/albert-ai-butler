@@ -712,7 +712,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
 	}
 
 	/**
@@ -729,7 +729,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
 		$this->assertEmpty( term_exists( 'orphan-tag', 'post_tag' ) );
 	}
 
@@ -759,7 +759,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
 		$this->assertStringContainsString( 'albert/update-page', $result->get_error_message() );
 		$this->assertSame( 'Original', get_post( $page_id )->post_title );
 	}
@@ -792,7 +792,7 @@ class PostsAbilityTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_post_not_found', $result->get_error_code() );
+		$this->assertSame( 'post_not_found', $result->get_error_code() );
 		$this->assertStringNotContainsString( 'albert/update-page', $result->get_error_message() );
 		$this->assertStringNotContainsString( 'is a page', $result->get_error_message() );
 	}
@@ -1242,5 +1242,59 @@ class PostsAbilityTest extends TestCase {
 		$this->assertSame( 'rest_trash_not_supported', $result->get_error_code() );
 		$this->assertNotNull( get_post( $post_id ), 'The post must survive — no silent permanent delete.' );
 		$this->assertSame( 'publish', get_post_status( $post_id ) );
+	}
+
+	// ─── 1.5.1 hardening ────────────────────────────────────────────
+
+	/**
+	 * Searching does not reveal what another author's protected post contains.
+	 *
+	 * @return void
+	 */
+	public function test_search_skips_protected_posts_the_user_cannot_edit(): void {
+		$protected = self::factory()->post->create(
+			[
+				'post_content'  => 'The launch date is in marmalade.',
+				'post_password' => 'hunter2',
+				'post_author'   => get_current_user_id(),
+			]
+		);
+
+		$author = self::factory()->user->create( [ 'role' => 'author' ] );
+		$own    = self::factory()->post->create(
+			[
+				'post_content'  => 'My own marmalade notes.',
+				'post_password' => 'mine',
+				'post_author'   => $author,
+			]
+		);
+
+		wp_set_current_user( $author );
+
+		$found = ( new FindPosts() )->execute( [ 'search' => 'marmalade' ] );
+		$ids   = array_column( $found['posts'], 'id' );
+
+		$this->assertNotContains( $protected, $ids );
+		$this->assertContains( $own, $ids );
+	}
+
+	/**
+	 * A refused post save leaves no new tags behind.
+	 *
+	 * @return void
+	 */
+	public function test_create_post_makes_no_tags_when_the_save_is_refused(): void {
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'contributor' ] ) );
+
+		$result = ( new CreatePost() )->execute(
+			[
+				'title'  => 'Refused',
+				'status' => 'publish',
+				'tags'   => [ 'orphan-tag-151' ],
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertFalse( get_term_by( 'name', 'orphan-tag-151', 'post_tag' ) );
 	}
 }

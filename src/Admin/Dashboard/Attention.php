@@ -299,7 +299,7 @@ class Attention {
 				'title'       => __( 'New assistants can\'t connect: the connection limit is reached', 'albert-ai-butler' ),
 				'detail'      => sprintf(
 					/* translators: %d: the maximum number of registered apps. */
-					__( 'This site allows %d registered apps, and every place is held by a connected assistant or one that started connecting in the last few minutes. Disconnect assistants you no longer use.', 'albert-ai-butler' ),
+					__( 'This site allows %d connected apps, and every place is in use. Disconnect assistants you no longer use.', 'albert-ai-butler' ),
 					ClientRegistration::max_clients()
 				),
 				'action'      => [
