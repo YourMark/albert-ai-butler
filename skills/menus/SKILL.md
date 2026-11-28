@@ -1,6 +1,8 @@
 ---
 name: menus
 description: How to find the menu visitors actually see, and change it without editing an unused one. Read this before changing any menu.
+metadata:
+  abilities: "albert/find-menus albert/view-menu albert/create-menu albert/delete-menu albert/add-menu-item albert/update-menu-item albert/move-menu-item albert/remove-menu-item albert/assign-menu-location albert/unassign-menu-location"
 ---
 
 # Changing a site's menus through Albert
