@@ -236,6 +236,12 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.7.0 =
+
+**Improvements**
+
+* When your assistant looks at a media file, it now also sees where the file is used: each post or page, the alt text there, whether the image is a link, its caption and the text around it. Good alt text depends on that place, not on the file alone.
+
 = 1.6.0 =
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
