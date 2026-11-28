@@ -18,6 +18,7 @@ use Albert\Undo\Retention\BoundedRetentionPolicy;
 use Albert\Undo\Retention\FreeRetentionPolicy;
 use Albert\Undo\Retention\Registrar;
 use Albert\Undo\Retention\RetentionPolicy;
+use Albert\Undo\Snapshot;
 use Albert\Undo\Thing;
 use Albert\Undo\WindowContext;
 
@@ -50,6 +51,14 @@ class Repository {
 	public const RUN_MAX_SECONDS = DAY_IN_SECONDS;
 
 	/**
+	 * What an item's `pruned` says when the revision holding its content
+	 * before the call is gone or changed.
+	 *
+	 * @var string
+	 */
+	public const REVISION_GONE = 'revision_gone';
+
+	/**
 	 * Most names kept in `other_tables` or an effect's list.
 	 *
 	 * @var int
@@ -80,6 +89,16 @@ class Repository {
 	 */
 	public function __construct( ?int $blog_id = null ) {
 		$this->blog_id = $blog_id ?? get_current_blog_id();
+	}
+
+	/**
+	 * The blog whose journal this is.
+	 *
+	 * @return int
+	 * @since 1.7.0
+	 */
+	public function blog_id(): int {
+		return $this->blog_id;
 	}
 
 	/**
@@ -203,11 +222,13 @@ class Repository {
 	 * @param array<int, mixed>|null $after_blocks The block tree the call left in a post's content
 	 *                                             ({@see \Albert\Undo\BlockTree}), when it changed it.
 	 * @param array<string, mixed>   $preview      Short text of what changed ({@see \Albert\Undo\Preview}).
+	 * @param int|null               $revision_id  The revision holding the post content left out of `$image`.
+	 * @param string|null            $content_hash sha256 of that content, checked on every read.
 	 *
 	 * @return bool
 	 * @since 1.7.0
 	 */
-	public function insert_item( int $change_id, int $run_id, Entity $entity, ?string $image, string $operation, array $after_hashes, string $captured_by, ?string $claimed_by, ?array $after_blocks = null, array $preview = [] ): bool {
+	public function insert_item( int $change_id, int $run_id, Entity $entity, ?string $image, string $operation, array $after_hashes, string $captured_by, ?string $claimed_by, ?array $after_blocks = null, array $preview = [], ?int $revision_id = null, ?string $content_hash = null ): bool {
 		global $wpdb;
 
 		$thing = Thing::for( $entity );
@@ -232,6 +253,8 @@ class Repository {
 				'claimed_by'   => $claimed_by,
 				'after_blocks'  => $after_blocks === null ? null : (string) wp_json_encode( $after_blocks ),
 				'after_preview' => $preview === [] ? null : (string) wp_json_encode( $preview, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+				'content_revision_id' => $revision_id,
+				'content_hash'        => $content_hash,
 			]
 		);
 	}
@@ -369,6 +392,14 @@ class Repository {
 					$row['pruned']       = $expired;
 				}
 				$row['before'] = is_string( $row['before_image'] ) ? self::decode( $row['before_image'] ) : null;
+
+				if ( $row['before'] !== null && $row['content_revision_id'] !== null ) {
+					$row['before'] = Snapshot::hydrate( $row['before'], (int) $row['content_revision_id'], (string) $row['content_hash'] );
+					if ( $row['before'] === null ) {
+						$row['pruned'] = self::REVISION_GONE;
+					}
+				}
+
 				return $row;
 			},
 			$rows

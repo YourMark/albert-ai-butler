@@ -25,6 +25,7 @@ use Albert\Undo\Handlers\Handler;
 use Albert\Undo\Handlers\Registry;
 use Albert\Undo\Journal;
 use Albert\Undo\Recorder;
+use Albert\Undo\RevisionGuard;
 use Albert\Undo\Storage\Repository;
 use Albert\Undo\Window;
 use Albert\Undo\WindowContext;
@@ -330,6 +331,88 @@ class ChangeJournalTest extends TestCase {
 		$this->assertNotEmpty( $revisions, 'The update wrote a revision.' );
 		$this->assertSame( [ "post:{$post_id}" ], array_values( $posts ) );
 		$this->assertEqualsCanonicalizing( $revisions, json_decode( (string) $entry['effects'], true )['revision_ids'] );
+	}
+
+	/**
+	 * A post's content before the call is left to the revision holding it,
+	 * and read back from there.
+	 *
+	 * @return void
+	 */
+	public function test_content_a_revision_holds_is_not_stored_twice(): void {
+		[ $post_id, $content ] = $this->revised_post();
+
+		$this->work = static fn() => wp_update_post(
+			[
+				'ID'         => $post_id,
+				'post_title' => 'Renamed',
+			]
+		);
+		$this->call();
+
+		$item   = $this->items_by_key( (int) $this->only_entry()['id'] )[ "post:{$post_id}" ];
+		$stored = Repository::decode( (string) $item['before_image'] );
+
+		$this->assertNotNull( $item['content_revision_id'] );
+		$this->assertSame( 'revision', get_post_type( (int) $item['content_revision_id'] ) );
+		$this->assertArrayNotHasKey( 'post_content', $stored );
+		$this->assertSame( $content, $item['before']['post_content'] );
+	}
+
+	/**
+	 * Deleting the revision first copies its content into the item, so the
+	 * revision limit cannot take a revert away.
+	 *
+	 * @return void
+	 */
+	public function test_a_deleted_revision_is_copied_into_the_item_first(): void {
+		[ $post_id, $content ] = $this->revised_post();
+		( new RevisionGuard() )->register_hooks();
+
+		$this->work = static fn() => wp_update_post(
+			[
+				'ID'         => $post_id,
+				'post_title' => 'Renamed',
+			]
+		);
+		$this->call();
+
+		$entry_id = (int) $this->only_entry()['id'];
+		wp_delete_post_revision( (int) $this->items_by_key( $entry_id )[ "post:{$post_id}" ]['content_revision_id'] );
+
+		$item = $this->items_by_key( $entry_id )[ "post:{$post_id}" ];
+		$this->assertNull( $item['content_revision_id'] );
+		$this->assertSame( $content, Repository::decode( (string) $item['before_image'] )['post_content'] );
+		$this->assertSame( $content, $item['before']['post_content'] );
+	}
+
+	/**
+	 * A revision that no longer holds the content is never trusted: the item
+	 * reads as gone, not as the wrong content.
+	 *
+	 * @return void
+	 */
+	public function test_a_changed_revision_reads_as_gone(): void {
+		global $wpdb;
+
+		[ $post_id ] = $this->revised_post();
+
+		$this->work = static fn() => wp_update_post(
+			[
+				'ID'         => $post_id,
+				'post_title' => 'Renamed',
+			]
+		);
+		$this->call();
+
+		$entry_id = (int) $this->only_entry()['id'];
+		$revision = (int) $this->items_by_key( $entry_id )[ "post:{$post_id}" ]['content_revision_id'];
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture.
+		$wpdb->update( $wpdb->posts, [ 'post_content' => 'Tampered' ], [ 'ID' => $revision ] );
+
+		$item = $this->items_by_key( $entry_id )[ "post:{$post_id}" ];
+		$this->assertNull( $item['before'] );
+		$this->assertSame( Repository::REVISION_GONE, $item['pruned'] );
 	}
 
 	/**
@@ -1419,6 +1502,24 @@ class ChangeJournalTest extends TestCase {
 		} finally {
 			array_pop( $wp_current_filter );
 		}
+	}
+
+	/**
+	 * A post saved twice, so its latest revision holds its current content.
+	 *
+	 * @return array{0: int, 1: string} The post and its content.
+	 */
+	private function revised_post(): array {
+		$content = '<!-- wp:paragraph --><p>' . str_repeat( 'Long page. ', 50 ) . '</p><!-- /wp:paragraph -->';
+		$post_id = self::factory()->post->create( [ 'post_content' => 'Draft' ] );
+		wp_update_post(
+			[
+				'ID'           => $post_id,
+				'post_content' => $content,
+			]
+		);
+
+		return [ $post_id, $content ];
 	}
 
 	/**

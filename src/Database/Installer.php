@@ -605,6 +605,8 @@ class Installer {
 	 * changed thing ({@see \Albert\Undo\Thing}). `after_blocks` is the block
 	 * tree a call left in a post's content ({@see \Albert\Undo\BlockTree}),
 	 * `after_preview` short text of what it changed ({@see \Albert\Undo\Preview}).
+	 * A post's content before the call is left out of `before_image` when the
+	 * revision `content_revision_id` holds it; `content_hash` proves it still does.
 	 *
 	 * @param string $charset_collate Charset/collation clause.
 	 *
@@ -628,16 +630,19 @@ class Installer {
 			image_bytes int(10) unsigned NOT NULL DEFAULT 0,
 			after_hashes longtext DEFAULT NULL,
 			claimed_by varchar(100) DEFAULT NULL,
-			pruned varchar(10) DEFAULT NULL,
+			pruned varchar(20) DEFAULT NULL,
 			thing_key varchar(191) NOT NULL DEFAULT '',
 			thing_hash char(64) NOT NULL DEFAULT '',
 			after_blocks longtext DEFAULT NULL,
 			after_preview longtext DEFAULT NULL,
+			content_revision_id bigint(20) unsigned DEFAULT NULL,
+			content_hash char(64) DEFAULT NULL,
 			PRIMARY KEY  (id),
 			KEY change_id (change_id),
 			KEY entity_run (entity_hash, run_id),
 			KEY run_pruned (run_id, pruned),
-			KEY thing_change (thing_hash, change_id)
+			KEY thing_change (thing_hash, change_id),
+			KEY content_revision (content_revision_id)
 		) $charset_collate;\n\n";
 	}
 

@@ -630,6 +630,8 @@ final class Recorder {
 				$item['after']     = [];
 				$item['blocks']    = null;
 				$item['preview']   = [];
+				$item['revision']  = null;
+				$item['content']   = null;
 				$item['operation'] = $item['existed'] ? 'update' : 'create';
 				$kept[]            = $item;
 				continue;
@@ -641,9 +643,19 @@ final class Recorder {
 				continue;
 			}
 
-			$item['after']     = $hashes;
-			$item['blocks']    = self::after_blocks( $item, $after, $hashes );
-			$item['preview']   = Preview::of( Snapshot::comparable( $item['entity'], $after ), $item['before'], $hashes, $item['blocks'] === null ? null : self::before_content( $item ) );
+			$before = $item['entity']->type === Entity::POST && is_string( $item['image'] ) ? Repository::decode( $item['image'] ) : null;
+
+			$item['after']   = $hashes;
+			$item['blocks']  = self::after_blocks( $item, $after, $hashes );
+			$item['preview'] = Preview::of(
+				Snapshot::comparable( $item['entity'], $after ),
+				$item['before'],
+				$hashes,
+				$item['blocks'] !== null && is_string( $before['post_content'] ?? null ) ? $before['post_content'] : null
+			);
+
+			[ $item['image'], $item['revision'], $item['content'] ] = $this->revision_backed( $item, $before );
+
 			$item['operation'] = ! $item['existed'] ? 'create' : ( $after === null ? 'delete' : 'update' );
 			$kept[]            = $item;
 		}
@@ -683,7 +695,9 @@ final class Recorder {
 				$item['by'],
 				$this->handlers->claimant( $item['entity'] ),
 				$item['blocks'],
-				$item['preview']
+				$item['preview'],
+				$item['revision'],
+				$item['content']
 			);
 
 			if ( $inserted ) {
@@ -737,16 +751,32 @@ final class Recorder {
 	}
 
 	/**
-	 * A post's content before the call, from its held before-image.
+	 * A post's before-image with its content left to a revision that holds it
+	 * exactly, so a long page is not stored twice.
 	 *
-	 * @param array<string, mixed> $item The captured item.
+	 * Only on the journal's own blog: a revision on another blog could be
+	 * deleted without this journal hearing of it.
 	 *
-	 * @return string|null Null for a create, or when the image was not kept.
+	 * @param array<string, mixed>      $item   The captured item.
+	 * @param array<string, mixed>|null $before Its decoded before-image.
+	 *
+	 * @return array{0: string|null, 1: int|null, 2: string|null} The image to store, the revision, and the content's sha256.
 	 */
-	private static function before_content( array $item ): ?string {
-		$before = is_string( $item['image'] ) ? Repository::decode( $item['image'] ) : null;
+	private function revision_backed( array $item, ?array $before ): array {
+		$content = $before['post_content'] ?? null;
 
-		return is_string( $before['post_content'] ?? null ) ? $before['post_content'] : null;
+		if ( ! is_string( $content ) || $content === '' || $item['entity']->blog_id !== $this->repository->blog_id() ) {
+			return [ $item['image'], null, null ];
+		}
+
+		$revision = Snapshot::matching_revision( (int) $item['entity']->parts[0], $content );
+		if ( $revision === null ) {
+			return [ $item['image'], null, null ];
+		}
+
+		unset( $before['post_content'] );
+
+		return [ Repository::encode( $before ), $revision, hash( 'sha256', $content ) ];
 	}
 
 	/**

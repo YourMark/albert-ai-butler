@@ -134,6 +134,7 @@ use Albert\SafeMode\Interceptor as SafeModeInterceptor;
 use Albert\SafeMode\ConnectionGuard as SafeModeConnectionGuard;
 use Albert\SafeMode\OptionRestorer as SafeModeOptionRestorer;
 use Albert\Undo\Journal as UndoJournal;
+use Albert\Undo\RevisionGuard;
 use Albert\Admin\Approvals;
 use WP\MCP\Core\McpAdapter;
 
@@ -286,6 +287,7 @@ class Plugin {
 		// Change journal: records what assistant calls change, so they can be
 		// undone. Not admin-only, the window opens on MCP requests.
 		( new UndoJournal() )->register_hooks();
+		( new RevisionGuard() )->register_hooks();
 		( new ChangeJournalPrune() )->register_hooks();
 		ChangeJournalPrune::schedule();
 

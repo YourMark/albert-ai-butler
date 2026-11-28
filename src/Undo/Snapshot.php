@@ -60,6 +60,13 @@ final class Snapshot {
 	];
 
 	/**
+	 * Revisions searched for one holding a before-image's content.
+	 *
+	 * @var int
+	 */
+	private const REVISIONS_SEARCHED = 3;
+
+	/**
 	 * Build a reader.
 	 *
 	 * @param Registry $handlers Handler registry, for custom entities.
@@ -105,6 +112,85 @@ final class Snapshot {
 				return hash( 'sha256', (string) $value );
 			}
 		);
+	}
+
+	/**
+	 * A recent revision of a post holding exactly this content, so the
+	 * journal can point at it instead of keeping a second copy.
+	 *
+	 * Looks a few revisions back, not only at the latest: since WordPress 6.4
+	 * the revision of a save is written after it, so at the end of a call the
+	 * latest one usually holds the new content. Autosaves are skipped, they
+	 * are rewritten in place.
+	 *
+	 * @param int    $post_id The post.
+	 * @param string $content The content to find.
+	 *
+	 * @return int|null The revision's id, or null when none holds it.
+	 * @since 1.7.0
+	 */
+	public static function matching_revision( int $post_id, string $content ): ?int {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The stored rows, not the cache.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT ID, post_content FROM %i WHERE post_parent = %d AND post_type = 'revision' AND post_name NOT LIKE %s ORDER BY ID DESC LIMIT %d",
+				$wpdb->posts,
+				$post_id,
+				'%' . $wpdb->esc_like( '-autosave-v1' ),
+				self::REVISIONS_SEARCHED
+			),
+			ARRAY_A
+		);
+
+		foreach ( is_array( $rows ) ? $rows : [] as $row ) {
+			if ( (string) $row['post_content'] === $content ) {
+				return (int) $row['ID'];
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Put a revision's content back into a before-image that points at it.
+	 *
+	 * @param array<string, mixed> $before      The image, without `post_content`.
+	 * @param int                  $revision_id The revision it points at.
+	 * @param string               $hash        sha256 of the content it held.
+	 *
+	 * @return array<string, mixed>|null Null when the revision is gone or no
+	 *                                   longer holds that content.
+	 * @since 1.7.0
+	 */
+	public static function hydrate( array $before, int $revision_id, string $hash ): ?array {
+		$content = self::revision_content( $revision_id );
+
+		if ( $content === null || ! hash_equals( $hash, hash( 'sha256', $content ) ) ) {
+			return null;
+		}
+
+		$before['post_content'] = $content;
+
+		return $before;
+	}
+
+	/**
+	 * A revision's stored content.
+	 *
+	 * @param int $revision_id The revision.
+	 *
+	 * @return string|null Null when it does not exist.
+	 * @since 1.7.0
+	 */
+	public static function revision_content( int $revision_id ): ?string {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The stored row, not the cache.
+		$content = $wpdb->get_var( $wpdb->prepare( "SELECT post_content FROM %i WHERE ID = %d AND post_type = 'revision'", $wpdb->posts, $revision_id ) );
+
+		return is_string( $content ) ? $content : null;
 	}
 
 	/**
