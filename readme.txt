@@ -236,6 +236,16 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.7.0 =
+
+**Improvements**
+
+* Privacy mode covers the user and content searches WordPress 7.2 adds: people's names, usernames, email addresses and websites are masked just as in Albert's own user search, and a post's author is masked too.
+
+**Developer**
+
+* `albert/privacy/personal_keys` starts from the full key list for `core/users-query` and `core/content-query`, as for Albert's own abilities.
+
 = 1.6.0 =
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
