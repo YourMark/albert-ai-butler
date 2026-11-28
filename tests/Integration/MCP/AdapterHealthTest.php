@@ -218,4 +218,38 @@ class AdapterHealthTest extends TestCase {
 		$this->assertArrayHasKey( 'mcp_missing', $fields );
 		$this->assertNotEmpty( $fields['mcp_loaded_at']['value'] );
 	}
+
+	/**
+	 * The admin notice is for people who can fix it, and names no server path.
+	 *
+	 * @return void
+	 */
+	public function test_notice_is_for_plugin_managers_and_names_no_path(): void {
+		$health = new class() extends AdapterHealth {
+			/**
+			 * Pretend the library is unusable.
+			 *
+			 * @return array<int, string>
+			 */
+			protected function missing(): array {
+				return [ 'WP\\MCP\\Core\\SomethingAlbertNeeds' ];
+			}
+		};
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'subscriber' ] ) );
+		ob_start();
+		$health->render_notice();
+		$this->assertSame( '', ob_get_clean() );
+
+		wp_set_current_user( self::factory()->user->create( [ 'role' => 'administrator' ] ) );
+		ob_start();
+		$health->render_notice();
+		$notice = (string) ob_get_clean();
+
+		$this->assertStringContainsString( 'SomethingAlbertNeeds', $notice );
+		$path = (string) \Albert\MCP\AdapterStatus::adapter_path();
+		if ( $path !== '' ) {
+			$this->assertStringNotContainsString( $path, $notice );
+		}
+	}
 }

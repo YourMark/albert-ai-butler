@@ -39,10 +39,12 @@ class GateTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		parent::setUp();
-		$GLOBALS['albert_test_options']        = [];
-		$GLOBALS['albert_test_hooks']          = [];
-		$GLOBALS['albert_test_filter_returns'] = [];
-		$this->gate                            = new Gate();
+		$GLOBALS['albert_test_options']          = [];
+		$GLOBALS['albert_test_hooks']            = [];
+		$GLOBALS['albert_test_filter_returns']   = [];
+		$GLOBALS['albert_test_filter_callbacks'] = [];
+		unset( $GLOBALS['albert_test_user_id'] );
+		$this->gate = new Gate();
 	}
 
 	/**
@@ -151,5 +153,166 @@ class GateTest extends TestCase {
 	 */
 	public function test_enabled_by_default(): void {
 		$this->assertTrue( $this->gate->is_enabled() );
+	}
+
+	/**
+	 * An add-on can hold a call that Albert's policy lets through, on its input.
+	 *
+	 * @return void
+	 */
+	public function test_an_add_on_can_hold_a_call_on_its_input(): void {
+		$GLOBALS['albert_test_filter_callbacks']['albert/safe_mode/should_hold'] = static function ( bool $hold, string $ability, array $input ): bool {
+			return $hold || ( $input['status'] ?? '' ) === 'publish';
+		};
+
+		$ability = $this->ability( [ 'destructive' => false ] );
+
+		$this->assertTrue( $this->gate->must_gate( $ability, [ 'status' => 'publish' ] ) );
+		$this->assertFalse( $this->gate->must_gate( $ability, [ 'status' => 'draft' ] ) );
+	}
+
+	/**
+	 * A filter returning false cannot release a hold Albert's policy made.
+	 *
+	 * @return void
+	 */
+	public function test_a_filter_cannot_release_a_policy_hold(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/should_hold'] = false;
+
+		$this->assertTrue( $this->gate->must_gate( $this->ability( [ 'destructive' => true ] ) ) );
+	}
+
+	/**
+	 * The filter receives the policy decision, ability id, input and user id.
+	 *
+	 * @return void
+	 */
+	public function test_the_filter_receives_the_call(): void {
+		$GLOBALS['albert_test_user_id'] = 42;
+		$input                          = [ 'id' => 7 ];
+
+		$this->gate->must_gate( $this->ability( [ 'destructive' => true ] ), $input );
+
+		$calls = array_values(
+			array_filter(
+				$GLOBALS['albert_test_hooks'],
+				static fn( array $call ): bool => $call['hook'] === 'albert/safe_mode/should_hold'
+			)
+		);
+
+		$this->assertCount( 1, $calls );
+		$this->assertSame( [ true, 'test/ability', $input, 42 ], $calls[0]['args'] );
+	}
+
+	/**
+	 * The filter is not asked when safe mode is off or the ability is exempt.
+	 *
+	 * Otherwise an add-on hold would override the owner's off switch or exemption.
+	 *
+	 * @return void
+	 */
+	public function test_the_filter_is_skipped_when_off_or_exempt(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/should_hold']      = true;
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/exempt_abilities'] = [ 'test/ability' ];
+
+		$this->assertFalse( $this->gate->must_gate( $this->ability( [ 'destructive' => false ] ) ) );
+
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/exempt_abilities'] = [];
+		$GLOBALS['albert_test_options']['albert_safe_mode']                         = 'off';
+
+		$this->assertFalse( $this->gate->must_gate( $this->ability( [ 'destructive' => false ] ) ) );
+	}
+
+	/**
+	 * A destructive delete ability with a boolean `force`, like Albert's delete-post.
+	 *
+	 * @param string $name Ability id.
+	 * @return WP_Ability
+	 */
+	private function trash_ability( string $name = 'albert/delete-post' ): WP_Ability {
+		return new WP_Ability(
+			$name,
+			[ 'annotations' => [ 'destructive' => true ] ],
+			[ 'properties' => [ 'force' => [ 'type' => 'boolean' ] ] ]
+		);
+	}
+
+	/**
+	 * Moving to the trash is not held: trash is core's own undo.
+	 *
+	 * @return void
+	 */
+	public function test_a_trash_call_is_not_held(): void {
+		$this->assertFalse( $this->gate->must_gate( $this->trash_ability(), [ 'id' => 5 ] ) );
+		$this->assertFalse(
+			$this->gate->must_gate(
+				$this->trash_ability(),
+				[
+					'id'    => 5,
+					'force' => false,
+				]
+			)
+		);
+	}
+
+	/**
+	 * The permanent call is held, and so is any value that is not exactly false.
+	 *
+	 * @dataProvider not_exactly_false
+	 *
+	 * @param mixed $force The `force` value sent.
+	 * @return void
+	 */
+	public function test_a_permanent_call_is_held( mixed $force ): void {
+		$this->assertTrue(
+			$this->gate->must_gate(
+				$this->trash_ability(),
+				[
+					'id'    => 5,
+					'force' => $force,
+				]
+			)
+		);
+	}
+
+	/**
+	 * `force` values that are not exactly false.
+	 *
+	 * @return array<string, array{0: mixed}>
+	 */
+	public static function not_exactly_false(): array {
+		return [
+			'true'           => [ true ],
+			'string "false"' => [ 'false' ],
+			'zero'           => [ 0 ],
+			'null'           => [ null ],
+			'string "true"'  => [ 'true' ],
+		];
+	}
+
+	/**
+	 * Any other ability with the same input is still held, Albert's delete-media included.
+	 *
+	 * @return void
+	 */
+	public function test_an_unlisted_ability_with_a_force_input_is_held(): void {
+		$input = [
+			'id'    => 5,
+			'force' => false,
+		];
+
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability( 'vendor/delete-thing' ), $input ) );
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability( 'albert/delete-media' ), $input ) );
+	}
+
+	/**
+	 * The risk list still holds a trash call.
+	 *
+	 * @return void
+	 */
+	public function test_the_risk_list_still_holds_a_trash_call(): void {
+		$GLOBALS['albert_test_filter_returns']['albert/safe_mode/high_risk_abilities'] = [ 'albert/delete-post' ];
+
+		$this->assertTrue( $this->gate->must_gate( $this->trash_ability(), [ 'id' => 5 ] ) );
 	}
 }

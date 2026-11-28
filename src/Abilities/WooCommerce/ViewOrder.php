@@ -9,9 +9,10 @@
 
 namespace Albert\Abilities\WooCommerce;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use Albert\Privacy\PiiPolicy;
 use WC_Order;
 use WC_Order_Item_Product;
 use WP_Error;
@@ -59,15 +60,10 @@ class ViewOrder extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'                   => [
+				'id' => [
 					'type'        => 'integer',
 					'description' => 'The order ID to retrieve.',
 					'minimum'     => 1,
-				],
-				'reveal_personal_data' => [
-					'type'        => 'boolean',
-					'description' => "Return real customer PII instead of anonymised placeholders. Requires the ability's own capability; ignored unless privacy mode is Balanced.",
-					'default'     => false,
 				],
 			],
 			'required'   => [ 'id' ],
@@ -99,7 +95,11 @@ class ViewOrder extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'edit_shop_orders' );
+		$allowed = $this->require_capability( 'edit_shop_orders' );
+
+		// WooCommerce's own order REST asks for this one as well; only a custom
+		// role can hold the first without it.
+		return $allowed === true ? $this->require_capability( 'read_private_shop_orders' ) : $allowed;
 	}
 
 	/**
@@ -141,48 +141,44 @@ class ViewOrder extends BaseAbility {
 			];
 		}
 
-		return PiiPolicy::redact(
-			[
-				'order' => [
-					'id'             => $order->get_id(),
-					'status'         => $order->get_status(),
-					'total'          => $order->get_total(),
-					'subtotal'       => $order->get_subtotal(),
-					'total_tax'      => $order->get_total_tax(),
-					'currency'       => $order->get_currency(),
-					'payment_method' => $order->get_payment_method_title(),
-					'customer_id'    => $order->get_customer_id(),
-					'billing'        => [
-						'first_name' => $order->get_billing_first_name(),
-						'last_name'  => $order->get_billing_last_name(),
-						'email'      => $order->get_billing_email(),
-						'phone'      => $order->get_billing_phone(),
-						'address_1'  => $order->get_billing_address_1(),
-						'address_2'  => $order->get_billing_address_2(),
-						'city'       => $order->get_billing_city(),
-						'state'      => $order->get_billing_state(),
-						'postcode'   => $order->get_billing_postcode(),
-						'country'    => $order->get_billing_country(),
-					],
-					'shipping'       => [
-						'first_name' => $order->get_shipping_first_name(),
-						'last_name'  => $order->get_shipping_last_name(),
-						'address_1'  => $order->get_shipping_address_1(),
-						'address_2'  => $order->get_shipping_address_2(),
-						'city'       => $order->get_shipping_city(),
-						'state'      => $order->get_shipping_state(),
-						'postcode'   => $order->get_shipping_postcode(),
-						'country'    => $order->get_shipping_country(),
-					],
-					'items'          => $items,
-					'date_created'   => $order->get_date_created() ? $order->get_date_created()->date( 'Y-m-d H:i:s' ) : '',
-					'date_modified'  => $order->get_date_modified() ? $order->get_date_modified()->date( 'Y-m-d H:i:s' ) : '',
-					'date_completed' => $order->get_date_completed() ? $order->get_date_completed()->date( 'Y-m-d H:i:s' ) : '',
-					'customer_note'  => $order->get_customer_note(),
+		return [
+			'order' => [
+				'id'             => $order->get_id(),
+				'status'         => $order->get_status(),
+				'total'          => $order->get_total(),
+				'subtotal'       => $order->get_subtotal(),
+				'total_tax'      => $order->get_total_tax(),
+				'currency'       => $order->get_currency(),
+				'payment_method' => $order->get_payment_method_title(),
+				'customer_id'    => $order->get_customer_id(),
+				'billing'        => [
+					'first_name' => $order->get_billing_first_name(),
+					'last_name'  => $order->get_billing_last_name(),
+					'email'      => $order->get_billing_email(),
+					'phone'      => $order->get_billing_phone(),
+					'address_1'  => $order->get_billing_address_1(),
+					'address_2'  => $order->get_billing_address_2(),
+					'city'       => $order->get_billing_city(),
+					'state'      => $order->get_billing_state(),
+					'postcode'   => $order->get_billing_postcode(),
+					'country'    => $order->get_billing_country(),
 				],
+				'shipping'       => [
+					'first_name' => $order->get_shipping_first_name(),
+					'last_name'  => $order->get_shipping_last_name(),
+					'address_1'  => $order->get_shipping_address_1(),
+					'address_2'  => $order->get_shipping_address_2(),
+					'city'       => $order->get_shipping_city(),
+					'state'      => $order->get_shipping_state(),
+					'postcode'   => $order->get_shipping_postcode(),
+					'country'    => $order->get_shipping_country(),
+				],
+				'items'          => $items,
+				'date_created'   => $order->get_date_created() ? $order->get_date_created()->date( 'Y-m-d H:i:s' ) : '',
+				'date_modified'  => $order->get_date_modified() ? $order->get_date_modified()->date( 'Y-m-d H:i:s' ) : '',
+				'date_completed' => $order->get_date_completed() ? $order->get_date_completed()->date( 'Y-m-d H:i:s' ) : '',
+				'customer_note'  => $order->get_customer_note(),
 			],
-			$args,
-			[ 'reveal_capability' => 'edit_shop_orders' ]
-		);
+		];
 	}
 }

@@ -17,10 +17,17 @@ use Albert\Database\Installer;
 use Albert\Database\Tables;
 use Albert\Media\UploadLinks\UploadLinkController;
 use Albert\Media\UploadLinks\UploadLinkService;
+use Albert\OAuth\AllowedUsers;
+use Albert\OAuth\Entities\AccessTokenEntity;
+use Albert\OAuth\Entities\ClientEntity;
+use Albert\OAuth\Entities\ScopeEntity;
+use Albert\OAuth\Repositories\AccessTokenRepository;
+use Albert\OAuth\Repositories\ClientRepository;
 use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
 use Albert\Undo\Storage\Repository as ChangeRepository;
 use Albert\Undo\WindowContext;
+use DateTimeImmutable;
 use WP_Error;
 use WP_REST_Request;
 
@@ -59,6 +66,9 @@ class UploadLinkControllerTest extends TestCase {
 	 */
 	public function set_up(): void {
 		parent::set_up();
+
+		// A link only redeems for somebody still allowed to connect.
+		add_action( 'user_register', [ AllowedUsers::class, 'add' ] );
 
 		Installer::install();
 
@@ -179,15 +189,26 @@ class UploadLinkControllerTest extends TestCase {
 	}
 
 	/**
-	 * A link minted over a connection records its upload in the change journal
-	 * as that connection's call; one minted without a connection does not.
+	 * A link minted over a live connection records its upload in the change
+	 * journal as that connection's call.
 	 *
 	 * @return void
 	 */
 	public function test_an_upload_through_a_connections_link_is_recorded(): void {
 		global $wpdb;
 
-		ConnectionContext::set( 'client-acme' );
+		$client_id = (string) ( new ClientRepository() )->createClient( 'Acme', 'https://example.test/cb', true, $this->admin_id )['client_id'];
+		$client    = new ClientEntity();
+		$client->setIdentifier( $client_id );
+		$token = new AccessTokenEntity();
+		$token->setIdentifier( 'tok_' . $client_id );
+		$token->setClient( $client );
+		$token->setUserIdentifier( (string) $this->admin_id );
+		$token->setExpiryDateTime( new DateTimeImmutable( '+1 hour' ) );
+		$token->addScope( new ScopeEntity( 'default' ) );
+		( new AccessTokenRepository() )->persistNewAccessToken( $token );
+
+		ConnectionContext::set( $client_id );
 		try {
 			$link = $this->links->mint( $this->admin_id, [] );
 		} finally {
@@ -200,7 +221,7 @@ class UploadLinkControllerTest extends TestCase {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Assertion read.
 		$entry = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id DESC LIMIT 1', Tables::changes() ), ARRAY_A );
 
-		$this->assertSame( 'client-acme', $entry['client_id'] );
+		$this->assertSame( $client_id, $entry['client_id'] );
 		$this->assertSame( WindowContext::SOURCE_UPLOAD, $entry['source'] );
 		$this->assertContains( 'post:' . $response->get_data()['attachment_id'], array_map( static fn( $item ) => $item['entity_type'] . ':' . $item['entity_key'], ( new ChangeRepository() )->items( (int) $entry['id'] ) ) );
 	}

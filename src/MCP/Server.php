@@ -98,13 +98,19 @@ class Server implements Hookable {
 		// ability runs (e.g. input-schema validation).
 		( new ToolCallObserver() )->register_hooks();
 
-		// Strip server-only keys from schemas before they reach the client
-		// (WordPress 7.1+); a no-op on older versions.
+		// Strip server-only keys from schemas before they reach the client.
 		( new SchemaPreparer() )->register_hooks();
+
+		// Switched-off abilities: hidden from discovery, refused on call.
+		( new DisabledAbilities() )->register_hooks();
 
 		// Add `site` and `skills` to the discovery response, so an assistant
 		// knows what this site is before it starts guessing.
 		( new DiscoveryContext() )->register_hooks();
+
+		// CORE_TOOL_ABILITIES otherwise only exist while the adapter's default
+		// server is on, which any plugin can switch off for the whole site.
+		( new AdapterAbilities() )->register_hooks();
 	}
 
 	/**
@@ -461,7 +467,7 @@ class Server implements Hookable {
 	 * Skills are bundled Markdown playbooks loaded as built McpPrompt instances
 	 * (not abilities), mirroring how resources are supplied. See {@see SkillLoader}.
 	 *
-	 * @return array<int, McpPrompt> The prompt instances to expose.
+	 * @return list<McpPrompt> The prompt instances to expose.
 	 * @since 1.2.0
 	 */
 	private function get_prompts(): array {

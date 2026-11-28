@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Media;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use Albert\Media\AttachmentImporter;
@@ -169,15 +171,15 @@ class UploadMedia extends BaseAbility {
 		// (int) cast, not absint(): absint(-12) returns 12, which would
 		// silently attach to a post the caller never asked for.
 		$post_id = max( 0, (int) ( $args['post_id'] ?? 0 ) );
-		if ( ! empty( $post_id ) ) {
-			$post = get_post( $post_id );
-			if ( ! $post ) {
-				return new WP_Error(
-					'invalid_post',
-					__( 'The specified post does not exist.', 'albert-ai-butler' ),
-					[ 'status' => 404 ]
-				);
-			}
+		// Core's media endpoint asks the same before attaching to a parent. A
+		// missing post fails it too, with the same answer, so the error does not
+		// tell anyone which post IDs exist.
+		if ( $post_id > 0 && ! current_user_can( 'edit_post', $post_id ) ) {
+			return new WP_Error(
+				'cannot_attach',
+				__( 'That post does not exist, or you may not attach media to it.', 'albert-ai-butler' ),
+				[ 'status' => 403 ]
+			);
 		}
 
 		// download_url() needs this one; AttachmentImporter requires the rest itself.

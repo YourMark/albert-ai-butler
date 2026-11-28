@@ -194,7 +194,7 @@ class Recommendations {
 				// does: this string used to be hardcoded in the renderer, so an
 				// inactive Premium was offered as a way to "work with your shop".
 				'inactive_detail' => __( 'You already have this. Switch it on to let assistants work with your shop.', 'albert-ai-butler' ),
-				'url'             => 'https://albertwp.com/add-ons/woocommerce/',
+				'url'             => 'https://albertwp.com/add-ons/albert-for-woocommerce/',
 				'host_symbol'     => 'WooCommerce',
 				'plugin_file'     => 'albert-woocommerce/albert-woocommerce.php',
 				// Verified against the add-on itself: albert-woocommerce declares

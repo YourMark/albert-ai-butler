@@ -13,11 +13,33 @@ namespace Albert\Tests\Unit\Abilities;
 
 require_once dirname( __DIR__ ) . '/stubs/wordpress.php';
 
+use Albert\Abilities\WordPress\Comments\DeleteComment;
+use Albert\Abilities\WordPress\Comments\FindComments;
+use Albert\Abilities\WordPress\Comments\ViewComment;
+use Albert\Abilities\WordPress\Comments\ModerateComment;
+use Albert\Abilities\WordPress\Comments\ReplyToComment;
+use Albert\Abilities\WordPress\Media\DeleteMedia;
 use Albert\Abilities\WordPress\Media\FindMedia;
+use Albert\Abilities\WordPress\Media\UpdateMedia;
+use Albert\Abilities\WordPress\Menus\AddMenuItem;
+use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
+use Albert\Abilities\WordPress\Menus\CreateMenu;
+use Albert\Abilities\WordPress\Menus\DeleteMenu;
+use Albert\Abilities\WordPress\Menus\FindMenus;
+use Albert\Abilities\WordPress\Menus\ViewMenu;
+use Albert\Abilities\WordPress\Menus\MoveMenuItem;
+use Albert\Abilities\WordPress\Menus\RemoveMenuItem;
+use Albert\Abilities\WordPress\Menus\UnassignMenuLocation;
+use Albert\Abilities\WordPress\Menus\UpdateMenuItem;
 use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\Search\SearchContent;
+use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
+use Albert\Abilities\WordPress\Revisions\FindRevisions;
+use Albert\Abilities\WordPress\Revisions\ViewRevision;
+use Albert\Abilities\WordPress\Revisions\RestoreRevision;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
@@ -66,37 +88,69 @@ class DirectCapabilityTest extends TestCase {
 	/**
 	 * Abilities and the capability they require.
 	 *
-	 * @return array<string, array{0: class-string<BaseAbility>, 1: string}>
+	 * @return array<string, array{0: class-string<BaseAbility>, 1: string|list<string>}>
 	 */
 	public static function provideAbilitiesWithCaps(): array {
 		return [
+			// Menus.
+			'find-menus'             => [ FindMenus::class, 'edit_theme_options' ],
+			'view-menu'              => [ ViewMenu::class, 'edit_theme_options' ],
+			'create-menu'            => [ CreateMenu::class, 'edit_theme_options' ],
+			'delete-menu'            => [ DeleteMenu::class, 'edit_theme_options' ],
+			'add-menu-item'          => [ AddMenuItem::class, 'edit_theme_options' ],
+			'update-menu-item'       => [ UpdateMenuItem::class, 'edit_theme_options' ],
+			'move-menu-item'         => [ MoveMenuItem::class, 'edit_theme_options' ],
+			'remove-menu-item'       => [ RemoveMenuItem::class, 'edit_theme_options' ],
+			'assign-menu-location'   => [ AssignMenuLocation::class, 'edit_theme_options' ],
+			'unassign-menu-location' => [ UnassignMenuLocation::class, 'edit_theme_options' ],
+
+			// Comments.
+			'find-comments'          => [ FindComments::class, 'moderate_comments' ],
+			'view-comment'           => [ ViewComment::class, 'moderate_comments' ],
+			'reply-to-comment'       => [ ReplyToComment::class, 'moderate_comments' ],
+			'moderate-comment'       => [ ModerateComment::class, 'moderate_comments' ],
+			'delete-comment'         => [ DeleteComment::class, 'moderate_comments' ],
+
 			// Media.
-			'find-media'         => [ FindMedia::class, 'upload_files' ],
-			'view-media'         => [ ViewMedia::class, 'upload_files' ],
-			'upload-media'       => [ UploadMedia::class, 'upload_files' ],
+			'find-media'             => [ FindMedia::class, 'upload_files' ],
+			'view-media'             => [ ViewMedia::class, 'upload_files' ],
+			'upload-media'           => [ UploadMedia::class, 'upload_files' ],
+			'update-media'           => [ UpdateMedia::class, 'upload_files' ],
+			'delete-media'           => [ DeleteMedia::class, 'upload_files' ],
 
 			// Posts/Pages (read-only).
-			'view-post'          => [ ViewPost::class, 'read' ],
-			'view-page'          => [ ViewPage::class, 'read' ],
+			'view-post'              => [ ViewPost::class, 'read' ],
+			'view-page'              => [ ViewPage::class, 'read' ],
+
+			// Search (core's search route is public).
+			'search-content'         => [ SearchContent::class, 'read' ],
+
+			// Site Health.
+			'view-site-health'       => [ ViewSiteHealth::class, 'view_site_health_checks' ],
+
+			// Revisions (the per-post edit_post check runs in execute()).
+			'find-revisions'         => [ FindRevisions::class, 'edit_posts' ],
+			'view-revision'          => [ ViewRevision::class, 'edit_posts' ],
+			'restore-revision'       => [ RestoreRevision::class, 'edit_posts' ],
 
 			// Users.
-			'view-user'          => [ ViewUser::class, 'list_users' ],
+			'view-user'              => [ ViewUser::class, 'list_users' ],
 
 			// Taxonomies.
-			'find-taxonomies'    => [ FindTaxonomies::class, 'manage_categories' ],
-			'find-terms'         => [ FindTerms::class, 'manage_categories' ],
-			'view-term'          => [ ViewTerm::class, 'manage_categories' ],
-			'create-term'        => [ CreateTerm::class, 'manage_categories' ],
-			'update-term'        => [ UpdateTerm::class, 'manage_categories' ],
-			'delete-term'        => [ DeleteTerm::class, 'manage_categories' ],
+			'find-taxonomies'        => [ FindTaxonomies::class, 'manage_categories' ],
+			'find-terms'             => [ FindTerms::class, 'manage_categories' ],
+			'view-term'              => [ ViewTerm::class, 'manage_categories' ],
+			'create-term'            => [ CreateTerm::class, 'manage_categories' ],
+			'update-term'            => [ UpdateTerm::class, 'manage_categories' ],
+			'delete-term'            => [ DeleteTerm::class, 'manage_categories' ],
 
 			// WooCommerce.
-			'woo-find-products'  => [ FindProducts::class, 'edit_products' ],
-			'woo-view-product'   => [ ViewProduct::class, 'read' ],
-			'woo-find-orders'    => [ FindOrders::class, 'edit_shop_orders' ],
-			'woo-view-order'     => [ ViewOrder::class, 'edit_shop_orders' ],
-			'woo-find-customers' => [ FindCustomers::class, 'list_users' ],
-			'woo-view-customer'  => [ ViewCustomer::class, 'list_users' ],
+			'woo-find-products'      => [ FindProducts::class, 'edit_products' ],
+			'woo-view-product'       => [ ViewProduct::class, 'edit_products' ],
+			'woo-find-orders'        => [ FindOrders::class, [ 'edit_shop_orders', 'read_private_shop_orders' ] ],
+			'woo-view-order'         => [ ViewOrder::class, [ 'edit_shop_orders', 'read_private_shop_orders' ] ],
+			'woo-find-customers'     => [ FindCustomers::class, 'list_users' ],
+			'woo-view-customer'      => [ ViewCustomer::class, 'list_users' ],
 		];
 	}
 
@@ -106,18 +160,18 @@ class DirectCapabilityTest extends TestCase {
 	 * @dataProvider provideAbilitiesWithCaps
 	 *
 	 * @param class-string<BaseAbility> $ability_class Ability class.
-	 * @param string                    $cap   Required capability.
+	 * @param string|list<string>       $cap   Required capability, or every one required.
 	 *
 	 * @return void
 	 */
-	public function test_permission_granted_with_required_cap( string $ability_class, string $cap ): void {
-		$GLOBALS['albert_test_caps'] = [ $cap ];
+	public function test_permission_granted_with_required_cap( string $ability_class, string|array $cap ): void {
+		$GLOBALS['albert_test_caps'] = (array) $cap;
 
 		$ability = new $ability_class();
 
 		$this->assertTrue(
 			$ability->check_permission(),
-			sprintf( '%s should return true when user has "%s".', $ability_class, $cap )
+			sprintf( '%s should return true when user has "%s".', $ability_class, implode( '", "', (array) $cap ) )
 		);
 	}
 
@@ -127,11 +181,11 @@ class DirectCapabilityTest extends TestCase {
 	 * @dataProvider provideAbilitiesWithCaps
 	 *
 	 * @param class-string<BaseAbility> $ability_class Ability class.
-	 * @param string                    $cap   Required capability.
+	 * @param string|list<string>       $cap   Required capability, or every one required.
 	 *
 	 * @return void
 	 */
-	public function test_permission_denied_without_required_cap( string $ability_class, string $cap ): void {
+	public function test_permission_denied_without_required_cap( string $ability_class, string|array $cap ): void {
 		// Grant a harmless cap that is NOT the required one.
 		$GLOBALS['albert_test_caps'] = [ 'some_unrelated_cap' ];
 
@@ -141,7 +195,7 @@ class DirectCapabilityTest extends TestCase {
 		$this->assertInstanceOf(
 			WP_Error::class,
 			$result,
-			sprintf( '%s should return WP_Error when user lacks "%s".', $ability_class, $cap )
+			sprintf( '%s should return WP_Error when user lacks "%s".', $ability_class, implode( '", "', (array) $cap ) )
 		);
 		$this->assertSame( 'ability_permission_denied', $result->get_error_code() );
 	}
@@ -152,11 +206,11 @@ class DirectCapabilityTest extends TestCase {
 	 * @dataProvider provideAbilitiesWithCaps
 	 *
 	 * @param class-string<BaseAbility> $ability_class Ability class.
-	 * @param string                    $cap   Required capability.
+	 * @param string|list<string>       $cap   Required capability, or every one required.
 	 *
 	 * @return void
 	 */
-	public function test_permission_denied_error_has_403_status( string $ability_class, string $cap ): void {
+	public function test_permission_denied_error_has_403_status( string $ability_class, string|array $cap ): void {
 		$GLOBALS['albert_test_caps'] = [];
 
 		$ability = new $ability_class();
@@ -174,21 +228,23 @@ class DirectCapabilityTest extends TestCase {
 	 * @dataProvider provideAbilitiesWithCaps
 	 *
 	 * @param class-string<BaseAbility> $ability_class Ability class.
-	 * @param string                    $cap   Required capability.
+	 * @param string|list<string>       $cap   Required capability, or every one required.
 	 *
 	 * @return void
 	 */
-	public function test_permission_denied_message_mentions_capability( string $ability_class, string $cap ): void {
+	public function test_permission_denied_message_mentions_capability( string $ability_class, string|array $cap ): void {
 		$GLOBALS['albert_test_caps'] = [];
 
 		$ability = new $ability_class();
 		$result  = $ability->check_permission();
 
 		$this->assertInstanceOf( WP_Error::class, $result );
+		// With none held, the first missing capability is the one named.
+		$first = ( (array) $cap )[0];
 		$this->assertStringContainsString(
-			$cap,
+			$first,
 			$result->get_error_message(),
-			sprintf( 'Error message should mention the required capability "%s".', $cap )
+			sprintf( 'Error message should mention the required capability "%s".', $first )
 		);
 	}
 }

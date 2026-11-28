@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Repositories;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Database\Tables;
 use Albert\OAuth\Entities\ClientEntity;
 use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
@@ -352,6 +354,238 @@ class ClientRepository implements ClientRepositoryInterface {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, count for cap enforcement.
 		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $tables['clients'] ) );
+	}
+
+	/**
+	 * Count the clients that hold a place under the registration cap: those
+	 * with a live access or refresh token, so connected ones.
+	 *
+	 * Registration is anonymous, so a client that never authorised must not
+	 * count, or anybody could fill the cap and lock every assistant out.
+	 * Unfinished registrations are bounded by {@see self::count_pending_clients()}.
+	 *
+	 * @return int
+	 * @since 1.5.0
+	 * @since 1.5.1 Recent clients without a token no longer count.
+	 */
+	public function count_live_clients(): int {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, count for cap enforcement.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i c
+				WHERE EXISTS (
+					SELECT 1 FROM %i t
+					LEFT JOIN %i r
+						ON r.access_token_id = t.token_id
+						AND r.revoked = 0
+						AND r.expires_at > UTC_TIMESTAMP()
+					WHERE t.client_id = c.client_id
+						AND ( ( t.revoked = 0 AND t.expires_at > UTC_TIMESTAMP() ) OR r.id IS NOT NULL )
+				)',
+				$tables['clients'],
+				$tables['access_tokens'],
+				$tables['refresh_tokens']
+			)
+		);
+	}
+
+	/**
+	 * Count the clients that never got a token: unfinished registrations.
+	 *
+	 * @return int
+	 * @since 1.5.1
+	 */
+	public function count_pending_clients(): int {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, bound on registrations.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE client_id NOT IN ( SELECT t.client_id FROM %i t )',
+				$tables['clients'],
+				$tables['access_tokens']
+			)
+		);
+	}
+
+	/**
+	 * Delete the oldest client that never got a token, to make room for a new one.
+	 *
+	 * A client holding a live authorization code is mid sign-in and kept.
+	 *
+	 * @return bool Whether a client was deleted.
+	 * @since 1.5.1
+	 */
+	public function evict_oldest_pending_client(): bool {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, bound on registrations.
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i
+				WHERE client_id NOT IN ( SELECT t.client_id FROM %i t )
+					AND client_id NOT IN (
+						SELECT a.client_id FROM %i a WHERE a.revoked = 0 AND a.expires_at > UTC_TIMESTAMP()
+					)
+				ORDER BY created_at ASC, id ASC
+				LIMIT 1',
+				$tables['clients'],
+				$tables['access_tokens'],
+				$tables['auth_codes']
+			)
+		);
+
+		return (int) $result > 0;
+	}
+
+	/**
+	 * Delete clients older than `$days` that hold no token at all.
+	 *
+	 * No token row, revoked or not: the client never authorised, or every token
+	 * it had has expired and been cleaned up. A client holding an unexpired
+	 * authorization code is kept, since somebody is signing in with it right now.
+	 *
+	 * @param int $days Minimum age in days.
+	 *
+	 * @return int How many clients were deleted.
+	 * @since 1.5.0
+	 */
+	public function delete_stale_clients( int $days ): int {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, nightly cleanup.
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				'DELETE c FROM %i c
+				WHERE c.created_at < DATE_SUB( NOW(), INTERVAL %d DAY )
+					AND NOT EXISTS ( SELECT 1 FROM %i t WHERE t.client_id = c.client_id )
+					AND NOT EXISTS (
+						SELECT 1 FROM %i a
+						WHERE a.client_id = c.client_id AND a.revoked = 0 AND a.expires_at > UTC_TIMESTAMP()
+					)',
+				$tables['clients'],
+				$days,
+				$tables['access_tokens'],
+				$tables['auth_codes']
+			)
+		);
+
+		return (int) $result;
+	}
+
+	/**
+	 * Revoke one user's tokens for a client, access and refresh, leaving
+	 * anyone else who approved the same client connected.
+	 *
+	 * @param string $client_id The client.
+	 * @param int    $user_id   The user whose tokens go.
+	 *
+	 * @return int How many access tokens were revoked; 0 when the user held no live one.
+	 * @since 1.5.0
+	 */
+	public function revokeUserTokens( string $client_id, int $user_id ): int {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
+		$token_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT token_id FROM %i WHERE client_id = %s AND user_id = %d AND revoked = 0',
+				$tables['access_tokens'],
+				$client_id,
+				$user_id
+			)
+		);
+
+		if ( empty( $token_ids ) ) {
+			return 0;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table.
+		$wpdb->update(
+			$tables['access_tokens'],
+			[ 'revoked' => 1 ],
+			[
+				'client_id' => $client_id,
+				'user_id'   => $user_id,
+			],
+			[ '%d' ],
+			[ '%s', '%d' ]
+		);
+
+		( new RefreshTokenRepository() )->revokeForAccessTokens( (array) $token_ids );
+
+		return count( $token_ids );
+	}
+
+	/**
+	 * The newest connection a user approved at or after a moment, or null.
+	 *
+	 * Approved means an authorization code this user issued to the client from
+	 * then on, redeemed for a live access token. A refresh issues tokens but
+	 * never a code, so an older connection refreshing while the dialog is
+	 * open does not count. The code table stamps `created_at` in the
+	 * database's own time zone, so UNIX_TIMESTAMP() reads it back in that
+	 * same zone.
+	 *
+	 * @param int $user_id The user who approved it.
+	 * @param int $since   Unix timestamp; only connections first approved from here on count.
+	 *
+	 * @return array{client_id: string, name: string, label: string, connected_ts: int}|null
+	 * @since 1.5.0
+	 */
+	public function firstConnectionSince( int $user_id, int $since ): ?array {
+		global $wpdb;
+
+		$tables = Tables::oauth();
+
+		// Tokens are compared as UTC strings, the way their created_at is written.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, polled by the connect dialog.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT t.client_id, MIN( t.created_at ) AS first_at
+				FROM %i t
+				WHERE t.user_id = %d AND t.revoked = 0 AND t.created_at >= %s
+					AND EXISTS (
+						SELECT 1 FROM %i c
+						WHERE c.client_id = t.client_id AND c.user_id = %d AND UNIX_TIMESTAMP( c.created_at ) >= %d
+					)
+				GROUP BY t.client_id
+				ORDER BY first_at DESC
+				LIMIT 1',
+				$tables['access_tokens'],
+				$user_id,
+				gmdate( 'Y-m-d H:i:s', $since ),
+				$tables['auth_codes'],
+				$user_id,
+				$since
+			),
+			ARRAY_A
+		);
+
+		if ( ! is_array( $row ) ) {
+			return null;
+		}
+
+		$client = $this->getClientEntity( (string) $row['client_id'] );
+
+		return [
+			'client_id'    => (string) $row['client_id'],
+			'name'         => $client && $client->getName() !== '' ? (string) $client->getName() : __( 'Your assistant', 'albert-ai-butler' ),
+			'label'        => $client ? (string) $client->getLabel() : '',
+			'connected_ts' => (int) strtotime( $row['first_at'] . ' UTC' ),
+		];
 	}
 
 	/**

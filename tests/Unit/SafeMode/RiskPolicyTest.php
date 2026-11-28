@@ -74,6 +74,8 @@ class RiskPolicyTest extends TestCase {
 	public function test_holds_named_high_risk_abilities(): void {
 		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/update-user' ), [] ) );
 		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/create-user' ), [] ) );
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/reply-to-comment' ), [] ), 'A reply is public the moment it is saved.' );
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'albert/moderate-comment' ), [] ), 'Approving publishes a visitor\'s text.' );
 	}
 
 	/**
@@ -128,6 +130,25 @@ class RiskPolicyTest extends TestCase {
 			)
 		);
 		$this->assertTrue( $this->risk->must_hold( $this->ability( 'thirdparty/update-option' ), [ 'option_name' => 'admin_email' ] ) );
+	}
+
+	/**
+	 * Options that hand out privileges or code execution are held too.
+	 *
+	 * @return void
+	 */
+	public function test_holds_privilege_escalating_option_writes(): void {
+		global $wpdb;
+		$saved = $wpdb ?? null;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Only the prefix is read.
+		$wpdb = (object) [ 'prefix' => 'wp_' ];
+
+		foreach ( [ 'wp_user_roles', 'cron', 'active_sitewide_plugins', 'upload_path', 'upload_url_path', 'new_admin_email', 'auth_key', 'nonce_salt' ] as $name ) {
+			$this->assertTrue( $this->risk->must_hold( $this->ability( 'thirdparty/update-option' ), [ 'option' => $name ] ), $name );
+		}
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore.
+		$wpdb = $saved;
 	}
 
 	/**

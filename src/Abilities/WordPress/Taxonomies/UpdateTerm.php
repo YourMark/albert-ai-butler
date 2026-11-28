@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Taxonomies;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -67,6 +69,7 @@ class UpdateTerm extends BaseAbility {
 				'id'          => [
 					'type'        => 'integer',
 					'description' => 'The term ID to update (required)',
+					'minimum'     => 1,
 				],
 				'name'        => [
 					'type'        => 'string',

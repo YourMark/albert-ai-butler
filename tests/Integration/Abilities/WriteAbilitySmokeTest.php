@@ -202,27 +202,22 @@ class WriteAbilitySmokeTest extends TestCase {
 	}
 
 	/**
-	 * Updating a user's email actually changes the stored email.
+	 * Updating a user's name actually changes the stored name.
 	 *
 	 * @return void
 	 */
 	public function test_update_user_happy_path(): void {
-		$user_id = self::factory()->user->create(
-			[
-				'role'       => 'subscriber',
-				'user_email' => 'before@albert.test',
-			]
-		);
+		$user_id = self::factory()->user->create( [ 'role' => 'subscriber' ] );
 
 		$result = ( new UpdateUser() )->execute(
 			[
-				'id'    => $user_id,
-				'email' => 'after@albert.test',
+				'id'         => $user_id,
+				'first_name' => 'After',
 			]
 		);
 
 		$this->assertIsArray( $result );
-		$this->assertSame( 'after@albert.test', get_userdata( $user_id )->user_email );
+		$this->assertSame( 'After', get_userdata( $user_id )->first_name );
 	}
 
 	/**
@@ -231,7 +226,12 @@ class WriteAbilitySmokeTest extends TestCase {
 	 * @return void
 	 */
 	public function test_delete_user_missing_returns_404(): void {
-		$result = ( new DeleteUser() )->execute( [ 'id' => 99999 ] );
+		$result = ( new DeleteUser() )->execute(
+			[
+				'id'       => 99999,
+				'reassign' => get_current_user_id(),
+			]
+		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'user_not_found', $result->get_error_code() );

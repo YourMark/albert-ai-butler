@@ -36,6 +36,16 @@ use Albert\OAuth\Server\KeyManager;
 class Jwks {
 
 	/**
+	 * The JWS algorithm the signing key is published for.
+	 *
+	 * Shared with the authorization server metadata, so the key set and the
+	 * document that points at it cannot name different algorithms.
+	 *
+	 * @since 1.5.0
+	 */
+	public const ALGORITHM = 'RS256';
+
+	/**
 	 * The JSON Web Key Set document.
 	 *
 	 * Always returns the `keys` envelope. When the public key cannot be read or
@@ -86,7 +96,7 @@ class Jwks {
 		return [
 			'kty' => 'RSA',
 			'use' => 'sig',
-			'alg' => 'RS256',
+			'alg' => self::ALGORITHM,
 			'kid' => self::thumbprint( $modulus, $exponent ),
 			'n'   => $modulus,
 			'e'   => $exponent,

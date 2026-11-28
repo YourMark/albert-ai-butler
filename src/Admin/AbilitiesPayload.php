@@ -14,6 +14,7 @@ namespace Albert\Admin;
 use Albert\Core\AbilitiesRegistry;
 use Albert\Core\AbilitiesState;
 use Albert\Core\AnnotationPresenter;
+use Albert\Core\EnvironmentPolicy;
 use Albert\Logging\Repository as LoggingRepository;
 
 defined( 'ABSPATH' ) || exit;
@@ -37,7 +38,8 @@ class AbilitiesPayload {
 	 *     abilities: array<int, array<string, mixed>>,
 	 *     categories: array<int, array{value: string, label: string}>,
 	 *     sources: array<int, array{value: string, label: string}>,
-	 *     counts: array{total: int, enabled: int}
+	 *     counts: array{total: int, enabled: int},
+	 *     policy: array{environment: string, policy: string, source: string}|null
 	 * }
 	 * @since 1.3.0
 	 */
@@ -45,6 +47,10 @@ class AbilitiesPayload {
 		$categories = function_exists( 'wp_get_ability_categories' ) ? wp_get_ability_categories() : [];
 		$disabled   = AbilitiesState::disabled();
 		$roles      = self::roles();
+
+		if ( has_filter( 'albert/abilities/required_capability' ) ) {
+			_deprecated_hook( 'albert/abilities/required_capability', '1.6.0', '', esc_html__( 'The Abilities screen no longer shows a required capability, because an ability\'s permission check cannot be read.', 'albert-ai-butler' ) );
+		}
 		// Raw registry, not wp_get_abilities(): the management screen must show every
 		// ability the site has, including any a third-party filter hides from the
 		// filtered view — otherwise a row the admin can still toggle goes missing.
@@ -53,7 +59,7 @@ class AbilitiesPayload {
 		// The MCP adapter's own tools (discover / get-info / execute) are protocol
 		// infrastructure, not user-manageable abilities — never surface them on the
 		// screen. They can't be disabled regardless (see
-		// AbilitiesManager::get_effective_disabled_list()).
+		// AbilitiesState::effective()).
 		$protected = AbilitiesRegistry::get_protected_abilities();
 		$all       = array_filter(
 			$all,
@@ -72,7 +78,7 @@ class AbilitiesPayload {
 		$enabled_count = 0;
 
 		foreach ( $all as $ability ) {
-			$row         = self::row_from_ability( $ability, $categories, $disabled, $roles, $logs[ $ability->get_name() ] ?? null );
+			$row         = self::row_from_ability( $ability, $categories, $disabled, $logs[ $ability->get_name() ] ?? null );
 			$abilities[] = $row;
 
 			if ( $row['enabled'] ) {
@@ -105,6 +111,7 @@ class AbilitiesPayload {
 				'total'   => count( $abilities ),
 				'enabled' => $enabled_count,
 			],
+			'policy'     => EnvironmentPolicy::is_active() ? EnvironmentPolicy::current() : null,
 		];
 	}
 
@@ -135,7 +142,7 @@ class AbilitiesPayload {
 		$categories = function_exists( 'wp_get_ability_categories' ) ? wp_get_ability_categories() : [];
 		$log        = ( new LoggingRepository() )->latest_for_ability( $ability_id );
 
-		return self::row_from_ability( $ability, $categories, AbilitiesState::disabled(), self::roles(), $log );
+		return self::row_from_ability( $ability, $categories, AbilitiesState::disabled(), $log );
 	}
 
 	/**
@@ -144,19 +151,17 @@ class AbilitiesPayload {
 	 * @param \WP_Ability          $ability    The ability.
 	 * @param array<string, mixed> $categories Map from wp_get_ability_categories().
 	 * @param array<int, string>   $disabled   Disabled ability IDs.
-	 * @param array<string, mixed> $roles      Map from WP_Roles::roles (slug => role data).
 	 * @param object|null          $log        Latest log row for this ability, or null.
 	 *
 	 * @return array<string, mixed>
 	 * @since 1.3.0
 	 */
-	private static function row_from_ability( \WP_Ability $ability, array $categories, array $disabled, array $roles, ?object $log = null ): array {
+	private static function row_from_ability( \WP_Ability $ability, array $categories, array $disabled, ?object $log = null ): array {
 		$id          = $ability->get_name();
 		$meta        = (array) $ability->get_meta();
 		$annotations = isset( $meta['annotations'] ) && is_array( $meta['annotations'] ) ? $meta['annotations'] : [];
 		$chips       = AnnotationPresenter::chips_for( $annotations, $id );
 		$source      = AbilitiesRegistry::get_ability_source( $id );
-		$capability  = AbilitiesRegistry::resolve_required_capability( $ability );
 
 		$row = [
 			'id'              => $id,
@@ -172,10 +177,12 @@ class AbilitiesPayload {
 			// an add-on already reading them must keep working.
 			'supplier'        => $source['slug'],
 			'supplierLabel'   => $source['label'],
-			'operation'       => $chips[0]['key'] ?? 'read',
+			'operation'       => $chips[0]['key'] ?? 'undeclared',
 			'enabled'         => ! in_array( $id, $disabled, true ),
-			'capability'      => $capability,
-			'capabilityRoles' => self::roles_with_capability( $capability, $roles ),
+			// Deprecated since 1.6.0, always empty: a permission check is code, so no
+			// capability can be read from it. Kept for add-ons that read the row.
+			'capability'      => '',
+			'capabilityRoles' => [],
 			'lastUsed'        => self::last_used( $log ),
 			'badges'          => [],
 			'inputs'          => self::inputs( $ability->get_input_schema() ),
@@ -367,29 +374,5 @@ class AbilitiesPayload {
 				? sprintf( __( '%s ago', 'albert-ai-butler' ), human_time_diff( $timestamp ) )
 				: '',
 		];
-	}
-
-	/**
-	 * List the display names of roles that grant a capability.
-	 *
-	 * @param string               $capability Capability slug.
-	 * @param array<string, mixed> $roles      Map from WP_Roles::roles.
-	 *
-	 * @return array<int, string>
-	 * @since 1.3.0
-	 */
-	private static function roles_with_capability( string $capability, array $roles ): array {
-		if ( $capability === '' ) {
-			return [];
-		}
-
-		$names = [];
-		foreach ( $roles as $role ) {
-			if ( ! empty( $role['capabilities'][ $capability ] ) ) {
-				$names[] = (string) ( $role['name'] ?? '' );
-			}
-		}
-
-		return array_values( array_filter( $names ) );
 	}
 }

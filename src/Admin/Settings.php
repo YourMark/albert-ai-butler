@@ -347,7 +347,9 @@ class Settings implements Hookable {
 	}
 
 	/**
-	 * Revoke all tokens for a user.
+	 * Revoke all tokens for a user, and any authorization code not yet exchanged.
+	 *
+	 * The codes too, or one issued just before would still mint a fresh token.
 	 *
 	 * @param int $user_id The user ID.
 	 *
@@ -380,6 +382,15 @@ class Settings implements Hookable {
 		);
 
 		( new RefreshTokenRepository() )->revokeForAccessTokens( (array) $token_ids );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update(
+			$tables['auth_codes'],
+			[ 'revoked' => 1 ],
+			[ 'user_id' => $user_id ],
+			[ '%d' ],
+			[ '%d' ]
+		);
 	}
 
 	/**
@@ -429,7 +440,6 @@ class Settings implements Hookable {
 			'albertAdmin',
 			[
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'albert_oauth_nonce' ),
 				'i18n'    => [
 					'copied'     => __( 'Copied!', 'albert-ai-butler' ),
 					'copyFailed' => __( 'Copy failed', 'albert-ai-butler' ),

@@ -248,12 +248,32 @@ class InterceptorTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_awaiting_approval', $result->get_error_code() );
+		$this->assertSame( 'awaiting_approval', $result->get_error_code() );
 		$this->assertCount( 1, $this->repository->staged );
 		$this->assertSame( 'test/delete', $this->repository->staged[0]['ability_name'] );
 		$this->assertSame( [ 'id' => 42 ], $this->repository->staged[0]['input'] );
 		$this->assertSame( 7, $this->repository->staged[0]['user_id'] );
 		$this->assertSame( 'client-1', $this->repository->staged[0]['client_id'] );
+	}
+
+	/**
+	 * An environment policy switching every ability on does not let a destructive call skip approval.
+	 *
+	 * @return void
+	 */
+	public function test_environment_policy_does_not_bypass_the_hold(): void {
+		ConnectionContext::set( 'client-1' );
+		$GLOBALS['albert_test_filter_returns']['albert/abilities/environment_policy'] = \Albert\Core\EnvironmentPolicy::ALL;
+
+		try {
+			$result = $this->interceptor->intercept( $this->sentinel, 'test/delete', [ 'id' => 42 ], $this->destructive() );
+		} finally {
+			unset( $GLOBALS['albert_test_filter_returns']['albert/abilities/environment_policy'] );
+		}
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'awaiting_approval', $result->get_error_code() );
+		$this->assertCount( 1, $this->repository->staged );
 	}
 
 	/**
@@ -276,7 +296,7 @@ class InterceptorTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_protected_option', $result->get_error_code() );
+		$this->assertSame( 'protected_option', $result->get_error_code() );
 		$this->assertSame( [], $this->repository->staged );
 	}
 
@@ -297,7 +317,7 @@ class InterceptorTest extends TestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_hold_failed', $result->get_error_code() );
+		$this->assertSame( 'hold_failed', $result->get_error_code() );
 		$this->assertStringNotContainsString( 'queued for approval', $result->get_error_message() );
 	}
 
@@ -315,7 +335,7 @@ class InterceptorTest extends TestCase {
 		$result = $this->interceptor->intercept( $this->sentinel, 'test/delete', [ 'id' => 42 ], $ability );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_permission_denied', $result->get_error_code() );
+		$this->assertSame( 'permission_denied', $result->get_error_code() );
 		$this->assertSame( [], $this->repository->staged );
 	}
 

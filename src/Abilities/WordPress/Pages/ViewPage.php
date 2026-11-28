@@ -9,9 +9,12 @@
 
 namespace Albert\Abilities\WordPress\Pages;
 
+use Albert\Abilities\WordPress\PostTerms;
+defined( 'ABSPATH' ) || exit;
+
+use Albert\Abilities\WordPress\ProtectedContent;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
-use Albert\Blocks\EditorMode;
 use Albert\Core\Annotations;
 use WP_Error;
 
@@ -107,7 +110,7 @@ class ViewPage extends BaseAbility {
 						],
 						'blocks'     => [
 							'type'        => 'array',
-							'description' => 'The page content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path }; innerBlocks is the same shape recursively. "path" (e.g. [2], [2,0]) is the block\'s address — pass it to the edit/add/remove/move-page-block abilities. Included when "blocks" is requested (default).',
+							'description' => 'The page content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path, html }; innerBlocks is the same shape recursively. "path" (e.g. [2], [2,0]) is the block\'s address: pass it to the edit/add/remove/move-page-block abilities. "html" is the saved markup of a block without inner blocks; send it back unchanged to keep the block exactly. Included when "blocks" is requested (default).',
 							'items'       => [ 'type' => 'object' ],
 						],
 						'plaintext'  => [
@@ -116,7 +119,7 @@ class ViewPage extends BaseAbility {
 						],
 						'html'       => [
 							'type'        => 'string',
-							'description' => 'Rendered HTML produced by do_blocks() — reflects dynamic/server-rendered block output. Only included when "html" is requested.',
+							'description' => 'Rendered HTML produced by do_blocks(), so it reflects dynamic/server-rendered block output. Only included when "html" is requested.',
 						],
 						'markdown'   => [
 							'type'        => 'string',
@@ -131,6 +134,7 @@ class ViewPage extends BaseAbility {
 							'type'        => 'boolean',
 							'description' => 'Whether the stored content actually contains block markup. May differ from "editor" (e.g. classic content saved on a block-editor type).',
 						],
+						'protected'  => ProtectedContent::schema(),
 						'_meta'      => [
 							'type'        => 'object',
 							'description' => 'Block-window pagination metadata. The returned content/blocks/plaintext/html/markdown reflect only the requested window of top-level blocks. When "truncated" is true, fetch the rest by re-requesting with the suggested "next_offset".',
@@ -165,6 +169,7 @@ class ViewPage extends BaseAbility {
 								],
 							],
 						],
+						...PostTerms::schema(),
 					],
 				],
 			],
@@ -216,7 +221,8 @@ class ViewPage extends BaseAbility {
 		if ( isset( $args['limit'] ) ) {
 			$options['limit'] = max( 0, (int) $args['limit'] );
 		}
-		$content = ContentFormatter::build( $page->post_content, $format, $options );
+		$withheld = ProtectedContent::is_withheld( $page );
+		$content  = ContentFormatter::build( $withheld ? '' : $page->post_content, $format, $options );
 
 		return [
 			'page' => array_merge(
@@ -225,9 +231,10 @@ class ViewPage extends BaseAbility {
 					'title' => $page->post_title,
 				],
 				$content,
-				EditorMode::signal( $page ),
+				ProtectedContent::editor_signal( $page ),
 				[
-					'excerpt'        => $page->post_excerpt,
+					'excerpt'        => $withheld ? '' : $page->post_excerpt,
+					'protected'      => ProtectedContent::is_protected( $page ),
 					'status'         => $page->post_status,
 					'author_id'      => (int) $page->post_author,
 					'date'           => $page->post_date,
@@ -236,8 +243,11 @@ class ViewPage extends BaseAbility {
 					'permalink'      => get_permalink( $page ),
 					'parent_id'      => (int) $page->post_parent,
 					'menu_order'     => (int) $page->menu_order,
+					'template'       => get_page_template_slug( $page ),
+					'comment_status' => $page->comment_status,
 					'featured_image' => get_post_thumbnail_id( $page ) ? get_post_thumbnail_id( $page ) : null,
-				]
+				],
+				PostTerms::for_post( $page )
 			),
 		];
 	}

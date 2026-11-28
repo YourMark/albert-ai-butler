@@ -9,6 +9,9 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+defined( 'ABSPATH' ) || exit;
+
+use Albert\Abilities\WordPress\ProtectedContent;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
 use Albert\Blocks\EditorMode;
@@ -130,7 +133,7 @@ class FindPosts extends BaseAbility {
 							],
 							'blocks'     => [
 								'type'        => 'array',
-								'description' => 'The post content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path }. "path" (e.g. [2], [2,0]) is the block\'s address — pass it to the edit/add/remove/move-post-block abilities. Included when "blocks" is requested (default).',
+								'description' => 'The post content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path, html }. "path" (e.g. [2], [2,0]) is the block\'s address: pass it to the edit/add/remove/move-post-block abilities. "html" is the saved markup of a block without inner blocks; send it back unchanged to keep the block exactly. Included when "blocks" is requested (default).',
 								'items'       => [ 'type' => 'object' ],
 							],
 							'plaintext'  => [
@@ -139,7 +142,7 @@ class FindPosts extends BaseAbility {
 							],
 							'html'       => [
 								'type'        => 'string',
-								'description' => 'Rendered HTML produced by do_blocks() — reflects dynamic/server-rendered block output. Only included when "html" is requested.',
+								'description' => 'Rendered HTML produced by do_blocks(), so it reflects dynamic/server-rendered block output. Only included when "html" is requested.',
 							],
 							'markdown'   => [
 								'type'        => 'string',
@@ -154,6 +157,7 @@ class FindPosts extends BaseAbility {
 								'type'        => 'boolean',
 								'description' => 'Whether the stored content actually contains block markup.',
 							],
+							'protected'  => ProtectedContent::schema(),
 							'truncated'  => [
 								'type'        => 'boolean',
 								'description' => 'Present and true only when a text representation for this item was byte-capped (a "…[truncated, N more characters]" marker was appended). For the full content of a large post, call view-post, which paginates by block.',
@@ -243,10 +247,20 @@ class FindPosts extends BaseAbility {
 			$request->set_param( 'orderby', sanitize_key( $args['orderby'] ) );
 		}
 
-		// Execute the request.
-		$response = rest_do_request( $request );
-		$server   = rest_get_server();
-		$data     = $server->response_to_data( $response, false );
+		$search_guard = ! empty( $args['search'] ) ? ProtectedContent::search_guard( 'post' ) : null;
+		if ( $search_guard !== null ) {
+			add_filter( 'posts_search', $search_guard );
+		}
+
+		try {
+			$response = rest_do_request( $request );
+		} finally {
+			if ( $search_guard !== null ) {
+				remove_filter( 'posts_search', $search_guard );
+			}
+		}
+		$server = rest_get_server();
+		$data   = $server->response_to_data( $response, false );
 
 		// Check for errors.
 		if ( is_wp_error( $data ) ) {
@@ -281,8 +295,10 @@ class FindPosts extends BaseAbility {
 
 		$posts = [];
 		foreach ( $data as $post_data ) {
-			$post        = get_post( (int) $post_data['id'] );
-			$raw_content = $post ? $post->post_content : '';
+			$post = get_post( (int) $post_data['id'] );
+			// Core REST blanks protected content, but it is re-read raw here.
+			$withheld    = $post && ProtectedContent::is_withheld( $post );
+			$raw_content = $post && ! $withheld ? $post->post_content : '';
 
 			$posts[] = array_merge(
 				[
@@ -290,10 +306,11 @@ class FindPosts extends BaseAbility {
 					'title' => $post_data['title']['rendered'] ?? '',
 				],
 				ContentFormatter::build( $raw_content, $format, [ 'paginate' => false ] ),
-				$post ? EditorMode::signal( $post ) : EditorMode::signal_for_content( $raw_content ),
+				$post ? ProtectedContent::editor_signal( $post ) : EditorMode::signal_for_content( $raw_content ),
 				[
 					'excerpt'    => $post_data['excerpt']['rendered'] ?? '',
 					'status'     => $post_data['status'] ?? '',
+					'protected'  => $post ? ProtectedContent::is_protected( $post ) : false,
 					'date'       => $post_data['date'] ?? '',
 					'modified'   => $post_data['modified'] ?? '',
 					'author'     => $post_data['author'] ?? 0,

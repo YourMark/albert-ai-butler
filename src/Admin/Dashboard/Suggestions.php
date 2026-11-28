@@ -134,12 +134,6 @@ class Suggestions {
 	 * that has a real answer on any site with the abilities it names, whether
 	 * that answer is a list or "none".
 	 *
-	 * The same rule ruled out the other tempting ones. "Which images are
-	 * missing alt text?" would be the most useful prompt on this list, but
-	 * `albert/find-media` does not return alt text; answering it means a
-	 * `view-media` call per attachment, which is not a thing to put in front of
-	 * somebody as an example.
-	 *
 	 * Ordered so the first one that survives filtering is the most
 	 * characteristic thing this site can do: commerce on a shop, content
 	 * everywhere else.
@@ -188,12 +182,36 @@ class Suggestions {
 				'requires' => [ 'albert/find-posts', 'albert/create-post' ],
 			],
 			[
+				'text'     => __( 'Which images are missing alt text? Suggest alt text for each, and add it once I agree.', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-media', 'albert/update-media' ],
+			],
+			[
+				'text'     => __( 'Are any comments waiting for approval? Tell me which look like spam.', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-comments' ],
+			],
+			[
+				'text'     => __( 'Find every page, post, pattern, header and footer that mentions our opening hours.', 'albert-ai-butler' ),
+				'requires' => [ 'albert/search-content' ],
+			],
+			[
+				'text'     => __( 'Does Site Health flag anything I should fix?', 'albert-ai-butler' ),
+				'requires' => [ 'albert/view-site-health' ],
+			],
+			[
+				'text'     => __( 'What changed the last time my homepage was edited?', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-pages', 'albert/find-revisions', 'albert/view-revision' ],
+			],
+			[
 				'text'     => __( 'Who has administrator access to this site?', 'albert-ai-butler' ),
 				'requires' => [ 'albert/find-users' ],
 			],
 			[
 				'text'     => __( 'Summarise what this site is about.', 'albert-ai-butler' ),
 				'requires' => [ 'albert/find-pages' ],
+			],
+			[
+				'text'     => __( 'Which menu do visitors see on my site, and what is in it?', 'albert-ai-butler' ),
+				'requires' => [ 'albert/find-menus', 'albert/view-menu' ],
 			],
 		];
 	}

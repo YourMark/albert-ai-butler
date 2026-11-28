@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Entities;
 
+defined( 'ABSPATH' ) || exit;
+
 use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
 use League\OAuth2\Server\Entities\Traits\AccessTokenTrait;
 use League\OAuth2\Server\Entities\Traits\EntityTrait;

@@ -1,0 +1,13 @@
+{
+  "name": "albert-claude-desktop-bridge",
+  "private": true,
+  "description": "Builds the bridge Albert puts in its Claude Desktop install file: mcp-remote, pinned, bundled into one file.",
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "build": "esbuild entry.mjs --bundle --minify --platform=node --target=node18 --format=esm --legal-comments=linked --banner:js=\"import { createRequire as __albertRequire } from 'node:module'; const require = __albertRequire(import.meta.url);\" --outfile=../../assets/claude-desktop/bridge.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "mcp-remote": "0.15.1"
+  }
+}

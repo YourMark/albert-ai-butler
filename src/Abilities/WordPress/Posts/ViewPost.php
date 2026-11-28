@@ -9,9 +9,12 @@
 
 namespace Albert\Abilities\WordPress\Posts;
 
+use Albert\Abilities\WordPress\PostTerms;
+defined( 'ABSPATH' ) || exit;
+
+use Albert\Abilities\WordPress\ProtectedContent;
 use Albert\Abstracts\BaseAbility;
 use Albert\Blocks\ContentFormatter;
-use Albert\Blocks\EditorMode;
 use Albert\Core\Annotations;
 use WP_Error;
 
@@ -107,7 +110,7 @@ class ViewPost extends BaseAbility {
 						],
 						'blocks'     => [
 							'type'        => 'array',
-							'description' => 'The post content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path }; innerBlocks is the same shape recursively. "path" (e.g. [2], [2,0]) is the block\'s address — pass it to the edit/add/remove/move-post-block abilities. Included when "blocks" is requested (default).',
+							'description' => 'The post content parsed into a structured block tree. Each node has { name, attributes, innerBlocks, plaintext, path, html }; innerBlocks is the same shape recursively. "path" (e.g. [2], [2,0]) is the block\'s address: pass it to the edit/add/remove/move-post-block abilities. "html" is the saved markup of a block without inner blocks; send it back unchanged to keep the block exactly. Included when "blocks" is requested (default).',
 							'items'       => [ 'type' => 'object' ],
 						],
 						'plaintext'  => [
@@ -116,7 +119,7 @@ class ViewPost extends BaseAbility {
 						],
 						'html'       => [
 							'type'        => 'string',
-							'description' => 'Rendered HTML produced by do_blocks() — reflects dynamic/server-rendered block output. Only included when "html" is requested.',
+							'description' => 'Rendered HTML produced by do_blocks(), so it reflects dynamic/server-rendered block output. Only included when "html" is requested.',
 						],
 						'markdown'   => [
 							'type'        => 'string',
@@ -131,6 +134,7 @@ class ViewPost extends BaseAbility {
 							'type'        => 'boolean',
 							'description' => 'Whether the stored content actually contains block markup. May differ from "editor" (e.g. classic content saved on a block-editor type).',
 						],
+						'protected'  => ProtectedContent::schema(),
 						'_meta'      => [
 							'type'        => 'object',
 							'description' => 'Block-window pagination metadata. The returned content/blocks/plaintext/html/markdown reflect only the requested window of top-level blocks. When "truncated" is true, fetch the rest by re-requesting with the suggested "next_offset".',
@@ -165,6 +169,7 @@ class ViewPost extends BaseAbility {
 								],
 							],
 						],
+						...PostTerms::schema(),
 					],
 				],
 			],
@@ -216,7 +221,9 @@ class ViewPost extends BaseAbility {
 		if ( isset( $args['limit'] ) ) {
 			$options['limit'] = max( 0, (int) $args['limit'] );
 		}
-		$content = ContentFormatter::build( $post->post_content, $format, $options );
+		$withheld    = ProtectedContent::is_withheld( $post );
+		$content     = ContentFormatter::build( $withheld ? '' : $post->post_content, $format, $options );
+		$post_format = get_post_format( $post );
 
 		return [
 			'post' => array_merge(
@@ -225,17 +232,23 @@ class ViewPost extends BaseAbility {
 					'title' => $post->post_title,
 				],
 				$content,
-				EditorMode::signal( $post ),
+				ProtectedContent::editor_signal( $post ),
 				[
-					'excerpt'        => $post->post_excerpt,
+					'excerpt'        => $withheld ? '' : $post->post_excerpt,
+					'protected'      => ProtectedContent::is_protected( $post ),
 					'status'         => $post->post_status,
 					'author_id'      => (int) $post->post_author,
 					'date'           => $post->post_date,
 					'modified'       => $post->post_modified,
 					'slug'           => $post->post_name,
 					'permalink'      => get_permalink( $post ),
+					'template'       => get_page_template_slug( $post ),
+					'comment_status' => $post->comment_status,
+					'sticky'         => is_sticky( $post->ID ),
+					'format'         => $post_format ? $post_format : 'standard',
 					'featured_image' => get_post_thumbnail_id( $post ) ? get_post_thumbnail_id( $post ) : null,
-				]
+				],
+				PostTerms::for_post( $post )
 			),
 		];
 	}

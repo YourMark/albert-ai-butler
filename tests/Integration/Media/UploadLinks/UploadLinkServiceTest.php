@@ -17,6 +17,9 @@ namespace Albert\Tests\Integration\Media\UploadLinks;
 use Albert\Database\Installer;
 use Albert\Database\Tables;
 use Albert\Media\UploadLinks\UploadLinkService;
+use Albert\OAuth\AllowedUsers;
+use Albert\OAuth\Repositories\ClientRepository;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\Tests\TestCase;
 use WP_Error;
 
@@ -48,6 +51,9 @@ class UploadLinkServiceTest extends TestCase {
 	 */
 	public function set_up(): void {
 		parent::set_up();
+
+		// A link only redeems for somebody still allowed to connect.
+		add_action( 'user_register', [ AllowedUsers::class, 'add' ] );
 
 		Installer::install();
 
@@ -397,7 +403,7 @@ class UploadLinkServiceTest extends TestCase {
 		$link = $this->service->mint( $this->admin_id, [ 'post_id' => 999999 ] );
 
 		$this->assertInstanceOf( WP_Error::class, $link );
-		$this->assertSame( 'invalid_post', $link->get_error_code() );
+		$this->assertSame( 'cannot_attach', $link->get_error_code() );
 	}
 
 	/**
@@ -659,5 +665,118 @@ class UploadLinkServiceTest extends TestCase {
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'upload_failed', $result->get_error_code() );
 		$this->assertSame( 400, $result->get_error_data()['status'] );
+	}
+
+	// ─── 1.5.1: who may still redeem ──────────────────────────────
+
+	/**
+	 * Mint and redeem a link as `$user_id` over a connection holding one token.
+	 *
+	 * @param int $user_id The user.
+	 *
+	 * @return array{client_id: string, token: string}
+	 */
+	private function mint_over_a_connection( int $user_id ): array {
+		global $wpdb;
+
+		$client = ( new ClientRepository() )->createClient( 'Test client', 'https://client.example/cb' );
+		$this->assertIsArray( $client );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Test fixture.
+		$wpdb->insert(
+			Tables::oauth()['access_tokens'],
+			[
+				'token_id'   => wp_generate_password( 40, false ),
+				'client_id'  => $client['client_id'],
+				'user_id'    => $user_id,
+				'expires_at' => gmdate( 'Y-m-d H:i:s', time() + HOUR_IN_SECONDS ),
+			]
+		);
+
+		ConnectionContext::set( $client['client_id'] );
+
+		try {
+			$link = $this->service->mint( $user_id, [] );
+		} finally {
+			ConnectionContext::reset();
+		}
+
+		return [
+			'client_id' => $client['client_id'],
+			'token'     => $link['upload_token'],
+		];
+	}
+
+	/**
+	 * A link minted over a live connection redeems.
+	 *
+	 * @return void
+	 */
+	public function test_link_from_a_live_connection_redeems(): void {
+		$link = $this->mint_over_a_connection( $this->admin_id );
+
+		$this->assertIsArray( $this->service->redeem_link( $link['token'] ) );
+	}
+
+	/**
+	 * Disconnecting the assistant ends its outstanding links.
+	 *
+	 * @return void
+	 */
+	public function test_link_dies_with_its_connection(): void {
+		$link = $this->mint_over_a_connection( $this->admin_id );
+
+		( new ClientRepository() )->revokeUserTokens( $link['client_id'], $this->admin_id );
+
+		$result = $this->service->redeem_link( $link['token'] );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'capability_revoked', $result->get_error_code() );
+	}
+
+	/**
+	 * Removing somebody from the allowed list ends their outstanding links.
+	 *
+	 * @return void
+	 */
+	public function test_link_dies_when_the_user_is_removed(): void {
+		$link = $this->service->mint( $this->admin_id, [] );
+
+		AllowedUsers::remove( $this->admin_id );
+
+		$result = $this->service->redeem_link( $link['upload_token'] );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'capability_revoked', $result->get_error_code() );
+	}
+
+	/**
+	 * A link cannot attach to a post its user may not edit, at mint or redeem.
+	 *
+	 * @return void
+	 */
+	public function test_attaching_needs_edit_post_at_mint_and_redeem(): void {
+		$author  = self::factory()->user->create( [ 'role' => 'author' ] );
+		$foreign = self::factory()->post->create( [ 'post_author' => $this->admin_id ] );
+		$own     = self::factory()->post->create( [ 'post_author' => $author ] );
+
+		$refused = $this->service->mint( $author, [ 'post_id' => $foreign ] );
+		$this->assertWPError( $refused );
+		$this->assertSame( 'cannot_attach', $refused->get_error_code() );
+
+		$link = $this->service->mint( $author, [ 'post_id' => $own ] );
+		$this->assertIsArray( $link );
+
+		// The post changes hands before the link is used.
+		wp_update_post(
+			[
+				'ID'          => $own,
+				'post_author' => $this->admin_id,
+			]
+		);
+
+		$result = $this->service->redeem_link( $link['upload_token'] );
+		$this->assertWPError( $result );
+		$this->assertSame( 'capability_revoked', $result->get_error_code() );
 	}
 }

@@ -26,10 +26,10 @@ use WP\MCP\Core\McpAdapter;
  * before suspecting the plugin. This class exists so they are told instead.
  *
  * Note what is deliberately *not* here: any notion of a conflicting second
- * copy. Albert loads the library through Jetpack Autoloader, which resolves one
- * newest copy of `WP\MCP\` across every plugin that ships it. Sharing is the
- * supported arrangement, so another plugin bundling the adapter is normal and
- * not something to warn about.
+ * copy. Jetpack Autoloader resolves one newest copy of `WP\MCP\` across every
+ * plugin that ships it, and Albert only offers its own when the MCP Adapter
+ * plugin is not active ({@see AdapterSource}), so another copy on the site is
+ * normal and not something to warn about.
  *
  * @since 1.4.0
  */

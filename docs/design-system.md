@@ -445,7 +445,7 @@ The check before removing a selector:
 grep -rn "albert-the-class" ../albert-premium-service ../albert-woocommerce
 ```
 
-This is the CSS half of the boundary rule in `.claude/CLAUDE.md`: core never
+This is the CSS half of the boundary rule in `AGENTS.md`: core never
 depends on add-ons, but core is depended *on*, and a published class is as much
 a contract as a hook name or a stylesheet handle.
 

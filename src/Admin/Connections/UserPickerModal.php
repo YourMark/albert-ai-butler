@@ -62,10 +62,12 @@ final class UserPickerModal {
 		 * Filters the capability a user needs to appear in the allowed-users picker.
 		 *
 		 * Return an empty string to offer every user, or another capability to
-		 * widen or narrow the candidate list. This only changes who is *offered*:
-		 * the authorisation gate itself is the stored allowed-users list.
+		 * widen or narrow the candidate list. Since 1.6.0 it is also who may be
+		 * added, on the screen and through WP-CLI. The authorisation gate itself
+		 * stays the stored allowed-users list.
 		 *
 		 * @since 1.4.0
+		 * @since 1.6.0 Also limits who may be added.
 		 *
 		 * @param string $capability Default `edit_posts`.
 		 */
@@ -131,6 +133,8 @@ final class UserPickerModal {
 					'searching'               => __( 'Searching…', 'albert-ai-butler' ),
 					'noResults'               => __( 'Nobody matched that.', 'albert-ai-butler' ),
 					'failed'                  => __( 'Could not search users. Reload the page and try again.', 'albert-ai-butler' ),
+					'blocked'                 => __( 'Your site blocks the list of users this search reads, often through a security plugin that hides users from the REST API. Allow administrators to see users there, then reload this page.', 'albert-ai-butler' ),
+					'roleCannotList'          => __( "Your account's role can't list users. Ask an administrator to add users, or give this role the list_users capability.", 'albert-ai-butler' ),
 					'prompt'                  => __( 'Type a name, email address or user ID to search.', 'albert-ai-butler' ),
 					'loadingDefaults'         => __( 'Loading…', 'albert-ai-butler' ),
 					// Both plural forms, chosen in the browser: the count is only
@@ -151,6 +155,13 @@ final class UserPickerModal {
 					/* translators: %d: number of selected people. */
 					'addMany'                 => __( 'Add %d users', 'albert-ai-butler' ),
 					'addFailed'               => __( 'Could not add the selected people. Reload the page and try again.', 'albert-ai-butler' ),
+					'emailSending'            => __( 'Sending…', 'albert-ai-butler' ),
+					'emailSent'               => __( 'Email sent', 'albert-ai-butler' ),
+					'emailFailed'             => __( 'The email couldn’t be sent. Copy the link and send it another way.', 'albert-ai-butler' ),
+					'emailFailedShort'        => __( 'Couldn’t send, copy the link instead', 'albert-ai-butler' ),
+					'copied'                  => __( 'Copied', 'albert-ai-butler' ),
+					'copiedAnnounce'          => __( 'Setup link copied', 'albert-ai-butler' ),
+					'copyFailed'              => __( 'Couldn’t copy the link, try again', 'albert-ai-butler' ),
 					'noRole'                  => __( 'No role on this site', 'albert-ai-butler' ),
 					/* translators: %s: the person's name. */
 					'chosen'                  => __( '%s added to the selection.', 'albert-ai-butler' ),
@@ -219,6 +230,10 @@ final class UserPickerModal {
 				</div>
 
 				<div class="albert-dialog__footer">
+					<label class="albert-picker__email">
+						<input type="checkbox" name="albert_email_setup" value="1" />
+						<?php esc_html_e( 'Email them how to connect', 'albert-ai-butler' ); ?>
+					</label>
 					<button type="button" class="button" data-albert-picker-close><?php esc_html_e( 'Cancel', 'albert-ai-butler' ); ?></button>
 					<button type="submit" class="button button-primary" data-albert-picker-confirm disabled>
 						<?php esc_html_e( 'Add user', 'albert-ai-butler' ); ?>

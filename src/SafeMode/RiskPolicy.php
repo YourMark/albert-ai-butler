@@ -19,9 +19,9 @@ use WP_Ability;
  * The annotation catches deletes but misses what actually compromises a
  * WordPress site: changing an administrator's email or role (account takeover),
  * creating an administrator, or writing a foundational option like `siteurl`.
- * Several of those ride on abilities annotated `destructive: false` — Albert's
- * own `update-user`/`create-user`, and any third-party ability that reuses the
- * "update"/"create" annotation preset for something that grants privileges.
+ * Several of those ride on abilities annotated `destructive: false`: any
+ * third-party ability that reuses the "update"/"create" annotation preset for
+ * something that grants privileges.
  *
  * Two layers, because a name list alone cannot see abilities it has never heard
  * of:
@@ -50,6 +50,12 @@ class RiskPolicy {
 		'albert/update-user',
 		'albert/create-user',
 		'albert/delete-user',
+		// Public the moment it is saved, and it speaks for the site.
+		'albert/reply-to-comment',
+		// Approving publishes a visitor's text on the site.
+		'albert/moderate-comment',
+		// Undoable through a new revision, but it replaces live content in one call.
+		'albert/restore-revision',
 	];
 
 	/**
@@ -74,6 +80,24 @@ class RiskPolicy {
 		'blog_public',
 		// Changes every URL on the site at once, breaking inbound links.
 		'permalink_structure',
+		// Schedules any hook to run later, with any arguments.
+		'cron',
+		'active_sitewide_plugins',
+		// Point uploads at another directory or host.
+		'upload_path',
+		'upload_url_path',
+		// A pending change of the admin email, confirmed by mail to the new address.
+		'new_admin_email',
+		// Fallback salts, used when wp-config.php does not define them: whoever
+		// sets them can forge login cookies and nonces.
+		'auth_key',
+		'auth_salt',
+		'secure_auth_key',
+		'secure_auth_salt',
+		'logged_in_key',
+		'logged_in_salt',
+		'nonce_key',
+		'nonce_salt',
 	];
 
 	/**
@@ -119,7 +143,7 @@ class RiskPolicy {
 	 * @since 1.5.0
 	 */
 	public function must_hold( WP_Ability $ability, array $input ): bool {
-		return $this->is_held_ability( $ability->get_name() )
+		return self::is_high_risk_ability( $ability->get_name() )
 			|| $this->grants_admin_role( $input )
 			|| $this->writes_high_risk_option( $input );
 	}
@@ -153,9 +177,9 @@ class RiskPolicy {
 	 * @param string $ability_name The ability id.
 	 *
 	 * @return bool
-	 * @since 1.5.0
+	 * @since 1.6.0
 	 */
-	private function is_held_ability( string $ability_name ): bool {
+	public static function is_high_risk_ability( string $ability_name ): bool {
 		/**
 		 * Filters the abilities safe mode always holds, regardless of annotation.
 		 *
@@ -228,13 +252,33 @@ class RiskPolicy {
 		 *
 		 * @param list<string> $options Option names.
 		 */
-		$high_risk = apply_filters( 'albert/safe_mode/high_risk_options', self::HIGH_RISK_OPTIONS );
+		$high_risk = apply_filters( 'albert/safe_mode/high_risk_options', self::high_risk_options() );
 
 		if ( ! is_array( $high_risk ) ) {
 			return false;
 		}
 
 		return $this->named_option( $input, $high_risk ) !== null;
+	}
+
+	/**
+	 * The high-risk options, with the prefixed ones resolved for this site.
+	 *
+	 * `{prefix}user_roles` holds every role's capabilities: writing it gives any
+	 * role administrator rights.
+	 *
+	 * @return list<string>
+	 * @since 1.5.1
+	 */
+	private static function high_risk_options(): array {
+		global $wpdb;
+
+		$options = self::HIGH_RISK_OPTIONS;
+		if ( isset( $wpdb ) && is_object( $wpdb ) && isset( $wpdb->prefix ) ) {
+			$options[] = $wpdb->prefix . 'user_roles';
+		}
+
+		return $options;
 	}
 
 	/**

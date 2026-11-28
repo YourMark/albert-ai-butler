@@ -9,6 +9,8 @@ on:
       - '**.php'
       - 'composer.json'
       - 'composer.lock'
+      - 'lib/mcp-adapter/composer.json'
+      - 'lib/mcp-adapter/composer.lock'
       - 'phpcs.xml.dist'
       - 'phpstan.neon'
 
@@ -43,7 +45,7 @@ jobs:
         run: composer install --prefer-dist --no-progress
 
       - name: Run PHPCS
-        run: ./vendor/bin/phpcs --standard=phpcs.xml.dist src/
+        run: ./vendor/bin/phpcs --standard=phpcs.xml.dist src/ tests/
 
   phpstan:
     name: PHPStan

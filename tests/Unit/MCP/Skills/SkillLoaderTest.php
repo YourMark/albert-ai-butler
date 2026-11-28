@@ -9,6 +9,8 @@ namespace Albert\Tests\Unit\MCP\Skills;
 
 use Albert\MCP\Skills\SkillLoader;
 use WP\MCP\Domain\Prompts\McpPrompt;
+use WP\McpSchema\Schema;
+use WP\McpSchema\Schemas;
 use PHPUnit\Framework\TestCase;
 
 // Load WordPress function/class stubs (apply_filters, WP_Error, __, etc.).
@@ -61,6 +63,15 @@ class SkillLoaderTest extends TestCase {
 	}
 
 	/**
+	 * The schema a prompt is projected through to read its protocol fields.
+	 *
+	 * @return Schema
+	 */
+	private function schema(): Schema {
+		return Schemas::create()->forVersion( Schemas::V2025_11_25 );
+	}
+
+	/**
 	 * Write a fixture skill file and return its absolute path.
 	 *
 	 * @param string $name     The file base name (without extension).
@@ -101,8 +112,8 @@ class SkillLoaderTest extends TestCase {
 
 		$this->assertCount( 1, $prompts );
 		$this->assertInstanceOf( McpPrompt::class, $prompts[0] );
-		$this->assertSame( 'block-editor', $prompts[0]->get_protocol_dto()->getName() );
-		$this->assertSame( 'A playbook.', $prompts[0]->get_protocol_dto()->getDescription() );
+		$this->assertSame( 'block-editor', $prompts[0]->get_name() );
+		$this->assertSame( 'A playbook.', $prompts[0]->get_protocol_record( $this->schema() )->getDescription() );
 	}
 
 	/**
@@ -139,7 +150,7 @@ class SkillLoaderTest extends TestCase {
 
 		$prompts = ( new SkillLoader() )->prompts();
 
-		$names = array_map( static fn( McpPrompt $p ): string => $p->get_protocol_dto()->getName(), $prompts );
+		$names = array_map( static fn( McpPrompt $p ): string => $p->get_name(), $prompts );
 		$this->assertSame( [ 'one', 'two' ], $names );
 	}
 
@@ -156,7 +167,7 @@ class SkillLoaderTest extends TestCase {
 		$prompts = ( new SkillLoader() )->prompts();
 
 		$this->assertCount( 1, $prompts );
-		$this->assertSame( 'valid', $prompts[0]->get_protocol_dto()->getName() );
+		$this->assertSame( 'valid', $prompts[0]->get_name() );
 	}
 
 	/**
@@ -184,7 +195,7 @@ class SkillLoaderTest extends TestCase {
 		$prompts = ( new SkillLoader() )->prompts();
 
 		$this->assertCount( 1, $prompts );
-		$this->assertSame( 'valid', $prompts[0]->get_protocol_dto()->getName() );
+		$this->assertSame( 'valid', $prompts[0]->get_name() );
 	}
 
 	/**
@@ -200,7 +211,7 @@ class SkillLoaderTest extends TestCase {
 		$this->set_skill_files( [ $file ] );
 
 		$prompts   = ( new SkillLoader() )->prompts();
-		$arguments = $prompts[0]->get_protocol_dto()->getArguments();
+		$arguments = $prompts[0]->get_protocol_record( $this->schema() )->getArguments();
 
 		$this->assertCount( 1, $arguments );
 		$this->assertSame( 'slug', $arguments[0]->getName() );
@@ -219,7 +230,7 @@ class SkillLoaderTest extends TestCase {
 		$prompts = ( new SkillLoader() )->prompts();
 
 		$this->assertCount( 1, $prompts );
-		$this->assertSame( 'valid', $prompts[0]->get_protocol_dto()->getName() );
+		$this->assertSame( 'valid', $prompts[0]->get_name() );
 	}
 
 	/**
@@ -234,7 +245,7 @@ class SkillLoaderTest extends TestCase {
 		$prompts = ( new SkillLoader() )->prompts();
 
 		$this->assertCount( 1, $prompts );
-		$this->assertSame( 'dupe', $prompts[0]->get_protocol_dto()->getName() );
+		$this->assertSame( 'dupe', $prompts[0]->get_name() );
 	}
 
 	/**

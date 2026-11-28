@@ -9,9 +9,10 @@
 
 namespace Albert\Abilities\WordPress\Users;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
-use Albert\Privacy\PiiPolicy;
 use WP_Error;
 
 /**
@@ -57,15 +58,10 @@ class ViewUser extends BaseAbility {
 		return [
 			'type'       => 'object',
 			'properties' => [
-				'id'                   => [
+				'id' => [
 					'type'        => 'integer',
 					'description' => 'The user ID to retrieve.',
 					'minimum'     => 1,
-				],
-				'reveal_personal_data' => [
-					'type'        => 'boolean',
-					'description' => "Return real personal data instead of anonymised placeholders. Requires the ability's own capability; ignored unless privacy mode is Balanced.",
-					'default'     => false,
 				],
 			],
 			'required'   => [ 'id' ],
@@ -111,7 +107,8 @@ class ViewUser extends BaseAbility {
 		$user_id = absint( $args['id'] );
 		$user    = get_user_by( 'id', $user_id );
 
-		if ( ! $user ) {
+		// On multisite, users of other sites in the network are not this site's to show.
+		if ( ! $user || ( is_multisite() && ! is_user_member_of_blog( $user_id ) ) ) {
 			return new WP_Error(
 				'user_not_found',
 				sprintf(
@@ -122,26 +119,19 @@ class ViewUser extends BaseAbility {
 			);
 		}
 
-		return PiiPolicy::redact(
-			[
-				'user' => [
-					'id'           => $user->ID,
-					'username'     => $user->user_login,
-					'email'        => $user->user_email,
-					'display_name' => $user->display_name,
-					'first_name'   => $user->first_name,
-					'last_name'    => $user->last_name,
-					'roles'        => $user->roles,
-					'registered'   => $user->user_registered,
-					'url'          => $user->user_url,
-					'description'  => $user->description,
-				],
+		return [
+			'user' => [
+				'id'           => $user->ID,
+				'username'     => $user->user_login,
+				'email'        => $user->user_email,
+				'display_name' => $user->display_name,
+				'first_name'   => $user->first_name,
+				'last_name'    => $user->last_name,
+				'roles'        => $user->roles,
+				'registered'   => $user->user_registered,
+				'url'          => $user->user_url,
+				'description'  => $user->description,
 			],
-			$args,
-			[
-				'mask_context_names' => true,
-				'reveal_capability'  => 'list_users',
-			]
-		);
+		];
 	}
 }

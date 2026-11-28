@@ -57,7 +57,7 @@ class SkillLoader {
 	 * Suitable for passing straight to the adapter's `create_server()` prompts
 	 * argument. Files that cannot be parsed into a valid prompt are skipped.
 	 *
-	 * @return array<int, McpPrompt> The skill prompts.
+	 * @return list<McpPrompt> The skill prompts.
 	 * @since 1.2.0
 	 */
 	public function prompts(): array {
@@ -182,7 +182,7 @@ class SkillLoader {
 		// A named skill with an empty body would register a useless empty
 		// prompt; skip it the same way a nameless file is skipped.
 		if ( trim( $body ) === '' ) {
-			error_log( sprintf( 'Albert: skipping skill "%s" — empty body in %s', $skill['name'], $file ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Concise admin-facing warning for a misconfigured skill file.
+			error_log( sprintf( 'Albert: skipping skill "%s", empty body in %s', $skill['name'], $file ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Concise admin-facing warning for a misconfigured skill file.
 			return null;
 		}
 

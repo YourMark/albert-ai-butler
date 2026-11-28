@@ -86,6 +86,15 @@ class ServerMetadata {
 
 			// Optional but useful fields.
 			'scopes_supported'                      => [ 'default' ],
+
+			/*
+			 * Required by OIDC Discovery, not RFC 8414: where a host answers the root
+			 * `/.well-known/` (SiteGround), Claude Code validates the
+			 * `openid-configuration` copy as OIDC metadata. No ID tokens are issued,
+			 * hence no `openid` scope.
+			 */
+			'subject_types_supported'               => [ 'public' ],
+			'id_token_signing_alg_values_supported' => [ Jwks::ALGORITHM ],
 		];
 	}
 

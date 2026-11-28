@@ -109,6 +109,9 @@
 .albert-setup__step {
 	display: flex;
 	gap: 14px;
+	/* WordPress gives every admin list item a bottom margin, which left a
+	   white strip under the tinted current step. */
+	margin: 0;
 	padding: var(--albert-space-400) var(--albert-card-padding);
 }
 
@@ -186,6 +189,21 @@
 
 .albert-setup__step .albert-endpoint {
 	margin-block-start: var(--albert-space-300);
+}
+
+/* A recommendation under a done step: quiet, so it never reads as a blocker. */
+.albert-setup__note {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--albert-space-300);
+	margin-block-start: var(--albert-space-300);
+	font-size: var(--albert-font-size-sm);
+	color: var(--albert-color-text-muted);
+}
+
+.albert-setup__note p {
+	margin: 0;
 }
 
 .albert-setup__aside-link {

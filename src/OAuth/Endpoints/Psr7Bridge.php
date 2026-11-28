@@ -9,6 +9,8 @@
 
 namespace Albert\OAuth\Endpoints;
 
+defined( 'ABSPATH' ) || exit;
+
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7\ServerRequest;
 use Psr\Http\Message\ResponseInterface;

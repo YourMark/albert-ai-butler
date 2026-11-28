@@ -2,9 +2,8 @@
 /**
  * Minimal WP_Ability stub for unit tests.
  *
- * Only the accessors Albert reads are implemented: get_name / get_meta for
- * AbilitiesRegistry::resolve_required_capability(), and get_input_schema for
- * MCP\ToolCallObserver.
+ * Only the accessors Albert reads are implemented: get_name, get_meta and
+ * get_input_schema for MCP\ToolCallObserver, plus an execute() a test fills in.
  *
  * @package Albert\Tests
  */
@@ -88,6 +87,24 @@ if ( ! class_exists( 'WP_Ability' ) ) {
 		 */
 		public function get_meta_item( string $key, $default_value = null ) {
 			return array_key_exists( $key, $this->meta ) ? $this->meta[ $key ] : $default_value;
+		}
+
+		/**
+		 * What execute() runs, given the ability and the input; stands in for core's execute() body.
+		 *
+		 * @var callable|null
+		 */
+		public $runner = null;
+
+		/**
+		 * Run the configured body, so WP_Ability::execute is on the call stack as in core.
+		 *
+		 * @param mixed $input Ability input.
+		 *
+		 * @return mixed
+		 */
+		public function execute( $input = null ) {
+			return is_callable( $this->runner ) ? ( $this->runner )( $this, $input ) : null;
 		}
 
 		/**

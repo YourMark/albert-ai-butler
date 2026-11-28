@@ -111,6 +111,13 @@ class OptionRestorer implements Hookable {
 			return $query;
 		}
 
+		// A plain CREATE TABLE, as site creation issues, makes an empty table that
+		// reading first would fail on. Not TEMPORARY, which shadows the real table,
+		// nor IF NOT EXISTS or SELECT, which can write rows into an existing one.
+		if ( preg_match( '/^[\s(]*CREATE\s+TABLE\s+(?!IF\s)/i', $query ) === 1 && preg_match( '/\bSELECT\b/i', $query ) !== 1 ) {
+			return $query;
+		}
+
 		$tables = $this->options_tables( $query );
 		if ( $tables === [] || $this->issued_by_option_api() ) {
 			return $query;
@@ -296,7 +303,7 @@ class OptionRestorer implements Hookable {
 		$failed = true;
 		$this->own(
 			static function () use ( $wpdb, $selects, &$found, &$failed ): void {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Each part prepared above.
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Each part prepared above.
 				$found  = $wpdb->get_results( implode( ' UNION ALL ', $selects ), ARRAY_A );
 				$failed = $wpdb->last_error !== '';
 			}

@@ -35,9 +35,12 @@ webpack.config.js
 assets/src/
 
 # Dev scripts and tests
+# The Claude Desktop bridge's build project; its output in assets/claude-desktop/ ships.
+tools/
 bin/
 scripts/
 tests/
+tests-fakes/
 
 # Documentation (dev-only)
 CLAUDE.md
@@ -57,8 +60,8 @@ design_handoff_*/
 # includes/ and never touches either, so they are dead weight — and a second
 # `Plugin Name:` and `Stable tag:` inside our SVN trunk invites a question at
 # review for no benefit.
-vendor/wordpress/mcp-adapter/mcp-adapter.php
-vendor/wordpress/mcp-adapter/readme.txt
+lib/mcp-adapter/vendor/wordpress/mcp-adapter/mcp-adapter.php
+lib/mcp-adapter/vendor/wordpress/mcp-adapter/readme.txt
 
 # Non-permitted vendor files
 vendor/bin/
@@ -68,6 +71,34 @@ vendor/**/.deepsource.toml
 vendor/**/dist/*.asc
 vendor/**/dist/*.asc.sig
 vendor/**/*.bat
+vendor/**/*.sh
+lib/mcp-adapter/vendor/bin/
+lib/mcp-adapter/vendor/*/bin/
+lib/mcp-adapter/vendor/**/.deployignore
+lib/mcp-adapter/vendor/**/.deepsource.toml
+lib/mcp-adapter/vendor/**/dist/*.asc
+lib/mcp-adapter/vendor/**/dist/*.asc.sig
+lib/mcp-adapter/vendor/**/*.bat
+lib/mcp-adapter/vendor/**/*.sh
+
+# Library build, CI and analysis files: never loaded, and Plugin Check flags
+# hidden and application files anywhere in the zip.
+vendor/**/.*.yml
+vendor/**/.*.yaml
+vendor/**/phpstan*.neon*
+vendor/**/psalm*.xml
+vendor/**/psalm-autoload.php
+vendor/**/renovate.json
+vendor/**/Makefile
+vendor/**/box.json
+vendor/**/*.pubkey
+vendor/defuse/php-encryption/dist/
+vendor/paragonie/random_compat/other/
+lib/mcp-adapter/vendor/**/.*.yml
+lib/mcp-adapter/vendor/**/.*.yaml
+lib/mcp-adapter/vendor/**/phpstan*.neon*
+lib/mcp-adapter/vendor/**/psalm*.xml
+lib/mcp-adapter/vendor/**/renovate.json
 
 # WordPress.org directory assets (screenshots, banners, icons)
 .wordpress-org

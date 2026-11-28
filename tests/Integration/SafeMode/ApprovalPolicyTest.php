@@ -66,6 +66,11 @@ class ApprovalPolicyTest extends TestCase {
 		$this->registered_ids = [];
 		$this->permitted      = true;
 
+		// The owner has switched every ability on; the test abilities are
+		// writes, which a fresh install starts off.
+		update_option( 'albert_abilities_saved', true );
+		delete_option( 'albert_disabled_abilities' );
+
 		if ( function_exists( 'wp_has_ability_category' ) && ! wp_has_ability_category( self::TEST_CATEGORY ) ) {
 			$this->during(
 				'wp_abilities_api_categories_init',
@@ -277,15 +282,17 @@ class ApprovalPolicyTest extends TestCase {
 	}
 
 	/**
-	 * A subscriber cannot reach the screen; an editor can.
+	 * Only the people on the list reach the screen, whatever their role.
 	 *
 	 * @return void
 	 */
-	public function test_the_view_gate_keeps_subscribers_out(): void {
-		$subscriber = self::factory()->user->create( [ 'role' => 'subscriber' ] );
-		$editor     = self::factory()->user->create( [ 'role' => 'editor' ] );
+	public function test_the_view_gate_follows_the_allowed_list(): void {
+		delete_option( \Albert\OAuth\AllowedUsers::OPTION );
+		$editor = self::factory()->user->create( [ 'role' => 'editor' ] );
 
-		$this->assertFalse( $this->policy->can_view( $subscriber ) );
+		$this->assertFalse( $this->policy->can_view( $editor ) );
+
+		\Albert\OAuth\AllowedUsers::add( $editor );
 		$this->assertTrue( $this->policy->can_view( $editor ) );
 	}
 
@@ -296,10 +303,11 @@ class ApprovalPolicyTest extends TestCase {
 	 */
 	public function test_the_view_gate_is_filterable(): void {
 		$subscriber = self::factory()->user->create( [ 'role' => 'subscriber' ] );
+		$owner      = self::factory()->user->create( [ 'role' => 'editor' ] );
 
 		add_filter( 'albert/approvals/view_capability', static fn(): string => 'read' );
 
 		$this->assertTrue( $this->policy->can_view( $subscriber ) );
-		$this->assertFalse( $this->policy->can_decide( $this->action( 999 ), $subscriber ) );
+		$this->assertFalse( $this->policy->can_decide( $this->action( $owner ), $subscriber ) );
 	}
 }

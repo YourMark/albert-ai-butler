@@ -68,30 +68,89 @@ class BlockTreeEditor {
 		'core/quote',
 		'core/details',
 		'core/navigation',
+		'core/navigation-submenu',
 	];
 
 	/**
 	 * Replace the block at a path with a new block.
 	 *
-	 * @param array<int, array<string, mixed>> $tree      Parsed block tree.
-	 * @param array<int, int>                  $path      Logical path of the target block.
-	 * @param array<string, mixed>             $new_block New ParsedBlock to put in its place.
-	 * @param string|null                      $expect    Optional expected block name at the path.
+	 * @param array<int, array<string, mixed>> $tree          Parsed block tree.
+	 * @param array<int, int>                  $path          Logical path of the target block.
+	 * @param array<string, mixed>             $new_block     New ParsedBlock to put in its place.
+	 * @param string|null                      $expect        Optional expected block name at the path.
+	 * @param bool                             $keep_children Carry the target node's inner blocks onto the replacement.
 	 * @return array<int, array<string, mixed>>|WP_Error New tree, or an error.
 	 *
 	 * @since 1.2.0
+	 * @since 1.5.0 Added `$keep_children`.
 	 */
-	public function edit( array $tree, array $path, array $new_block, ?string $expect = null ): array|WP_Error {
+	public function edit( array $tree, array $path, array $new_block, ?string $expect = null, bool $keep_children = false ): array|WP_Error {
 		return $this->mutate(
 			$tree,
 			$path,
 			$expect,
-			static function ( array $siblings, int $actual_index ) use ( $new_block ): array {
-				$siblings[ $actual_index ] = $new_block;
+			static function ( array $siblings, int $actual_index ) use ( $new_block, $keep_children, $path ): array|WP_Error {
+				$replacement = $new_block;
+				$target      = $siblings[ $actual_index ];
+
+				if ( $keep_children && ! empty( $target['innerBlocks'] ) && is_array( $target['innerBlocks'] ) ) {
+					// Kept children need a wrapper to sit in. Under a leaf they would land
+					// inside its markup (a heading's <h2>); under a wrapper the serializer
+					// could not build (an untemplated cover) they would be stored bare
+					// without the warning the create path gives. Dropping them would lose
+					// content, so ask the caller to send them.
+					$same_type = ( $replacement['blockName'] ?? null ) === ( $target['blockName'] ?? null );
+					$hollow    = implode( '', array_filter( (array) ( $replacement['innerContent'] ?? [] ), 'is_string' ) ) === '';
+
+					if ( $hollow || ( ! $same_type && ! self::is_container_block( $replacement ) ) ) {
+						return new WP_Error(
+							'block_children_unplaceable',
+							sprintf(
+								/* translators: 1: block name at the path, 2: the path, e.g. [2], 3: replacement block name. */
+								__( "%1\$s at %2\$s has inner blocks, and they can't be kept automatically under %3\$s. Send innerBlocks explicitly: the blocks to keep, or [] to remove them.", 'albert-ai-butler' ),
+								(string) ( $target['blockName'] ?? '' ),
+								self::format_path( $path ),
+								(string) ( $replacement['blockName'] ?? '' )
+							),
+							[ 'status' => 400 ]
+						);
+					}
+
+					$replacement['innerBlocks'] = array_values( $target['innerBlocks'] );
+					$replacement                = self::sync_inner_content( $replacement );
+				}
+
+				$siblings[ $actual_index ] = $replacement;
 
 				return $siblings;
 			}
 		);
+	}
+
+	/**
+	 * The block at a logical path, or null when there is none.
+	 *
+	 * @param array<int, mixed> $tree Parsed block tree.
+	 * @param array<int, int>   $path Logical path.
+	 * @return array<string, mixed>|null The node.
+	 *
+	 * @since 1.6.0
+	 */
+	public function find( array $tree, array $path ): ?array {
+		$node     = null;
+		$siblings = array_values( $tree );
+
+		foreach ( $path as $logical ) {
+			$actual = self::logical_to_actual( $siblings, $logical );
+			if ( $actual === null || ! is_array( $siblings[ $actual ] ) ) {
+				return null;
+			}
+
+			$node     = $siblings[ $actual ];
+			$siblings = isset( $node['innerBlocks'] ) && is_array( $node['innerBlocks'] ) ? array_values( $node['innerBlocks'] ) : [];
+		}
+
+		return $node;
 	}
 
 	/**
@@ -133,6 +192,21 @@ class BlockTreeEditor {
 	 * @since 1.2.0
 	 */
 	public function add( array $tree, array $path, string $position, array $new_block ): array|WP_Error {
+		return $this->add_all( $tree, $path, $position, [ $new_block ] );
+	}
+
+	/**
+	 * Insert several blocks, in order, relative to the block at a path.
+	 *
+	 * @param array<int, array<string, mixed>> $tree       Parsed block tree.
+	 * @param array<int, int>                  $path       Logical path of the reference block.
+	 * @param string                           $position   One of before|after|inside_start|inside_end.
+	 * @param array<int, array<string, mixed>> $new_blocks ParsedBlocks to insert, in order.
+	 * @return array<int, array<string, mixed>>|WP_Error New tree, or an error.
+	 *
+	 * @since 1.6.0
+	 */
+	public function add_all( array $tree, array $path, string $position, array $new_blocks ): array|WP_Error {
 		$allowed = [ 'before', 'after', 'inside_start', 'inside_end' ];
 		if ( ! in_array( $position, $allowed, true ) ) {
 			return new WP_Error(
@@ -152,9 +226,9 @@ class BlockTreeEditor {
 				$tree,
 				$path,
 				null,
-				static function ( array $siblings, int $actual_index ) use ( $position, $new_block ): array {
+				static function ( array $siblings, int $actual_index ) use ( $position, $new_blocks ): array {
 					$at = $position === 'after' ? $actual_index + 1 : $actual_index;
-					array_splice( $siblings, $at, 0, [ $new_block ] );
+					array_splice( $siblings, $at, 0, $new_blocks );
 
 					return $siblings;
 				}
@@ -166,7 +240,7 @@ class BlockTreeEditor {
 			$tree,
 			$path,
 			null,
-			static function ( array $node ) use ( $position, $new_block, $path ) {
+			static function ( array $node ) use ( $position, $new_blocks, $path ) {
 				if ( ! self::is_container_block( $node ) ) {
 					return new WP_Error(
 						'block_not_container',
@@ -184,11 +258,7 @@ class BlockTreeEditor {
 					? array_values( $node['innerBlocks'] )
 					: [];
 
-				if ( $position === 'inside_start' ) {
-					array_unshift( $inner, $new_block );
-				} else {
-					$inner[] = $new_block;
-				}
+				$inner = $position === 'inside_start' ? array_merge( $new_blocks, $inner ) : array_merge( $inner, $new_blocks );
 
 				$node['innerBlocks'] = $inner;
 
@@ -364,7 +434,7 @@ class BlockTreeEditor {
 			'block_path_mismatch',
 			sprintf(
 				/* translators: 1: expected block name, 2: path, 3: actual block name. */
-				__( 'Expected %1$s at %2$s but found %3$s. The post changed since you read it — re-read and retry.', 'albert-ai-butler' ),
+				__( 'Expected %1$s at %2$s but found %3$s. The post changed since you read it. Re-read and retry.', 'albert-ai-butler' ),
 				$expect,
 				self::format_path( $path ),
 				$actual_name === null ? 'classic/freeform content' : (string) $actual_name

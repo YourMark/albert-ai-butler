@@ -882,4 +882,49 @@ class TaxonomiesAbilityTest extends TestCase {
 		$this->assertArrayHasKey( 'terms', $result );
 		$this->assertContains( 'Shoes', array_column( $result['terms'], 'name' ) );
 	}
+
+	/**
+	 * DeleteTerm deletes without `force`: terms have no trash, so core would refuse a soft delete.
+	 *
+	 * @return void
+	 */
+	public function test_delete_term_without_force_deletes(): void {
+		foreach ( [ [], [ 'force' => false ] ] as $extra ) {
+			$term_id = self::factory()->term->create( [ 'taxonomy' => 'post_tag' ] );
+
+			$result = ( new DeleteTerm() )->execute(
+				array_merge(
+					[
+						'taxonomy' => 'post_tag',
+						'id'       => $term_id,
+					],
+					$extra
+				)
+			);
+
+			$this->assertIsArray( $result );
+			$this->assertTrue( $result['deleted'] );
+			$this->assertNull( get_term( $term_id, 'post_tag' ) );
+		}
+	}
+
+	/**
+	 * ViewTerm reaches only taxonomies core exposes over REST.
+	 *
+	 * @return void
+	 */
+	public function test_view_term_refuses_a_taxonomy_hidden_from_rest(): void {
+		$term = wp_insert_term( 'albert-hidden-term', 'wp_theme' );
+		$this->assertIsArray( $term );
+
+		$result = ( new ViewTerm() )->execute(
+			[
+				'id'       => $term['term_id'],
+				'taxonomy' => 'wp_theme',
+			]
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'taxonomy_not_rest_enabled', $result->get_error_code() );
+	}
 }

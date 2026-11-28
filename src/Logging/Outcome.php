@@ -146,6 +146,8 @@ class Outcome {
 	 *     `rest_do_request()` abilities.
 	 *   - `forbidden` — Albert's own per-object read refusal in ViewPost and
 	 *     ViewPage ("You do not have permission to view this post.").
+	 *   - `permission_denied`: the bare form of the suffix rule, raised by the
+	 *     permission wrapper and safe mode.
 	 *
 	 * Deliberately *not* here: `ability_invalid_input` and `rest_invalid_param`
 	 * are malformed requests rather than policy; `link_expired` and
@@ -162,6 +164,7 @@ class Outcome {
 		'capability_revoked',
 		'rest_forbidden',
 		'forbidden',
+		'permission_denied',
 	];
 
 	/**
@@ -183,7 +186,7 @@ class Outcome {
 	 * @since 1.5.0
 	 * @var string
 	 */
-	const HELD_CODE = 'albert_awaiting_approval';
+	const HELD_CODE = 'awaiting_approval';
 
 	/**
 	 * Error-code suffix that marks a truthful negative answer.
@@ -201,13 +204,8 @@ class Outcome {
 	/**
 	 * Exact error codes treated as a truthful negative answer.
 	 *
-	 * Deliberately short. Every entry was checked against every site that
-	 * raises it, and each one means "the record you named is not there" and
-	 * nothing else:
-	 *
-	 *   - `not_found`          — the bare, unprefixed form of the suffix rule.
-	 *   - `invalid_post`       — "The specified post does not exist."
-	 *   - `invalid_attachment` — "The specified attachment does not exist."
+	 * Deliberately short: only `not_found`, the bare form of the suffix rule.
+	 * Albert's own codes follow `{resource}_not_found`.
 	 *
 	 * Codes deliberately left as `error` even though they read close to this
 	 * list: `token_already_used` and `link_already_used` both say "invalid **or**
@@ -232,7 +230,7 @@ class Outcome {
 	 * @since 1.4.0
 	 * @var array<int, string>
 	 */
-	const NOT_FOUND_CODES = [ 'not_found', 'invalid_post', 'invalid_attachment' ];
+	const NOT_FOUND_CODES = [ 'not_found' ];
 
 	/**
 	 * `*_not_found` codes that are API-surface misses, not content misses.
@@ -243,20 +241,19 @@ class Outcome {
 	 * calls anything, so naming one that is not on the list is a client bug and
 	 * belongs in red:
 	 *
-	 *   - `albert_ability_not_found`, `albert_premium_ability_not_found`,
-	 *     `ability_not_found` — the ability id is not registered.
+	 *   - `ability_not_found`, and `albert_premium_ability_not_found` from
+	 *     Premium releases before it dropped the prefix: the ability id is not registered.
 	 *   - `tool_not_found` — the MCP tool name is not one the server exposes.
-	 *   - `skill_not_found` — a judgement call, written down rather than left to
-	 *     the suffix rule: skills *are* enumerated to the assistant, so asking
+	 *   - `skill_not_found` — a judgement call, written down rather than
+	 *     left to the suffix rule: skills *are* enumerated to the assistant, so asking
 	 *     for one that does not exist is the same client bug as the others.
 	 *
 	 * @since 1.4.0
 	 * @var array<int, string>
 	 */
 	const API_SURFACE_CODES = [
-		'albert_ability_not_found',
-		'albert_premium_ability_not_found',
 		'ability_not_found',
+		'albert_premium_ability_not_found',
 		'tool_not_found',
 		'skill_not_found',
 	];
@@ -289,9 +286,8 @@ class Outcome {
 	 * Two signals decide the answer, and the stage wins. A writer that recorded
 	 * `permission` watched the invocation stop in the permission check; that is
 	 * a fact about the run, where an error code is only a convention about how
-	 * somebody spelled it. Free never stamps a stage — it has nowhere to learn
-	 * one — so the code rules below are what classify its own rows, and Premium
-	 * gets both.
+	 * somebody spelled it. Free stamps a stage only for calls `ExecutionObserver`
+	 * watched; its other rows are classified by the code rules below.
 	 *
 	 * @param WP_Error    $error         The error the invocation produced.
 	 * @param string      $ability_name  The ability identifier.

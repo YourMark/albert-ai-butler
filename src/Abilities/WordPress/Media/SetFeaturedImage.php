@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WordPress\Media;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -64,10 +66,12 @@ class SetFeaturedImage extends BaseAbility {
 				'post_id'       => [
 					'type'        => 'integer',
 					'description' => 'The ID of the post or page to set the featured image for (required)',
+					'minimum'     => 1,
 				],
 				'attachment_id' => [
 					'type'        => 'integer',
 					'description' => 'The ID of the media attachment to set as featured image (required)',
+					'minimum'     => 1,
 				],
 			],
 			'required'   => [ 'post_id', 'attachment_id' ],
@@ -131,7 +135,7 @@ class SetFeaturedImage extends BaseAbility {
 
 			if ( $page_response->is_error() ) {
 				return new WP_Error(
-					'invalid_post',
+					'post_not_found',
 					__( 'The specified post or page does not exist.', 'albert-ai-butler' ),
 					[ 'status' => 404 ]
 				);
@@ -144,7 +148,7 @@ class SetFeaturedImage extends BaseAbility {
 
 		if ( $media_response->is_error() ) {
 			return new WP_Error(
-				'invalid_attachment',
+				'media_not_found',
 				__( 'The specified attachment does not exist.', 'albert-ai-butler' ),
 				[ 'status' => 404 ]
 			);

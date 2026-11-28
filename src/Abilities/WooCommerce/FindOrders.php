@@ -9,6 +9,8 @@
 
 namespace Albert\Abilities\WooCommerce;
 
+defined( 'ABSPATH' ) || exit;
+
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use WP_Error;
@@ -86,7 +88,7 @@ class FindOrders extends BaseAbility {
 				],
 				'date_after'  => [
 					'type'        => 'string',
-					'description' => 'Filter orders created after this date (YYYY-MM-DD).',
+					'description' => 'Filter orders created after this date (YYYY-MM-DD). Together with date_before, orders on both dates are included.',
 				],
 				'date_before' => [
 					'type'        => 'string',
@@ -147,7 +149,11 @@ class FindOrders extends BaseAbility {
 	 * @since 1.0.0
 	 */
 	public function check_permission(): bool|WP_Error {
-		return $this->require_capability( 'edit_shop_orders' );
+		$allowed = $this->require_capability( 'edit_shop_orders' );
+
+		// WooCommerce's own order REST asks for this one as well; only a custom
+		// role can hold the first without it.
+		return $allowed === true ? $this->require_capability( 'read_private_shop_orders' ) : $allowed;
 	}
 
 	/**
@@ -178,17 +184,16 @@ class FindOrders extends BaseAbility {
 			$query_args['customer_id'] = absint( $args['customer_id'] );
 		}
 
-		if ( ! empty( $args['date_after'] ) ) {
-			$query_args['date_created'] = '>' . sanitize_text_field( $args['date_after'] );
-		}
+		$after  = ! empty( $args['date_after'] ) ? sanitize_text_field( $args['date_after'] ) : '';
+		$before = ! empty( $args['date_before'] ) ? sanitize_text_field( $args['date_before'] ) : '';
 
-		if ( ! empty( $args['date_before'] ) ) {
-			$before = '<' . sanitize_text_field( $args['date_before'] );
-			if ( isset( $query_args['date_created'] ) ) {
-				$query_args['date_created'] .= '...' . sanitize_text_field( $args['date_before'] );
-			} else {
-				$query_args['date_created'] = $before;
-			}
+		// WooCommerce's range syntax is `A...B`; a comparison operator in front breaks it.
+		if ( $after !== '' && $before !== '' ) {
+			$query_args['date_created'] = $after . '...' . $before;
+		} elseif ( $after !== '' ) {
+			$query_args['date_created'] = '>' . $after;
+		} elseif ( $before !== '' ) {
+			$query_args['date_created'] = '<' . $before;
 		}
 
 		// Paginate returns stdClass with orders, total, max_num_pages.

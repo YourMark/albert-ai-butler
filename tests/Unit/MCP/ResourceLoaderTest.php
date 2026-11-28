@@ -55,7 +55,7 @@ class ResourceLoaderTest extends TestCase {
 	private function uris( array $resources ): array {
 		return array_map(
 			static function ( McpResource $entry ): string {
-				return $entry->get_protocol_dto()->getUri();
+				return $entry->get_uri();
 			},
 			$resources
 		);

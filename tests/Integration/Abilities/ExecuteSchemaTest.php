@@ -19,21 +19,47 @@ namespace Albert\Tests\Integration\Abilities;
 use Albert\Abilities\WordPress\Blocks\CreatePattern;
 use Albert\Abilities\WordPress\Blocks\DeletePattern;
 use Albert\Abilities\WordPress\Blocks\UpdatePattern;
+use Albert\Abilities\WordPress\Comments\DeleteComment;
+use Albert\Abilities\WordPress\Comments\FindComments;
+use Albert\Abilities\WordPress\Comments\ViewComment;
+use Albert\Abilities\WordPress\Comments\ModerateComment;
+use Albert\Abilities\WordPress\Comments\ReplyToComment;
 use Albert\Abilities\WordPress\Media\CreateUploadLink;
+use Albert\Abilities\WordPress\Media\DeleteMedia;
+use Albert\Abilities\WordPress\Menus\AddMenuItem;
+use Albert\Abilities\WordPress\Menus\AssignMenuLocation;
+use Albert\Abilities\WordPress\Menus\ViewMenu;
+use Albert\Abilities\WordPress\Menus\UnassignMenuLocation;
+use Albert\Abilities\WordPress\Menus\CreateMenu;
+use Albert\Abilities\WordPress\Menus\DeleteMenu;
+use Albert\Abilities\WordPress\Menus\FindMenus;
+use Albert\Abilities\WordPress\Menus\MoveMenuItem;
+use Albert\Abilities\WordPress\Menus\RemoveMenuItem;
+use Albert\Abilities\WordPress\Menus\UpdateMenuItem;
 use Albert\Abilities\WordPress\Media\FindMedia;
 use Albert\Abilities\WordPress\Media\SetFeaturedImage;
+use Albert\Abilities\WordPress\Media\UpdateMedia;
 use Albert\Abilities\WordPress\Media\UploadMedia;
 use Albert\Abilities\WordPress\Media\ViewMedia;
 use Albert\Abilities\WordPress\Pages\Create as CreatePage;
 use Albert\Abilities\WordPress\Pages\Delete as DeletePage;
 use Albert\Abilities\WordPress\Pages\FindPages;
+use Albert\Abilities\WordPress\Pages\ReplaceText as ReplacePageText;
 use Albert\Abilities\WordPress\Pages\Update as UpdatePage;
 use Albert\Abilities\WordPress\Pages\ViewPage;
+use Albert\Abilities\WordPress\Posts\AddTerms as AddPostTerms;
 use Albert\Abilities\WordPress\Posts\Create as CreatePost;
 use Albert\Abilities\WordPress\Posts\Delete as DeletePost;
 use Albert\Abilities\WordPress\Posts\FindPosts;
+use Albert\Abilities\WordPress\Posts\RemoveTerms as RemovePostTerms;
+use Albert\Abilities\WordPress\Posts\ReplaceText as ReplacePostText;
 use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
+use Albert\Abilities\WordPress\Search\SearchContent;
+use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
+use Albert\Abilities\WordPress\Revisions\FindRevisions;
+use Albert\Abilities\WordPress\Revisions\ViewRevision;
+use Albert\Abilities\WordPress\Revisions\RestoreRevision;
 use Albert\Abilities\WordPress\Taxonomies\CreateTerm;
 use Albert\Abilities\WordPress\Taxonomies\DeleteTerm;
 use Albert\Abilities\WordPress\Taxonomies\FindTaxonomies;
@@ -100,7 +126,6 @@ class ExecuteSchemaTest extends TestCase {
 	private function get_output_schema( BaseAbility $ability ): array {
 		$reflection = new \ReflectionClass( $ability );
 		$prop       = $reflection->getProperty( 'output_schema' );
-		$prop->setAccessible( true );
 
 		return $prop->getValue( $ability );
 	}
@@ -222,6 +247,88 @@ class ExecuteSchemaTest extends TestCase {
 				'title' => 'Updated Title',
 			],
 			'UpdatePost'
+		);
+	}
+
+	/**
+	 * AddPostTerms returns the post's terms matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_add_post_terms_output_matches_schema(): void {
+		$post_id = self::factory()->post->create();
+
+		$this->assert_execute_matches_schema(
+			new AddPostTerms(),
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ 'schema-tag' ],
+			],
+			'AddPostTerms'
+		);
+	}
+
+	/**
+	 * RemovePostTerms returns the post's terms matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_remove_post_terms_output_matches_schema(): void {
+		$post_id = self::factory()->post->create();
+		wp_set_post_tags( $post_id, [ 'schema-tag' ] );
+
+		$this->assert_execute_matches_schema(
+			new RemovePostTerms(),
+			[
+				'post_id'  => $post_id,
+				'taxonomy' => 'post_tag',
+				'terms'    => [ 'schema-tag' ],
+			],
+			'RemovePostTerms'
+		);
+	}
+
+	/**
+	 * ReplacePostText returns the replacement count matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_replace_post_text_output_matches_schema(): void {
+		$post_id = self::factory()->post->create( [ 'post_content' => '<!-- wp:paragraph --><p>Old words</p><!-- /wp:paragraph -->' ] );
+
+		$this->assert_execute_matches_schema(
+			new ReplacePostText(),
+			[
+				'post_id' => $post_id,
+				'search'  => 'Old',
+				'replace' => 'New',
+			],
+			'ReplacePostText'
+		);
+	}
+
+	/**
+	 * ReplacePageText returns the replacement count matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_replace_page_text_output_matches_schema(): void {
+		$page_id = self::factory()->post->create(
+			[
+				'post_type'    => 'page',
+				'post_content' => '<!-- wp:paragraph --><p>Old words</p><!-- /wp:paragraph -->',
+			]
+		);
+
+		$this->assert_execute_matches_schema(
+			new ReplacePageText(),
+			[
+				'page_id' => $page_id,
+				'search'  => 'Old',
+				'replace' => 'New',
+			],
+			'ReplacePageText'
 		);
 	}
 
@@ -388,8 +495,8 @@ class ExecuteSchemaTest extends TestCase {
 		$this->assert_execute_matches_schema(
 			new UpdateUser(),
 			[
-				'id'    => $user_id,
-				'email' => 'after-schema@albert.test',
+				'id'         => $user_id,
+				'first_name' => 'Schema',
 			],
 			'UpdateUser'
 		);
@@ -448,6 +555,211 @@ class ExecuteSchemaTest extends TestCase {
 			[ 'id' => $attachment_id ],
 			'ViewMedia'
 		);
+	}
+
+	/**
+	 * UpdateMedia returns the saved media matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_update_media_output_matches_schema(): void {
+		$attachment_id = self::factory()->attachment->create( [ 'post_mime_type' => 'image/jpeg' ] );
+
+		$this->assert_execute_matches_schema(
+			new UpdateMedia(),
+			[
+				'id'       => $attachment_id,
+				'alt_text' => 'A test image',
+			],
+			'UpdateMedia'
+		);
+	}
+
+	/**
+	 * DeleteMedia returns a deletion result matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_delete_media_output_matches_schema(): void {
+		$attachment_id = self::factory()->attachment->create( [ 'post_mime_type' => 'image/jpeg' ] );
+
+		$this->assert_execute_matches_schema(
+			new DeleteMedia(),
+			[ 'id' => $attachment_id ],
+			'DeleteMedia'
+		);
+	}
+
+	/**
+	 * The menu abilities return results matching their output schemas.
+	 *
+	 * @return void
+	 */
+	public function test_menu_abilities_output_matches_schema(): void {
+		global $_wp_registered_nav_menus;
+		$registered = $_wp_registered_nav_menus;
+		register_nav_menus( [ 'albert-test' => 'Albert test' ] );
+
+		$this->assert_execute_matches_schema( new FindMenus(), [], 'FindMenus' );
+
+		$menu = $this->assert_execute_matches_schema( new CreateMenu(), [ 'name' => 'Schema menu' ], 'CreateMenu' );
+		$this->assert_execute_matches_schema(
+			new ViewMenu(),
+			[
+				'menu_id'   => $menu['id'],
+				'menu_type' => 'classic',
+			],
+			'ViewMenu'
+		);
+
+		$first  = $this->assert_execute_matches_schema(
+			new AddMenuItem(),
+			[
+				'menu_id' => $menu['id'],
+				'title'   => 'One',
+				'url'     => 'https://example.com/one',
+			],
+			'AddMenuItem'
+		);
+		$second = ( new AddMenuItem() )->execute(
+			[
+				'menu_id' => $menu['id'],
+				'title'   => 'Two',
+				'url'     => 'https://example.com/two',
+			]
+		);
+
+		$this->assert_execute_matches_schema(
+			new UpdateMenuItem(),
+			[
+				'menu_item_id' => $first['id'],
+				'title'        => 'First',
+			],
+			'UpdateMenuItem'
+		);
+		$this->assert_execute_matches_schema(
+			new MoveMenuItem(),
+			[
+				'menu_item_id' => $first['id'],
+				'position'     => 2,
+			],
+			'MoveMenuItem'
+		);
+		$this->assert_execute_matches_schema(
+			new AssignMenuLocation(),
+			[
+				'location' => 'albert-test',
+				'menu_id'  => $menu['id'],
+			],
+			'AssignMenuLocation'
+		);
+		$this->assert_execute_matches_schema( new UnassignMenuLocation(), [ 'location' => 'albert-test' ], 'UnassignMenuLocation' );
+		$this->assert_execute_matches_schema( new RemoveMenuItem(), [ 'menu_item_id' => $second['id'] ], 'RemoveMenuItem' );
+		$this->assert_execute_matches_schema( new DeleteMenu(), [ 'menu_id' => $menu['id'] ], 'DeleteMenu' );
+
+		$_wp_registered_nav_menus = $registered;
+	}
+
+	/**
+	 * The comment abilities return results matching their output schemas.
+	 *
+	 * @return void
+	 */
+	public function test_comment_abilities_output_matches_schema(): void {
+		$post_id    = self::factory()->post->create();
+		$comment_id = (int) self::factory()->comment->create(
+			[
+				'comment_post_ID'  => $post_id,
+				'comment_approved' => '0',
+			]
+		);
+
+		$this->assert_execute_matches_schema( new FindComments(), [], 'FindComments' );
+		$this->assert_execute_matches_schema( new ViewComment(), [ 'comment_id' => $comment_id ], 'ViewComment' );
+		$this->assert_execute_matches_schema(
+			new ReplyToComment(),
+			[
+				'comment_id' => $comment_id,
+				'content'    => 'Thanks.',
+			],
+			'ReplyToComment'
+		);
+		$this->assert_execute_matches_schema(
+			new ModerateComment(),
+			[
+				'comment_ids' => [ $comment_id ],
+				'status'      => 'spam',
+			],
+			'ModerateComment'
+		);
+		$this->assert_execute_matches_schema( new DeleteComment(), [ 'comment_ids' => [ $comment_id ] ], 'DeleteComment' );
+	}
+
+	/**
+	 * SearchContent returns results matching the output schema.
+	 *
+	 * @return void
+	 */
+	public function test_search_content_output_matches_schema(): void {
+		self::factory()->post->create( [ 'post_title' => 'Searchable thing' ] );
+
+		$this->assert_execute_matches_schema( new SearchContent(), [ 'search' => 'Searchable' ], 'SearchContent' );
+	}
+
+	/**
+	 * ViewSiteHealth returns results matching the output schema.
+	 *
+	 * Limited to one cheap core test and two that end up in not_run, so the suite makes no HTTP requests.
+	 *
+	 * @return void
+	 */
+	public function test_view_site_health_output_matches_schema(): void {
+		$only_timezone = static function (): array {
+			return [
+				'direct' => [
+					'php_default_timezone' => [
+						'label' => 'PHP Default Timezone',
+						'test'  => 'php_default_timezone',
+					],
+					'broken'               => [
+						'label' => 'Broken',
+						'test'  => 'no_such_test_method',
+					],
+				],
+				'async'  => [
+					'background' => [
+						'label'             => 'Background',
+						'test'              => 'https://example.com/background',
+						'async_direct_test' => static fn(): array => [],
+					],
+				],
+			];
+		};
+		add_filter( 'site_status_tests', $only_timezone, 999 );
+
+		$this->assert_execute_matches_schema( new ViewSiteHealth(), [], 'ViewSiteHealth' );
+
+		remove_filter( 'site_status_tests', $only_timezone, 999 );
+	}
+
+	/**
+	 * The revision abilities return results matching their output schemas.
+	 *
+	 * @return void
+	 */
+	public function test_revision_abilities_output_matches_schema(): void {
+		$post_id = self::factory()->post->create( [ 'post_content' => 'First' ] );
+		wp_update_post(
+			[
+				'ID'           => $post_id,
+				'post_content' => 'Second',
+			]
+		);
+		$revision_id = (int) array_key_last( wp_get_post_revisions( $post_id ) );
+
+		$this->assert_execute_matches_schema( new FindRevisions(), [ 'post_id' => $post_id ], 'FindRevisions' );
+		$this->assert_execute_matches_schema( new ViewRevision(), [ 'revision_id' => $revision_id ], 'ViewRevision' );
+		$this->assert_execute_matches_schema( new RestoreRevision(), [ 'revision_id' => $revision_id ], 'RestoreRevision' );
 	}
 
 	/**

@@ -11,6 +11,8 @@ namespace Albert\SafeMode;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Core\AbilitiesState;
+
 /**
  * Decides who may approve or reject a staged action.
  *
@@ -51,15 +53,15 @@ class ApprovalPolicy {
 	/**
 	 * Default capability floor for reaching the screen at all.
 	 *
-	 * `edit_posts`, matching the floor Albert already uses for who may be
-	 * offered as an allowed user. Deliberately not `read`: that would put an
-	 * Approvals item in the menu of every subscriber on the site, all of whom
-	 * would find it permanently empty.
+	 * `albert_connect`: administrators and the people on the list of who may
+	 * connect an assistant ({@see \Albert\Admin\Connections\ConnectCapability}).
+	 * Only they can have an assistant whose calls get held, so anyone else
+	 * would find the screen permanently empty, and should not see Albert at all.
 	 *
 	 * @since 1.5.0
 	 * @var string
 	 */
-	public const DEFAULT_VIEW_CAPABILITY = 'edit_posts';
+	public const DEFAULT_VIEW_CAPABILITY = 'albert_connect';
 
 	/**
 	 * Whether this user decides every row rather than only their own.
@@ -156,7 +158,7 @@ class ApprovalPolicy {
 			return __( 'Only an administrator, or the person who requested this, can decide it.', 'albert-ai-butler' );
 		}
 
-		if ( wp_get_ability( $action->ability_name ) === null ) {
+		if ( wp_get_ability( $action->ability_name ) === null || ! AbilitiesState::is_enabled( $action->ability_name ) ) {
 			return __( 'The action this request needs is no longer available. An administrator can clear it, or it will expire on its own.', 'albert-ai-butler' );
 		}
 
@@ -201,7 +203,7 @@ class ApprovalPolicy {
 
 		$ability = wp_get_ability( $action->ability_name );
 
-		if ( $ability === null ) {
+		if ( $ability === null || ! AbilitiesState::is_enabled( $action->ability_name ) ) {
 			return false;
 		}
 
@@ -236,7 +238,7 @@ class ApprovalPolicy {
 		 *
 		 * @since 1.5.0
 		 *
-		 * @param string $capability Capability required. Default `edit_posts`.
+		 * @param string $capability Capability required. Default `albert_connect`.
 		 */
 		$capability = apply_filters( 'albert/approvals/view_capability', self::DEFAULT_VIEW_CAPABILITY );
 

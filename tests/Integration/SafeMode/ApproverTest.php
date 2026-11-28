@@ -73,6 +73,12 @@ class ApproverTest extends TestCase {
 		}
 
 		Installer::install();
+
+		// Nothing switched off: a fresh install switches write abilities off, and
+		// switched-off abilities are refused when they run.
+		update_option( 'albert_abilities_saved', true );
+		update_option( 'albert_disabled_abilities', [] );
+
 		$this->repository     = new Repository();
 		$this->observed       = [];
 		$this->registered_ids = [];
@@ -83,6 +89,11 @@ class ApproverTest extends TestCase {
 
 		ApprovalTicket::clear();
 		$this->ensure_test_category_registered();
+
+		// The owner has switched every ability on; the test abilities are
+		// writes, which a fresh install starts off.
+		update_option( 'albert_abilities_saved', true );
+		delete_option( 'albert_disabled_abilities' );
 	}
 
 	/**
@@ -275,11 +286,33 @@ class ApproverTest extends TestCase {
 		$result = ( new Approver( $this->repository ) )->approve( $action, $approver );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'albert_pending_ability_missing', $result->get_error_code() );
+		$this->assertSame( 'pending_ability_missing', $result->get_error_code() );
 
 		$stored = $this->repository->find( $action->action_id );
 		$this->assertInstanceOf( PendingAction::class, $stored );
 		$this->assertSame( PendingAction::STATUS_FAILED, $stored->status );
+	}
+
+	/**
+	 * An ability switched off while the call waited is not run on approval.
+	 * It is still registered, so this is the only thing stopping it.
+	 *
+	 * @return void
+	 */
+	public function test_an_ability_switched_off_while_waiting_is_not_run(): void {
+		$this->register_recording_ability( 'albert-test/switched-off' );
+
+		$approver = self::factory()->user->create( [ 'role' => 'administrator' ] );
+		wp_set_current_user( $approver );
+
+		$action = $this->repository->stage( 'albert-test/switched-off', [ 'id' => 1 ], $approver, 'client-a', 'Claude', DAY_IN_SECONDS );
+		update_option( 'albert_disabled_abilities', [ 'albert-test/switched-off' ] );
+
+		$result = ( new Approver( $this->repository ) )->approve( $action, $approver );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'pending_ability_missing', $result->get_error_code() );
+		$this->assertSame( [], $this->observed, 'The ability must not run.' );
 	}
 
 	/**
@@ -357,7 +390,7 @@ class ApproverTest extends TestCase {
 		$second = $approver_service->approve( $action, $approver );
 
 		$this->assertInstanceOf( WP_Error::class, $second );
-		$this->assertSame( 'albert_already_handled', $second->get_error_code() );
+		$this->assertSame( 'already_handled', $second->get_error_code() );
 		$this->assertSame( [], $this->observed, 'The ability must not run a second time.' );
 	}
 

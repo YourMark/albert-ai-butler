@@ -45,6 +45,7 @@ phpunit-wp.xml
 ############
 
 /vendor/
+/lib/mcp-adapter/vendor/
 
 # composer.lock IS committed (this is a deployable plugin, not a library) so
 # every environment — dev, CI, release — resolves identical versions.

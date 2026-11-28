@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\Tokens\SingleUseTokenRepository;
 use Albert\OAuth\Repositories\AccessTokenRepository;
+use Albert\OAuth\Repositories\ClientRepository;
 use Albert\OAuth\Repositories\RefreshTokenRepository;
 
 /**
@@ -55,6 +56,19 @@ class TokenCleanup implements Hookable {
 			( new AccessTokenRepository() )->cleanupExpiredTokens();
 			( new RefreshTokenRepository() )->cleanupExpiredTokens();
 			( new SingleUseTokenRepository() )->cleanup_expired();
+
+			/**
+			 * Days a client may sit without any token before it is deleted. 0 keeps them.
+			 *
+			 * @since 1.5.0
+			 *
+			 * @param int $days Default 7.
+			 */
+			$days = (int) apply_filters( 'albert/oauth/stale_client_days', 7 );
+
+			if ( $days > 0 ) {
+				( new ClientRepository() )->delete_stale_clients( $days );
+			}
 		} catch ( \Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
 			// Never let a cron failure surface to the site.
 		}

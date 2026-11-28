@@ -105,7 +105,7 @@ class PermissionWrapperTest extends TestCase {
 	 * @return void
 	 */
 	public function test_filter_receives_context_and_can_deny(): void {
-		$denial = new WP_Error( 'albert_permission_denied', 'Denied by rule.' );
+		$denial = new WP_Error( 'permission_denied', 'Denied by rule.' );
 
 		$GLOBALS['albert_test_filter_returns']['albert/abilities/check_permission'] = $denial;
 

@@ -15,6 +15,7 @@
 // Class stubs live in their own files so this file can stay
 // functions-only (keeps PHPCS's OO/function separation rule happy).
 require_once __DIR__ . '/WP_Error.php';
+require_once __DIR__ . '/WP_Filter_Sentinel.php';
 require_once __DIR__ . '/WP_REST_Request.php';
 require_once __DIR__ . '/WP_REST_Response.php';
 require_once __DIR__ . '/WP.php';
@@ -235,6 +236,19 @@ if ( ! function_exists( 'current_user_can' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_is_file_mod_allowed' ) ) {
+	/**
+	 * Stub wp_is_file_mod_allowed: plugin installs are allowed.
+	 *
+	 * @param string $context Why the check is made.
+	 *
+	 * @return bool
+	 */
+	function wp_is_file_mod_allowed( string $context ): bool {
+		return true;
+	}
+}
+
 if ( ! function_exists( 'wp_get_abilities' ) ) {
 	/**
 	 * Stub wp_get_abilities that reads from $GLOBALS['albert_test_abilities'].
@@ -375,6 +389,35 @@ if ( ! function_exists( 'wp_parse_url' ) ) {
 	 */
 	function wp_parse_url( string $url, int $component = -1 ): mixed {
 		return parse_url( $url, $component );
+	}
+}
+
+if ( ! function_exists( '_doing_it_wrong' ) ) {
+	/**
+	 * Record the call for assertions.
+	 *
+	 * @param string $function_name Function that was misused.
+	 * @param string $message       What went wrong.
+	 * @param string $version       Version the message was added in.
+	 *
+	 * @return void
+	 */
+	function _doing_it_wrong( string $function_name, string $message, string $version ): void {
+		$GLOBALS['albert_test_doing_it_wrong'][] = $message;
+	}
+}
+
+if ( ! function_exists( 'esc_html__' ) ) {
+	/**
+	 * Return the text unchanged.
+	 *
+	 * @param string $text   Text.
+	 * @param string $domain Text domain.
+	 *
+	 * @return string
+	 */
+	function esc_html__( string $text, string $domain = 'default' ): string {
+		return $text;
 	}
 }
 
@@ -726,11 +769,14 @@ if ( ! function_exists( 'rest_validate_value_from_schema' ) ) {
 				}
 			}
 
+			// An empty `properties` may arrive as a stdClass, as core allows.
+			$properties = (array) ( $args['properties'] ?? [] );
+
 			foreach ( $value as $property => $property_value ) {
-				if ( isset( $args['properties'][ $property ] ) ) {
+				if ( isset( $properties[ $property ] ) ) {
 					$is_valid = rest_validate_value_from_schema(
 						$property_value,
-						$args['properties'][ $property ],
+						$properties[ $property ],
 						$param . '[' . $property . ']'
 					);
 
@@ -750,6 +796,16 @@ if ( ! function_exists( 'rest_validate_value_from_schema' ) ) {
 			}
 
 			return true;
+		}
+
+		if ( $type === 'array' && is_array( $value ) && isset( $args['items'] ) && is_array( $args['items'] ) ) {
+			foreach ( $value as $index => $item ) {
+				$is_valid = rest_validate_value_from_schema( $item, $args['items'], $param . '[' . $index . ']' );
+
+				if ( is_wp_error( $is_valid ) ) {
+					return $is_valid;
+				}
+			}
 		}
 
 		$matches = [

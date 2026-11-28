@@ -155,11 +155,11 @@ class WriteContentResolver {
 	 * Resolve content for a block-editor target.
 	 *
 	 * Structured `blocks` take precedence over the `content` string; both routes
-	 * go through {@see BlockSerializer::serialize_with_issues()} (specs → markup,
-	 * or a string → BlockConverter fallback for HTML/Markdown). Allowed-block
-	 * enforcement runs on submitted specs, exempting block names already present
-	 * in the post on Update. Enforcement and serializer errors both abort the
-	 * save; only warnings ride along.
+	 * go through {@see BlockSerializer::serialize_with_issues()} (specs → markup;
+	 * block markup kept as sent; HTML through BlockConverter; Markdown refused).
+	 * Allowed-block enforcement runs on submitted specs and on block markup,
+	 * exempting block names already present in the post on Update. Enforcement
+	 * and serializer errors both abort the save; only warnings ride along.
 	 *
 	 * @param array<string, mixed> $args             Ability input.
 	 * @param string|null          $post_type        Post type slug for the editor context, or null for the site-wide (pattern) scope.
@@ -177,7 +177,22 @@ class WriteContentResolver {
 			$policy_issues = $this->policy->enforce( $args['blocks'], $post_type, $post_id, $exempt );
 			$serialized    = $this->serializer->serialize_with_issues( $args['blocks'] );
 		} else {
-			$serialized = $this->serializer->serialize_with_issues( (string) ( $args['content'] ?? '' ) );
+			$content = (string) ( $args['content'] ?? '' );
+			// The converter does not read Markdown: it would store the whole text as one paragraph.
+			if ( self::is_markdown( $content ) ) {
+				return new WP_Error(
+					'invalid_content',
+					__( "This looks like Markdown, which isn't converted. Send it as `blocks` instead.", 'albert-ai-butler' ),
+					[ 'status' => 400 ]
+				);
+			}
+			$serialized = $this->serializer->serialize_with_issues( $content );
+
+			// Block markup is enforced like `blocks`; plain HTML is not.
+			if ( has_blocks( $content ) ) {
+				$exempt        = $post_id ? $this->policy->existing_block_names( $post_id ) : [];
+				$policy_issues = $this->policy->enforce( parse_blocks( $serialized['markup'] ), $post_type, $post_id, $exempt );
+			}
 		}
 
 		// Enforcement errors and serializer errors both abort the save; only
@@ -191,5 +206,25 @@ class WriteContentResolver {
 			'content'      => $serialized['markup'],
 			'block_issues' => BlockIssues::warning_messages( $serialized['issues'] ),
 		];
+	}
+
+	/**
+	 * Whether the content, or text between its blocks, is Markdown.
+	 *
+	 * Text outside any block is converted like a plain string, so it is checked the same way.
+	 * Content without blocks parses as one freeform block, so one loop covers both cases.
+	 *
+	 * @param string $content The `content` input.
+	 * @return bool
+	 * @since 1.6.0
+	 */
+	private static function is_markdown( string $content ): bool {
+		foreach ( parse_blocks( $content ) as $block ) {
+			if ( $block['blockName'] === null && MarkdownDetector::looks_like_markdown( (string) $block['innerHTML'] ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

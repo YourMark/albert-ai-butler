@@ -103,9 +103,76 @@ class BlockSerializerTest extends TestCase {
 		$this->assertSame( $expected, $names, "Round-trip names mismatch for markup:\n{$markup}" );
 	}
 
-	// =====================================================================
 	// Per-block round-trips
-	// =====================================================================
+
+	public function test_only_sourced_attributes_core_cannot_validate_leave_the_comment_json(): void {
+		albert_test_register_block_type(
+			'core/button',
+			false,
+			[
+				'text'  => [
+					'type'   => 'rich-text',
+					'source' => 'rich-text',
+				],
+				'url'   => [
+					'type'      => 'string',
+					'source'    => 'attribute',
+					'attribute' => 'href',
+				],
+				'width' => [ 'type' => 'number' ],
+			]
+		);
+
+		$markup = $this->serializer->serialize(
+			[
+				[
+					'name'       => 'core/button',
+					'attributes' => [
+						'text'  => 'Go',
+						'url'   => 'https://example.com/',
+						'width' => 50,
+					],
+				],
+			]
+		);
+
+		$this->assertStringStartsWith( '<!-- wp:button {"url":"https://example.com/","width":50} -->', $markup );
+		$this->assertStringContainsString( '>Go</a>', $markup );
+	}
+
+	public function test_untemplated_block_with_text_attributes_is_refused_not_guessed(): void {
+		albert_test_register_block_type(
+			'core/file',
+			false,
+			[
+				'fileName'           => [
+					'type'   => 'rich-text',
+					'source' => 'rich-text',
+				],
+				'downloadButtonText' => [
+					'type'   => 'rich-text',
+					'source' => 'rich-text',
+				],
+			]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/file',
+					'attributes' => [
+						'fileName'           => 'contract.pdf',
+						'downloadButtonText' => 'Download now',
+					],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( "'html'", $errors[0] );
+		$this->assertStringNotContainsString( 'wp:file', $result['markup'] );
+	}
 
 	public function test_paragraph_round_trip(): void {
 		$markup = $this->serializer->serialize(
@@ -119,7 +186,7 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( '<!-- wp:paragraph --><p>Hello world</p><!-- /wp:paragraph -->', $markup );
+		$this->assertSame( "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->", $markup );
 		$this->assert_round_trip(
 			[
 				[
@@ -178,10 +245,8 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		// core/list is a dynamic block: stored markup is a bare <ul>, the
-		// wp-block-list class is injected by the render_callback at render time.
-		$this->assertStringContainsString( '<ul>', $markup );
-		$this->assertStringNotContainsString( 'class="wp-block-list"', $markup );
+		// The editor's save() writes the generated class, as for any block.
+		$this->assertStringContainsString( '<ul class="wp-block-list">', $markup );
 		$this->assertStringContainsString( '<li>First</li>', $markup );
 		$this->assertStringContainsString( '<li>Second</li>', $markup );
 
@@ -217,8 +282,7 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$this->assertStringContainsString( '<ol>', $markup );
-		$this->assertStringNotContainsString( 'class="wp-block-list"', $markup );
+		$this->assertStringContainsString( '<ol class="wp-block-list">', $markup );
 	}
 
 	public function test_quote_round_trip(): void {
@@ -428,9 +492,7 @@ class BlockSerializerTest extends TestCase {
 		);
 	}
 
-	// =====================================================================
 	// Alias normalization
-	// =====================================================================
 
 	public function test_blockname_alias_is_accepted(): void {
 		$markup = $this->serializer->serialize(
@@ -443,12 +505,10 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( '<!-- wp:paragraph --><p>Aliased</p><!-- /wp:paragraph -->', $markup );
+		$this->assertSame( "<!-- wp:paragraph -->\n<p>Aliased</p>\n<!-- /wp:paragraph -->", $markup );
 	}
 
-	// =====================================================================
 	// Unknown block fallback
-	// =====================================================================
 
 	public function test_unknown_block_is_flagged_as_error_with_html_fallback(): void {
 		$result = $this->serializer->serialize_with_issues(
@@ -520,8 +580,8 @@ class BlockSerializerTest extends TestCase {
 		$this->assertSame( 'core/latest-posts', $tree[0]['name'] );
 	}
 
-	public function test_registered_static_untemplated_block_warns_but_does_not_error(): void {
-		// A registered static block with no dedicated template here.
+	public function test_registered_static_untemplated_block_is_refused(): void {
+		// Without a template the wrapper would be a guess the editor rejects.
 		albert_test_register_block_type( 'core/verse', false );
 
 		$result = $this->serializer->serialize_with_issues(
@@ -533,16 +593,221 @@ class BlockSerializerTest extends TestCase {
 			]
 		);
 
-		$warnings = $this->messages( $result['issues'], 'warning' );
-		$this->assertNotEmpty( $warnings );
-		$this->assertStringContainsString( 'core/verse', $warnings[0] );
-		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
-		$this->assertStringContainsString( '<!-- wp:verse', $result['markup'] );
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertNotEmpty( $errors );
+		$this->assertStringContainsString( 'core/verse', $errors[0] );
+		$this->assertStringNotContainsString( '<!-- wp:verse', $result['markup'] );
 	}
 
-	// =====================================================================
+	public function test_untemplated_block_is_written_from_its_html(): void {
+		albert_test_register_block_type( 'core/verse', false, [ 'content' => [ 'source' => 'html' ] ] );
+
+		$html   = '<pre class="wp-block-verse">Roses are <em>red</em></pre>';
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name' => 'core/verse',
+					'html' => $html,
+				],
+			]
+		);
+
+		$this->assertSame( [], $result['issues'] );
+		$this->assertStringContainsString( $html, $result['markup'] );
+	}
+
+	// Hybrid blocks (render_callback + stored inner blocks, e.g. core/cover) must not self-close.
+
+	public function test_hybrid_block_with_inner_blocks_is_refused_without_its_html(): void {
+		// core/cover stores its wrapper in markup only save() can write; children
+		// placed without it would show unstyled on the site and invalid in the editor.
+		albert_test_register_block_type( 'core/cover', true, [ 'url' => [] ] );
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'        => 'core/cover',
+					'attributes'  => [ 'url' => 'https://example.com/x.jpg' ],
+					'innerBlocks' => [
+						[
+							'name'       => 'core/paragraph',
+							'attributes' => [ 'content' => 'First line' ],
+						],
+					],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'core/cover', $errors[0] );
+		$this->assertStringNotContainsString( 'wp:cover', $result['markup'] );
+	}
+
+	public function test_hybrid_block_keeps_its_children_from_html(): void {
+		albert_test_register_block_type( 'core/media-text', true, [ 'mediaUrl' => [] ] );
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/media-text',
+					'attributes' => [ 'mediaUrl' => 'https://example.com/a.jpg' ],
+					'html'       => '<div class="wp-block-media-text"><figure class="wp-block-media-text__media"><img src="https://example.com/a.jpg" alt=""/></figure><div class="wp-block-media-text__content"><!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Nested heading</h3><!-- /wp:heading --></div></div>',
+				],
+			]
+		);
+
+		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
+		$this->assertStringContainsString( '<!-- /wp:media-text -->', $result['markup'] );
+
+		$tree = $this->reader->read( $result['markup'] );
+		$this->assertCount( 1, $tree[0]['innerBlocks'] );
+		$this->assertSame( 'core/heading', $tree[0]['innerBlocks'][0]['name'] );
+		$this->assertSame( 'Nested heading', $tree[0]['innerBlocks'][0]['plaintext'] );
+	}
+
+	public function test_childless_hybrid_block_self_closes_losslessly(): void {
+		// A cover with no children and only JSON-stored attributes carries
+		// nothing in its markup, so self-closing loses nothing and must not warn.
+		albert_test_register_block_type( 'core/cover', true, [ 'url' => [] ] );
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/cover',
+					'attributes' => [
+						'url'      => 'https://example.com/x.jpg',
+						'dimRatio' => 50,
+					],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( '/-->', $result['markup'] );
+		$this->assertStringNotContainsString( '<!-- /wp:cover -->', $result['markup'] );
+		$this->assertSame( [], $result['issues'], 'A childless, all-JSON block self-closes losslessly with no issue.' );
+	}
+
+	public function test_third_party_block_with_markup_sourced_attribute_is_refused_not_guessed(): void {
+		// Albert cannot know a plugin block's save() markup. Writing the text
+		// without its wrapper would keep the words and break the block.
+		albert_test_register_block_type(
+			'acme/callout',
+			false,
+			[ 'text' => [ 'source' => 'rich-text' ] ]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'acme/callout',
+					'attributes' => [ 'text' => 'Heads up' ],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( "'html'", $errors[0] );
+		$this->assertStringNotContainsString( 'acme/callout', $result['markup'] );
+	}
+
+	public function test_scalar_text_sourced_attribute_is_not_silently_dropped(): void {
+		// core/verse stores `content` in its markup (source: html). Self-closing
+		// would leave the text inert in the comment JSON; refuse instead.
+		albert_test_register_block_type(
+			'core/verse',
+			false,
+			[ 'content' => [ 'source' => 'html' ] ]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/verse',
+					'attributes' => [ 'content' => 'Roses are red' ],
+				],
+			]
+		);
+
+		$this->assertNotEmpty( $this->messages( $result['issues'], 'error' ) );
+		$this->assertStringNotContainsString( 'wp:verse', $result['markup'] );
+	}
+
+	public function test_empty_markup_sourced_attribute_self_closes_losslessly(): void {
+		// An empty content attribute stores nothing, so self-closing loses
+		// nothing and must not warn or error.
+		albert_test_register_block_type(
+			'core/verse',
+			false,
+			[ 'content' => [ 'source' => 'html' ] ]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/verse',
+					'attributes' => [ 'content' => '' ],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( '/-->', $result['markup'] );
+		$this->assertSame( [], $result['issues'] );
+	}
+
+	public function test_unreproducible_structural_content_is_refused_not_dropped(): void {
+		// A block whose content lives in a structural source (a `query` — nested
+		// rows/cells) that this server cannot reproduce as inner text. It must be
+		// REFUSED with an error, never self-closed with the content silently lost.
+		albert_test_register_block_type(
+			'core/table',
+			false,
+			[ 'body' => [ 'source' => 'query' ] ]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/table',
+					'attributes' => [ 'body' => [ [ 'cells' => [ [ 'content' => 'A1' ] ] ] ] ],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertNotEmpty( $errors, 'Unreproducible structural content must be refused, not dropped.' );
+		$this->assertStringContainsString( 'core/table', $errors[0] );
+	}
+
+	public function test_inner_blocks_are_never_dropped_under_a_leaf_template(): void {
+		// A leaf-templated block (heading) whose template emits no %children%
+		// marker, handed inner blocks anyway — e.g. an assistant nesting content
+		// under the wrong block. The make_block() safety net must still emit the
+		// child rather than silently discard it.
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'        => 'core/heading',
+					'attributes'  => [ 'content' => 'Title' ],
+					'innerBlocks' => [
+						[
+							'name'       => 'core/paragraph',
+							'attributes' => [ 'content' => 'Orphaned child' ],
+						],
+					],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( 'Orphaned child', $result['markup'] );
+
+		$tree = $this->reader->read( $result['markup'] );
+		$this->assertCount( 1, $tree[0]['innerBlocks'], 'The nested child must not be dropped by make_block().' );
+		$this->assertSame( 'Orphaned child', $tree[0]['innerBlocks'][0]['plaintext'] );
+	}
+
 	// Validation issues
-	// =====================================================================
 
 	public function test_invalid_heading_level_is_flagged_and_clamped(): void {
 		$result = $this->serializer->serialize_with_issues(
@@ -599,9 +864,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertSame( [], $result['issues'] );
 	}
 
-	// =====================================================================
 	// String input → BlockConverter fallback
-	// =====================================================================
 
 	public function test_string_input_routes_through_block_converter(): void {
 		$markup = $this->serializer->serialize( '<p>Hello world</p>' );
@@ -627,9 +890,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertSame( 'Already a block', $tree[0]['plaintext'] );
 	}
 
-	// =====================================================================
 	// Multiple top-level blocks separated correctly
-	// =====================================================================
 
 	public function test_multiple_blocks_round_trip_in_order(): void {
 		$this->assert_round_trip(
@@ -663,9 +924,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertStringContainsString( '&lt;', $markup );
 	}
 
-	// =====================================================================
-	// Rich-text attributes (FIX 1): inline formatting preserved, scripts stripped
-	// =====================================================================
+	// Rich-text attributes: stored as sent; the REST save filters them
 
 	public function test_rich_text_paragraph_attribute_preserves_inline_formatting(): void {
 		$markup = $this->serializer->serialize(
@@ -699,29 +958,19 @@ class BlockSerializerTest extends TestCase {
 		$this->assertStringContainsString( '<em>emphasis</em>', $markup );
 	}
 
-	public function test_rich_text_attribute_strips_script_and_event_handlers(): void {
-		$markup = $this->serializer->serialize(
+	public function test_rich_text_attribute_goes_into_the_markup_as_sent(): void {
+		$content = 'See <ta href="https://example.com/go" linkid="1">this deal</ta> and <mark class="x">more</mark>';
+		$markup  = $this->serializer->serialize(
 			[
 				[
 					'name'       => 'core/paragraph',
-					'attributes' => [ 'content' => 'Safe <strong>text</strong><script>alert(1)</script> <a href="javascript:evil()" onclick="evil()">x</a>' ],
+					'attributes' => [ 'content' => $content ],
 				],
 			]
 		);
 
-		// Assert against the rendered innerHTML body (the block comment legitimately
-		// stores the raw attribute JSON; only the visible HTML must be sanitised).
-		$this->assertSame( 1, preg_match( '/-->(.*)<!--/s', $markup, $m ) );
-		$body = $m[1];
-
-		// The script payload and its contents are gone from the rendered body.
-		$this->assertStringNotContainsString( '<script>', $body );
-		$this->assertStringNotContainsString( 'alert(1)', $body );
-
-		// Event handlers and javascript: URLs are dropped, but the safe parts stay.
-		$this->assertStringNotContainsString( 'onclick', $body );
-		$this->assertStringNotContainsString( 'javascript:', $body );
-		$this->assertStringContainsString( '<strong>text</strong>', $body );
+		// Filtering is left to the REST save, which applies the user's KSES.
+		$this->assertStringContainsString( '<p>' . $content . '</p>', $markup );
 	}
 
 	public function test_rich_text_button_text_preserves_inline_formatting(): void {
@@ -761,9 +1010,7 @@ class BlockSerializerTest extends TestCase {
 		$this->assertStringNotContainsString( '<strong>b</strong>', $markup );
 	}
 
-	// =====================================================================
 	// Group tagName allowlist (FIX 3)
-	// =====================================================================
 
 	public function test_group_tagname_script_is_coerced_to_div(): void {
 		$markup = $this->serializer->serialize(
@@ -802,5 +1049,418 @@ class BlockSerializerTest extends TestCase {
 		);
 
 		$this->assertStringContainsString( '<section class="wp-block-group">', $markup );
+	}
+
+	// Block markup in `content` is stored as sent
+
+	public function test_block_markup_in_content_is_kept_as_sent(): void {
+		$content = '<!-- wp:group {"tagName":"article","className":"project"} -->' . "\n"
+			. '<article class="wp-block-group project"><!-- wp:columns {"style":{"color":{"background":"#f7cc26"}}} -->' . "\n"
+			. '<div class="wp-block-columns has-background" style="background-color:#f7cc26"><!-- wp:column --><div class="wp-block-column"></div><!-- /wp:column --></div>' . "\n"
+			. '<!-- /wp:columns --></article>' . "\n" . '<!-- /wp:group -->';
+
+		$result = $this->serializer->serialize_with_issues( $content );
+
+		$this->assertSame( $content, $result['markup'] );
+		$this->assertSame( [], $result['issues'] );
+	}
+
+	public function test_an_unregistered_block_in_content_is_an_error(): void {
+		$result = $this->serializer->serialize_with_issues( '<!-- wp:hero --><div>Hi</div><!-- /wp:hero -->' );
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( "'core/hero'", $errors[0] );
+	}
+
+	public function test_a_block_never_closed_in_content_is_an_error(): void {
+		$result = $this->serializer->serialize_with_issues( '<!-- wp:group --><div class="wp-block-group"><!-- wp:paragraph --><p>x</p><!-- /wp:paragraph --></div>' );
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( '<!-- wp:group -->', $errors[0] );
+		$this->assertStringContainsString( 'never closes', $errors[0] );
+	}
+
+	public function test_a_closer_without_its_opener_in_content_is_an_error(): void {
+		$result = $this->serializer->serialize_with_issues( '<!-- wp:paragraph --><p>x</p><!-- /wp:paragraph --><!-- /wp:group -->' );
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( '<!-- /wp:group -->', $errors[0] );
+	}
+
+	public function test_html_between_blocks_in_content_is_converted_and_the_blocks_kept(): void {
+		$block  = '<!-- wp:paragraph {"className":"kept"} --><p class="kept">A block</p><!-- /wp:paragraph -->';
+		$result = $this->serializer->serialize_with_issues( '<h2>Stray</h2>' . $block );
+
+		$this->assertStringContainsString( '<!-- wp:heading', $result['markup'] );
+		$this->assertStringEndsWith( $block, $result['markup'] );
+		$this->assertCount( 1, $this->messages( $result['issues'], 'warning' ) );
+		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
+	}
+
+	// `html` is honoured on every block
+
+	public function test_html_on_a_templated_block_is_kept_and_its_blocks_become_inner_blocks(): void {
+		$html   = '<article class="wp-block-group project"><!-- wp:paragraph --><p>Inside</p><!-- /wp:paragraph --></article>';
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/group',
+					'attributes' => [ 'tagName' => 'article' ],
+					'html'       => $html,
+				],
+			]
+		);
+
+		$this->assertSame( '<!-- wp:group {"tagName":"article"} -->' . "\n" . $html . "\n" . '<!-- /wp:group -->', $result['markup'] );
+		$this->assertSame( [], $result['issues'] );
+
+		$tree = $this->reader->read( $result['markup'] );
+		$this->assertSame( 'core/paragraph', $tree[0]['innerBlocks'][0]['name'] );
+	}
+
+	public function test_html_with_inner_blocks_is_an_error(): void {
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'        => 'core/group',
+					'html'        => '<div class="wp-block-group"></div>',
+					'innerBlocks' => [ [ 'name' => 'core/paragraph' ] ],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertNotEmpty( $errors );
+		$this->assertStringContainsString( "both 'html' and 'innerBlocks'", $errors[0] );
+	}
+
+	public function test_an_unregistered_block_inside_html_is_an_error(): void {
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name' => 'core/group',
+					'html' => '<div class="wp-block-group"><!-- wp:hero /--></div>',
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'content[0].html', $errors[0] );
+	}
+
+	// Supports reach the HTML; an attribute nobody writes fails the write
+
+	public function test_block_supports_reach_the_wrapper(): void {
+		albert_test_register_block_type( 'core/columns', false, [], [ 'anchor' => true ] );
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/columns',
+					'attributes' => [
+						'className'         => 'project-card',
+						'anchor'            => 'cards',
+						'verticalAlignment' => 'center',
+						'isStackedOnMobile' => false,
+					],
+				],
+			]
+		);
+
+		$this->assertSame( [], $result['issues'] );
+		$this->assertStringContainsString( 'id="cards"', $result['markup'] );
+		$this->assertStringContainsString( 'class="wp-block-columns are-vertically-aligned-center is-not-stacked-on-mobile project-card"', $result['markup'] );
+	}
+
+	public function test_an_attribute_no_template_or_support_writes_fails_the_write(): void {
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/paragraph',
+					'attributes' => [
+						'content'  => 'Hi',
+						'fitText'  => true,
+						'style'    => [ 'color' => [ 'background' => '#000' ] ],
+						'lock'     => [ 'move' => true ],
+						'metadata' => [ 'name' => 'Intro' ],
+					],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 2, $errors );
+		$this->assertStringContainsString( 'content[0].attributes.fitText', $errors[0] );
+		$this->assertStringContainsString( 'content[0].attributes.style.color.background', $errors[1] );
+	}
+
+	public function test_a_supported_attribute_passes_the_guard(): void {
+		albert_test_register_block_type(
+			'core/paragraph',
+			false,
+			[],
+			[
+				'className' => false,
+				'color'     => [ 'background' => true ],
+			]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/paragraph',
+					'attributes' => [
+						'content' => 'Hi',
+						'style'   => [ 'color' => [ 'background' => '#000' ] ],
+					],
+				],
+			]
+		);
+
+		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
+	}
+
+	public function test_a_skipped_support_the_template_does_not_write_fails_the_write(): void {
+		albert_test_register_block_type(
+			'core/spacer',
+			false,
+			[],
+			[
+				'spacing' => [
+					'margin'                          => true,
+					'__experimentalSkipSerialization' => true,
+				],
+			]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/spacer',
+					'attributes' => [ 'style' => [ 'spacing' => [ 'margin' => [ 'top' => '0' ] ] ] ],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'attributes.style.spacing.margin', $errors[0] );
+	}
+
+	public function test_image_attributes_are_written_into_the_figure_and_img(): void {
+		$markup = $this->serializer->serialize(
+			[
+				[
+					'name'       => 'core/image',
+					'attributes' => [
+						'id'       => 7,
+						'url'      => 'https://example.com/a.jpg',
+						'sizeSlug' => 'large',
+						'width'    => 300,
+						'href'     => 'https://example.com/',
+					],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( '"width":"300px"', $markup );
+		$this->assertStringContainsString( '<figure class="wp-block-image size-large is-resized">', $markup );
+		$this->assertStringContainsString( '<a href="https://example.com/"><img src="https://example.com/a.jpg" alt="" class="wp-image-7" style="width:300px;height:auto;"/></a>', $markup );
+	}
+
+	public function test_list_start_and_reversed_are_written(): void {
+		$markup = $this->serializer->serialize(
+			[
+				[
+					'name'       => 'core/list',
+					'attributes' => [
+						'ordered'  => true,
+						'start'    => 4,
+						'reversed' => true,
+					],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( '<ol reversed start="4" class="wp-block-list">', $markup );
+	}
+
+	public function test_column_width_becomes_flex_basis(): void {
+		$markup = $this->serializer->serialize(
+			[
+				[
+					'name'       => 'core/column',
+					'attributes' => [ 'width' => '33.33%' ],
+				],
+			]
+		);
+
+		$this->assertStringContainsString( 'style="flex-basis:33.33%;"', $markup );
+	}
+
+	public function test_blocks_are_laid_out_with_the_editors_line_breaks(): void {
+		$markup = $this->serializer->serialize(
+			[
+				[
+					'name'        => 'core/group',
+					'innerBlocks' => [
+						[
+							'name'      => 'core/paragraph',
+							'plaintext' => 'One',
+						],
+						[
+							'name'      => 'core/paragraph',
+							'plaintext' => 'Two',
+						],
+					],
+				],
+				[ 'name' => 'core/separator' ],
+			]
+		);
+
+		$this->assertSame(
+			"<!-- wp:group -->\n<div class=\"wp-block-group\"><!-- wp:paragraph -->\n<p>One</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Two</p>\n<!-- /wp:paragraph --></div>\n<!-- /wp:group -->\n\n"
+				. "<!-- wp:separator -->\n<hr class=\"wp-block-separator has-alpha-channel-opacity\"/>\n<!-- /wp:separator -->",
+			$markup
+		);
+	}
+
+	public function test_image_without_url_is_refused(): void {
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/image',
+					'attributes' => [ 'alt' => 'Logo' ],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'url is required', $errors[0] );
+	}
+
+	public function test_children_under_a_block_that_cannot_nest_are_refused(): void {
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'        => 'core/heading',
+					'attributes'  => [ 'content' => 'Title' ],
+					'innerBlocks' => [
+						[
+							'name'       => 'core/paragraph',
+							'attributes' => [ 'content' => 'Lost' ],
+						],
+					],
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'does not nest inner blocks', $errors[0] );
+	}
+
+	public function test_a_text_change_next_to_unchanged_html_is_refused(): void {
+		albert_test_register_block_type(
+			'core/paragraph',
+			false,
+			[
+				'content' => [
+					'source' => 'rich-text',
+					'type'   => 'rich-text',
+				],
+			]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/paragraph',
+					'attributes' => [ 'content' => 'New text' ],
+					'html'       => '<p>Old text</p>',
+				],
+			]
+		);
+
+		$errors = $this->messages( $result['issues'], 'error' );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( 'attributes.content differs', $errors[0] );
+	}
+
+	public function test_a_sourced_attribute_matching_its_html_is_accepted(): void {
+		albert_test_register_block_type(
+			'core/image',
+			false,
+			[
+				'url' => [
+					'source' => 'attribute',
+					'type'   => 'string',
+				],
+			]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/image',
+					'attributes' => [ 'url' => 'https://example.com/a&b.png' ],
+					'html'       => '<figure class="wp-block-image"><img src="https://example.com/a&amp;b.png" alt=""/></figure>',
+				],
+			]
+		);
+
+		$this->assertSame( [], $result['issues'] );
+	}
+
+	public function test_text_escaped_the_editors_way_and_a_boolean_are_accepted(): void {
+		albert_test_register_block_type(
+			'core/paragraph',
+			false,
+			[
+				'content' => [
+					'source' => 'rich-text',
+					'type'   => 'rich-text',
+				],
+			]
+		);
+		albert_test_register_block_type(
+			'core/video',
+			false,
+			[
+				'src'      => [
+					'source' => 'attribute',
+					'type'   => 'string',
+				],
+				'controls' => [
+					'source' => 'attribute',
+					'type'   => 'boolean',
+				],
+			]
+		);
+
+		$result = $this->serializer->serialize_with_issues(
+			[
+				[
+					'name'       => 'core/paragraph',
+					'attributes' => [ 'content' => 'Don\'t & "co"' ],
+					'html'       => '<p>Don\'t &amp; "co"</p>',
+				],
+				[
+					'name'       => 'core/video',
+					'attributes' => [
+						'src'      => 'https://example.com/v.mp4',
+						'controls' => true,
+					],
+					'html'       => '<figure class="wp-block-video"><video controls src="https://example.com/v.mp4"></video></figure>',
+				],
+			]
+		);
+
+		$this->assertSame( [], $this->messages( $result['issues'], 'error' ) );
 	}
 }
