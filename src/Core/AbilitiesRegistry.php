@@ -273,7 +273,8 @@ class AbilitiesRegistry {
 	 * Get the default set of disabled abilities.
 	 *
 	 * On fresh install only abilities declared read-only start on; writes,
-	 * deletes and undeclared abilities start off.
+	 * deletes and undeclared abilities start off, and so do core reads that
+	 * Albert's own do better ({@see CoreAbilityOverlap::OFF_BY_DEFAULT}).
 	 *
 	 * Reads the raw registry: the default state must describe every ability the
 	 * site really has, not a filtered view of it.
@@ -291,7 +292,7 @@ class AbilitiesRegistry {
 			$id = $ability->get_name();
 
 			// The transport tools are never off, so they never enter the list a save persists.
-			if ( ( $annotations['readonly'] ?? null ) !== true && ! self::is_transport_ability( $id ) ) {
+			if ( ( ( $annotations['readonly'] ?? null ) !== true || in_array( $id, CoreAbilityOverlap::OFF_BY_DEFAULT, true ) ) && ! self::is_transport_ability( $id ) ) {
 				$disabled[] = $id;
 			}
 		}

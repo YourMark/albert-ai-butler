@@ -173,6 +173,16 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.7.0
+
+**Improvements**
+
+- On WordPress 7.2, your assistant gets one tool per job. WordPress's own user lookup replaces Albert's View User and keeps whether you had it on. WordPress's new posts search starts off for connections, because Albert's post and page abilities also search, sort and read blocks. Both tell the assistant which tool to use.
+
+**Developer**
+
+- On WordPress 7.2 single sites, `albert/view-user` is not registered when `core/users-query` is; `core/content-query` is off for connections by default. See `Albert\Core\CoreAbilityOverlap`.
+
 ### 1.6.0
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 

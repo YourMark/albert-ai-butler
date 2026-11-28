@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
+use Albert\Core\CoreAbilityOverlap;
 use WP_Error;
 use WP_REST_Request;
 
@@ -65,7 +66,7 @@ class FindUsers extends BaseAbility {
 			'properties' => [
 				'id'       => [
 					'type'        => 'integer',
-					'description' => 'Return only the user with this ID, as a one-item list. For all of one user\'s details use albert/view-user.',
+					'description' => 'Return only the user with this ID, as a one-item list. For all of one user\'s details use ' . ( CoreAbilityOverlap::replacement( 'albert/view-user' ) ?? 'albert/view-user' ) . '.',
 					'minimum'     => 1,
 				],
 				'page'     => [

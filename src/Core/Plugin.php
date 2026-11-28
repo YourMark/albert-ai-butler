@@ -412,6 +412,9 @@ class Plugin {
 		$this->abilities_manager = new AbilitiesManager();
 		$this->abilities_manager->register_hooks();
 
+		// One tool per job where WordPress 7.2's abilities overlap Albert's.
+		( new CoreAbilityOverlap() )->register_hooks();
+
 		// Something read the registry earlier in `init`. WordPress no longer
 		// accepts registrations, but the manager still needs its instances
 		// for labels and counts.
