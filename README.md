@@ -175,6 +175,10 @@ Website: https://yourmark.nl
 
 ### 1.7.0
 
+**Features**
+
+- A skill on Site Health: the most urgent issues first, in plain words, with who can fix each one, and checks that did not run reported as unknown.
+
 **Improvements**
 
 - Every skill your assistant can read as a prompt is also in its skills list, and a skill about abilities that are all switched off is no longer offered.
