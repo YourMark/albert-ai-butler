@@ -51,6 +51,17 @@ if ( ! class_exists( 'WP_Block_Type_Registry' ) ) {
 		public function get_all_registered() {
 			return (array) ( $GLOBALS['albert_test_block_types'] ?? [] );
 		}
+
+		/**
+		 * Return one registered block type, or null.
+		 *
+		 * @param string $name Block name.
+		 *
+		 * @return object|null
+		 */
+		public function get_registered( $name ) {
+			return $this->get_all_registered()[ $name ] ?? null;
+		}
 	}
 }
 
