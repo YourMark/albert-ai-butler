@@ -236,6 +236,12 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.7.0 =
+
+**Fixes**
+
+* Another plugin's ability that declares its options in a common shorthand no longer stops Albert from working on the Balanced privacy setting.
+
 = 1.6.0 =
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
