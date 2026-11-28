@@ -14,6 +14,7 @@ namespace Albert\Abilities\WordPress\Skills;
 
 use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
+use Albert\MCP\Skills\AbilitySkills;
 use Albert\MCP\Skills\Skill;
 use Albert\MCP\Skills\SkillRegistry;
 use WP_Error;
@@ -177,6 +178,8 @@ class GetSkill extends BaseAbility {
 				[ 'status' => 500 ]
 			);
 		}
+
+		AbilitySkills::served( $skill->slug(), 'get_skill' );
 
 		return [
 			'slug'    => $skill->slug(),

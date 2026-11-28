@@ -94,6 +94,8 @@ All hooks follow `albert/{location}/{hook_name}` convention:
 | `albert/context/site` | filter | The assembled site context array, before it is rendered to the wire text. Add, drop or rewrite a section; unrecognised sections render generically. The untrusted-data framing is deliberately outside this array and cannot be filtered away |
 | `albert/context/skills` | filter | The skills index entries, after preconditions have been applied |
 | `albert/skills/registry` | filter | Register a skill: `slug`, `summary`, and either `file` or `body`, plus optional `requires` / `when` preconditions, `abilities` (the ability ids it belongs to) and `priority` |
+| `albert/skills/ability_links` | filter | `( string[] $slugs, string $ability_id, int $user_id )`: the skills that come with an ability's `get-ability-info`. Unavailable slugs are dropped after it, then the budget applies |
+| `albert/skills/served` | action | `( string $slug, string $route, int $user_id, array $context )` when a skill reaches an assistant; `$route` is `index`, `get_skill`, `ability_info` or `prompt`; `$context` holds `client_id`, `client_name`, `digest` |
 | `albert/skills/conditions` | filter | Add a precondition skills may name in `requires`: `slug => [ check, requirement, active ]`. Adds only; Albert's cannot be replaced, and an undefined one fails closed |
 | `albert/skills/files` | filter | Deprecated 1.7.0. Extra skill files; read into the registry, with a notice unless the skill is also registered by slug |
 | `albert/abilities/payload_row` | filter | Augment a normalized ability row before it reaches the Abilities screen (e.g. append `badges`). Fires on both the bulk build and single-row paths. See `docs/extending-the-abilities-screen.md` |

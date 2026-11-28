@@ -213,6 +213,16 @@ class Skill {
 	}
 
 	/**
+	 * Whether Albert itself ships this skill.
+	 *
+	 * @return bool
+	 * @since 1.7.0
+	 */
+	public function is_albert(): bool {
+		return $this->source === __( 'Albert', 'albert-ai-butler' );
+	}
+
+	/**
 	 * Who ships this skill, shown in the Skills screen's Source column.
 	 *
 	 * Bundled skills declare `'Albert'` explicitly (see {@see

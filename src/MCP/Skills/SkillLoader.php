@@ -62,20 +62,25 @@ class SkillLoader {
 			return null;
 		}
 
+		$slug   = $skill->slug();
 		$config = [
-			'name'        => $skill->slug(),
+			'name'        => $slug,
 			'description' => $skill->summary(),
-			'handler'     => static fn(): array => [
-				'messages' => [
-					[
-						'role'    => 'user',
-						'content' => [
-							'type' => 'text',
-							'text' => $body,
+			'handler'     => static function () use ( $slug, $body ): array {
+				AbilitySkills::served( $slug, 'prompt' );
+
+				return [
+					'messages' => [
+						[
+							'role'    => 'user',
+							'content' => [
+								'type' => 'text',
+								'text' => $body,
+							],
 						],
 					],
-				],
-			],
+				];
+			},
 			// Static guidance; the transport's OAuth gate already authenticates.
 			'permission'  => static fn(): bool => true,
 		];
