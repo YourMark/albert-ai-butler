@@ -140,11 +140,20 @@ class ConnectedResultRedactor implements Hookable {
 					$args[ $key ] = static fn() => call_user_func( $callback );
 				}
 			}
-		} elseif ( ( $schema['type'] ?? null ) !== 'object' || isset( $schema['properties'][ self::REVEAL_INPUT ] ) ) {
+		} elseif ( ( $schema['type'] ?? null ) !== 'object' ) {
 			return $args;
 		}
 
-		$schema['properties']                       = (array) ( $schema['properties'] ?? [] );
+		// `new stdClass()` is a common way to declare no properties, so it serialises as `{}`.
+		$properties = $schema['properties'] ?? [];
+		if ( is_object( $properties ) ) {
+			$properties = get_object_vars( $properties );
+		}
+		if ( ! is_array( $properties ) || isset( $properties[ self::REVEAL_INPUT ] ) ) {
+			return $args;
+		}
+
+		$schema['properties']                       = $properties;
 		$schema['properties'][ self::REVEAL_INPUT ] = [
 			'type'        => 'boolean',
 			'description' => 'Return the real personal data instead of masked values. Anyone allowed to run this ability may ask; only on Balanced privacy mode.',
