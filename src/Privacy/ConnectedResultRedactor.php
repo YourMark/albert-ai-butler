@@ -46,6 +46,23 @@ class ConnectedResultRedactor implements Hookable {
 	public const REVEAL_INPUT = 'reveal_personal_data';
 
 	/**
+	 * Core abilities whose results hold people, mapped to where they are.
+	 *
+	 * WordPress 7.2's queries. Their people are masked as Albert's own
+	 * `find-users` masks users, rather than with the short list kept for
+	 * unknown shapes. `''` means every record in the result is a person, so a
+	 * bare `{ id, name }` public author is masked too; a key names the nested
+	 * record that is, and the rest of the result gets the short list.
+	 *
+	 * @since 1.7.0
+	 * @var array<string, string>
+	 */
+	private const PERSON_RESULTS = [
+		'core/users-query'   => '',
+		'core/content-query' => 'author',
+	];
+
+	/**
 	 * Unredacted results awaiting output validation, per ability.
 	 *
 	 * @since 1.6.0
@@ -204,13 +221,71 @@ class ConnectedResultRedactor implements Hookable {
 			return $result;
 		}
 
-		$redacted = PiiPolicy::redact_value( $result, [ self::REVEAL_INPUT => $this->reveal ], self::anonymizer_options( $ability_name ) );
+		$args     = [ self::REVEAL_INPUT => $this->reveal ];
+		$redacted = self::redact_people( $result, $ability_name, $args );
+		if ( ( self::PERSON_RESULTS[ $ability_name ] ?? null ) !== '' ) {
+			$redacted = PiiPolicy::redact_value( $redacted, $args, self::anonymizer_options( $ability_name ) );
+		}
 
 		if ( $redacted !== $result ) {
 			$this->unredacted[ $ability_name ][] = $result;
 		}
 
 		return $redacted;
+	}
+
+	/**
+	 * Mask the people in a core ability's result as Albert masks its own users.
+	 *
+	 * @param mixed                $result       The result.
+	 * @param string               $ability_name The ability that ran.
+	 * @param array<string, mixed> $args         The reveal request.
+	 *
+	 * @return mixed The result with its people masked, or unchanged.
+	 * @since 1.7.0
+	 */
+	private static function redact_people( mixed $result, string $ability_name, array $args ): mixed {
+		if ( ! isset( self::PERSON_RESULTS[ $ability_name ] ) ) {
+			return $result;
+		}
+
+		$opts                       = self::anonymizer_options( $ability_name, true );
+		$opts['mask_context_names'] = true;
+
+		$key = self::PERSON_RESULTS[ $ability_name ];
+		if ( $key === '' ) {
+			return PiiPolicy::redact_value( $result, $args, $opts );
+		}
+
+		// Core returns arrays; anything else gets only the generic pass.
+		return is_array( $result ) ? self::redact_key( $result, $key, $args, $opts ) : $result;
+	}
+
+	/**
+	 * Mask every array under one key, at any depth.
+	 *
+	 * Deliberately wide: an `author` record in a custom field is masked too.
+	 *
+	 * @param array<mixed>         $node The node.
+	 * @param string               $key  The key holding a person.
+	 * @param array<string, mixed> $args The reveal request.
+	 * @param array<string, mixed> $opts Anonymiser options.
+	 *
+	 * @return array<mixed>
+	 * @since 1.7.0
+	 */
+	private static function redact_key( array $node, string $key, array $args, array $opts ): array {
+		foreach ( $node as $name => $value ) {
+			if ( ! is_array( $value ) ) {
+				continue;
+			}
+
+			$node[ $name ] = $name === $key
+				? PiiPolicy::redact_value( $value, $args, $opts )
+				: self::redact_key( $value, $key, $args, $opts );
+		}
+
+		return $node;
 	}
 
 	/**
@@ -260,26 +335,30 @@ class ConnectedResultRedactor implements Hookable {
 	/**
 	 * What counts as personal data in one ability's result.
 	 *
-	 * Albert's own abilities return known shapes, so they get the full list,
-	 * names and addresses included. Another plugin's result can be anything, a
-	 * settings array or a form, so only keys that are personal everywhere apply.
+	 * Albert's own abilities and the people in core's queries have known
+	 * shapes, so they get the full list, names and addresses included. Another
+	 * plugin's result can be anything, a settings array or a form, so only keys
+	 * that are personal everywhere apply.
 	 *
 	 * @param string $ability_name The ability.
+	 * @param bool   $people       Whether the data is a person record from {@see self::PERSON_RESULTS}.
 	 *
 	 * @return array<string, mixed> Options for {@see Anonymizer::anonymize()}.
 	 * @since 1.6.0
 	 */
-	private static function anonymizer_options( string $ability_name ): array {
-		$keys = str_starts_with( $ability_name, 'albert/' ) ? Anonymizer::fields() : Anonymizer::essential_fields();
+	private static function anonymizer_options( string $ability_name, bool $people = false ): array {
+		$keys = $people || str_starts_with( $ability_name, 'albert/' ) ? Anonymizer::fields() : Anonymizer::essential_fields();
 
 		/**
 		 * Filters the keys masked in one ability's result on a connected call.
 		 *
 		 * Grouped by rule, as `albert/privacy/pii_fields`. Albert's own abilities
-		 * start from that full list; any other ability only from email, phone,
-		 * IP address, password hash and token keys.
+		 * and the people in core's user and content queries start from that
+		 * full list; anything else only from email, phone, IP address,
+		 * password hash and token keys.
 		 *
 		 * @since 1.6.0
+		 * @since 1.7.0 The people in core's user and content queries start from the full list.
 		 *
 		 * @param array<string, array<int, string>> $keys         Key names per rule.
 		 * @param string                            $ability_name The ability whose result is masked.
