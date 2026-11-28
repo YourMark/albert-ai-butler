@@ -19,6 +19,7 @@
 // Prevent direct access.
 use Albert\Core\Plugin;
 use Albert\MCP\AdapterSource;
+use Albert\OAuth\AdapterOAuthGuard;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -57,6 +58,9 @@ require_once ALBERT_PLUGIN_DIR . 'src/MCP/AdapterSource.php';
 AdapterSource::offer_fallback( ALBERT_PLUGIN_DIR );
 
 require_once ALBERT_PLUGIN_DIR . 'vendor/autoload_packages.php';
+
+// Before any plugin's `plugins_loaded`: the MCP Adapter plugin decides there whether its OAuth server runs.
+AdapterOAuthGuard::register();
 
 /**
  * Initialize the plugin.
