@@ -57,6 +57,7 @@ use Albert\Abilities\WordPress\Posts\Update as UpdatePost;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Abilities\WordPress\Search\SearchContent;
 use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
+use Albert\Abilities\WordPress\Plugins\FindPlugins;
 use Albert\Abilities\WordPress\Revisions\FindRevisions;
 use Albert\Abilities\WordPress\Revisions\ViewRevision;
 use Albert\Abilities\WordPress\Revisions\RestoreRevision;
@@ -740,6 +741,28 @@ class ExecuteSchemaTest extends TestCase {
 		$this->assert_execute_matches_schema( new ViewSiteHealth(), [], 'ViewSiteHealth' );
 
 		remove_filter( 'site_status_tests', $only_timezone, 999 );
+	}
+
+	/**
+	 * FindPlugins returns results matching the output schema, with and without an update check.
+	 *
+	 * @return void
+	 */
+	public function test_find_plugins_output_matches_schema(): void {
+		delete_site_transient( 'update_plugins' );
+		$this->assert_execute_matches_schema( new FindPlugins(), [], 'FindPlugins' );
+
+		set_site_transient(
+			'update_plugins',
+			(object) [
+				'last_checked' => time(),
+				'checked'      => [],
+				'response'     => [],
+			]
+		);
+		$this->assert_execute_matches_schema( new FindPlugins(), [], 'FindPlugins' );
+
+		delete_site_transient( 'update_plugins' );
 	}
 
 	/**

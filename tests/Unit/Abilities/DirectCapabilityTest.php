@@ -37,6 +37,7 @@ use Albert\Abilities\WordPress\Pages\ViewPage;
 use Albert\Abilities\WordPress\Posts\ViewPost;
 use Albert\Abilities\WordPress\Search\SearchContent;
 use Albert\Abilities\WordPress\SiteHealth\ViewSiteHealth;
+use Albert\Abilities\WordPress\Plugins\FindPlugins;
 use Albert\Abilities\WordPress\Revisions\FindRevisions;
 use Albert\Abilities\WordPress\Revisions\ViewRevision;
 use Albert\Abilities\WordPress\Revisions\RestoreRevision;
@@ -127,6 +128,9 @@ class DirectCapabilityTest extends TestCase {
 
 			// Site Health.
 			'view-site-health'       => [ ViewSiteHealth::class, 'view_site_health_checks' ],
+
+			// Plugins.
+			'find-plugins'           => [ FindPlugins::class, 'activate_plugins' ],
 
 			// Revisions (the per-post edit_post check runs in execute()).
 			'find-revisions'         => [ FindRevisions::class, 'edit_posts' ],
