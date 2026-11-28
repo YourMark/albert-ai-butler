@@ -236,6 +236,12 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.7.0 =
+
+**Fixes**
+
+* Searching users by the administrator role no longer waits for approval in safe mode. A search only finds people; it gives nobody a role.
+
 = 1.6.0 =
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
