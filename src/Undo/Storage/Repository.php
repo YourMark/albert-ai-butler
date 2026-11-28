@@ -14,7 +14,10 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Database\Tables;
 use Albert\Undo\Entity;
 use Albert\Undo\Recorder;
+use Albert\Undo\Retention\BoundedRetentionPolicy;
+use Albert\Undo\Retention\FreeRetentionPolicy;
 use Albert\Undo\Retention\Registrar;
+use Albert\Undo\Retention\RetentionPolicy;
 use Albert\Undo\WindowContext;
 
 /**
@@ -22,8 +25,8 @@ use Albert\Undo\WindowContext;
  *
  * Retention prunes whole sessions (`run_id`), never part of one, so "revert
  * this session" never finds half its before-images gone. A session goes when
- * its last call is past the window, or when an item it changed was changed
- * later by as many other sessions as the policy keeps.
+ * its last call is past the window, or, past the byte ceiling, least recently
+ * active first.
  *
  * @since 1.7.0
  *
@@ -319,9 +322,9 @@ class Repository {
 	/**
 	 * An entry's items, with before-images decoded.
 	 *
-	 * Retention is enforced here too, so a nightly prune that has not run yet
-	 * never stretches it: an item of a session past the window or the per-item
-	 * session count comes back without its before-image, as if pruned.
+	 * Retention is enforced here too, so a prune that has not run yet never
+	 * stretches it: an item of a session past the window comes back without
+	 * its before-image, as if pruned.
 	 *
 	 * @param int $change_id Entry id.
 	 *
@@ -340,13 +343,12 @@ class Repository {
 			return [];
 		}
 
-		$policy  = Registrar::current();
-		$run_id  = (int) $rows[0]['run_id'];
-		$expired = null;
-		if ( $this->run_last_seen( $run_id ) < self::cutoff( $policy->max_age_days() ) ) {
-			$expired = 'age';
-		} elseif ( $this->is_superseded( $run_id, $policy->runs_per_item() ) ) {
-			$expired = 'runs';
+		$last_seen = $this->run_last_seen( (int) $rows[0]['run_id'] );
+		$expired   = null;
+		foreach ( self::cutoffs( Registrar::current() ) as $cutoff ) {
+			if ( $last_seen < $cutoff ) {
+				$expired = 'age';
+			}
 		}
 
 		return array_map(
@@ -405,36 +407,6 @@ class Repository {
 
 		self::check();
 		$this->prune_runs( array_map( 'intval', $runs ), 'age' );
-	}
-
-	/**
-	 * Prune whole sessions that changed an item later changed by `$keep` other sessions.
-	 *
-	 * Sessions are ranked per item by their last change to it, not by when they
-	 * started: two assistants working at once overlap.
-	 *
-	 * @param int $keep Sessions kept per item; 0 for no limit.
-	 *
-	 * @return void
-	 * @since 1.7.0
-	 */
-	public function prune_beyond_runs( int $keep ): void {
-		global $wpdb;
-
-		if ( $keep <= 0 ) {
-			return;
-		}
-
-		$runs = $wpdb->get_col(
-			$wpdb->prepare(
-				'SELECT DISTINCT run_id FROM (SELECT run_id, ROW_NUMBER() OVER (PARTITION BY entity_hash ORDER BY last_change DESC) AS newer FROM (SELECT entity_hash, run_id, MAX(change_id) AS last_change FROM %i GROUP BY entity_hash, run_id) per_run) ranked WHERE newer > %d',
-				Tables::change_items( $this->blog_id ),
-				$keep
-			)
-		);
-
-		self::check();
-		$this->prune_runs( array_map( 'intval', $runs ), 'runs' );
 	}
 
 	/**
@@ -517,6 +489,31 @@ class Repository {
 	}
 
 	/**
+	 * The UTC cutoffs a policy sets: a session last active before any of them
+	 * is past retention.
+	 *
+	 * A {@see BoundedRetentionPolicy} adds one: a session last active before
+	 * its start keeps only Free's window.
+	 *
+	 * @param RetentionPolicy $policy     The policy.
+	 * @param int             $extra_days Days added to every window, for the
+	 *                                    deletion that follows pruning.
+	 *
+	 * @return array<int, string>
+	 * @since 1.7.0
+	 */
+	public static function cutoffs( RetentionPolicy $policy, int $extra_days = 0 ): array {
+		$cutoffs = [ self::cutoff( $policy->max_age_days() + $extra_days ) ];
+
+		if ( $policy instanceof BoundedRetentionPolicy ) {
+			// Both conditions are "before", so the earlier of the two decides.
+			$cutoffs[] = min( gmdate( 'Y-m-d H:i:s', $policy->not_before() ), self::cutoff( FreeRetentionPolicy::MAX_AGE_DAYS + $extra_days ) );
+		}
+
+		return $cutoffs;
+	}
+
+	/**
 	 * Hash identifying an entity across calls and blogs.
 	 *
 	 * @param Entity $entity The entity.
@@ -578,35 +575,6 @@ class Repository {
 	}
 
 	/**
-	 * Whether an item this session changed was changed later by `$keep` other sessions.
-	 *
-	 * @param int $run_id Session id.
-	 * @param int $keep   Sessions kept per item; 0 for no limit.
-	 *
-	 * @return bool
-	 */
-	private function is_superseded( int $run_id, int $keep ): bool {
-		global $wpdb;
-
-		if ( $keep <= 0 ) {
-			return false;
-		}
-
-		$items = Tables::change_items( $this->blog_id );
-
-		return (bool) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT 1 FROM (SELECT entity_hash, MAX(change_id) AS last_change FROM %i WHERE run_id = %d GROUP BY entity_hash) mine JOIN %i later ON later.entity_hash = mine.entity_hash AND later.change_id > mine.last_change AND later.run_id <> %d GROUP BY mine.entity_hash HAVING COUNT(DISTINCT later.run_id) >= %d LIMIT 1',
-				$items,
-				$run_id,
-				$items,
-				$run_id,
-				$keep
-			)
-		);
-	}
-
-	/**
 	 * Throw when the last query failed: wpdb reports errors by return value,
 	 * so a failing prune would otherwise pass for one with nothing to do.
 	 *
@@ -625,7 +593,7 @@ class Repository {
 	 * Drop the before-images of whole sessions, keeping their rows.
 	 *
 	 * @param array<int, int> $runs   Session ids.
-	 * @param string          $reason age, runs or size.
+	 * @param string          $reason age or size.
 	 *
 	 * @return void
 	 */

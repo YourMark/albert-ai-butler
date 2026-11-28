@@ -27,14 +27,7 @@ final class FreeRetentionPolicy implements RetentionPolicy {
 	 *
 	 * @var int
 	 */
-	public const MAX_AGE_DAYS = 2;
-
-	/**
-	 * Sessions kept per item.
-	 *
-	 * @var int
-	 */
-	public const RUNS_PER_ITEM = 2;
+	public const MAX_AGE_DAYS = 14;
 
 	/**
 	 * Ceiling on stored before-images: 50 MB.
@@ -48,13 +41,6 @@ final class FreeRetentionPolicy implements RetentionPolicy {
 	 */
 	public function max_age_days(): int {
 		return self::MAX_AGE_DAYS;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	public function runs_per_item(): int {
-		return self::RUNS_PER_ITEM;
 	}
 
 	/**

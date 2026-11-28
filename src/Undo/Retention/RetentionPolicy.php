@@ -31,18 +31,6 @@ interface RetentionPolicy {
 	public function max_age_days(): int;
 
 	/**
-	 * Sessions kept per item, newest first; 0 for no limit.
-	 *
-	 * Counts sessions, not calls: building one page takes many calls, and
-	 * "revert what you just did" has to cover all of them. A session that falls
-	 * outside the count for any item it changed is pruned whole.
-	 *
-	 * @return int
-	 * @since 1.7.0
-	 */
-	public function runs_per_item(): int;
-
-	/**
 	 * Ceiling on the stored before-images, in bytes. Oldest go first past it.
 	 *
 	 * @return int

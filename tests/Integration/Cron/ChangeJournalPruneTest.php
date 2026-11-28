@@ -13,6 +13,7 @@ use Albert\Database\Tables;
 use Albert\Tests\TestCase;
 use Albert\Undo\Entity;
 use Albert\Undo\FailureCounter;
+use Albert\Undo\Retention\BoundedRetentionPolicy;
 use Albert\Undo\Retention\FreeRetentionPolicy;
 use Albert\Undo\Retention\Registrar;
 use Albert\Undo\Retention\RetentionPolicy;
@@ -63,8 +64,7 @@ class ChangeJournalPruneTest extends TestCase {
 		$policy = Registrar::current();
 
 		$this->assertInstanceOf( FreeRetentionPolicy::class, $policy );
-		$this->assertSame( 2, $policy->max_age_days() );
-		$this->assertSame( 2, $policy->runs_per_item() );
+		$this->assertSame( 14, $policy->max_age_days() );
 		$this->assertSame( 50 * 1024 * 1024, $policy->max_bytes() );
 	}
 
@@ -94,13 +94,13 @@ class ChangeJournalPruneTest extends TestCase {
 	public function test_a_session_is_pruned_whole(): void {
 		$first = $this->record( 'client-a', Entity::post( 42 ) );
 		$last  = $this->record( 'client-a', Entity::post( 42 ) );
-		$this->age( $first, 3 * DAY_IN_SECONDS );
+		$this->age( $first, 15 * DAY_IN_SECONDS );
 
 		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
 
 		$this->assertSame( [ null ], $this->stored( $first ), 'Its session had a call within the window.' );
 
-		$this->age( $last, 3 * DAY_IN_SECONDS );
+		$this->age( $last, 15 * DAY_IN_SECONDS );
 		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
 
 		$this->assertSame( [ 'age' ], $this->stored( $first ) );
@@ -114,54 +114,53 @@ class ChangeJournalPruneTest extends TestCase {
 	 */
 	public function test_the_window_holds_without_the_prune(): void {
 		$old = $this->record( 'client-a', Entity::option( 'a' ) );
-		$this->age( $old, 3 * DAY_IN_SECONDS );
+		$this->age( $old, 15 * DAY_IN_SECONDS );
 
 		$this->assertSame( 'age', $this->item( $old )['pruned'] );
 		$this->assertNull( $this->item( $old )['before'] );
 	}
 
 	/**
-	 * An item keeps its last two sessions. The session before them is pruned
-	 * whole, including what it changed that nothing later touched, so it can
-	 * never be half reverted.
+	 * Retention is by time and size only: an item changed by many sessions
+	 * keeps every one of them inside the window.
 	 *
 	 * @return void
 	 */
-	public function test_the_cap_counts_sessions_and_prunes_them_whole(): void {
-		$oldest = $this->record( 'client-a', Entity::post( 42 ), Entity::option( 'only-here' ) );
-		$middle = $this->record( 'client-b', Entity::post( 42 ) );
-		$newest = $this->record( 'client-c', Entity::post( 42 ) );
-		$more   = $this->record( 'client-c', Entity::post( 42 ) );
-
-		$this->assertSame( 'runs', $this->item( $oldest )['pruned'], 'Enforced on read before the prune runs.' );
-		$this->assertSame( [ null, null ], $this->stored( $oldest ) );
+	public function test_many_sessions_on_one_item_are_all_kept(): void {
+		$sessions = [];
+		foreach ( [ 'client-a', 'client-b', 'client-c', 'client-d' ] as $client ) {
+			$sessions[] = $this->record( $client, Entity::post( 42 ) );
+		}
 
 		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
 
-		$this->assertSame( [ 'runs', 'runs' ], $this->stored( $oldest ) );
-		$this->assertSame( [ null ], $this->stored( $middle ) );
-		$this->assertSame( [ null ], $this->stored( $newest ), 'Two calls in one session count once.' );
-		$this->assertSame( [ null ], $this->stored( $more ) );
+		foreach ( $sessions as $session ) {
+			$this->assertSame( [ null ], $this->stored( $session ) );
+			$this->assertNull( $this->item( $session )['pruned'] );
+		}
 	}
 
 	/**
-	 * Sessions rank by their last change to the item, not by when they
-	 * started: a session that began first but changed the item last is kept.
+	 * A longer window is not retroactive: a session last active before the
+	 * policy's start keeps Free's 14 days, a later one the longer window.
 	 *
 	 * @return void
 	 */
-	public function test_overlapping_sessions_rank_by_their_last_change(): void {
-		$early_start = $this->record( 'client-a', Entity::option( 'x' ) );
-		$between     = $this->record( 'client-b', Entity::option( 'x' ) );
-		$late_change = $this->record( 'client-a', Entity::option( 'x' ) );
-		$this->record( 'client-c', Entity::option( 'x' ) );
+	public function test_a_bounded_policy_only_extends_later_sessions(): void {
+		$before = $this->record( 'client-a', Entity::option( 'a' ) );
+		$after  = $this->record( 'client-b', Entity::option( 'b' ) );
+		$this->age( $before, 14 * DAY_IN_SECONDS + 6 * HOUR_IN_SECONDS );
+		$this->age( $after, 14 * DAY_IN_SECONDS + HOUR_IN_SECONDS );
 
-		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
+		$policy = $this->bounded( 365, time() - 14 * DAY_IN_SECONDS - 3 * HOUR_IN_SECONDS );
 
-		$this->assertSame( [ 'runs' ], $this->stored( $between ) );
-		$this->assertSame( [ null ], $this->stored( $early_start ) );
-		$this->assertSame( [ null ], $this->stored( $late_change ) );
-		$this->assertNull( $this->item( $early_start )['pruned'], 'Read-time ranking agrees.' );
+		$this->assertSame( 'age', $this->with_policy( $policy, fn() => $this->item( $before )['pruned'] ), 'Enforced on read.' );
+		$this->assertNull( $this->with_policy( $policy, fn() => $this->item( $after )['pruned'] ) );
+
+		( new ChangeJournalPrune( $this->journal, $policy ) )->run();
+
+		$this->assertSame( [ 'age' ], $this->stored( $before ) );
+		$this->assertSame( [ null ], $this->stored( $after ) );
 	}
 
 	/**
@@ -172,7 +171,7 @@ class ChangeJournalPruneTest extends TestCase {
 	public function test_old_entries_are_pruned_by_age(): void {
 		$old   = $this->record( 'client-a', Entity::option( 'a' ) );
 		$fresh = $this->record( 'client-b', Entity::option( 'b' ) );
-		$this->age( $old, 3 * DAY_IN_SECONDS );
+		$this->age( $old, 15 * DAY_IN_SECONDS );
 
 		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
 
@@ -192,7 +191,7 @@ class ChangeJournalPruneTest extends TestCase {
 		$third  = $this->record( 'client-c', Entity::option( 'c' ) );
 		$bytes  = (int) $this->item( $third )['image_bytes'];
 
-		( new ChangeJournalPrune( $this->journal, $this->policy( 2, $bytes * 2 ) ) )->run();
+		( new ChangeJournalPrune( $this->journal, $this->policy( 14, $bytes * 2 ) ) )->run();
 
 		$this->assertSame( 'size', $this->item( $first )['pruned'] );
 		$this->assertNull( $this->item( $second )['pruned'] );
@@ -211,30 +210,11 @@ class ChangeJournalPruneTest extends TestCase {
 		$latest       = $this->record( 'client-a', Entity::option( 'c' ) );
 		$bytes        = (int) $this->item( $latest )['image_bytes'];
 
-		( new ChangeJournalPrune( $this->journal, $this->policy( 2, $bytes * 2 ) ) )->run();
+		( new ChangeJournalPrune( $this->journal, $this->policy( 14, $bytes * 2 ) ) )->run();
 
 		$this->assertSame( 'size', $this->item( $quiet )['pruned'] );
 		$this->assertNull( $this->item( $long_running )['pruned'] );
 		$this->assertNull( $this->item( $latest )['pruned'] );
-	}
-
-	/**
-	 * A policy may lift the per-item cap (0) or tighten it.
-	 *
-	 * @return void
-	 */
-	public function test_a_policy_sets_the_per_item_cap(): void {
-		$first  = $this->record( 'client-a', Entity::option( 'x' ) );
-		$second = $this->record( 'client-b', Entity::option( 'x' ) );
-		$third  = $this->record( 'client-c', Entity::option( 'x' ) );
-
-		( new ChangeJournalPrune( $this->journal, $this->policy( 2, PHP_INT_MAX, 0 ) ) )->run();
-		$this->assertSame( [ null ], $this->stored( $first ), 'No limit keeps every session.' );
-
-		( new ChangeJournalPrune( $this->journal, $this->policy( 2, PHP_INT_MAX, 1 ) ) )->run();
-		$this->assertSame( [ 'runs' ], $this->stored( $first ) );
-		$this->assertSame( [ 'runs' ], $this->stored( $second ) );
-		$this->assertSame( [ null ], $this->stored( $third ) );
 	}
 
 	/**
@@ -299,12 +279,16 @@ class ChangeJournalPruneTest extends TestCase {
 	 */
 	public function test_entries_are_deleted_long_after_the_window(): void {
 		$ancient = $this->record( 'client-a', Entity::option( 'a' ) );
-		$this->age( $ancient, ( 2 + ChangeJournalPrune::DELETE_AFTER_DAYS + 1 ) * DAY_IN_SECONDS );
+		$pruned  = $this->record( 'client-b', Entity::option( 'b' ) );
+		$this->age( $ancient, ( 14 + ChangeJournalPrune::DELETE_AFTER_DAYS ) * DAY_IN_SECONDS + HOUR_IN_SECONDS );
+		$this->age( $pruned, 14 * DAY_IN_SECONDS + HOUR_IN_SECONDS );
 
 		( new ChangeJournalPrune( $this->journal, new FreeRetentionPolicy() ) )->run();
 
 		$this->assertNull( $this->journal->entry( $ancient ) );
 		$this->assertSame( [], $this->journal->items( $ancient ) );
+		$this->assertNotNull( $this->journal->entry( $pruned ), 'Inside the grace day the row stays, without its image.' );
+		$this->assertSame( [ 'age' ], $this->stored( $pruned ) );
 	}
 
 	/**
@@ -391,21 +375,19 @@ class ChangeJournalPruneTest extends TestCase {
 	 *
 	 * @param int $days  Days.
 	 * @param int $bytes Byte ceiling.
-	 * @param int $runs  Sessions kept per item; 0 for no limit.
 	 *
 	 * @return RetentionPolicy
 	 */
-	private function policy( int $days, int $bytes, int $runs = 0 ): RetentionPolicy {
-		return new class( $days, $bytes, $runs ) implements RetentionPolicy {
+	private function policy( int $days, int $bytes ): RetentionPolicy {
+		return new class( $days, $bytes ) implements RetentionPolicy {
 
 			/**
 			 * Build.
 			 *
 			 * @param int $days  Days.
 			 * @param int $bytes Bytes.
-			 * @param int $runs  Sessions per item.
 			 */
-			public function __construct( private int $days, private int $bytes, private int $runs ) {}
+			public function __construct( private int $days, private int $bytes ) {}
 
 			/**
 			 * {@inheritDoc}
@@ -417,16 +399,70 @@ class ChangeJournalPruneTest extends TestCase {
 			/**
 			 * {@inheritDoc}
 			 */
-			public function runs_per_item(): int {
-				return $this->runs;
+			public function max_bytes(): int {
+				return $this->bytes;
+			}
+		};
+	}
+
+	/**
+	 * A longer policy that starts at a given time.
+	 *
+	 * @param int $days  Days.
+	 * @param int $since Unix timestamp it applies from.
+	 *
+	 * @return BoundedRetentionPolicy
+	 */
+	private function bounded( int $days, int $since ): BoundedRetentionPolicy {
+		return new class( $days, $since ) implements BoundedRetentionPolicy {
+
+			/**
+			 * Build.
+			 *
+			 * @param int $days  Days.
+			 * @param int $since Start.
+			 */
+			public function __construct( private int $days, private int $since ) {}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function max_age_days(): int {
+				return $this->days;
 			}
 
 			/**
 			 * {@inheritDoc}
 			 */
 			public function max_bytes(): int {
-				return $this->bytes;
+				return PHP_INT_MAX;
+			}
+
+			/**
+			 * {@inheritDoc}
+			 */
+			public function not_before(): int {
+				return $this->since;
 			}
 		};
+	}
+
+	/**
+	 * Run a read with a policy registered.
+	 *
+	 * @param RetentionPolicy $policy The policy.
+	 * @param callable        $read   The read.
+	 *
+	 * @return mixed What the read returned.
+	 */
+	private function with_policy( RetentionPolicy $policy, callable $read ) {
+		$hook = static fn( Registrar $registrar ) => $registrar->register( $policy );
+
+		add_action( 'albert/undo/register_retention_policy', $hook );
+		try {
+			return $read();
+		} finally {
+			remove_action( 'albert/undo/register_retention_policy', $hook );
+		}
 	}
 }

@@ -20,10 +20,9 @@ use Albert\Undo\Storage\Repository;
 /**
  * Nightly WP-Cron job that holds the change journal to its retention policy.
  *
- * Prunes whole sessions by age, then beyond the per-item session count, then
- * by size, least recently active first. A pruned item keeps its row, so the
- * entry can still say what happened; entries go {@see self::DELETE_AFTER_DAYS}
- * later.
+ * Prunes whole sessions by age, then by size, least recently active first.
+ * A pruned item keeps its row, so the entry can still say what happened;
+ * entries go {@see self::DELETE_AFTER_DAYS} later.
  *
  * @since 1.7.0
  */
@@ -37,11 +36,12 @@ class ChangeJournalPrune implements Hookable {
 	const HOOK = 'albert_prune_change_journal';
 
 	/**
-	 * Days after which an entry, already pruned, is deleted.
+	 * Days after which an entry, already pruned, is deleted. Short, so "nothing
+	 * older than the window is left" stays true of the rows too.
 	 *
 	 * @var int
 	 */
-	const DELETE_AFTER_DAYS = 30;
+	const DELETE_AFTER_DAYS = 1;
 
 	/**
 	 * How long an entry may stay `recording` before it counts as abandoned, in seconds.
@@ -103,12 +103,13 @@ class ChangeJournalPrune implements Hookable {
 			$now    = time();
 
 			$this->repository->close_abandoned( gmdate( 'Y-m-d H:i:s', $now - self::ABANDONED_SECONDS ) );
-			$this->repository->prune_older_than( Repository::cutoff( $policy->max_age_days() ) );
-			$this->repository->prune_beyond_runs( $policy->runs_per_item() );
+			foreach ( Repository::cutoffs( $policy ) as $cutoff ) {
+				$this->repository->prune_older_than( $cutoff );
+			}
 			$this->repository->prune_to_bytes( $policy->max_bytes() );
-			$this->repository->delete_older_than(
-				gmdate( 'Y-m-d H:i:s', $now - ( max( 0, $policy->max_age_days() ) + self::DELETE_AFTER_DAYS ) * DAY_IN_SECONDS )
-			);
+			foreach ( Repository::cutoffs( $policy, self::DELETE_AFTER_DAYS ) as $cutoff ) {
+				$this->repository->delete_older_than( $cutoff );
+			}
 		} catch ( \Throwable $e ) {
 			// Counted, so retention that stopped working can be reported rather than go unseen.
 			FailureCounter::record( 1 );
