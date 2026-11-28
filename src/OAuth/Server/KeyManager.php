@@ -48,6 +48,22 @@ class KeyManager {
 	const PUBLIC_KEY_OPTION = 'albert_oauth_public_key';
 
 	/**
+	 * Option holding why the key pair could not be created, for the admin notice.
+	 *
+	 * @since 1.7.0
+	 * @var string
+	 */
+	const KEY_ERROR_OPTION = 'albert_oauth_key_error';
+
+	/**
+	 * The generator in use; null for the real one.
+	 *
+	 * @since 1.7.0
+	 * @var KeyPairGenerator|null
+	 */
+	private static ?KeyPairGenerator $generator = null;
+
+	/**
 	 * Get or generate the encryption key.
 	 *
 	 * @return string The encryption key.
@@ -68,14 +84,15 @@ class KeyManager {
 	 * Get or generate the private key for JWT signing.
 	 *
 	 * @return string The private key in PEM format.
+	 * @throws KeyGenerationFailed When the key pair cannot be created.
 	 * @since 1.0.0
+	 * @since 1.7.0 Throws instead of returning an empty string.
 	 */
 	public static function get_private_key(): string {
 		$key = get_option( self::PRIVATE_KEY_OPTION );
 
-		if ( ! $key ) {
-			self::generate_key_pair();
-			$key = get_option( self::PRIVATE_KEY_OPTION );
+		if ( ! is_string( $key ) || $key === '' ) {
+			$key = self::generate_key_pair()['private'];
 		}
 
 		return $key;
@@ -85,14 +102,15 @@ class KeyManager {
 	 * Get or generate the public key for JWT verification.
 	 *
 	 * @return string The public key in PEM format.
+	 * @throws KeyGenerationFailed When the key pair cannot be created.
 	 * @since 1.0.0
+	 * @since 1.7.0 Throws instead of returning an empty string.
 	 */
 	public static function get_public_key(): string {
 		$key = get_option( self::PUBLIC_KEY_OPTION );
 
-		if ( ! $key ) {
-			self::generate_key_pair();
-			$key = get_option( self::PUBLIC_KEY_OPTION );
+		if ( ! is_string( $key ) || $key === '' ) {
+			$key = self::generate_key_pair()['public'];
 		}
 
 		return $key;
@@ -110,38 +128,45 @@ class KeyManager {
 	}
 
 	/**
-	 * Generate RSA key pair for JWT signing.
+	 * Generate and store the RSA key pair for JWT signing.
+	 *
+	 * Stored only when both keys exist, so a failed export never leaves a
+	 * public key without its private one. A failure is kept for the admin
+	 * notice ({@see KeyHealth}) and cleared by the next success.
+	 *
+	 * @return array{private: string, public: string} PEM-encoded keys.
+	 * @throws KeyGenerationFailed When OpenSSL cannot create them.
+	 * @since 1.0.0
+	 * @since 1.7.0 Falls back to a bundled OpenSSL config, and throws on failure.
+	 */
+	private static function generate_key_pair(): array {
+		try {
+			$pair = ( self::$generator ?? new KeyPairGenerator() )->generate();
+		} catch ( KeyGenerationFailed $e ) {
+			update_option( self::KEY_ERROR_OPTION, $e->getMessage(), false );
+			throw $e;
+		}
+
+		// Not autoloaded: read only when a token is signed or checked.
+		update_option( self::PRIVATE_KEY_OPTION, $pair['private'], false );
+		update_option( self::PUBLIC_KEY_OPTION, $pair['public'], false );
+		delete_option( self::KEY_ERROR_OPTION );
+
+		return $pair;
+	}
+
+	/**
+	 * Swap the key pair generator.
+	 *
+	 * @internal For tests that need OpenSSL to fail.
+	 *
+	 * @param KeyPairGenerator|null $generator The generator, or null for the real one.
 	 *
 	 * @return void
-	 * @since 1.0.0
+	 * @since 1.7.0
 	 */
-	private static function generate_key_pair(): void {
-		$config = [
-			'digest_alg'       => 'sha256',
-			'private_key_bits' => 2048,
-			'private_key_type' => OPENSSL_KEYTYPE_RSA,
-		];
-
-		$resource = openssl_pkey_new( $config );
-
-		// Check if key generation failed.
-		if ( $resource === false ) {
-			return;
-		}
-
-		// Extract private key.
-		openssl_pkey_export( $resource, $private_key );
-
-		// Extract public key.
-		$details = openssl_pkey_get_details( $resource );
-		if ( $details === false ) {
-			return;
-		}
-		$public_key = $details['key'];
-
-		// Store keys (not autoloaded for security).
-		update_option( self::PRIVATE_KEY_OPTION, $private_key, false );
-		update_option( self::PUBLIC_KEY_OPTION, $public_key, false );
+	public static function use_generator( ?KeyPairGenerator $generator ): void {
+		self::$generator = $generator;
 	}
 
 	/**
@@ -150,6 +175,7 @@ class KeyManager {
 	 * Warning: This will invalidate all existing tokens.
 	 *
 	 * @return void
+	 * @throws KeyGenerationFailed When the new key pair cannot be created.
 	 * @since 1.0.0
 	 */
 	public static function regenerate_keys(): void {
@@ -172,5 +198,6 @@ class KeyManager {
 		delete_option( self::ENCRYPTION_KEY_OPTION );
 		delete_option( self::PRIVATE_KEY_OPTION );
 		delete_option( self::PUBLIC_KEY_OPTION );
+		delete_option( self::KEY_ERROR_OPTION );
 	}
 }

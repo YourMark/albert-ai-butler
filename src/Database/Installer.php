@@ -66,6 +66,7 @@ class Installer {
 		'albert_oauth_encryption_key',
 		'albert_oauth_private_key',
 		'albert_oauth_public_key',
+		'albert_oauth_key_error',
 		'albert_upload_link_max_mb',
 		// Written by install_defaults() on every new install.
 		'albert_privacy_mode',

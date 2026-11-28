@@ -120,6 +120,7 @@ use Albert\Admin\Rest\ConnectController;
 use Albert\Admin\Rest\SkillsController;
 use Albert\OAuth\Endpoints\OAuthDiscovery;
 use Albert\OAuth\DiscoveryHealth;
+use Albert\OAuth\KeyHealth;
 use Albert\OAuth\PasswordChange;
 use Albert\OAuth\UserDeletion;
 use Albert\Privacy\ConnectedResultRedactor;
@@ -370,6 +371,9 @@ class Plugin {
 		// address is not reachable. Some hosts serve /.well-known/ themselves, so
 		// assistant sign-in fails with no sign of why from inside WordPress.
 		( new DiscoveryHealth() )->register_hooks();
+
+		// Say why assistants cannot connect when OpenSSL could not create the signing keys.
+		( new KeyHealth() )->register_hooks();
 
 		// Register MCP server (uses OAuth for authentication).
 		( new McpServer() )->register_hooks();
