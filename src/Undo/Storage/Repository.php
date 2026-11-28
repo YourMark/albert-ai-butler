@@ -238,23 +238,23 @@ class Repository {
 		return (bool) $wpdb->insert(
 			Tables::change_items( $this->blog_id ),
 			[
-				'change_id'    => $change_id,
-				'run_id'       => $run_id,
-				'blog_id'      => $entity->blog_id,
-				'entity_type'  => $entity->type,
-				'entity_key'   => $entity->key(),
-				'entity_hash'  => self::entity_hash( $entity ),
+				'change_id'           => $change_id,
+				'run_id'              => $run_id,
+				'blog_id'             => $entity->blog_id,
+				'entity_type'         => $entity->type,
+				'entity_key'          => $entity->key(),
+				'entity_hash'         => self::entity_hash( $entity ),
 				// Cut to the column: an option name fills it on its own. The hash keeps the full key.
-				'thing_key'    => mb_substr( $thing->key(), 0, 191 ),
-				'thing_hash'   => $thing->hash(),
-				'operation'    => $operation,
-				'captured_by'  => $captured_by,
-				'before_image' => $image,
-				'image_bytes'  => $image === null ? 0 : strlen( $image ),
-				'after_hashes' => (string) wp_json_encode( $after_hashes ),
-				'claimed_by'   => $claimed_by,
-				'after_blocks'  => $after_blocks === null ? null : (string) wp_json_encode( $after_blocks ),
-				'after_preview' => $preview === [] ? null : (string) wp_json_encode( $preview, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+				'thing_key'           => mb_substr( $thing->key(), 0, 191 ),
+				'thing_hash'          => $thing->hash(),
+				'operation'           => $operation,
+				'captured_by'         => $captured_by,
+				'before_image'        => $image,
+				'image_bytes'         => $image === null ? 0 : strlen( $image ),
+				'after_hashes'        => (string) wp_json_encode( $after_hashes ),
+				'claimed_by'          => $claimed_by,
+				'after_blocks'        => $after_blocks === null ? null : (string) wp_json_encode( $after_blocks ),
+				'after_preview'       => $preview === [] ? null : (string) wp_json_encode( $preview, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
 				'content_revision_id' => $revision_id,
 				'content_hash'        => $content_hash,
 			]
@@ -272,11 +272,12 @@ class Repository {
 	 * @param int                  $item_count   Items stored.
 	 * @param int|null             $log_id       The ability-log row for the same call.
 	 * @param array<string, mixed> $coverage     How much of the call was recorded, and what was not, with why.
+	 * @param array<string, mixed> $meta         Add-ons' own keys from `albert/changes/entry_meta`, already checked.
 	 *
 	 * @return bool Whether the row was updated.
 	 * @since 1.7.0
 	 */
-	public function finish_entry( int $change_id, string $status, ?string $reason, array $other_tables, array $effects, int $item_count, ?int $log_id, array $coverage = [] ): bool {
+	public function finish_entry( int $change_id, string $status, ?string $reason, array $other_tables, array $effects, int $item_count, ?int $log_id, array $coverage = [], array $meta = [] ): bool {
 		global $wpdb;
 
 		$other_tables = self::capped( $other_tables );
@@ -297,6 +298,7 @@ class Repository {
 				'item_count'   => $item_count,
 				'log_id'       => $log_id,
 				'coverage'     => $coverage === [] ? null : (string) wp_json_encode( $coverage, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+				'meta'         => $meta === [] ? null : (string) wp_json_encode( $meta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
 				'finished_at'  => gmdate( 'Y-m-d H:i:s' ),
 			],
 			[ 'id' => $change_id ]
@@ -421,6 +423,54 @@ class Repository {
 		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', Tables::changes( $this->blog_id ), $change_id ), ARRAY_A );
 
 		return is_array( $row ) ? $row : null;
+	}
+
+	/**
+	 * An entry as add-ons see it: who, what and how much was recorded, and
+	 * the things it changed with their items' previews. No before-images.
+	 *
+	 * Shape: the entry's columns (ids as int, `effects`, `coverage`, `meta`
+	 * and `other_tables` decoded), plus `things`: a list of
+	 * `{ key, items: [ { entity_type, entity_key, operation, preview } ] }`.
+	 *
+	 * @param int $change_id Entry id.
+	 *
+	 * @return array<string, mixed>|null
+	 * @since 1.7.0
+	 */
+	public function view( int $change_id ): ?array {
+		global $wpdb;
+
+		$entry = $this->entry( $change_id );
+		if ( $entry === null ) {
+			return null;
+		}
+
+		foreach ( [ 'id', 'run_id', 'blog_id', 'user_id', 'pending_action_id', 'approved_by', 'log_id', 'item_count' ] as $column ) {
+			$entry[ $column ] = $entry[ $column ] === null ? null : (int) $entry[ $column ];
+		}
+		foreach ( [ 'effects', 'coverage', 'meta', 'other_tables' ] as $column ) {
+			$entry[ $column ] = is_string( $entry[ $column ] ) ? json_decode( $entry[ $column ], true ) : null;
+		}
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare( 'SELECT thing_key, entity_type, entity_key, operation, after_preview FROM %i WHERE change_id = %d ORDER BY id', Tables::change_items( $this->blog_id ), $change_id ),
+			ARRAY_A
+		);
+
+		$things = [];
+		foreach ( is_array( $rows ) ? $rows : [] as $row ) {
+			$things[ $row['thing_key'] ]['key']     = $row['thing_key'];
+			$things[ $row['thing_key'] ]['items'][] = [
+				'entity_type' => $row['entity_type'],
+				'entity_key'  => $row['entity_key'],
+				'operation'   => $row['operation'],
+				'preview'     => is_string( $row['after_preview'] ) ? json_decode( $row['after_preview'], true ) : null,
+			];
+		}
+		$entry['things'] = array_values( $things );
+
+		return $entry;
 	}
 
 	/**

@@ -102,6 +102,20 @@ final class Recorder {
 	public const MAX_ITEMS = 2000;
 
 	/**
+	 * Most bytes of add-on data one entry stores, encoded.
+	 *
+	 * @var int
+	 */
+	private const MAX_META_BYTES = 1024;
+
+	/**
+	 * An add-on's entry data key: a namespace, a slash, a name.
+	 *
+	 * @var string
+	 */
+	private const META_KEY = '#^[a-z0-9_-]+/[a-z0-9_./-]+$#i';
+
+	/**
 	 * Most revision ids an entry lists.
 	 *
 	 * @var int
@@ -750,7 +764,8 @@ final class Recorder {
 			$this->effects(),
 			$stored,
 			ExecutionLogMarker::row_id( $this->context->ability_name ),
-			$this->coverage( $kept, $stored )
+			$this->coverage( $kept, $stored ),
+			$this->entry_meta()
 		);
 
 		if ( ! $finished ) {
@@ -884,6 +899,94 @@ final class Recorder {
 			'kept'         => min( $with_before, $stored ),
 			'not_recorded' => $lines,
 		];
+	}
+
+	/**
+	 * The call as hooks are told about it.
+	 *
+	 * @return array<string, mixed>
+	 * @since 1.7.0
+	 */
+	public function context_view(): array {
+		return [
+			'change_id'         => $this->entry['id'] ?? null,
+			'run_id'            => $this->entry['run_id'] ?? null,
+			'blog_id'           => $this->repository->blog_id(),
+			'source'            => $this->context->source,
+			'ability_name'      => $this->context->ability_name,
+			'user_id'           => $this->context->user_id,
+			'client_id'         => $this->context->client_id,
+			'client_name'       => $this->context->client_name,
+			'session_id'        => $this->context->session_id,
+			'pending_action_id' => $this->context->pending_action_id,
+			'approved_by'       => $this->context->approved_by,
+			'note'              => $this->context->note,
+		];
+	}
+
+	/**
+	 * Add-ons' own data for the entry, held to namespaced keys and a size cap.
+	 *
+	 * What does not fit is dropped and named under `albert/dropped` with why,
+	 * so an add-on can see its data was refused rather than lost.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function entry_meta(): array {
+		try {
+			/**
+			 * Filters the add-on data stored on a change journal entry.
+			 *
+			 * Keys must be namespaced (`premium/session_label`). The encoded
+			 * data may take 1 KB; keys past that are dropped, last first. The
+			 * data is change data: the privacy exporter and eraser cover it.
+			 *
+			 * @since 1.7.0
+			 *
+			 * @param array<string, mixed> $meta    Data so far.
+			 * @param array<string, mixed> $context The call ({@see Recorder::context_view()}).
+			 */
+			$meta = apply_filters( 'albert/changes/entry_meta', [], $this->context_view() );
+		} catch ( \Throwable $e ) {
+			++$this->failures;
+			return [];
+		}
+
+		if ( ! is_array( $meta ) ) {
+			return [];
+		}
+
+		$kept    = [];
+		$dropped = [];
+		foreach ( $meta as $key => $value ) {
+			if ( ! is_string( $key ) || preg_match( self::META_KEY, $key ) !== 1 || str_starts_with( $key, 'albert/' ) ) {
+				$dropped[ (string) $key ] = 'not_namespaced';
+				continue;
+			}
+			$kept[ $key ] = $value;
+		}
+
+		while ( $kept !== [] && self::encoded_size( $kept ) > self::MAX_META_BYTES ) {
+			$dropped[ (string) array_key_last( $kept ) ] = 'too_large';
+			array_pop( $kept );
+		}
+
+		if ( $dropped !== [] ) {
+			$kept['albert/dropped'] = array_slice( $dropped, 0, 20, true );
+		}
+
+		return $kept;
+	}
+
+	/**
+	 * Bytes data takes as stored JSON.
+	 *
+	 * @param array<string, mixed> $data The data.
+	 *
+	 * @return int
+	 */
+	private static function encoded_size( array $data ): int {
+		return strlen( (string) wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
 	}
 
 	/**

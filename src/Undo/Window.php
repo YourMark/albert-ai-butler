@@ -49,6 +49,13 @@ final class Window {
 	private static int $blog_id = 0;
 
 	/**
+	 * Entries closed this request, announced at shutdown: `[ entry id, blog id ]`.
+	 *
+	 * @var array<int, array{0: int, 1: int}>
+	 */
+	private static array $recorded = [];
+
+	/**
 	 * Whether the shutdown fallback is registered.
 	 *
 	 * @var bool
@@ -123,6 +130,7 @@ final class Window {
 			$entry_id = $recorder->finish( $status );
 			if ( $entry_id !== null ) {
 				ChangeJournalPrune::soon( self::$blog_id );
+				self::queue( $entry_id );
 			}
 			return $entry_id;
 		} catch ( \Throwable $e ) {
@@ -166,6 +174,67 @@ final class Window {
 			$recorder->finish( Recorder::STATUS_INTERRUPTED );
 		} catch ( \Throwable $e ) {
 			unset( $e );
+		}
+	}
+
+	/**
+	 * Announce an entry once the request is done with it.
+	 *
+	 * @param int $entry_id The entry.
+	 *
+	 * @return void
+	 */
+	private static function queue( int $entry_id ): void {
+		if ( self::$recorded === [] ) {
+			// After every window is closed, so observers' own writes are never recorded.
+			add_action( 'shutdown', [ self::class, 'announce' ], PHP_INT_MAX - 1 );
+		}
+
+		self::$recorded[] = [ $entry_id, self::$blog_id ];
+	}
+
+	/**
+	 * Fire `albert/changes/recorded` for every entry closed this request.
+	 * Bound to `shutdown`; an observer that throws never stops the next one.
+	 *
+	 * @return void
+	 * @since 1.7.0
+	 */
+	public static function announce(): void {
+		$recorded       = self::$recorded;
+		self::$recorded = [];
+		remove_action( 'shutdown', [ self::class, 'announce' ], PHP_INT_MAX - 1 );
+
+		foreach ( $recorded as [ $entry_id, $blog_id ] ) {
+			try {
+				$view = ( new Repository( $blog_id ) )->view( $entry_id );
+				if ( $view === null ) {
+					continue;
+				}
+
+				/**
+				 * Fires once a change journal entry is written, at the end of
+				 * the request and outside any recording window.
+				 *
+				 * There is no ChangeView class yet: `$change` is the array
+				 * {@see Repository::view()} documents.
+				 *
+				 * @since 1.7.0
+				 *
+				 * @param array<string, mixed> $change  The entry.
+				 * @param array<string, mixed> $context `blog_id` and `source`.
+				 */
+				do_action(
+					'albert/changes/recorded',
+					$view,
+					[
+						'blog_id' => $blog_id,
+						'source'  => $view['source'],
+					]
+				);
+			} catch ( \Throwable $e ) {
+				unset( $e );
+			}
 		}
 	}
 

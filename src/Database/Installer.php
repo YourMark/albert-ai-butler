@@ -562,7 +562,8 @@ class Installer {
 	 * entry cannot be reverted (NULL when it can), `other_tables` what was
 	 * written but not captured. `approved_by` is who approved a run safe mode
 	 * held; `note` the assistant's own one-line reason, never Albert's words.
-	 * `coverage` says how much of the call was recorded and names what was not.
+	 * `coverage` says how much of the call was recorded and names what was not;
+	 * `meta` holds add-ons' namespaced keys (`albert/changes/entry_meta`).
 	 *
 	 * @param string $charset_collate Charset/collation clause.
 	 *
@@ -591,6 +592,7 @@ class Installer {
 			other_tables text DEFAULT NULL,
 			effects text DEFAULT NULL,
 			coverage text DEFAULT NULL,
+			meta text DEFAULT NULL,
 			item_count int(10) unsigned NOT NULL DEFAULT 0,
 			created_at datetime NOT NULL,
 			finished_at datetime DEFAULT NULL,

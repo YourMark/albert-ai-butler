@@ -127,6 +127,8 @@ class ChangeJournalTest extends TestCase {
 	 */
 	public function tear_down(): void {
 		Window::close();
+		// Shutdown never runs between tests; nothing queued may reach the next one.
+		Window::announce();
 		ConnectionContext::reset();
 
 		if ( function_exists( 'wp_unregister_ability' ) && wp_has_ability( self::ABILITY ) ) {
@@ -413,6 +415,80 @@ class ChangeJournalTest extends TestCase {
 		$item = $this->items_by_key( $entry_id )[ "post:{$post_id}" ];
 		$this->assertNull( $item['before'] );
 		$this->assertSame( Repository::REVISION_GONE, $item['pruned'] );
+	}
+
+	/**
+	 * An add-on's entry data is stored under namespaced keys within 1 KB; the
+	 * rest is dropped and named with why.
+	 *
+	 * @return void
+	 */
+	public function test_entry_meta_is_namespaced_and_capped(): void {
+		$seen = null;
+		$meta = static function ( $meta, $context ) use ( &$seen ) {
+			$seen = $context;
+			return array_merge(
+				(array) $meta,
+				[
+					'premium/label' => 'Spring sale',
+					'loose'         => 1,
+					'premium/big'   => str_repeat( 'x', 2000 ),
+				]
+			);
+		};
+
+		$this->work = static fn() => update_option( 'acme_banner', 'meta' );
+
+		add_filter( 'albert/changes/entry_meta', $meta, 10, 2 );
+		try {
+			$this->call();
+		} finally {
+			remove_filter( 'albert/changes/entry_meta', $meta, 10 );
+		}
+
+		$entry = $this->only_entry();
+		$this->assertSame(
+			[
+				'premium/label'  => 'Spring sale',
+				'albert/dropped' => [
+					'loose'       => 'not_namespaced',
+					'premium/big' => 'too_large',
+				],
+			],
+			json_decode( (string) $entry['meta'], true )
+		);
+		$this->assertSame( (int) $entry['id'], $seen['change_id'] );
+		$this->assertSame( self::ABILITY, $seen['ability_name'] );
+	}
+
+	/**
+	 * Once the request is done, add-ons hear of the entry with the things it changed.
+	 *
+	 * @return void
+	 */
+	public function test_a_recorded_entry_is_announced_at_shutdown(): void {
+		$heard  = [];
+		$listen = static function ( $change, $context ) use ( &$heard ): void {
+			$heard[] = [ $change, $context ];
+		};
+
+		$this->work = static fn() => update_option( 'acme_banner', 'announced' );
+		add_action( 'albert/changes/recorded', $listen, 10, 2 );
+		try {
+			$this->call();
+			$this->assertSame( [], $heard, 'Not while the request runs.' );
+			Window::announce();
+		} finally {
+			remove_action( 'albert/changes/recorded', $listen, 10 );
+		}
+
+		$this->assertCount( 1, $heard );
+		[ $change, $context ] = $heard[0];
+		$this->assertSame( (int) $this->only_entry()['id'], $change['id'] );
+		$this->assertSame( 'option:acme_banner', $change['things'][0]['key'] );
+		$this->assertSame( 'announced', $change['things'][0]['items'][0]['preview']['option_value'] );
+		$this->assertSame( 'mcp', $context['source'] );
+		$this->assertArrayNotHasKey( 'before_image', $change['things'][0]['items'][0] );
 	}
 
 	/**
