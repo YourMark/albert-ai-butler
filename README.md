@@ -173,6 +173,12 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.7.0
+
+**Improvements**
+
+- The connection guides match how each app connects today. ChatGPT now uses Add custom MCP server instead of Developer mode, which ChatGPT removed, and says which plans can add one. Claude uses its new Customize menu and warns when the site's address has its own port number.
+
 ### 1.6.0
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
