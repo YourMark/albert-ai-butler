@@ -14,6 +14,10 @@ namespace Albert\Admin\Rest;
 use Albert\Admin\SkillsPayload;
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\Plugin;
+use Albert\MCP\Skills\SkillRegistry;
+use Albert\MCP\Skills\SkillSwitch;
+use WP_Error;
+use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
 
@@ -60,6 +64,48 @@ class SkillsController implements Hookable {
 				'permission_callback' => [ $this, 'check_permission' ],
 			]
 		);
+
+		register_rest_route(
+			Plugin::rest_namespace(),
+			'/skills/(?P<slug>[a-z0-9-]+)',
+			[
+				'methods'             => WP_REST_Server::EDITABLE,
+				'callback'            => [ $this, 'update_skill' ],
+				'permission_callback' => [ $this, 'check_permission' ],
+				'args'                => [
+					'enabled' => [
+						'type'     => 'boolean',
+						'required' => true,
+					],
+				],
+			]
+		);
+	}
+
+	/**
+	 * Switch one skill on or off.
+	 *
+	 * @param WP_REST_Request<array<string, mixed>> $request The request.
+	 *
+	 * @return WP_REST_Response|WP_Error The skill's row, or not found.
+	 * @since 1.7.0
+	 */
+	public function update_skill( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$slug = (string) $request->get_param( 'slug' );
+
+		if ( SkillRegistry::get( $slug ) === null ) {
+			return new WP_Error( 'albert_skill_not_found', __( 'There is no skill with that name.', 'albert-ai-butler' ), [ 'status' => 404 ] );
+		}
+
+		SkillSwitch::set( $slug, (bool) $request->get_param( 'enabled' ) );
+
+		foreach ( SkillsPayload::build()['skills'] as $row ) {
+			if ( $row['slug'] === $slug ) {
+				return rest_ensure_response( $row );
+			}
+		}
+
+		return rest_ensure_response( [] );
 	}
 
 	/**

@@ -28,7 +28,7 @@ Holds destructive assistant calls until a person approves them in Albert > Appro
 ## Option tiers
 | Tier | Options | Behaviour |
 |---|---|---|
-| 1. Albert's controls | `albert_safe_mode`, `albert_safe_mode_ttl_minutes`, `albert_disabled_abilities`, `albert_allowed_users`, `albert_privacy_mode`, OAuth keys | Refused by `ConnectionGuard`, never approvable |
+| 1. Albert's controls | `albert_safe_mode`, `albert_safe_mode_ttl_minutes`, `albert_disabled_abilities`, `albert_allowed_users`, `albert_privacy_mode`, `albert_disabled_skills`, OAuth keys | Refused by `ConnectionGuard`, never approvable |
 | 2. High-risk WordPress | `siteurl`, `home`, `admin_email`, `default_role`, `users_can_register`, `template`, `stylesheet`, `active_plugins`, `blog_public`, `permalink_structure` | Held |
 | 3. Everything else | | Passes |
 
@@ -49,3 +49,6 @@ Holds destructive assistant calls until a person approves them in Albert > Appro
 ## Storage and settings
 - `albert_pending_actions`, UTC. `PendingActionSweep` expires lapsed rows, fails claims stale for an hour, and deletes decided rows after 30 days. Without it a lapsed row stays `pending` and drops out of both lists.
 - `albert_safe_mode` and `albert_safe_mode_ttl_minutes` (default 60, 5 minutes to a week) go through `Settings\Value`. The window is short because approving an old `update-post` overwrites later edits. `Gate::means_off()` accepts booleans, for `define( 'ALBERT_SAFE_MODE', false )`.
+
+## The owner's skills
+- `SkillGuard` refuses, over a connection, every write, trash and delete of an `albert_skill` post and its meta, and turning another post into one. Refused, not held: an assistant approving edits to its own guidance is still editing it.
