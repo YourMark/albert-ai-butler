@@ -79,6 +79,19 @@ class RiskPolicyTest extends TestCase {
 	}
 
 	/**
+	 * Core's proposed settings writer is held by name, whatever it nests its input under.
+	 *
+	 * @return void
+	 */
+	public function test_holds_core_settings_update(): void {
+		$input = [ 'settings' => [ 'general' => [ 'email' => 'new@example.com' ] ] ];
+
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'core/settings-update' ), $input ) );
+		$this->assertTrue( $this->risk->must_hold( $this->ability( 'core/update-settings' ), $input ) );
+		$this->assertFalse( $this->risk->must_hold( $this->ability( 'core/settings-get' ), [] ), 'Reading settings is not held by name.' );
+	}
+
+	/**
 	 * An ordinary write is not held by the risk policy.
 	 *
 	 * @return void
