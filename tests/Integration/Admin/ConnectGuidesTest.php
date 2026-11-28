@@ -61,6 +61,34 @@ class ConnectGuidesTest extends TestCase {
 	}
 
 	/**
+	 * ChatGPT's guide uses Add custom MCP server and no longer sends people
+	 * to Developer mode, which ChatGPT removed.
+	 *
+	 * @return void
+	 */
+	public function test_chatgpt_adds_a_custom_mcp_server(): void {
+		$guide = ClientSetupGuides::get( 'chatgpt', self::HTTPS, SiteLocation::PUBLIC );
+		$text  = implode( ' ', array_merge( array_column( $guide['steps'], 'text' ), array_column( $guide['notes'], 'text' ) ) );
+
+		$this->assertStringContainsString( 'Add custom MCP server', $guide['steps'][0]['text'] );
+		$this->assertSame( self::HTTPS, $guide['steps'][1]['action']['value'] );
+		$this->assertStringNotContainsString( 'Developer mode', $text );
+	}
+
+	/**
+	 * Claude reaches connectors on port 443 only, so another port gets a note.
+	 *
+	 * @return void
+	 */
+	public function test_claude_warns_about_a_non_standard_port(): void {
+		$ported   = ClientSetupGuides::get( 'claude', 'https://example.com:8443/wp-json/albert/v1/mcp', SiteLocation::PUBLIC );
+		$standard = ClientSetupGuides::get( 'claude', self::HTTPS, SiteLocation::PUBLIC );
+
+		$this->assertStringContainsString( 'standard https port', $ported['notes'][0]['text'] );
+		$this->assertStringNotContainsString( 'standard https port', implode( ' ', array_column( $standard['notes'], 'text' ) ) );
+	}
+
+	/**
 	 * On a local site, apps on this computer come first and the two that need
 	 * a public site come last, still listed, with a reason.
 	 *

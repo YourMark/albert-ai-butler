@@ -145,7 +145,14 @@ class ClientSetupGuides {
 		if ( $context['http'] ) {
 			$notes[] = self::note( __( 'Claude needs this site on an https address.', 'albert-ai-butler' ) );
 		}
-		$notes[] = self::note( __( 'A free Claude account can add one custom connector. On a Team or Enterprise plan, an owner adds it for the organisation first.', 'albert-ai-butler' ), '', true );
+
+		// Anthropic's cloud reaches custom connectors on port 443 only.
+		$port = wp_parse_url( $endpoint, PHP_URL_PORT );
+		if ( ! $context['http'] && is_int( $port ) && $port !== 443 ) {
+			$notes[] = self::note( __( 'Claude only connects on the standard https port, so it cannot reach this address with its own port number.', 'albert-ai-butler' ) );
+		}
+		$notes[] = self::note( __( 'Once added, it works in Claude on the web, in Claude Desktop and in the phone apps.', 'albert-ai-butler' ), '', true );
+		$notes[] = self::note( __( 'A free Claude account can add one custom connector. On a Team or Enterprise plan, an owner adds it under Organization settings, then Connectors, and each person chooses Connect next to it.', 'albert-ai-butler' ), '', true );
 
 		return self::guide(
 			[
@@ -155,18 +162,18 @@ class ClientSetupGuides {
 				'needs_public' => $context['local'],
 				'steps'        => [
 					self::step( __( 'Click Add to Claude.', 'albert-ai-butler' ), self::link( __( 'Add to Claude', 'albert-ai-butler' ), $deeplink ) ),
-					self::step( __( 'Claude asks to add the connector: choose Add.', 'albert-ai-butler' ) ),
+					self::step( __( 'Claude opens Add custom connector with the name and address filled in: choose Continue, then Add.', 'albert-ai-butler' ) ),
 					self::approve_step(),
 				],
 				'notes'        => $notes,
 				'manual'       => self::manual(
 					[
-						__( 'In Claude, open Settings, then Connectors.', 'albert-ai-butler' ),
-						__( 'Choose "Add custom connector".', 'albert-ai-butler' ),
-						__( 'Paste the address below as the connector URL and save.', 'albert-ai-butler' ),
+						__( 'In Claude, open Customize, then Connectors.', 'albert-ai-butler' ),
+						__( 'Choose Add, then "Add custom connector".', 'albert-ai-butler' ),
+						__( 'Give it a name, paste the address below as the MCP server URL and choose Continue, then Add.', 'albert-ai-butler' ),
 					],
 					$endpoint,
-					__( 'Connector URL', 'albert-ai-butler' )
+					__( 'MCP server URL', 'albert-ai-butler' )
 				),
 				'unavailable'  => __( 'Claude on the web and phone connects from Anthropic’s servers, which cannot reach a site on your computer.', 'albert-ai-butler' ),
 			]
@@ -355,7 +362,7 @@ class ClientSetupGuides {
 					self::step( __( 'VS Code asks to install the server: choose Install.', 'albert-ai-butler' ) ),
 					self::approve_step(),
 				],
-				'notes'  => array_merge( [ self::note( __( 'Albert’s tools work in Copilot Chat’s Agent mode.', 'albert-ai-butler' ) ) ], self::http_note( $context ) ),
+				'notes'  => array_merge( self::http_note( $context ), [ self::note( __( 'On a Copilot Business or Enterprise plan, your organisation has to allow MCP servers in Copilot first.', 'albert-ai-butler' ), '', true ) ] ),
 				'manual' => self::manual(
 					[
 						__( 'Create the file named below in your project folder.', 'albert-ai-butler' ),
@@ -370,11 +377,11 @@ class ClientSetupGuides {
 	}
 
 	/**
-	 * ChatGPT.
+	 * ChatGPT: a custom MCP server, added per site on the web.
 	 *
-	 * No install link: OpenAI publishes none, and the settings it would open
-	 * have moved more than once, so the steps name the setting rather than a
-	 * menu path that may be stale by the time somebody reads it.
+	 * No install link: OpenAI publishes none. A listed plugin would need one
+	 * fixed server for every site, which means a hosted gateway Albert does
+	 * not run. Labels as in OpenAI's help, checked 2026-11-28.
 	 *
 	 * @param array{endpoint: string, local: bool, http: bool, insecure: bool} $context The site.
 	 *
@@ -386,7 +393,8 @@ class ClientSetupGuides {
 		if ( $context['http'] ) {
 			$notes[] = self::note( __( 'ChatGPT needs this site on an https address.', 'albert-ai-butler' ) );
 		}
-		$notes[] = self::note( __( 'Custom connectors need ChatGPT’s Developer mode, which is not on every plan.', 'albert-ai-butler' ), '', true );
+		$notes[] = self::note( __( 'Business, Enterprise and Edu workspaces can add one if an admin allows it. On Pro it can only read. OpenAI’s help does not list Free or Plus.', 'albert-ai-butler' ), '', true );
+		$notes[] = self::note( __( 'Once added, ChatGPT asks you to confirm each change before Albert makes it.', 'albert-ai-butler' ), '', true );
 
 		return self::guide(
 			[
@@ -395,8 +403,9 @@ class ClientSetupGuides {
 				'icon'         => 'chatgpt',
 				'needs_public' => $context['local'],
 				'steps'        => [
-					self::step( __( 'In ChatGPT’s settings, turn on Developer mode.', 'albert-ai-butler' ) ),
-					self::step( __( 'Create a connector, paste this address as its URL and choose OAuth.', 'albert-ai-butler' ), self::copy( __( 'Copy', 'albert-ai-butler' ), $context['endpoint'] ) ),
+					self::step( __( 'In ChatGPT on the web, open Plugins, select the plus button and choose Add custom MCP server.', 'albert-ai-butler' ) ),
+					self::step( __( 'Give it a name, paste this address as the server URL and choose OAuth to sign in.', 'albert-ai-butler' ), self::copy( __( 'Copy', 'albert-ai-butler' ), $context['endpoint'] ) ),
+					self::step( __( 'Tick “I understand and want to continue”, then choose Create as a plugin.', 'albert-ai-butler' ) ),
 					self::approve_step(),
 				],
 				'notes'        => $notes,
