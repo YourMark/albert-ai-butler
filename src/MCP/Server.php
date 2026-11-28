@@ -15,6 +15,7 @@ use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\AbilitiesRegistry;
 use Albert\Core\Plugin;
 use Albert\Logging\ObservabilityHandler;
+use Albert\MCP\Skills\AbilitySkills;
 use Albert\MCP\Skills\SkillLoader;
 use Albert\OAuth\Server\TokenValidator;
 use Albert\OAuth\ServerMetadata;
@@ -107,6 +108,9 @@ class Server implements Hookable {
 		// Add `site` and `skills` to the discovery response, so an assistant
 		// knows what this site is before it starts guessing.
 		( new DiscoveryContext() )->register_hooks();
+
+		// Linked skills with each ability's info.
+		( new AbilitySkills() )->register_hooks();
 
 		// CORE_TOOL_ABILITIES otherwise only exist while the adapter's default
 		// server is on, which any plugin can switch off for the whole site.

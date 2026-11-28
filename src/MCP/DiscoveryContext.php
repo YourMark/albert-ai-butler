@@ -12,7 +12,9 @@ namespace Albert\MCP;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Context\Payload;
+use Albert\Context\SkillIndex;
 use Albert\Contracts\Interfaces\Hookable;
+use Albert\MCP\Skills\AbilitySkills;
 use Albert\Privacy\PrivacyMode;
 
 /**
@@ -158,6 +160,12 @@ class DiscoveryContext implements Hookable {
 
 		if ( $payload === [] ) {
 			return $result;
+		}
+
+		if ( isset( $payload['skills'] ) ) {
+			foreach ( SkillIndex::entries() as $entry ) {
+				AbilitySkills::served( (string) $entry['slug'], 'index' );
+			}
 		}
 
 		// Merged rather than assigned key by key, so a future field added to
