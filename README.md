@@ -173,6 +173,12 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.7.0
+
+**Improvements**
+
+- Updating a user, term or pattern without changing anything is now refused before it runs, instead of reporting a success that saved nothing. For these and for posts and pages, your assistant is told up front which fields count as a change.
+
 ### 1.6.0
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 

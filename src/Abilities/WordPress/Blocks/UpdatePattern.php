@@ -78,8 +78,9 @@ class UpdatePattern extends BaseAbility {
 	 */
 	protected function get_input_schema(): array {
 		return [
-			'type'       => 'object',
-			'properties' => [
+			'type'          => 'object',
+			'description'   => 'Send the name and at least one of title, blocks, content, synced or categories.',
+			'properties'    => [
 				'name'       => [
 					'type'        => 'string',
 					'description' => 'The user pattern\'s name (slug), as returned by find-patterns.',
@@ -107,7 +108,9 @@ class UpdatePattern extends BaseAbility {
 					'items'       => [ 'type' => 'string' ],
 				],
 			],
-			'required'   => [ 'name' ],
+			'required'      => [ 'name' ],
+			// Every other property is a change, so this refuses a call that sends nothing but `name`.
+			'minProperties' => 2,
 		];
 	}
 

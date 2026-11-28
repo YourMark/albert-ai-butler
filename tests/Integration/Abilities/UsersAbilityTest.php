@@ -628,6 +628,45 @@ class UsersAbilityTest extends TestCase {
 		$this->assertNotSame( 'Changed', get_userdata( $user_id )->first_name );
 	}
 
+	/**
+	 * The schema refuses an update that changes nothing, before anything runs.
+	 *
+	 * `email` may only repeat the current address, so it does not count as a change.
+	 *
+	 * @return void
+	 */
+	public function test_update_user_needs_a_change_besides_the_id(): void {
+		$ability = wp_get_ability( 'albert/update-user' );
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-user is not registered.' );
+		}
+
+		$user_id = self::factory()->user->create( [ 'user_email' => 'same@albert.test' ] );
+
+		foreach ( [
+			[ 'id' => $user_id ],
+			[
+				'id'    => $user_id,
+				'email' => 'same@albert.test',
+			],
+		] as $input ) {
+			$result = $ability->execute( $input );
+
+			$this->assertInstanceOf( WP_Error::class, $result );
+			$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+		}
+
+		$this->assertIsArray(
+			$ability->execute(
+				[
+					'id'          => $user_id,
+					'description' => '',
+				]
+			),
+			'Clearing one field is enough.'
+		);
+	}
+
 	// ─── DeleteUser ─────────────────────────────────────────────────
 
 	/**

@@ -66,9 +66,12 @@ class Update extends BaseAbility {
 		$wp_roles   = wp_roles();
 		$role_names = array_keys( $wp_roles->roles );
 
+		$fields = [ 'first_name', 'last_name', 'roles', 'url', 'description' ];
+
 		return [
-			'type'       => 'object',
-			'properties' => [
+			'type'        => 'object',
+			'description' => 'Send the id and at least one of first_name, last_name, roles, url or description.',
+			'properties'  => [
 				'id'          => [
 					'type'        => 'integer',
 					'description' => 'The user ID to update',
@@ -105,7 +108,9 @@ class Update extends BaseAbility {
 					'description' => 'User biographical info',
 				],
 			],
-			'required'   => [ 'id' ],
+			'required'    => [ 'id' ],
+			// Not minProperties: `email` may only repeat the current address, so `{ id, email }` changes nothing.
+			'anyOf'       => array_map( static fn( string $field ): array => [ 'required' => [ $field ] ], $fields ),
 		];
 	}
 

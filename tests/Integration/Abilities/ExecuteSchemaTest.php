@@ -1209,6 +1209,44 @@ class ExecuteSchemaTest extends TestCase {
 	}
 
 	/**
+	 * The schema refuses a pattern update that sends only the name, before anything runs.
+	 *
+	 * @return void
+	 */
+	public function test_update_pattern_needs_a_field_besides_the_name(): void {
+		$ability = wp_get_ability( 'albert/update-pattern' );
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-pattern is not registered.' );
+		}
+
+		$created = ( new CreatePattern() )->execute(
+			[
+				'title'  => 'Pattern Left Alone',
+				'blocks' => [
+					[
+						'name'       => 'core/paragraph',
+						'attributes' => [ 'content' => 'v1' ],
+					],
+				],
+			]
+		);
+
+		$result = $ability->execute( [ 'name' => $created['name'] ] );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+
+		$this->assertIsArray(
+			$ability->execute(
+				[
+					'name'   => $created['name'],
+					'synced' => false,
+				]
+			)
+		);
+	}
+
+	/**
 	 * DeletePattern removes a user pattern and matches the output schema.
 	 *
 	 * @return void

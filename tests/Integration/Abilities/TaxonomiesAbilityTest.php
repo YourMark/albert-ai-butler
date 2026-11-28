@@ -482,6 +482,44 @@ class TaxonomiesAbilityTest extends TestCase {
 		$this->assertSame( $new_parent, $result['parent'] );
 	}
 
+	/**
+	 * The schema refuses an update that changes nothing; `taxonomy` only selects the term.
+	 *
+	 * @return void
+	 */
+	public function test_update_term_needs_a_change_besides_the_id(): void {
+		$ability = wp_get_ability( 'albert/update-term' );
+		if ( ! $ability ) {
+			$this->markTestSkipped( 'albert/update-term is not registered.' );
+		}
+
+		$term_id = self::factory()->term->create( [ 'taxonomy' => 'post_tag' ] );
+
+		foreach ( [
+			[ 'id' => $term_id ],
+			[
+				'id'       => $term_id,
+				'taxonomy' => 'post_tag',
+			],
+		] as $input ) {
+			$result = $ability->execute( $input );
+
+			$this->assertInstanceOf( WP_Error::class, $result );
+			$this->assertSame( 'ability_invalid_input', $result->get_error_code() );
+		}
+
+		$this->assertIsArray(
+			$ability->execute(
+				[
+					'id'          => $term_id,
+					'taxonomy'    => 'post_tag',
+					'description' => '',
+				]
+			),
+			'Clearing one field is enough.'
+		);
+	}
+
 	// ─── DeleteTerm ─────────────────────────────────────────────────
 
 	/**
