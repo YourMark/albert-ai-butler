@@ -173,6 +173,16 @@ Website: https://yourmark.nl
 
 ## Changelog
 
+### 1.7.0
+
+**Improvements**
+
+- Connections keep working when the MCP Adapter plugin adds its own sign-in system, which is planned: Albert switches it off so assistants keep signing in through Albert.
+
+**Developer**
+
+- New filter `albert/oauth/disable_adapter_oauth_server` (default true). Return false to let the MCP Adapter plugin's OAuth server run; Albert's own MCP route stays out of it either way.
+
 ### 1.6.0
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
