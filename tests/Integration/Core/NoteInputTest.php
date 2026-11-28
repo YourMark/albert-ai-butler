@@ -7,9 +7,15 @@
 
 namespace Albert\Tests\Integration\Core;
 
+use Albert\Abstracts\BaseAbility;
+use Albert\Core\NoteInput;
 use Albert\Database\Installer;
+use Albert\Database\Tables;
+use Albert\OAuth\Server\ConnectionContext;
 use Albert\SafeMode\Repository as SafeModeRepository;
 use Albert\Tests\TestCase;
+use Albert\Undo\Journal;
+use Albert\Undo\Window;
 
 /**
  * Note input tests.
@@ -17,6 +23,13 @@ use Albert\Tests\TestCase;
  * @covers \Albert\Core\NoteInput
  */
 class NoteInputTest extends TestCase {
+
+	/**
+	 * A stand-in ability whose own input is called `note`, like an order note.
+	 *
+	 * @var string
+	 */
+	private const OWN_NOTE = 'acme/add-order-note';
 
 	/**
 	 * Run as an administrator with every ability on.
@@ -34,6 +47,22 @@ class NoteInputTest extends TestCase {
 		wp_set_current_user( self::factory()->user->create( [ 'role' => 'administrator' ] ) );
 		delete_option( 'albert_disabled_abilities' );
 		update_option( 'albert_abilities_saved', true );
+	}
+
+	/**
+	 * Forget the connection and the stand-in.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		Window::close();
+		ConnectionContext::reset();
+
+		if ( wp_has_ability( self::OWN_NOTE ) ) {
+			wp_unregister_ability( self::OWN_NOTE );
+		}
+
+		parent::tear_down();
 	}
 
 	/**
@@ -130,5 +159,94 @@ class NoteInputTest extends TestCase {
 
 		$this->assertSame( $first->id, $second->id );
 		$this->assertSame( 'First reason', $queue->find( $first->action_id )->input['note'] );
+	}
+
+	/**
+	 * An ability's own `note` is its input: it is kept, never read as the
+	 * assistant's reason, and it still tells held calls apart.
+	 *
+	 * @return void
+	 */
+	public function test_an_abilitys_own_note_is_never_the_journal_note(): void {
+		$this->register_own_note_ability();
+
+		$this->assertFalse( NoteInput::is_albert_note( self::OWN_NOTE ) );
+		$this->assertTrue( NoteInput::is_albert_note( 'albert/update-post' ) );
+		$this->assertSame( [ 'note' => 'Shipped today' ], NoteInput::without( self::OWN_NOTE, [ 'note' => 'Shipped today' ] ) );
+
+		ConnectionContext::set( 'client-acme' );
+		( new Journal() )->open( [ 'note' => 'Shipped today' ], self::OWN_NOTE );
+		update_option( 'acme_order_flag', 'noted' );
+		$entry_id = Window::close();
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Assertion read.
+		$note = $wpdb->get_var( $wpdb->prepare( 'SELECT note FROM %i WHERE id = %d', Tables::changes(), (int) $entry_id ) );
+		$this->assertNull( $note, 'A customer-facing order note is not the assistant\'s reason.' );
+
+		$queue = new SafeModeRepository();
+		$one   = $queue->stage( self::OWN_NOTE, [ 'note' => 'A' ], 1, 'client-acme', 'Acme', HOUR_IN_SECONDS );
+		$two   = $queue->stage( self::OWN_NOTE, [ 'note' => 'B' ], 1, 'client-acme', 'Acme', HOUR_IN_SECONDS );
+		$this->assertNotSame( $one->id, $two->id );
+	}
+
+	/**
+	 * Register the stand-in, a BaseAbility declaring `note` itself.
+	 *
+	 * @return void
+	 */
+	private function register_own_note_ability(): void {
+		global $wp_current_filter;
+
+		$ability = new class( self::OWN_NOTE, wp_get_ability( 'albert/update-post' )->get_category() ) extends BaseAbility {
+
+			/**
+			 * Build.
+			 *
+			 * @param string $id       Ability id.
+			 * @param string $category A registered category.
+			 */
+			public function __construct( string $id, string $category ) {
+				$this->id           = $id;
+				$this->label        = 'Add order note';
+				$this->description  = 'Adds a note a customer reads.';
+				$this->category     = $category;
+				$this->meta         = [ 'annotations' => [ 'readonly' => false ] ];
+				$this->input_schema = [
+					'type'       => 'object',
+					'properties' => [ 'note' => [ 'type' => 'string' ] ],
+				];
+
+				parent::__construct();
+			}
+
+			/**
+			 * Nothing to do.
+			 *
+			 * @param array<string, mixed> $args Input.
+			 *
+			 * @return array<string, mixed>
+			 */
+			public function execute( array $args ): array {
+				return $args;
+			}
+
+			/**
+			 * Always allowed.
+			 *
+			 * @return bool
+			 */
+			public function check_permission(): bool {
+				return true;
+			}
+		};
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- WP core's own abilities tests use this pattern.
+		$wp_current_filter[] = 'wp_abilities_api_init';
+		try {
+			$ability->register_ability();
+		} finally {
+			array_pop( $wp_current_filter );
+		}
 	}
 }

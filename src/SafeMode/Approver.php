@@ -12,6 +12,7 @@ namespace Albert\SafeMode;
 defined( 'ABSPATH' ) || exit;
 
 use Albert\Core\AbilitiesState;
+use Albert\Core\NoteInput;
 use Albert\OAuth\Server\ConnectionContext;
 use Albert\Undo\Recorder;
 use Albert\Undo\Window;
@@ -109,7 +110,7 @@ class Approver {
 				$action->id,
 				null,
 				$decided_by,
-				$action->input['note'] ?? null
+				NoteInput::of( $action->ability_name, $action->input )
 			)
 		);
 		$status    = Recorder::STATUS_INTERRUPTED;

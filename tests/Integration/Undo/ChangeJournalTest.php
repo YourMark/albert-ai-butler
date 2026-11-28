@@ -11,6 +11,7 @@
 
 namespace Albert\Tests\Integration\Undo;
 
+use Albert\Core\NoteInput;
 use Albert\Database\Installer;
 use Albert\Database\Tables;
 use Albert\MCP\Server;
@@ -119,6 +120,8 @@ class ChangeJournalTest extends TestCase {
 
 		$this->work = static fn() => null;
 		$this->register_ability();
+		// As BaseAbility does for its write abilities: this stand-in takes Albert's note.
+		NoteInput::mark( self::ABILITY );
 	}
 
 	/**

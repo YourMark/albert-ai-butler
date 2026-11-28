@@ -148,13 +148,13 @@ final class Window {
 	 * @return void
 	 */
 	private static function not_recorded( WindowContext $context ): void {
-		$ability     = function_exists( 'wp_get_ability' ) ? wp_get_ability( $context->ability_name ) : null;
-		$annotations = $ability !== null ? $ability->get_meta_item( 'annotations', [] ) : [];
-		if ( is_array( $annotations ) && ( $annotations['readonly'] ?? null ) === true ) {
-			return;
-		}
-
 		try {
+			$ability     = function_exists( 'wp_get_ability' ) ? wp_get_ability( $context->ability_name ) : null;
+			$annotations = $ability !== null ? $ability->get_meta_item( 'annotations', [] ) : [];
+			if ( is_array( $annotations ) && ( $annotations['readonly'] ?? null ) === true ) {
+				return;
+			}
+
 			( new Repository( get_current_blog_id() ) )->not_recorded( $context );
 		} catch ( \Throwable $e ) {
 			// Counted above; nothing more can be said.

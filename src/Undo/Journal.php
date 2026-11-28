@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Albert\Contracts\Interfaces\Hookable;
 use Albert\Core\AbilitiesRegistry;
+use Albert\Core\NoteInput;
 use Albert\OAuth\Server\ConnectionContext;
 use WP_Error;
 
@@ -61,24 +62,31 @@ class Journal implements Hookable {
 			return $args;
 		}
 
-		// A previous call in this request that threw never reached the result filter.
-		if ( Window::source() === WindowContext::SOURCE_MCP ) {
-			Window::close( Recorder::STATUS_INTERRUPTED );
-		}
+		// Recording is a safety net: a journal error must never break the assistant's call.
+		try {
+			// A previous call in this request that threw never reached the result filter.
+			if ( Window::source() === WindowContext::SOURCE_MCP ) {
+				Window::close( Recorder::STATUS_INTERRUPTED );
+			}
 
-		Window::open(
-			new WindowContext(
-				WindowContext::SOURCE_MCP,
-				self::ability_name( $args, (string) $tool_name, $mcp_tool ),
-				get_current_user_id(),
-				$client_id,
-				ConnectionContext::client_name(),
-				null,
-				self::session_id(),
-				null,
-				self::note( $args, (string) $tool_name )
-			)
-		);
+			$ability_name = self::ability_name( $args, (string) $tool_name, $mcp_tool );
+
+			Window::open(
+				new WindowContext(
+					WindowContext::SOURCE_MCP,
+					$ability_name,
+					get_current_user_id(),
+					$client_id,
+					ConnectionContext::client_name(),
+					null,
+					self::session_id(),
+					null,
+					self::note( $args, (string) $tool_name, $ability_name )
+				)
+			);
+		} catch ( \Throwable $e ) {
+			FailureCounter::record( 1 );
+		}
 
 		return $args;
 	}
@@ -103,15 +111,16 @@ class Journal implements Hookable {
 	 * The assistant's note, from the ability's input: inside `parameters` when
 	 * the call goes through the `execute-ability` meta-tool.
 	 *
-	 * @param array<string, mixed> $args      Tool arguments.
-	 * @param string               $tool_name Tool name.
+	 * @param array<string, mixed> $args         Tool arguments.
+	 * @param string               $tool_name    Tool name.
+	 * @param string               $ability_name The ability the call runs.
 	 *
 	 * @return mixed
 	 */
-	private static function note( array $args, string $tool_name ) {
+	private static function note( array $args, string $tool_name, string $ability_name ) {
 		$input = AbilitiesRegistry::is_transport_ability( $tool_name ) && is_array( $args['parameters'] ?? null ) ? $args['parameters'] : $args;
 
-		return $input['note'] ?? null;
+		return NoteInput::of( $ability_name, $input );
 	}
 
 	/**
