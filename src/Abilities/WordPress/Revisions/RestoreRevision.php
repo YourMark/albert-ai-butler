@@ -36,7 +36,7 @@ class RestoreRevision extends BaseAbility {
 	public function __construct() {
 		$this->id          = 'albert/restore-revision';
 		$this->label       = __( 'Restore Revision', 'albert-ai-butler' );
-		$this->description = __( 'Put a post, page, template or other content back to one of its revisions, recorded as a new revision so it can be undone; show the owner the changes with albert/view-revision first.', 'albert-ai-butler' );
+		$this->description = __( 'Put a post, page, template or other content back to one of its revisions, recorded as a new revision so it can be undone; show the owner the changes with albert/view-revision first. Only the title, content and excerpt come back: the featured image, categories, tags, status and slug stay as they are now.', 'albert-ai-butler' );
 		$this->category    = 'content';
 		$this->group       = 'revisions';
 
