@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Contracts\Interfaces\Ability;
 use Albert\Core\AbilitiesState;
 use Albert\OAuth\Server\ConnectionContext;
+use Albert\Undo\WindowContext;
 use WP_Error;
 use WP_REST_Request;
 
@@ -108,6 +109,17 @@ abstract class BaseAbility implements Ability {
 	protected array $sensitive_output_keys = [];
 
 	/**
+	 * Whether a write ability is offered the optional `note` input: a one-line
+	 * reason the assistant gives the site owner, kept with the recorded change.
+	 * An ability whose own input already means something else by `note` sets
+	 * this to false.
+	 *
+	 * @since 1.7.0
+	 * @var bool
+	 */
+	protected bool $accepts_note = true;
+
+	/**
 	 * Constructor.
 	 *
 	 * Child classes should call parent::__construct() after setting their properties.
@@ -187,6 +199,15 @@ abstract class BaseAbility implements Ability {
 			return $schema;
 		}
 
+		if ( $this->takes_note( $schema ) ) {
+			$schema['properties']         = (array) ( $schema['properties'] ?? [] );
+			$schema['properties']['note'] = [
+				'type'        => 'string',
+				'maxLength'   => WindowContext::NOTE_LENGTH,
+				'description' => 'Optional one-line reason, shown to the site owner',
+			];
+		}
+
 		if ( ! array_key_exists( 'default', $schema ) ) {
 			$schema['default'] = [];
 		}
@@ -196,6 +217,22 @@ abstract class BaseAbility implements Ability {
 		}
 
 		return $this->walk_subschemas( $schema );
+	}
+
+	/**
+	 * Whether this ability gets the `note` input: a write ability that has
+	 * not opted out and does not declare a `note` of its own.
+	 *
+	 * @param array<string, mixed> $schema Input schema declared by the ability.
+	 *
+	 * @return bool
+	 * @since 1.7.0
+	 */
+	private function takes_note( array $schema ): bool {
+		$annotations = $this->meta['annotations'] ?? [];
+		$readonly    = is_array( $annotations ) ? ( $annotations['readonly'] ?? null ) : null;
+
+		return $this->accepts_note && $readonly !== true && ! array_key_exists( 'note', (array) ( $schema['properties'] ?? [] ) );
 	}
 
 	/**
@@ -280,6 +317,11 @@ abstract class BaseAbility implements Ability {
 		$check = ConnectionContext::client_id() !== null ? $this->is_executable() : $this->is_available();
 		if ( is_wp_error( $check ) ) {
 			return $check;
+		}
+
+		// The journal read the note from the call; the ability never sees it.
+		if ( $this->takes_note( $this->input_schema ) ) {
+			unset( $args['note'] );
 		}
 
 		$user_id = get_current_user_id();
