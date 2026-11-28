@@ -288,6 +288,8 @@ class Plugin {
 		// undone. Not admin-only, the window opens on MCP requests.
 		( new UndoJournal() )->register_hooks();
 		( new RevisionGuard() )->register_hooks();
+		// Keeps the assistant's note from counting as a change an ability requires.
+		( new NoteInput() )->register_hooks();
 		( new ChangeJournalPrune() )->register_hooks();
 		ChangeJournalPrune::schedule();
 

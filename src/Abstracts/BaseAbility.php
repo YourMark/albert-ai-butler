@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Albert\Contracts\Interfaces\Ability;
 use Albert\Core\AbilitiesState;
 use Albert\OAuth\Server\ConnectionContext;
-use Albert\Undo\WindowContext;
+use Albert\Core\NoteInput;
 use WP_Error;
 use WP_REST_Request;
 
@@ -200,12 +200,9 @@ abstract class BaseAbility implements Ability {
 		}
 
 		if ( $this->takes_note( $schema ) ) {
-			$schema['properties']         = (array) ( $schema['properties'] ?? [] );
-			$schema['properties']['note'] = [
-				'type'        => 'string',
-				'maxLength'   => WindowContext::NOTE_LENGTH,
-				'description' => 'Optional one-line reason, shown to the site owner',
-			];
+			$schema['properties']                    = (array) ( $schema['properties'] ?? [] );
+			$schema['properties'][ NoteInput::NAME ] = NoteInput::schema();
+			NoteInput::mark( $this->id );
 		}
 
 		if ( ! array_key_exists( 'default', $schema ) ) {
@@ -232,7 +229,7 @@ abstract class BaseAbility implements Ability {
 		$annotations = $this->meta['annotations'] ?? [];
 		$readonly    = is_array( $annotations ) ? ( $annotations['readonly'] ?? null ) : null;
 
-		return $this->accepts_note && $readonly !== true && ! array_key_exists( 'note', (array) ( $schema['properties'] ?? [] ) );
+		return $this->accepts_note && $readonly !== true && ! array_key_exists( NoteInput::NAME, (array) ( $schema['properties'] ?? [] ) );
 	}
 
 	/**
@@ -320,9 +317,7 @@ abstract class BaseAbility implements Ability {
 		}
 
 		// The journal read the note from the call; the ability never sees it.
-		if ( $this->takes_note( $this->input_schema ) ) {
-			unset( $args['note'] );
-		}
+		$args = NoteInput::without( $this->id, $args );
 
 		$user_id = get_current_user_id();
 

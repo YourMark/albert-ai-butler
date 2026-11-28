@@ -11,6 +11,8 @@ namespace Albert\Undo;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Core\NoteInput;
+
 /**
  * The call a window records: which ability, as whom, through which connection.
  *
@@ -34,7 +36,7 @@ final class WindowContext {
 	 *
 	 * @var int
 	 */
-	public const NOTE_LENGTH = 140;
+	public const NOTE_LENGTH = NoteInput::MAX_LENGTH;
 
 	/**
 	 * The assistant's note, sanitised and cut to {@see self::NOTE_LENGTH}.

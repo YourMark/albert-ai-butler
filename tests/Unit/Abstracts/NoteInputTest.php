@@ -72,6 +72,8 @@ class NoteInputTest extends TestCase {
 	public function test_the_note_is_stripped_before_execute(): void {
 		$write = new NoteFixture( 'albert/note-write', [ 'readonly' => false ] );
 		$own   = new NoteFixture( 'albert/note-own', [ 'readonly' => false ], true, true );
+		$write->register_ability();
+		$own->register_ability();
 
 		$write->guarded_execute(
 			[
