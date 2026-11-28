@@ -20,6 +20,7 @@ use Albert\OAuth\Entities\UserEntity;
 use Albert\OAuth\Repositories\ClientRepository;
 use Albert\OAuth\Server\AuthorizationServerFactory;
 use Albert\OAuth\Server\DomainGuard;
+use Albert\OAuth\Server\KeyGenerationFailed;
 use League\OAuth2\Server\Exception\OAuthServerException;
 
 /**
@@ -466,11 +467,30 @@ class AuthorizationPage implements Hookable {
 			wp_redirect( self::error_redirect_url( $redirect_uri, $e->getErrorType(), $e->getMessage(), $state ) );
 			exit;
 		} catch ( \Exception $e ) {
-			$this->render_error_page(
-				__( 'Server Error', 'albert-ai-butler' ),
-				__( 'The authorization could not be completed. Please try again.', 'albert-ai-butler' )
-			);
+			$this->render_error_page( __( 'Server Error', 'albert-ai-butler' ), self::server_error_message( $e ) );
 		}
+	}
+
+	/**
+	 * What the sign-in window says when authorising fails on the server.
+	 *
+	 * Missing signing keys will not go away by trying again, so an administrator
+	 * gets the reason and anyone else is told who can fix it. OpenSSL's own
+	 * error text is only shown to an administrator.
+	 *
+	 * @param \Exception $e The failure.
+	 *
+	 * @return string Plain text, escaped where it is rendered.
+	 * @since 1.7.0
+	 */
+	public static function server_error_message( \Exception $e ): string {
+		if ( ! $e instanceof KeyGenerationFailed ) {
+			return __( 'The authorization could not be completed. Please try again.', 'albert-ai-butler' );
+		}
+
+		return current_user_can( 'manage_options' )
+			? $e->getMessage()
+			: __( 'This site cannot accept AI assistant connections yet. Its administrator can see why in Albert.', 'albert-ai-butler' );
 	}
 
 	/**

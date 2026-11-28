@@ -11,6 +11,7 @@ namespace Albert\OAuth;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\OAuth\Server\KeyGenerationFailed;
 use Albert\OAuth\Server\KeyManager;
 
 /**
@@ -69,9 +70,9 @@ class Jwks {
 	 * @since 1.4.2
 	 */
 	private static function signing_key(): ?array {
-		$pem = KeyManager::get_public_key();
-
-		if ( $pem === '' ) {
+		try {
+			$pem = KeyManager::get_public_key();
+		} catch ( KeyGenerationFailed $e ) {
 			return null;
 		}
 

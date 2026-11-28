@@ -1,0 +1,6 @@
+# Albert's fallback for PHP builds whose OpenSSL has no default openssl.cnf.
+# openssl_pkey_new() only needs the file to exist and to name a [ req ] section.
+[ req ]
+distinguished_name = req_distinguished_name
+
+[ req_distinguished_name ]
