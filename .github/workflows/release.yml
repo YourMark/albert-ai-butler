@@ -115,7 +115,7 @@ jobs:
             vendor \
             lib/mcp-adapter/vendor/composer/jetpack_autoload_classmap.php \
             assets/build/js \
-            skills/block-editor.md
+            skills/block-editor/SKILL.md
           do
             if [ ! -e "build/albert-ai-butler/$required" ]; then
               echo "::error::missing from the package: $required"

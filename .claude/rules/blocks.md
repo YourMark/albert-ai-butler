@@ -3,7 +3,7 @@ paths:
   - "src/Blocks/**"
   - "tests/**/Blocks/**"
   - "tests/Editor/**"
-  - "skills/block-editor.md"
+  - "skills/block-editor/SKILL.md"
 ---
 
 # Blocks
