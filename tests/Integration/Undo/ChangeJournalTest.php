@@ -439,6 +439,87 @@ class ChangeJournalTest extends TestCase {
 		$this->assertSame( Recorder::REASON_OTHER_TABLE, $entry['reason'] );
 		$this->assertSame( [ $table ], json_decode( (string) $entry['other_tables'], true ) );
 		$this->assertArrayHasKey( 'option:acme_banner', $this->items_by_key( (int) $entry['id'] ) );
+		$this->assertSame(
+			[
+				'items'        => 1,
+				'kept'         => 1,
+				'not_recorded' => [
+					[
+						'what'   => $table,
+						'reason' => Recorder::REASON_OTHER_TABLE,
+					],
+				],
+			],
+			json_decode( (string) $entry['coverage'], true )
+		);
+	}
+
+	/**
+	 * Each thing a call did that is not recorded is its own line with its
+	 * own reason: a direct write, a secret, a deleted file.
+	 *
+	 * @return void
+	 */
+	public function test_coverage_names_each_gap_with_its_reason(): void {
+		$product    = self::factory()->post->create();
+		$attachment = self::factory()->attachment->create_object( 'acme.jpg', 0, [ 'post_mime_type' => 'image/jpeg' ] );
+		update_post_meta( $product, '_stock', 5 );
+
+		$this->work = static function () use ( $product, $attachment ): void {
+			self::reduce_stock( $product );
+			update_option( 'acme_smtp_password', 'hunter2' );
+			wp_delete_attachment( $attachment, true );
+		};
+
+		$this->call();
+
+		$lines = json_decode( (string) $this->only_entry()['coverage'], true )['not_recorded'];
+		$by    = array_column( $lines, 'reason', 'what' );
+
+		$this->assertSame( Recorder::REASON_FILES, $by['media files'] );
+		$this->assertSame( Recorder::REASON_SECRET, $by['acme_smtp_password'] );
+		$this->assertContains( Recorder::REASON_DIRECT_WRITE, $by );
+	}
+
+	/**
+	 * A call whose entry could not be created at first is still listed, as
+	 * not recorded, never silently missing.
+	 *
+	 * @return void
+	 */
+	public function test_a_call_that_could_not_be_recorded_is_listed(): void {
+		global $wpdb;
+
+		$table = Tables::changes();
+		$fails = 1;
+		$break = static function ( $query ) use ( $table, &$fails ) {
+			if ( $fails > 0 && is_string( $query ) && str_starts_with( $query, "INSERT INTO `{$table}`" ) ) {
+				--$fails;
+				return 'INSERT INTO nowhere_at_all VALUES (1)';
+			}
+			return $query;
+		};
+
+		$this->work = static fn() => update_option( 'acme_banner', 'unrecorded' );
+
+		add_filter( 'query', $break );
+		$suppress = $wpdb->suppress_errors( true );
+		try {
+			$this->call();
+		} finally {
+			$wpdb->suppress_errors( $suppress );
+			remove_filter( 'query', $break );
+		}
+
+		$entry = $this->only_entry();
+		$this->assertSame( Recorder::REASON_RECORD_FAILED, $entry['reason'] );
+		$this->assertSame(
+			[
+				'what'   => Recorder::WHOLE_CALL,
+				'reason' => Recorder::REASON_RECORD_FAILED,
+			],
+			json_decode( (string) $entry['coverage'], true )['not_recorded'][0]
+		);
 	}
 
 	/**

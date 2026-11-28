@@ -85,6 +85,7 @@ final class Window {
 				self::abandon( $recorder );
 			}
 			FailureCounter::record( 1 );
+			self::not_recorded( $context );
 			return false;
 		}
 
@@ -128,6 +129,28 @@ final class Window {
 			// Recording is a safety net for the call, never a reason for it to fail.
 			FailureCounter::record( 1 );
 			return null;
+		}
+	}
+
+	/**
+	 * List a call whose recording could not start, unless it only reads.
+	 *
+	 * @param WindowContext $context The call.
+	 *
+	 * @return void
+	 */
+	private static function not_recorded( WindowContext $context ): void {
+		$ability     = function_exists( 'wp_get_ability' ) ? wp_get_ability( $context->ability_name ) : null;
+		$annotations = $ability !== null ? $ability->get_meta_item( 'annotations', [] ) : [];
+		if ( is_array( $annotations ) && ( $annotations['readonly'] ?? null ) === true ) {
+			return;
+		}
+
+		try {
+			( new Repository( get_current_blog_id() ) )->not_recorded( $context );
+		} catch ( \Throwable $e ) {
+			// Counted above; nothing more can be said.
+			unset( $e );
 		}
 	}
 

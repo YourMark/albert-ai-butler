@@ -108,7 +108,7 @@ final class CoreHooks {
 			function ( $post_id ): void {
 				$this->capture( Entity::post( (int) $post_id ) );
 				// The files go from disk, and a before-image of rows cannot bring them back.
-				$this->recorder->untracked( 'media files' );
+				$this->recorder->untracked( 'media files', Recorder::REASON_FILES );
 			}
 		);
 
@@ -292,7 +292,7 @@ final class CoreHooks {
 				}
 			);
 		} catch ( \Throwable $e ) {
-			$this->recorder->untracked( "{$type} meta" );
+			$this->recorder->untracked( "{$type} meta", Recorder::REASON_RECORD_FAILED );
 			return;
 		}
 
@@ -322,7 +322,7 @@ final class CoreHooks {
 				}
 			);
 		} catch ( \Throwable $e ) {
-			$this->recorder->untracked( $table );
+			$this->recorder->untracked( $table, Recorder::REASON_RECORD_FAILED );
 			return;
 		}
 

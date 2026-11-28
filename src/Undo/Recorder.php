@@ -54,6 +54,33 @@ final class Recorder {
 	public const REASON_SECRET        = 'secret';
 
 	/**
+	 * Why one thing a call did is not recorded, beside the entry reasons:
+	 * files on disk, which no row brings back.
+	 *
+	 * @var string
+	 */
+	public const REASON_FILES = 'files';
+
+	/**
+	 * What an add-on's handler can name as never coming back: money moved
+	 * through a gateway, an email a customer received, stock sold since, a
+	 * webhook sent to another service. Owned here so the wording is one.
+	 *
+	 * @var string
+	 */
+	public const REASON_MONEY_MOVED  = 'money_moved';
+	public const REASON_EMAIL_SENT   = 'email_sent';
+	public const REASON_STOCK_SOLD   = 'stock_sold';
+	public const REASON_WEBHOOK_SENT = 'webhook_sent';
+
+	/**
+	 * What a "not recorded" line names when the whole call could not be recorded.
+	 *
+	 * @var string
+	 */
+	public const WHOLE_CALL = '*';
+
+	/**
 	 * What a query the monitor could not read is noted as.
 	 *
 	 * @var string
@@ -110,9 +137,10 @@ final class Recorder {
 	private array $items = [];
 
 	/**
-	 * Tables written that the journal does not capture, and unreadable queries.
+	 * What the call wrote that the journal does not capture, with why: tables,
+	 * unreadable queries, files, failed captures.
 	 *
-	 * @var array<string, true>
+	 * @var array<string, string>
 	 */
 	private array $untracked = [];
 
@@ -339,13 +367,14 @@ final class Recorder {
 	/**
 	 * Note a write the journal does not capture.
 	 *
-	 * @param string $what A table name, {@see self::UNREADABLE}, or a plain description (`media files`).
+	 * @param string $what   A table name, {@see self::UNREADABLE}, or a plain description (`media files`).
+	 * @param string $reason Why it is not recorded: one of the REASON_ constants.
 	 *
 	 * @return void
 	 * @since 1.7.0
 	 */
-	public function untracked( string $what ): void {
-		$this->untracked[ $what ] = true;
+	public function untracked( string $what, string $reason = self::REASON_OTHER_TABLE ): void {
+		$this->untracked[ $what ] ??= $reason;
 	}
 
 	/**
@@ -384,7 +413,7 @@ final class Recorder {
 	 */
 	public function direct_write( string $table, string $writer ): void {
 		$this->direct_write = true;
-		$this->untracked( "{$table}, written directly by {$writer}" );
+		$this->untracked( "{$table}, written directly by {$writer}", self::REASON_DIRECT_WRITE );
 	}
 
 	/**
@@ -433,7 +462,8 @@ final class Recorder {
 
 		$entry_id = null;
 
-		if ( $this->entry !== null || $this->items !== [] || $this->untracked !== [] || $this->secrets !== [] ) {
+		// A failed recorder still writes, so the call is listed as not recorded.
+		if ( $this->entry !== null || $this->failed || $this->items !== [] || $this->untracked !== [] || $this->secrets !== [] ) {
 			try {
 				$this->quietly(
 					function () use ( $status, &$entry_id ): void {
@@ -487,7 +517,7 @@ final class Recorder {
 		try {
 			$class = Exclusions::classify( $entity );
 		} catch ( \Throwable $e ) {
-			$this->untracked( $entity->type );
+			$this->untracked( $entity->type, self::REASON_RECORD_FAILED );
 			++$this->failures;
 			return false;
 		}
@@ -529,7 +559,7 @@ final class Recorder {
 		try {
 			$this->quietly( $work );
 		} catch ( \Throwable $e ) {
-			$this->untracked( $entity->type === Entity::CUSTOM ? $entity->parts[0] : $entity->type );
+			$this->untracked( $entity->type === Entity::CUSTOM ? $entity->parts[0] : $entity->type, self::REASON_RECORD_FAILED );
 			++$this->failures;
 		}
 	}
@@ -666,7 +696,7 @@ final class Recorder {
 			}
 		}
 
-		if ( $kept === [] && $this->untracked === [] && $this->secrets === [] ) {
+		if ( $kept === [] && ! $this->failed && $this->untracked === [] && $this->secrets === [] ) {
 			if ( $this->entry !== null && ! $this->repository->delete_entry( $this->entry['id'] ) ) {
 				++$this->failures;
 			}
@@ -709,7 +739,7 @@ final class Recorder {
 		}
 
 		foreach ( $this->handlers->dropped() as $id ) {
-			$this->untracked( "{$id} (handler failed)" );
+			$this->untracked( "{$id} (handler failed)", self::REASON_RECORD_FAILED );
 		}
 
 		$finished = $this->repository->finish_entry(
@@ -719,7 +749,8 @@ final class Recorder {
 			array_keys( $this->untracked ),
 			$this->effects(),
 			$stored,
-			ExecutionLogMarker::row_id( $this->context->ability_name )
+			ExecutionLogMarker::row_id( $this->context->ability_name ),
+			$this->coverage( $kept, $stored )
 		);
 
 		if ( ! $finished ) {
@@ -793,7 +824,7 @@ final class Recorder {
 			return self::REASON_INTERRUPTED;
 		}
 
-		if ( $lost ) {
+		if ( $lost || $this->failed ) {
 			return self::REASON_RECORD_FAILED;
 		}
 
@@ -817,6 +848,42 @@ final class Recorder {
 		}
 
 		return $this->secrets !== [] ? self::REASON_SECRET : null;
+	}
+
+	/**
+	 * How much of the call was recorded: items listed, items whose before
+	 * state is kept, and one line per thing it did that is not recorded, with
+	 * why. This is what lets a conversation say "4 of 5 changes can be
+	 * reverted" and name the fifth.
+	 *
+	 * @param array<int, array<string, mixed>> $kept   The items that changed.
+	 * @param int                              $stored How many of them were stored.
+	 *
+	 * @return array{items: int, kept: int, not_recorded: array<int, array{what: string, reason: string}>}
+	 */
+	private function coverage( array $kept, int $stored ): array {
+		$whole = $this->failed ? [ self::WHOLE_CALL => self::REASON_RECORD_FAILED ] : [];
+		$lines = [];
+
+		foreach ( $whole + $this->untracked + array_fill_keys( array_keys( $this->secrets ), self::REASON_SECRET ) as $what => $reason ) {
+			$lines[] = [
+				'what'   => (string) $what,
+				'reason' => $reason,
+			];
+		}
+
+		$with_before = 0;
+		foreach ( $kept as $item ) {
+			if ( $item['after'] !== [] && ( $item['image'] !== null || $item['operation'] === 'create' ) ) {
+				++$with_before;
+			}
+		}
+
+		return [
+			'items'        => $stored,
+			'kept'         => min( $with_before, $stored ),
+			'not_recorded' => $lines,
+		];
 	}
 
 	/**

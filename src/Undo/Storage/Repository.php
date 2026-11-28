@@ -271,16 +271,20 @@ class Repository {
 	 * @param array<string, mixed> $effects      What no revert takes back (emails, secrets by name).
 	 * @param int                  $item_count   Items stored.
 	 * @param int|null             $log_id       The ability-log row for the same call.
+	 * @param array<string, mixed> $coverage     How much of the call was recorded, and what was not, with why.
 	 *
 	 * @return bool Whether the row was updated.
 	 * @since 1.7.0
 	 */
-	public function finish_entry( int $change_id, string $status, ?string $reason, array $other_tables, array $effects, int $item_count, ?int $log_id ): bool {
+	public function finish_entry( int $change_id, string $status, ?string $reason, array $other_tables, array $effects, int $item_count, ?int $log_id, array $coverage = [] ): bool {
 		global $wpdb;
 
 		$other_tables = self::capped( $other_tables );
 		if ( isset( $effects['secrets'] ) && is_array( $effects['secrets'] ) ) {
 			$effects['secrets'] = self::capped( $effects['secrets'] );
+		}
+		if ( isset( $coverage['not_recorded'] ) && is_array( $coverage['not_recorded'] ) ) {
+			$coverage['not_recorded'] = self::capped_lines( $coverage['not_recorded'] );
 		}
 
 		$updated = $wpdb->update(
@@ -292,6 +296,7 @@ class Repository {
 				'effects'      => $effects === [] ? null : (string) wp_json_encode( $effects ),
 				'item_count'   => $item_count,
 				'log_id'       => $log_id,
+				'coverage'     => $coverage === [] ? null : (string) wp_json_encode( $coverage, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
 				'finished_at'  => gmdate( 'Y-m-d H:i:s' ),
 			],
 			[ 'id' => $change_id ]
@@ -320,6 +325,69 @@ class Repository {
 		$kept[] = sprintf( '+%d more', count( $names ) - self::MAX_NAMES );
 
 		return $kept;
+	}
+
+	/**
+	 * "Not recorded" lines cut like {@see self::capped()}, the last line
+	 * saying how many more there were.
+	 *
+	 * @param array<int, mixed> $lines Lines of `{ what, reason }`.
+	 *
+	 * @return array<int, array{what: string, reason: string}>
+	 */
+	private static function capped_lines( array $lines ): array {
+		$kept = [];
+
+		foreach ( array_values( $lines ) as $line ) {
+			$kept[] = [
+				'what'   => mb_substr( (string) ( $line['what'] ?? '' ), 0, self::MAX_NAME_LENGTH ),
+				'reason' => (string) ( $line['reason'] ?? Recorder::REASON_OTHER_TABLE ),
+			];
+		}
+
+		if ( count( $kept ) <= self::MAX_NAMES ) {
+			return $kept;
+		}
+
+		$more   = count( $kept ) - self::MAX_NAMES;
+		$kept   = array_slice( $kept, 0, self::MAX_NAMES );
+		$kept[] = [
+			'what'   => sprintf( '+%d more', $more ),
+			'reason' => Recorder::REASON_OTHER_TABLE,
+		];
+
+		return $kept;
+	}
+
+	/**
+	 * Leave a row for a call the journal could not record at all, so it is
+	 * listed as "not recorded" instead of missing.
+	 *
+	 * @param WindowContext $context The call.
+	 *
+	 * @return int|null The entry id, or null when even that could not be written.
+	 * @since 1.7.0
+	 */
+	public function not_recorded( WindowContext $context ): ?int {
+		$entry = $this->create_entry( $context );
+		if ( $entry === null ) {
+			return null;
+		}
+
+		$coverage = [
+			'items'        => 0,
+			'kept'         => 0,
+			'not_recorded' => [
+				[
+					'what'   => Recorder::WHOLE_CALL,
+					'reason' => Recorder::REASON_RECORD_FAILED,
+				],
+			],
+		];
+
+		$this->finish_entry( $entry['id'], Recorder::STATUS_RECORDED, Recorder::REASON_RECORD_FAILED, [], [], 0, null, $coverage );
+
+		return $entry['id'];
 	}
 
 	/**
