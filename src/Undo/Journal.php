@@ -74,7 +74,9 @@ class Journal implements Hookable {
 				$client_id,
 				ConnectionContext::client_name(),
 				null,
-				self::session_id()
+				self::session_id(),
+				null,
+				self::note( $args, (string) $tool_name )
 			)
 		);
 
@@ -95,6 +97,21 @@ class Journal implements Hookable {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * The assistant's note, from the ability's input: inside `parameters` when
+	 * the call goes through the `execute-ability` meta-tool.
+	 *
+	 * @param array<string, mixed> $args      Tool arguments.
+	 * @param string               $tool_name Tool name.
+	 *
+	 * @return mixed
+	 */
+	private static function note( array $args, string $tool_name ) {
+		$input = AbilitiesRegistry::is_transport_ability( $tool_name ) && is_array( $args['parameters'] ?? null ) ? $args['parameters'] : $args;
+
+		return $input['note'] ?? null;
 	}
 
 	/**

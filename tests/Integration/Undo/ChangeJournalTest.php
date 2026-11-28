@@ -1409,7 +1409,7 @@ class ChangeJournalTest extends TestCase {
 	public function test_an_approved_run_is_recorded_against_its_pending_action(): void {
 		$safe_mode = new SafeModeRepository();
 		$requester = self::factory()->user->create( [ 'role' => 'administrator' ] );
-		$action    = $safe_mode->stage( self::ABILITY, [], $requester, 'client-acme', 'Acme', DAY_IN_SECONDS );
+		$action    = $safe_mode->stage( self::ABILITY, [ 'note' => 'Approved banner' ], $requester, 'client-acme', 'Acme', DAY_IN_SECONDS );
 
 		ConnectionContext::reset();
 		$this->work = static fn() => update_option( 'acme_banner', 'approved' );
@@ -1421,7 +1421,56 @@ class ChangeJournalTest extends TestCase {
 		$this->assertSame( 'approval', $entry['source'] );
 		$this->assertSame( (string) $action->id, $entry['pending_action_id'] );
 		$this->assertSame( (string) $requester, $entry['user_id'] );
+		$this->assertSame( (string) $this->user_id, $entry['approved_by'], 'The approver is named beside the requester.' );
+		$this->assertSame( 'Approved banner', $entry['note'], 'The note captured with the held call.' );
 		$this->assertNull( $entry['reason'] );
+	}
+
+	/**
+	 * The assistant's note is kept as plain text, cut to 140 characters.
+	 *
+	 * @return void
+	 */
+	public function test_the_note_is_kept_as_plain_text(): void {
+		$this->work = static fn() => update_option( 'acme_banner', 'noted' );
+
+		$this->call( [ 'note' => '<b>Fix</b> the banner ' . str_repeat( 'x', 200 ) ] );
+
+		$note = $this->only_entry()['note'];
+		$this->assertStringStartsWith( 'Fix the banner', $note );
+		$this->assertSame( WindowContext::NOTE_LENGTH, mb_strlen( $note ) );
+	}
+
+	/**
+	 * A revert is recorded as a change of its own, saying what it took back.
+	 *
+	 * @return void
+	 */
+	public function test_a_revert_is_recorded_with_what_it_reverts(): void {
+		ConnectionContext::reset();
+		$reverts = [
+			[
+				'change_id' => 12,
+				'parts'     => [ 'post:title' ],
+			],
+			[ 'change_id' => 'nonsense' ],
+		];
+
+		Window::open( new WindowContext( WindowContext::SOURCE_REVERT, 'albert/revert-change', $this->user_id, 'client-acme', null, null, null, null, null, $reverts ) );
+		update_option( 'acme_banner', 'reverted' );
+		Window::close();
+
+		$entry = $this->only_entry();
+		$this->assertSame( 'revert', $entry['source'] );
+		$this->assertSame(
+			[
+				[
+					'change_id' => 12,
+					'parts'     => [ 'post:title' ],
+				],
+			],
+			json_decode( (string) $entry['effects'], true )['reverts']
+		);
 	}
 
 	/**
@@ -1431,9 +1480,11 @@ class ChangeJournalTest extends TestCase {
 	 * adapter's meta-abilities are not registered in the test environment. What
 	 * matters here, `ToolsHandler::call_tool()` and its pre/result filters, is real.
 	 *
+	 * @param array<string, mixed> $arguments Tool arguments.
+	 *
 	 * @return void
 	 */
-	private function call(): void {
+	private function call( array $arguments = [] ): void {
 		$tool   = McpTool::fromAbility( wp_get_ability( self::ABILITY ) );
 		$server = $this->createMock( McpServer::class );
 		$server->method( 'get_server_id' )->willReturn( Server::SERVER_ID );
@@ -1449,7 +1500,7 @@ class ChangeJournalTest extends TestCase {
 				'method'  => 'tools/call',
 				'params'  => (object) [
 					'name'      => 'acme-work',
-					'arguments' => new \stdClass(),
+					'arguments' => (object) $arguments,
 				],
 			]
 		);

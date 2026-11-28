@@ -129,6 +129,8 @@ class Repository {
 				'client_name'       => $context->client_name,
 				'session_id'        => $context->session_id,
 				'pending_action_id' => $context->pending_action_id,
+				'approved_by'       => $context->approved_by,
+				'note'              => $context->note,
 				'status'            => 'recording',
 				'created_at'        => gmdate( 'Y-m-d H:i:s' ),
 			]

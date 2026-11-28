@@ -98,7 +98,7 @@ class Approver {
 		ConnectionContext::set( $client_id ?? self::UNKNOWN_CONNECTION );
 
 		// Record the run in the change journal against this row, as the call it
-		// was: the requester and their connection, not the approving admin.
+		// was: the requester and their connection, with the approver beside them.
 		$recording = $client_id !== null && Window::open(
 			new WindowContext(
 				WindowContext::SOURCE_APPROVAL,
@@ -106,7 +106,10 @@ class Approver {
 				$action->user_id,
 				$client_id,
 				$action->client_name,
-				$action->id
+				$action->id,
+				null,
+				$decided_by,
+				$action->input['note'] ?? null
 			)
 		);
 		$status    = Recorder::STATUS_INTERRUPTED;

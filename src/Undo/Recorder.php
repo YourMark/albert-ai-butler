@@ -835,6 +835,10 @@ final class Recorder {
 			$effects['secrets'] = array_keys( $this->secrets );
 		}
 
+		if ( $this->context->reverts !== [] ) {
+			$effects['reverts'] = $this->context->reverts;
+		}
+
 		if ( $this->revisions !== [] ) {
 			$effects['revision_ids'] = array_slice( array_keys( $this->revisions ), 0, self::MAX_REVISION_IDS );
 		}

@@ -147,10 +147,10 @@ class InstallerTest extends TestCase {
 		$items   = $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', Tables::change_items() ) );
 		// phpcs:enable
 
-		foreach ( [ 'run_id', 'session_id', 'log_id', 'reason', 'other_tables', 'effects' ] as $column ) {
+		foreach ( [ 'run_id', 'session_id', 'log_id', 'reason', 'other_tables', 'effects', 'approved_by', 'note' ] as $column ) {
 			$this->assertContains( $column, $changes );
 		}
-		foreach ( [ 'change_id', 'run_id', 'entity_hash', 'before_image', 'after_hashes', 'pruned', 'image_bytes', 'thing_key', 'thing_hash' ] as $column ) {
+		foreach ( [ 'change_id', 'run_id', 'entity_hash', 'before_image', 'after_hashes', 'pruned', 'image_bytes', 'thing_key', 'thing_hash', 'after_blocks', 'after_preview', 'content_revision_id', 'content_hash' ] as $column ) {
 			$this->assertContains( $column, $items );
 		}
 	}

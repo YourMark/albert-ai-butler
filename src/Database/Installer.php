@@ -560,7 +560,8 @@ class Installer {
 	 *
 	 * `run_id` is the session, the id of its first entry. `reason` is why the
 	 * entry cannot be reverted (NULL when it can), `other_tables` what was
-	 * written but not captured.
+	 * written but not captured. `approved_by` is who approved a run safe mode
+	 * held; `note` the assistant's own one-line reason, never Albert's words.
 	 *
 	 * @param string $charset_collate Charset/collation clause.
 	 *
@@ -581,6 +582,8 @@ class Installer {
 			client_name varchar(255) DEFAULT NULL,
 			session_id varchar(191) DEFAULT NULL,
 			pending_action_id bigint(20) unsigned DEFAULT NULL,
+			approved_by bigint(20) unsigned DEFAULT NULL,
+			note varchar(191) DEFAULT NULL,
 			log_id bigint(20) unsigned DEFAULT NULL,
 			status varchar(20) NOT NULL DEFAULT 'recording',
 			reason varchar(20) DEFAULT NULL,
