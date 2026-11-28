@@ -236,6 +236,13 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.7.0 =
+
+**Fixes**
+
+* Assistants can connect on servers whose OpenSSL has no default configuration file, such as Local and many Windows setups. Before, sign-in failed with "Invalid key supplied".
+* When the server cannot create the keys that sign sign-ins at all, administrators see why on Albert's screens and the Plugins screen, and the sign-in window says so instead of showing a library error.
+
 = 1.6.0 =
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
