@@ -238,6 +238,10 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 = 1.7.0 =
 
+**Features**
+
+* **Native skills.** Assistants that support MCP skills, such as Claude Code, now list and load Albert's skills as their own. Every other assistant gets the same skills as before.
+
 **Improvements**
 
 * Every skill your assistant can read as a prompt is also in its skills list, and a skill about abilities that are all switched off is no longer offered.
@@ -248,6 +252,7 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 * New filter `albert/skills/conditions` lets an add-on add preconditions a skill can require.
 * Deprecated: `albert/skills/files`. Its files now join the skills registry, so they are in the skills index as well as the prompts and follow their `requires`. It starts from an empty list instead of Albert's own files, so removing a bundled skill through it no longer works. Register skills through `albert/skills/registry` instead.
 * New filter `albert/skills/available` lets an add-on withhold a skill from a user or connection. It can only narrow what Albert offers.
+* New filter `albert/skills/native` turns native MCP skills (the `io.modelcontextprotocol/skills` extension, for clients on protocol 2026-07-28 that declare it) off. They stand down by themselves when the MCP adapter serves the extension.
 
 = 1.6.0 =
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
