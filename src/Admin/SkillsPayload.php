@@ -15,6 +15,7 @@ use Albert\Context\SkillIndex;
 use Albert\Core\AbilitiesState;
 use Albert\MCP\Skills\Skill;
 use Albert\MCP\Skills\SkillRegistry;
+use Albert\MCP\Skills\SkillSwitch;
 
 /**
  * Normalises the doc-21 skill registry into rows the Albert → Skills screen renders.
@@ -77,6 +78,7 @@ class SkillsPayload {
 			'slug'      => $skill->slug(),
 			'summary'   => $skill->summary(),
 			'source'    => $skill->source(),
+			'enabled'   => SkillSwitch::is_on( $skill->slug() ),
 			'available' => $status['available'],
 			'status'    => $status['label'],
 			'body'      => $skill->body(),

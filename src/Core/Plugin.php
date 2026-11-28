@@ -110,6 +110,7 @@ use Albert\Logging\ExecutionObserver;
 use Albert\Logging\Repository as LoggingRepository;
 use Albert\MCP\AdapterHealth as McpAdapterHealth;
 use Albert\MCP\Server as McpServer;
+use Albert\MCP\Skills\OwnerSkills;
 use Albert\Media\UploadLinks\UploadLinkController;
 use Albert\OAuth\Endpoints\AuthorizationPage;
 use Albert\OAuth\Endpoints\ClientRegistration;
@@ -131,6 +132,7 @@ use Albert\SafeMode\Approver as SafeModeApprover;
 use Albert\SafeMode\ApprovalPolicy as SafeModeApprovalPolicy;
 use Albert\SafeMode\Interceptor as SafeModeInterceptor;
 use Albert\SafeMode\ConnectionGuard as SafeModeConnectionGuard;
+use Albert\SafeMode\SkillGuard;
 use Albert\SafeMode\OptionRestorer as SafeModeOptionRestorer;
 use Albert\Admin\Approvals;
 use WP\MCP\Core\McpAdapter;
@@ -258,6 +260,10 @@ class Plugin {
 		// The restorer puts back what a write skipping the option API changed.
 		( new SafeModeConnectionGuard() )->register_hooks();
 		( new SafeModeOptionRestorer() )->register_hooks();
+
+		// The owner's skills: stored as private posts no assistant may write.
+		( new OwnerSkills() )->register_hooks();
+		( new SkillGuard() )->register_hooks();
 
 		// Daily sweep of never-authorised allowed-user invitations. schedule()
 		// is idempotent (guarded by wp_next_scheduled()), so calling it here

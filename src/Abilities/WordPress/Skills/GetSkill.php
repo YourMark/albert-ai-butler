@@ -16,6 +16,7 @@ use Albert\Abstracts\BaseAbility;
 use Albert\Core\Annotations;
 use Albert\MCP\Skills\Skill;
 use Albert\MCP\Skills\SkillRegistry;
+use Albert\MCP\Skills\SkillSwitch;
 use WP_Error;
 
 defined( 'ABSPATH' ) || exit;
@@ -160,6 +161,18 @@ class GetSkill extends BaseAbility {
 			);
 		}
 
+		if ( ! SkillSwitch::is_on( $skill->slug() ) ) {
+			return new WP_Error(
+				'skill_switched_off',
+				sprintf(
+					/* translators: %s: skill slug */
+					__( 'The skill "%s" is switched off on this site. Carry on without it.', 'albert-ai-butler' ),
+					$skill->slug()
+				),
+				[ 'status' => 403 ]
+			);
+		}
+
 		$body = $skill->body();
 
 		if ( $body === '' ) {
@@ -196,7 +209,8 @@ class GetSkill extends BaseAbility {
 	 * @since 1.4.0
 	 */
 	private function available_slugs(): string {
-		$slugs = array_keys( SkillRegistry::all() );
+		// A switched-off skill reaches no assistant, its name included.
+		$slugs = array_values( array_diff( array_keys( SkillRegistry::all() ), SkillSwitch::off() ) );
 
 		if ( $slugs === [] ) {
 			return __( 'none are registered on this site', 'albert-ai-butler' );

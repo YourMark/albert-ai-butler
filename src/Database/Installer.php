@@ -61,6 +61,7 @@ class Installer {
 		'albert_disabled_abilities',
 		'albert_abilities_saved',
 		'albert_known_abilities',
+		'albert_disabled_skills',
 		'albert_abilities_view_mode',
 		'albert_rewrite_version',
 		'albert_oauth_encryption_key',
@@ -391,6 +392,8 @@ class Installer {
 			delete_metadata( 'user', 0, $meta_key, '', true );
 		}
 
+		self::remove_skills();
+
 		// Caches and rate-limit counters. They expire anyway, but uninstall leaves nothing.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall sweep.
 		$transients = $wpdb->get_col(
@@ -404,6 +407,40 @@ class Installer {
 
 		foreach ( $transients as $option ) {
 			delete_option( $option );
+		}
+	}
+
+	/**
+	 * Remove the owner's skills and the skill switch, on every site of a network.
+	 *
+	 * Queried, not get_posts(): the post type is not registered while uninstalling.
+	 *
+	 * @return void
+	 * @since 1.7.0
+	 */
+	private static function remove_skills(): void {
+		global $wpdb;
+
+		$sites = is_multisite() ? get_sites(
+			[
+				'fields' => 'ids',
+				'number' => 0,
+			]
+		) : [ get_current_blog_id() ];
+
+		foreach ( $sites as $site_id ) {
+			$switched = is_multisite() && switch_to_blog( (int) $site_id );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall sweep.
+			$skills = $wpdb->get_col( $wpdb->prepare( 'SELECT ID FROM %i WHERE post_type = %s', $wpdb->posts, 'albert_skill' ) );
+			foreach ( $skills as $skill_id ) {
+				wp_delete_post( (int) $skill_id, true );
+			}
+			delete_option( 'albert_disabled_skills' );
+
+			if ( $switched ) {
+				restore_current_blog();
+			}
 		}
 	}
 

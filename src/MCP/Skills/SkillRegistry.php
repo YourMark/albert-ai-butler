@@ -87,6 +87,10 @@ class SkillRegistry {
 
 		$definitions += self::from_legacy_files( $definitions );
 
+		// The owner's own skill wins a slug collision: it is what this site asked for.
+		$definitions = OwnerSkills::definitions() + $definitions;
+		$overlays    = OwnerSkills::overlays();
+
 		$skills = [];
 
 		foreach ( $definitions as $slug => $definition ) {
@@ -99,6 +103,10 @@ class SkillRegistry {
 			$definition['slug'] = (string) $slug;
 
 			$skill = Skill::from_array( $definition );
+
+			if ( $skill instanceof Skill && isset( $overlays[ $skill->slug() ] ) ) {
+				$skill = self::with_overlay( $skill, $definition, $overlays[ $skill->slug() ] );
+			}
 
 			if ( $skill instanceof Skill ) {
 				$skills[ $skill->slug() ] = $skill;
@@ -113,12 +121,14 @@ class SkillRegistry {
 	/**
 	 * The skills whose preconditions hold on this site right now.
 	 *
-	 * And that `albert/skills/available` leaves in, for the current user and connection.
+	 * Switched on, and left in by `albert/skills/available` for the current
+	 * user and connection.
 	 *
 	 * @return array<string, Skill>
 	 * @since 1.4.0
 	 */
 	public static function available(): array {
+		$off        = SkillSwitch::off();
 		$user_id    = get_current_user_id();
 		$client_id  = ConnectionContext::client_id();
 		$connection = $client_id === null ? null : [
@@ -128,8 +138,8 @@ class SkillRegistry {
 
 		return array_filter(
 			self::all(),
-			static function ( Skill $skill ) use ( $user_id, $connection ): bool {
-				if ( ! $skill->is_available() ) {
+			static function ( Skill $skill ) use ( $off, $user_id, $connection ): bool {
+				if ( in_array( $skill->slug(), $off, true ) || ! $skill->is_available() ) {
 					return false;
 				}
 
@@ -284,6 +294,34 @@ class SkillRegistry {
 			'arguments' => $parsed['arguments'],
 			'source'    => $source,
 		];
+	}
+
+	/**
+	 * A registered skill with the owner's additions under it, or their customised copy instead.
+	 *
+	 * The original's updates still arrive under additions; a customised copy
+	 * replaces the text until the owner goes back to the original.
+	 *
+	 * @param Skill                $skill      The registered skill.
+	 * @param array<string, mixed> $definition Its definition.
+	 * @param array<string, mixed> $overlay    `additions` and/or `customised`.
+	 *
+	 * @return Skill|null
+	 * @since 1.7.0
+	 */
+	private static function with_overlay( Skill $skill, array $definition, array $overlay ): ?Skill {
+		if ( is_string( $overlay['customised'] ?? null ) ) {
+			$body = $overlay['customised'];
+		} elseif ( is_string( $overlay['additions'] ?? null ) ) {
+			$body = $skill->body() . "\n\n## Additions for this site\n\n" . trim( $overlay['additions'] );
+		} else {
+			return $skill;
+		}
+
+		unset( $definition['file'] );
+		$definition['body'] = $body;
+
+		return Skill::from_array( $definition );
 	}
 
 	/**
