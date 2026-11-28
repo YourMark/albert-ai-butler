@@ -238,6 +238,10 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 = 1.7.0 =
 
+**Features**
+
+* A skill on categories and tags: reuse the terms a site has, avoid near-duplicates, move posts between categories safely, and check what depends on a term before deleting it.
+
 **Improvements**
 
 * Every skill your assistant can read as a prompt is also in its skills list, and a skill about abilities that are all switched off is no longer offered.
