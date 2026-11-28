@@ -176,4 +176,76 @@ class SkillFileParserTest extends TestCase {
 		$this->assertSame( 'skill', $result['name'] );
 		$this->assertSame( "Intro line.\n\n---\n\nAfter the rule.", $result['body'] );
 	}
+
+	/**
+	 * Albert's keys under `metadata`, as space-separated strings.
+	 *
+	 * @return void
+	 */
+	public function test_reads_metadata_strings(): void {
+		$result = $this->parser->parse( "---\nname: alt\ndescription: Alt text.\nmetadata:\n  requires: \"woocommerce block_editor\"\n  abilities: \"albert/update-media albert/find-media\"\n  priority: \"5\"\n---\nBody." );
+
+		$this->assertSame( [ 'woocommerce', 'block_editor' ], $result['requires'] );
+		$this->assertSame( [ 'albert/update-media', 'albert/find-media' ], $result['abilities'] );
+		$this->assertSame( 5, $result['priority'] );
+		$this->assertSame( 'Body.', $result['body'] );
+	}
+
+	/**
+	 * The same keys written as YAML lists.
+	 *
+	 * @return void
+	 */
+	public function test_reads_metadata_lists(): void {
+		$result = $this->parser->parse( "---\nname: alt\nmetadata:\n  abilities:\n    - albert/update-media\n    - \"albert/find-media\"\n  requires:\n    - woocommerce\n---\nBody." );
+
+		$this->assertSame( [ 'albert/update-media', 'albert/find-media' ], $result['abilities'] );
+		$this->assertSame( [ 'woocommerce' ], $result['requires'] );
+		$this->assertNull( $result['priority'] );
+	}
+
+	/**
+	 * A top-level `requires`, as 1.6.0 files wrote it, still works; a metadata one wins.
+	 *
+	 * @return void
+	 */
+	public function test_top_level_requires_still_works(): void {
+		$this->assertSame( [ 'woocommerce', 'multisite' ], $this->parser->parse( "---\nname: a\nrequires: WooCommerce, multisite\n---\nB" )['requires'] );
+		$this->assertSame( [ 'block_editor' ], $this->parser->parse( "---\nname: a\nrequires: woocommerce\nmetadata:\n  requires: block_editor\n---\nB" )['requires'] );
+	}
+
+	/**
+	 * Keys Albert does not know, like `allowed-tools`, grant nothing and are ignored.
+	 *
+	 * @return void
+	 */
+	public function test_unknown_keys_are_ignored(): void {
+		$result = $this->parser->parse( "---\nname: a\nallowed-tools: Bash(rm:*)\nlicense: MIT\nmetadata:\n  author: someone\n---\nB" );
+
+		$this->assertSame( 'a', $result['name'] );
+		$this->assertSame( [], $result['abilities'] );
+		$this->assertArrayNotHasKey( 'allowed-tools', $result );
+	}
+
+	/**
+	 * A list at the start of the line is a list too, so a precondition is never lost to indentation.
+	 *
+	 * @return void
+	 */
+	public function test_reads_an_unindented_list(): void {
+		$this->assertSame( [ 'woocommerce' ], $this->parser->parse( "---\nname: a\nrequires:\n- woocommerce\n---\nB" )['requires'] );
+	}
+
+	/**
+	 * A trailing comment is not read as values; a hash inside quotes is kept.
+	 *
+	 * @return void
+	 */
+	public function test_trailing_comments_are_dropped(): void {
+		$result = $this->parser->parse( "---\nname: a # the slug\ndescription: \"Use # signs\"\nmetadata:\n  requires: woocommerce # needs a shop\n---\nB" );
+
+		$this->assertSame( 'a', $result['name'] );
+		$this->assertSame( 'Use # signs', $result['description'] );
+		$this->assertSame( [ 'woocommerce' ], $result['requires'] );
+	}
 }

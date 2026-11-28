@@ -11,6 +11,8 @@ namespace Albert\MCP\Skills;
 
 defined( 'ABSPATH' ) || exit;
 
+use Albert\Core\AbilitiesState;
+
 /**
  * A single registered skill.
  *
@@ -73,22 +75,24 @@ class Skill {
 	/**
 	 * Construct a skill.
 	 *
-	 * Promoted properties, and the only class in `src/` that uses them: six
-	 * immutable fields with no behaviour of their own is exactly the shape
-	 * promotion is for, and `readonly` is what lets the registry hand the same
-	 * instance to three callers without any of them being able to change it.
+	 * Promoted `readonly` properties: the registry hands the same instance to
+	 * several callers, and none of them may change it.
 	 *
-	 * @param string        $slug     Stable identifier, and the argument `albert/get-skill` takes.
-	 * @param string        $summary  One sentence for the discovery response's skills index.
-	 * @param string        $file     Absolute path to the Markdown body. Empty when `$body` is given.
-	 * @param string        $body     Literal body, for skills not backed by a file.
-	 * @param list<string>  $requires Named preconditions from {@see self::KNOWN_CONDITIONS}.
-	 * @param callable|null $when     Extra precondition for anything the vocabulary cannot express.
-	 * @param string        $source   Who ships this skill, shown in the Skills screen's Source column.
-	 *                                Empty when the registration did not say, the Skills screen falls
-	 *                                back to a generic "Add-on" label rather than guessing a name.
+	 * @param string                           $slug     Stable identifier, and the argument `albert/get-skill` takes.
+	 * @param string                           $summary  One sentence for the discovery response's skills index.
+	 * @param string                           $file     Absolute path to the Markdown body. Empty when `$body` is given.
+	 * @param string                           $body     Literal body, for skills not backed by a file.
+	 * @param list<string>                     $requires Named preconditions from {@see self::KNOWN_CONDITIONS}.
+	 * @param callable|null                    $when     Extra precondition for anything the vocabulary cannot express.
+	 * @param string                           $source   Who ships this skill, shown in the Skills screen's Source column.
+	 *                                                   Empty when the registration did not say, the Skills screen falls
+	 *                                                   back to a generic "Add-on" label rather than guessing a name.
+	 * @param list<string>                     $abilities Ability ids this skill belongs to (its maker's links).
+	 * @param int|null                         $priority  Order among skills linked to one ability, lower first.
+	 * @param array<int, array<string, mixed>> $arguments MCP prompt arguments.
 	 *
 	 * @since 1.4.0
+	 * @since 1.7.0 Added `$abilities`, `$priority` and `$arguments`.
 	 */
 	public function __construct(
 		private readonly string $slug,
@@ -97,7 +101,10 @@ class Skill {
 		private readonly string $body = '',
 		private readonly array $requires = [],
 		private readonly mixed $when = null,
-		private readonly string $source = ''
+		private readonly string $source = '',
+		private readonly array $abilities = [],
+		private readonly ?int $priority = null,
+		private readonly array $arguments = []
 	) {
 	}
 
@@ -127,11 +134,7 @@ class Skill {
 			return null;
 		}
 
-		$requires = [];
-		if ( isset( $definition['requires'] ) ) {
-			$declared = is_array( $definition['requires'] ) ? $definition['requires'] : [ $definition['requires'] ];
-			$requires = array_values( array_map( 'strval', $declared ) );
-		}
+		$requires = isset( $definition['requires'] ) ? SkillFileParser::words( $definition['requires'] ) : [];
 
 		$when = isset( $definition['when'] ) && is_callable( $definition['when'] ) ? $definition['when'] : null;
 
@@ -142,7 +145,10 @@ class Skill {
 			$body,
 			$requires,
 			$when,
-			isset( $definition['source'] ) ? (string) $definition['source'] : ''
+			isset( $definition['source'] ) ? (string) $definition['source'] : '',
+			SkillFileParser::words( $definition['abilities'] ?? [] ),
+			isset( $definition['priority'] ) && is_numeric( $definition['priority'] ) ? (int) $definition['priority'] : null,
+			isset( $definition['arguments'] ) && is_array( $definition['arguments'] ) ? array_values( array_filter( $definition['arguments'], 'is_array' ) ) : []
 		);
 	}
 
@@ -177,6 +183,36 @@ class Skill {
 	}
 
 	/**
+	 * The abilities this skill belongs to, as its maker linked them.
+	 *
+	 * @return list<string> Ability ids.
+	 * @since 1.7.0
+	 */
+	public function abilities(): array {
+		return $this->abilities;
+	}
+
+	/**
+	 * Order among skills linked to the same ability, lower first; null when unset.
+	 *
+	 * @return int|null
+	 * @since 1.7.0
+	 */
+	public function priority(): ?int {
+		return $this->priority;
+	}
+
+	/**
+	 * The MCP prompt arguments this skill takes.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 * @since 1.7.0
+	 */
+	public function arguments(): array {
+		return $this->arguments;
+	}
+
+	/**
 	 * Who ships this skill, shown in the Skills screen's Source column.
 	 *
 	 * Bundled skills declare `'Albert'` explicitly (see {@see
@@ -202,35 +238,17 @@ class Skill {
 	}
 
 	/**
-	 * The live precondition status.
+	 * The live precondition status: whether the skill is offered, and why.
 	 *
-	 * The single place that turns "does this apply here" into both the boolean
-	 * {@see self::is_available()} relies on — which is what gates a skill out
-	 * of the discovery index — and a human-readable reason ("WooCommerce is
-	 * active" / "Requires the block editor"), so the two can never drift
-	 * apart. `Admin\SkillsPayload` carries the reason in the Skills screen's
-	 * REST payload; 1.4.0's screen doesn't render it (every skill it lists
-	 * ships from Albert itself, so there's nothing yet to distinguish), but
-	 * the data is there for whenever a future version needs to show it —
-	 * doc 24's non-Albert sources are the case that will actually need it.
-	 *
-	 * An unknown condition name fails closed. A skill that declares
-	 * `requires: shopify` is asking a question this vocabulary cannot answer,
-	 * and treating it as met anyway would be answering "yes" to a question
-	 * nobody understood.
-	 *
-	 * Every unmet reason is reported at once, `requires` entries and a failing
-	 * `when` alike: a skill declaring two preconditions, or one named
-	 * precondition plus a `when`, that all fail should not need a second look
-	 * after the site owner fixes only the first one named.
-	 *
-	 * "Always enabled." is reserved for a skill with no `requires` and no
-	 * `when` at all. One gated only by a currently-passing `when` callable can
-	 * still flip to disabled on the next request, so it gets a label that
-	 * says so rather than a promise the class cannot keep.
+	 * One place for the boolean {@see self::is_available()} returns and the
+	 * reason the Skills screen shows, so they cannot drift apart. An unknown
+	 * condition fails closed. Every unmet reason is reported at once. A linked
+	 * skill with none of its abilities usable is unavailable. "Always enabled."
+	 * is only for a skill with no `requires` and no `when`.
 	 *
 	 * @return array{available: bool, label: string}
 	 * @since 1.4.0
+	 * @since 1.7.0 A linked skill needs one usable ability.
 	 */
 	public function status(): array {
 		$unmet = [];
@@ -242,6 +260,13 @@ class Skill {
 		}
 
 		$when_unmet = is_callable( $this->when ) && ! call_user_func( $this->when );
+
+		if ( $unmet === [] && ! $when_unmet && ! $this->has_usable_ability() ) {
+			return [
+				'available' => false,
+				'label'     => __( 'None of the abilities it is for is switched on.', 'albert-ai-butler' ),
+			];
+		}
 
 		if ( $unmet !== [] || $when_unmet ) {
 			$label = $unmet !== []
@@ -321,6 +346,52 @@ class Skill {
 	}
 
 	/**
+	 * Whether an assistant can use at least one ability this skill is for.
+	 *
+	 * A guide to tools nobody can call costs every conversation tokens for
+	 * nothing. A skill without links is about the site, not a tool, and always
+	 * passes.
+	 *
+	 * @return bool
+	 * @since 1.7.0
+	 */
+	private function has_usable_ability(): bool {
+		if ( $this->abilities === [] || ! function_exists( 'wp_has_ability' ) ) {
+			return true;
+		}
+
+		foreach ( $this->abilities as $ability ) {
+			if ( wp_has_ability( $ability ) && AbilitiesState::is_enabled( $ability ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether a precondition is defined, by Albert or an add-on.
+	 *
+	 * @param string $condition The condition slug.
+	 *
+	 * @return bool
+	 * @since 1.7.0
+	 */
+	public static function is_known_condition( string $condition ): bool {
+		return isset( self::condition_definitions()[ $condition ] );
+	}
+
+	/**
+	 * Drop the memoised conditions, so a test can add one.
+	 *
+	 * @return void
+	 * @since 1.7.0
+	 */
+	public static function reset_cache(): void {
+		self::$condition_definitions = null;
+	}
+
+	/**
 	 * Per-request memo of {@see self::condition_definitions()}.
 	 *
 	 * @since 1.4.0
@@ -329,27 +400,18 @@ class Skill {
 	private static ?array $condition_definitions = null;
 
 	/**
-	 * Everything this class knows about each named precondition: how to check
-	 * it, and its two phrasings (a requirement, "Requires %s.", and the
-	 * reason it currently holds, "%s.").
-	 *
-	 * One map instead of three parallel switches over the same vocabulary, so
-	 * a fifth condition (the vocabulary is expected to grow, see {@see
-	 * self::KNOWN_CONDITIONS}) is one array entry to add, not three switch
-	 * statements to keep in sync by hand. Built once per request: `status()`
-	 * calls into this map up to three times per skill, once per requires
-	 * entry evaluated, and every skill's status is computed on every Skills
-	 * screen load and every MCP discovery call.
+	 * Everything this class knows about each named precondition.
 	 *
 	 * @return array<string, array{check: callable(): bool, requirement: string, active: string}>
 	 * @since 1.4.0
+	 * @since 1.7.0 Add-ons add their own through `albert/skills/conditions`.
 	 */
 	private static function condition_definitions(): array {
 		if ( self::$condition_definitions !== null ) {
 			return self::$condition_definitions;
 		}
 
-		self::$condition_definitions = [
+		$definitions = [
 			'woocommerce'    => [
 				'check'       => static fn (): bool => class_exists( 'WooCommerce' ),
 				'requirement' => __( 'WooCommerce', 'albert-ai-butler' ),
@@ -375,6 +437,34 @@ class Skill {
 				'active'      => __( 'this is a multisite network', 'albert-ai-butler' ),
 			],
 		];
+
+		/**
+		 * Filters the preconditions a skill may declare in `requires`.
+		 *
+		 * An add-on adds its own (for example `woocommerce_subscriptions`) as
+		 * `slug => [ 'check' => callable, 'requirement' => 'WooCommerce Subscriptions', 'active' => 'WooCommerce Subscriptions is active' ]`.
+		 * It can add, never replace one of Albert's. A condition nobody
+		 * defines still fails closed.
+		 *
+		 * @since 1.7.0
+		 *
+		 * @param array<string, array<string, mixed>> $conditions Added conditions, keyed by slug.
+		 */
+		$added = apply_filters( 'albert/skills/conditions', [] );
+
+		foreach ( is_array( $added ) ? $added : [] as $slug => $condition ) {
+			if ( ! is_string( $slug ) || isset( $definitions[ $slug ] ) || ! is_array( $condition ) || ! is_callable( $condition['check'] ?? null ) ) {
+				continue;
+			}
+
+			$definitions[ $slug ] = [
+				'check'       => $condition['check'],
+				'requirement' => is_string( $condition['requirement'] ?? null ) ? $condition['requirement'] : $slug,
+				'active'      => is_string( $condition['active'] ?? null ) ? $condition['active'] : $slug,
+			];
+		}
+
+		self::$condition_definitions = $definitions;
 
 		return self::$condition_definitions;
 	}

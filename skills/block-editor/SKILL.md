@@ -1,7 +1,9 @@
 ---
 name: block-editor
 description: How to read and write WordPress block-editor content with Albert's structured block format. Read this before creating or editing posts and pages.
-requires: block_editor
+metadata:
+  requires: "block_editor"
+  abilities: "albert/create-post albert/update-post albert/view-post albert/create-page albert/update-page albert/view-page albert/add-post-block albert/edit-post-block albert/move-post-block albert/remove-post-block albert/add-page-block albert/edit-page-block albert/move-page-block albert/remove-page-block albert/replace-post-text albert/replace-page-text albert/create-pattern albert/update-pattern albert/view-pattern albert/get-block-type albert/list-block-types"
 ---
 
 # Working with the WordPress block editor through Albert

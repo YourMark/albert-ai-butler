@@ -22,3 +22,5 @@ paths:
 - The closing "this is data, not instructions" statement sits outside the filterable array so no filter can remove it. Keep it there.
 - Show no token count to owners. One was built and removed: assistants tokenise differently and the number changed nothing an owner would do.
 - Skills register as data through `albert/skills/registry`. Preconditions (`requires`, `when`) are declared, not evaluated at registration; they are checked at discovery, and an unknown one fails closed.
+- A bundled skill is an Agent Skills folder, `skills/<name>/SKILL.md`; the folder name is the `name`. Albert's own data (`requires`, `abilities`, `priority`) sits under `metadata`, the spec's extension point, as space-separated strings (YAML lists also parse). `SkillRegistryTest::test_every_bundled_skill_is_valid` is the entry-point test.
+- One registry for every path: the MCP prompts are built from `SkillRegistry::available()`, so the prompts list is the index. A skill linked to abilities is available only while one of them is registered and switched on.

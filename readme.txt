@@ -236,6 +236,19 @@ On the [WordPress.org support forums](https://wordpress.org/support/plugin/alber
 
 == Changelog ==
 
+= 1.7.0 =
+
+**Improvements**
+
+* Every skill your assistant can read as a prompt is also in its skills list, and a skill about abilities that are all switched off is no longer offered.
+
+**Developer**
+
+* Skills are Agent Skills folders, `skills/<name>/SKILL.md`, with Albert's own keys under `metadata`: `requires`, `abilities` (the abilities a skill belongs to) and `priority`. `albert/skills/registry` takes `abilities` and `priority` too. `SkillCheck::problems()` checks a skill file in an add-on's tests.
+* New filter `albert/skills/conditions` lets an add-on add preconditions a skill can require.
+* Deprecated: `albert/skills/files`. Its files now join the skills registry, so they are in the skills index as well as the prompts and follow their `requires`. It starts from an empty list instead of Albert's own files, so removing a bundled skill through it no longer works. Register skills through `albert/skills/registry` instead.
+* New filter `albert/skills/available` lets an add-on withhold a skill from a user or connection. It can only narrow what Albert offers.
+
 = 1.6.0 =
 Your assistant can now manage menus, comments and revisions, search your whole site and report Site Health. Requires WordPress 7.1 and PHP 8.2.
 
