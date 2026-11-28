@@ -106,6 +106,38 @@ class RiskPolicyTest extends TestCase {
 	}
 
 	/**
+	 * A read-only ability's role is a filter, so searching administrators is not held.
+	 *
+	 * @return void
+	 */
+	public function test_a_read_only_role_filter_is_not_held(): void {
+		$finder = new WP_Ability(
+			'albert/find-users',
+			[
+				'annotations' => [
+					'readonly'    => true,
+					'destructive' => false,
+				],
+			]
+		);
+
+		$this->assertFalse( $this->risk->must_hold( $finder, [ 'role' => 'administrator' ] ) );
+		$this->assertFalse( $this->risk->must_hold( $finder, [ 'roles' => [ 'administrator' ] ] ) );
+	}
+
+	/**
+	 * Without the read-only annotation the same input is still a grant, and held.
+	 *
+	 * @return void
+	 */
+	public function test_a_role_on_an_undeclared_ability_is_still_held(): void {
+		$undeclared = new WP_Ability( 'thirdparty/find-users', [ 'annotations' => [ 'readonly' => false ] ] );
+
+		$this->assertTrue( $this->risk->must_hold( $undeclared, [ 'role' => 'administrator' ] ) );
+		$this->assertTrue( $this->risk->must_hold( new WP_Ability( 'thirdparty/find-users', [] ), [ 'role' => 'administrator' ] ) );
+	}
+
+	/**
 	 * A non-admin role is not held on the role axis.
 	 *
 	 * @return void
