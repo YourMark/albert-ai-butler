@@ -17,8 +17,9 @@ defined( 'ABSPATH' ) || exit;
  * Parses a skill Markdown file into its YAML-ish frontmatter fields and body.
  * Intentionally small and dependency-free so it can be unit-tested without
  * WordPress. It understands the leading `---` fenced block at the top of a
- * file and a flat set of `key: value` pairs inside it. Anything after the
- * closing fence is returned verbatim as the body.
+ * file, top-level `key: value` pairs, and the Agent Skills `metadata` map one
+ * level down, whose values may be strings or `- item` lists. Anything after
+ * the closing fence is returned verbatim as the body.
  *
  * @since 1.2.0
  */
@@ -27,20 +28,25 @@ class SkillFileParser {
 	/**
 	 * Parse raw skill-file contents into frontmatter fields and body.
 	 *
-	 * Recognises the keys `name`, `description`, `requires`, and an optional
-	 * `arguments` block. When no valid frontmatter fence is present, the whole
-	 * input is treated as the body and the field keys are returned empty.
+	 * Recognises `name`, `description`, an optional `arguments` block, and
+	 * Albert's own keys under `metadata` (the spec's extension point):
+	 * `requires`, `abilities` and `priority`. A top-level `requires` still
+	 * works. When no valid frontmatter fence is present, the whole input is
+	 * treated as the body and the field keys are returned empty.
 	 *
 	 * @param string $contents The raw file contents.
 	 *
-	 * @return array{name: ?string, description: ?string, requires: list<string>, arguments: array<int, array<string, mixed>>, body: string}
+	 * @return array{name: ?string, description: ?string, requires: list<string>, abilities: list<string>, priority: ?int, arguments: array<int, array<string, mixed>>, body: string}
 	 * @since 1.2.0
+	 * @since 1.7.0 Reads `metadata`: `requires`, `abilities` and `priority`.
 	 */
 	public function parse( string $contents ): array {
 		$result = [
 			'name'        => null,
 			'description' => null,
 			'requires'    => [],
+			'abilities'   => [],
+			'priority'    => null,
 			'arguments'   => [],
 			'body'        => $contents,
 		];
@@ -63,26 +69,28 @@ class SkillFileParser {
 		$result['name']        = $parsed['name'];
 		$result['description'] = $parsed['description'];
 		$result['requires']    = $parsed['requires'];
+		$result['abilities']   = $parsed['abilities'];
+		$result['priority']    = $parsed['priority'];
 		$result['arguments']   = $parsed['arguments'];
 
 		return $result;
 	}
 
 	/**
-	 * Parse the flat key/value frontmatter block.
+	 * Parse the frontmatter block.
 	 *
 	 * @param string $frontmatter The text between the opening and closing fences.
 	 *
-	 * @return array{name: ?string, description: ?string, requires: list<string>, arguments: array<int, array<string, mixed>>}
+	 * @return array{name: ?string, description: ?string, requires: list<string>, abilities: list<string>, priority: ?int, arguments: array<int, array<string, mixed>>}
 	 * @since 1.2.0
+	 * @since 1.7.0 Reads the `metadata` map and lists.
 	 */
 	private function parse_frontmatter( string $frontmatter ): array {
-		$fields = [
-			'name'        => null,
-			'description' => null,
-			'requires'    => [],
-			'arguments'   => [],
-		];
+		$top      = [];
+		$metadata = [];
+		$lists    = [];
+		$key      = null;
+		$sub      = null;
 
 		foreach ( explode( "\n", $frontmatter ) as $line ) {
 			// Skip blank lines and YAML comments.
@@ -90,61 +98,70 @@ class SkillFileParser {
 				continue;
 			}
 
-			// Only consider top-level keys (no leading indentation).
-			if ( ! preg_match( '/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/', $line, $pair ) ) {
+			// A trailing comment, outside quotes: `requires: woocommerce # note`.
+			$line = (string) preg_replace( '/\s+#(?=(?:[^"\']|"[^"]*"|\'[^\']*\')*$).*$/', '', $line );
+
+			if ( preg_match( '/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/', $line, $pair ) ) {
+				$key         = strtolower( $pair[1] );
+				$sub         = null;
+				$top[ $key ] = $this->unquote( trim( $pair[2] ) );
 				continue;
 			}
 
-			$key   = strtolower( $pair[1] );
-			$value = $this->unquote( trim( $pair[2] ) );
+			// A `- item` belongs to the metadata key above it, or to the top-level one.
+			if ( preg_match( '/^\s*-\s+(.*)$/', $line, $item ) && $key !== null ) {
+				$owner             = $key === 'metadata' ? ( $sub === null ? null : 'metadata.' . $sub ) : $key;
+				$lists[ $owner ][] = $this->unquote( trim( $item[1] ) );
+				continue;
+			}
 
-			if ( $key === 'name' && $value !== '' ) {
-				$fields['name'] = $value;
-			} elseif ( $key === 'description' && $value !== '' ) {
-				$fields['description'] = $value;
-			} elseif ( $key === 'requires' ) {
-				$fields['requires'] = $this->parse_requires( $value );
-			} elseif ( $key === 'arguments' ) {
-				$fields['arguments'] = $this->parse_arguments( $value );
+			if ( $key === 'metadata' && preg_match( '/^\s+([A-Za-z0-9_.-]+)\s*:\s*(.*)$/', $line, $pair ) ) {
+				$sub              = strtolower( $pair[1] );
+				$metadata[ $sub ] = $this->unquote( trim( $pair[2] ) );
 			}
 		}
 
-		return $fields;
+		$value = static fn( string $name, array $map, string $prefix ): mixed => $lists[ $prefix . $name ] ?? ( isset( $map[ $name ] ) && $map[ $name ] !== '' ? $map[ $name ] : null );
+
+		$requires = $value( 'requires', $metadata, 'metadata.' ) ?? $value( 'requires', $top, '' ) ?? [];
+
+		$name        = is_string( $top['name'] ?? null ) && $top['name'] !== '' ? $top['name'] : null;
+		$description = is_string( $top['description'] ?? null ) && $top['description'] !== '' ? $top['description'] : null;
+		$priority    = $metadata['priority'] ?? null;
+
+		return [
+			'name'        => $name,
+			'description' => $description,
+			'requires'    => array_map( 'strtolower', self::words( $requires ) ),
+			'abilities'   => self::words( $value( 'abilities', $metadata, 'metadata.' ) ?? [] ),
+			'priority'    => is_string( $priority ) && is_numeric( $priority ) ? (int) $priority : null,
+			'arguments'   => is_string( $top['arguments'] ?? null ) ? $this->parse_arguments( $top['arguments'] ) : [],
+		];
 	}
 
 	/**
-	 * Parse the preconditions under which a skill is worth listing.
+	 * A list from a YAML list, or from a string separated by spaces or commas.
 	 *
-	 * Accepted as a comma-separated list or an inline YAML flow sequence, so
-	 * both `requires: woocommerce, block_editor` and
-	 * `requires: [woocommerce, block_editor]` read the same. Names are lowercased
-	 * and matched against {@see \Albert\MCP\Skills\Skill::KNOWN_CONDITIONS}
-	 * at evaluation time, not here, this class stays free of WordPress so it
-	 * can be unit-tested on its own.
+	 * The spec makes `metadata` values strings, so a list there is written
+	 * `"a b"`; makers who write a YAML list get the same result.
 	 *
-	 * @param string $value The raw value following `requires:`.
+	 * @param mixed $value A string or a list of strings.
 	 *
-	 * @return list<string>
-	 * @since 1.4.0
+	 * @return list<string> Unique, in order.
+	 * @since 1.7.0
 	 */
-	private function parse_requires( string $value ): array {
-		$value = trim( $value, " \t[]" );
+	public static function words( mixed $value ): array {
+		$items = is_array( $value ) ? $value : preg_split( '/[\s,]+/', trim( (string) $value, " \t[]" ) );
+		$words = [];
 
-		if ( $value === '' ) {
-			return [];
-		}
-
-		$conditions = [];
-
-		foreach ( explode( ',', $value ) as $condition ) {
-			$condition = strtolower( $this->unquote( trim( $condition ) ) );
-
-			if ( $condition !== '' ) {
-				$conditions[ $condition ] = $condition;
+		foreach ( (array) $items as $item ) {
+			$item = trim( (string) $item, " \t\"'" );
+			if ( $item !== '' ) {
+				$words[ $item ] = $item;
 			}
 		}
 
-		return array_values( $conditions );
+		return array_values( $words );
 	}
 
 	/**
