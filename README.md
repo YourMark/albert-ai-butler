@@ -175,6 +175,10 @@ Website: https://yourmark.nl
 
 ### 1.7.0
 
+**Features**
+
+- A skill on alt text: what good alt text says, which images need none, and how to sweep the media library without inventing descriptions for images the assistant has not seen.
+
 **Improvements**
 
 - Every skill your assistant can read as a prompt is also in its skills list, and a skill about abilities that are all switched off is no longer offered.
