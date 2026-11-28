@@ -217,6 +217,21 @@ final class Exclusions {
 	}
 
 	/**
+	 * Whether a post is a revision or an autosave. Those are WordPress's own
+	 * history, never an item: reverting one would delete history, and a
+	 * revision written by a call must not later pass for a person's edit.
+	 *
+	 * @param Entity                    $entity The entity.
+	 * @param array<string, mixed>|null $state  Its state as {@see Snapshot} reads it.
+	 *
+	 * @return bool
+	 * @since 1.7.0
+	 */
+	public static function is_revision( Entity $entity, ?array $state ): bool {
+		return $entity->type === Entity::POST && ( $state['post_type'] ?? null ) === 'revision';
+	}
+
+	/**
 	 * Whether a captured state holds a credential the name check could not
 	 * see: a stored option name or meta key that is one (MySQL matched the
 	 * requested name ignoring case, accents and trailing spaces), or a value

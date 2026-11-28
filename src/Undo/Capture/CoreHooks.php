@@ -86,7 +86,9 @@ final class CoreHooks {
 		$this->on(
 			'wp_insert_post',
 			function ( $post_id, $post, $update ): void {
-				if ( ! $update ) {
+				if ( $post instanceof \WP_Post && $post->post_type === 'revision' ) {
+					$this->recorder->revision( (int) $post_id );
+				} elseif ( ! $update ) {
 					$this->created( Entity::post( (int) $post_id ) );
 				}
 			},

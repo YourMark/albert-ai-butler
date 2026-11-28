@@ -75,6 +75,13 @@ final class Recorder {
 	public const MAX_ITEMS = 2000;
 
 	/**
+	 * Most revision ids an entry lists.
+	 *
+	 * @var int
+	 */
+	private const MAX_REVISION_IDS = 200;
+
+	/**
 	 * The entry, once something was captured.
 	 *
 	 * @var array{id: int, run_id: int}|null
@@ -122,6 +129,13 @@ final class Recorder {
 	 * @var array<string, true>
 	 */
 	private array $refused = [];
+
+	/**
+	 * Revisions and autosaves the call wrote, by id: never items.
+	 *
+	 * @var array<int, true>
+	 */
+	private array $revisions = [];
 
 	/**
 	 * Credentials the call changed, by name. Never their values.
@@ -261,6 +275,11 @@ final class Recorder {
 			function () use ( $entity, $captured_by ): void {
 				$before = $this->snapshot->read( $entity );
 
+				if ( Exclusions::is_revision( $entity, $before ) ) {
+					$this->revision( (int) $entity->parts[0] );
+					return;
+				}
+
 				$verdict = Exclusions::holds_secret( $entity, $before );
 				if ( $verdict === Exclusions::SECRET ) {
 					$this->refused[ $entity->id() ]                                 = true;
@@ -327,6 +346,19 @@ final class Recorder {
 	 */
 	public function untracked( string $what ): void {
 		$this->untracked[ $what ] = true;
+	}
+
+	/**
+	 * Note a revision or autosave the call wrote, so its row, meta and terms
+	 * are never items and a later history can tell it from a person's edit.
+	 *
+	 * @param int $post_id The revision's id.
+	 *
+	 * @return void
+	 * @since 1.7.0
+	 */
+	public function revision( int $post_id ): void {
+		$this->revisions[ $post_id ] = true;
 	}
 
 	/**
@@ -448,7 +480,7 @@ final class Recorder {
 	 * @return bool
 	 */
 	private function admit( Entity $entity ): bool {
-		if ( $this->failed || isset( $this->items[ $entity->id() ] ) || isset( $this->refused[ $entity->id() ] ) ) {
+		if ( $this->failed || isset( $this->items[ $entity->id() ] ) || isset( $this->refused[ $entity->id() ] ) || $this->of_revision( $entity ) ) {
 			return false;
 		}
 
@@ -466,6 +498,23 @@ final class Recorder {
 
 		// Past the limit nothing more is read or held: the entry is unrevertable already.
 		return $class === null && ! $this->too_large;
+	}
+
+	/**
+	 * Whether an entity is a revision the call wrote, or its meta or terms.
+	 *
+	 * @param Entity $entity The entity.
+	 *
+	 * @return bool
+	 */
+	private function of_revision( Entity $entity ): bool {
+		$post_id = match ( $entity->type ) {
+			Entity::POST, Entity::RELATIONSHIPS => (int) $entity->parts[0],
+			Entity::META                        => $entity->parts[0] === 'post' ? (int) $entity->parts[1] : 0,
+			default                             => 0,
+		};
+
+		return $post_id > 0 && isset( $this->revisions[ $post_id ] );
 	}
 
 	/**
@@ -754,6 +803,10 @@ final class Recorder {
 
 		if ( $this->secrets !== [] ) {
 			$effects['secrets'] = array_keys( $this->secrets );
+		}
+
+		if ( $this->revisions !== [] ) {
+			$effects['revision_ids'] = array_slice( array_keys( $this->revisions ), 0, self::MAX_REVISION_IDS );
 		}
 
 		return $effects;

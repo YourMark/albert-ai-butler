@@ -304,6 +304,35 @@ class ChangeJournalTest extends TestCase {
 	}
 
 	/**
+	 * An update that writes a revision records only the post: the revision is
+	 * listed by id, never as a created post.
+	 *
+	 * @return void
+	 */
+	public function test_revisions_are_listed_not_recorded(): void {
+		$post_id = self::factory()->post->create( [ 'post_content' => 'First' ] );
+
+		$this->work = static function () use ( $post_id ): void {
+			wp_update_post(
+				[
+					'ID'           => $post_id,
+					'post_content' => 'Second',
+				]
+			);
+		};
+
+		$this->call();
+
+		$entry     = $this->only_entry();
+		$revisions = array_map( 'intval', array_keys( wp_get_post_revisions( $post_id ) ) );
+		$posts     = array_filter( array_keys( $this->items_by_key( (int) $entry['id'] ) ), static fn( $key ) => str_starts_with( $key, 'post:' ) );
+
+		$this->assertNotEmpty( $revisions, 'The update wrote a revision.' );
+		$this->assertSame( [ "post:{$post_id}" ], array_values( $posts ) );
+		$this->assertEqualsCanonicalizing( $revisions, json_decode( (string) $entry['effects'], true )['revision_ids'] );
+	}
+
+	/**
 	 * A raw insert into a table nothing captures makes the entry unrevertable, and names it.
 	 *
 	 * @return void
