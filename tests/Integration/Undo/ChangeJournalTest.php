@@ -194,6 +194,42 @@ class ChangeJournalTest extends TestCase {
 	}
 
 	/**
+	 * A post's row, meta and terms are three entities and one thing; an
+	 * option is its own.
+	 *
+	 * @return void
+	 */
+	public function test_items_roll_up_into_their_thing(): void {
+		$post_id  = self::factory()->post->create();
+		$category = self::factory()->category->create();
+
+		$this->work = static function () use ( $post_id, $category ): void {
+			wp_update_post(
+				[
+					'ID'         => $post_id,
+					'post_title' => 'Pricing',
+				]
+			);
+			update_post_meta( $post_id, 'acme_color', 'red' );
+			wp_set_object_terms( $post_id, [ $category ], 'category' );
+			update_option( 'acme_banner', 'new' );
+		};
+
+		$this->call();
+
+		$items = $this->items_by_key( (int) $this->only_entry()['id'] );
+		$post  = $items[ "post:{$post_id}" ];
+
+		foreach ( [ "meta:post:{$post_id}:acme_color", "relationships:{$post_id}:category" ] as $key ) {
+			$this->assertSame( "post:{$post_id}", $items[ $key ]['thing_key'], $key );
+			$this->assertSame( $post['thing_hash'], $items[ $key ]['thing_hash'], $key );
+		}
+		$this->assertSame( "post:{$post_id}", $post['thing_key'] );
+		$this->assertSame( 'option:acme_banner', $items['option:acme_banner']['thing_key'] );
+		$this->assertNotSame( $post['thing_hash'], $items['option:acme_banner']['thing_hash'] );
+	}
+
+	/**
 	 * A raw insert into a table nothing captures makes the entry unrevertable, and names it.
 	 *
 	 * @return void

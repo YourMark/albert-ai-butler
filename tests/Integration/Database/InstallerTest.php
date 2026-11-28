@@ -150,7 +150,7 @@ class InstallerTest extends TestCase {
 		foreach ( [ 'run_id', 'session_id', 'log_id', 'reason', 'other_tables', 'effects' ] as $column ) {
 			$this->assertContains( $column, $changes );
 		}
-		foreach ( [ 'change_id', 'run_id', 'entity_hash', 'before_image', 'after_hashes', 'pruned', 'image_bytes' ] as $column ) {
+		foreach ( [ 'change_id', 'run_id', 'entity_hash', 'before_image', 'after_hashes', 'pruned', 'image_bytes', 'thing_key', 'thing_hash' ] as $column ) {
 			$this->assertContains( $column, $items );
 		}
 	}

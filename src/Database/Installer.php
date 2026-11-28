@@ -601,6 +601,8 @@ class Installer {
 	 *
 	 * `before_image` is NULL for a create, a call too large to keep, and once
 	 * pruned (`pruned` says why). `after_hashes` lets a revert see later edits.
+	 * `thing_key` and `thing_hash` group items into what the owner sees as one
+	 * changed thing ({@see \Albert\Undo\Thing}).
 	 *
 	 * @param string $charset_collate Charset/collation clause.
 	 *
@@ -625,10 +627,13 @@ class Installer {
 			after_hashes longtext DEFAULT NULL,
 			claimed_by varchar(100) DEFAULT NULL,
 			pruned varchar(10) DEFAULT NULL,
+			thing_key varchar(191) NOT NULL DEFAULT '',
+			thing_hash char(64) NOT NULL DEFAULT '',
 			PRIMARY KEY  (id),
 			KEY change_id (change_id),
 			KEY entity_run (entity_hash, run_id),
-			KEY run_pruned (run_id, pruned)
+			KEY run_pruned (run_id, pruned),
+			KEY thing_change (thing_hash, change_id)
 		) $charset_collate;\n\n";
 	}
 

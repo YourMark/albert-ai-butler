@@ -18,6 +18,7 @@ use Albert\Undo\Retention\BoundedRetentionPolicy;
 use Albert\Undo\Retention\FreeRetentionPolicy;
 use Albert\Undo\Retention\Registrar;
 use Albert\Undo\Retention\RetentionPolicy;
+use Albert\Undo\Thing;
 use Albert\Undo\WindowContext;
 
 /**
@@ -206,6 +207,8 @@ class Repository {
 	public function insert_item( int $change_id, int $run_id, Entity $entity, ?string $image, string $operation, array $after_hashes, string $captured_by, ?string $claimed_by ): bool {
 		global $wpdb;
 
+		$thing = Thing::for( $entity );
+
 		return (bool) $wpdb->insert(
 			Tables::change_items( $this->blog_id ),
 			[
@@ -215,6 +218,9 @@ class Repository {
 				'entity_type'  => $entity->type,
 				'entity_key'   => $entity->key(),
 				'entity_hash'  => self::entity_hash( $entity ),
+				// Cut to the column: an option name fills it on its own. The hash keeps the full key.
+				'thing_key'    => mb_substr( $thing->key(), 0, 191 ),
+				'thing_hash'   => $thing->hash(),
 				'operation'    => $operation,
 				'captured_by'  => $captured_by,
 				'before_image' => $image,
