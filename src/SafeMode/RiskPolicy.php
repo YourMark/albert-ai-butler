@@ -144,7 +144,7 @@ class RiskPolicy {
 	 */
 	public function must_hold( WP_Ability $ability, array $input ): bool {
 		return self::is_high_risk_ability( $ability->get_name() )
-			|| $this->grants_admin_role( $input )
+			|| ( ! self::is_readonly( $ability ) && $this->grants_admin_role( $input ) )
 			|| $this->writes_high_risk_option( $input );
 	}
 
@@ -163,8 +163,7 @@ class RiskPolicy {
 	 * @since 1.5.0
 	 */
 	public function protected_option( WP_Ability $ability, array $input ): ?string {
-		$annotations = $ability->get_meta_item( 'annotations', [] );
-		if ( is_array( $annotations ) && ( $annotations['readonly'] ?? false ) === true ) {
+		if ( self::is_readonly( $ability ) ) {
 			return null;
 		}
 
@@ -192,6 +191,23 @@ class RiskPolicy {
 		$held = apply_filters( 'albert/safe_mode/high_risk_abilities', self::HELD_ABILITIES );
 
 		return is_array( $held ) && in_array( $ability_name, $held, true );
+	}
+
+	/**
+	 * Whether an ability declares itself read-only.
+	 *
+	 * A read-only ability's `role` filters what it finds rather than assigning
+	 * one, so `find-users { role: "administrator" }` is a search, not a grant.
+	 *
+	 * @param WP_Ability $ability The ability about to execute.
+	 *
+	 * @return bool
+	 * @since 1.7.0
+	 */
+	private static function is_readonly( WP_Ability $ability ): bool {
+		$annotations = $ability->get_meta_item( 'annotations', [] );
+
+		return is_array( $annotations ) && ( $annotations['readonly'] ?? false ) === true;
 	}
 
 	/**
